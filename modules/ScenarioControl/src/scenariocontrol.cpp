@@ -1,4 +1,8 @@
+#include <thread>
+
 #include "scenariocontrol.hpp"
+
+using namespace std::chrono;
 
 ScenarioControl::ScenarioControl()
 	: Module(ScenarioControl::moduleName),
@@ -16,10 +20,11 @@ ScenarioControl::ScenarioControl()
 }
 
 ScenarioControl::~ScenarioControl(){
-	actionExecutorThread->join();
+	quit=true;
+	manageTriggersThread->join();
 }
 
-void ScenarioControl::initialize()
+int ScenarioControl::initialize()
 {
 	int retval = 0;
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d", get_name(), getpid());
@@ -34,8 +39,13 @@ void ScenarioControl::initialize()
 		retval = -1;
 		RCLCPP_ERROR(get_logger(), "Unable to initialize data dictionary");
 	}
-	JournalInit(get_name());
-	actionExecutorThread=std::make_unique<std::thread>(&ScenarioControl::mainLoop, this);
+	JournalInit(get_name());	
+	//! Start thread
+	manageTriggersThread=std::make_unique<std::thread>(&ScenarioControl::manageTriggers, this);
+	//! Load configuration
+	UtilGetConfDirectoryPath(configPath, sizeof(configPath));
+	strcat(configPath,TRIGGER_ACTION_FILE_NAME);
+	return retval;
 }
 
 void ScenarioControl::onInitMessage(const Empty::SharedPtr){
@@ -55,28 +65,35 @@ void ScenarioControl::onInitMessage(const Empty::SharedPtr){
 		}
 	}
 	else{
-		RCLCPP_WARN(get_logger(), "Received unexpected initialize command (current state: %u)",static_cast<unsigned char>(state));
+		RCLCPP_WARN(get_logger(), "Received unexpected initialize command (current state: %s)",stateToString.at(state));
 	}
 }
-
-void ScenarioControl::onObjectsConnectedMessage(const Empty::SharedPtr){
+void ScenarioControl::onObjectsConnectedMessage(const Empty::SharedPtr msg){
+	static int recursionDepth = 0;
 	if (state == INITIALIZED) {
 		state = CONNECTED;
 		RCLCPP_INFO(get_logger(), "Distributing scenario configuration");
 		scenario.sendConfiguration();
 	}
-	else {
-		RCLCPP_WARN(get_logger(), "Received unexpected objects connected command (current state: %u)",static_cast<unsigned char>(state));
+	else { // if not initialized, try to initialize once and then send conf to objects.
+		if (recursionDepth == 0){
+			recursionDepth=1;
+			RCLCPP_INFO(get_logger(), "Received objects connected message when not in initialized state, trying to initialize");
+			onInitMessage(msg);
+			onObjectsConnectedMessage(msg);
+		}
 	}
+	recursionDepth=0;
 }
 
-void ScenarioControl::onTriggerEventMessage(const TriggerEvent::SharedPtr){
+
+void ScenarioControl::onTriggerEventMessage(const TriggerEvent::SharedPtr treo){
 	if (state == RUNNING) {
 		// Trigger corresponding trigger
-		scenario.updateTrigger(treo.triggerID, treo);
+		scenario.updateTrigger(treo->trigger_id, treo);
 	}
 	else {
-		RCLCPP_WARN(get_logger(), "Received unexpected trigger action command (current state: %u)",static_cast<unsigned char>(state));
+		RCLCPP_WARN(get_logger(), "Received unexpected trigger action command (current state: %s)",stateToString.at(state));
 	}
 }
 
@@ -93,11 +110,11 @@ void ScenarioControl::onStartMessage(const Empty::SharedPtr){
 		// Update the triggers immediately on transition
 		// to ensure they are always in a valid state when
 		// they are checked for the first time
-		updateObjectCheckTimer(&nextSHMEMreadTime, SHMEM_READ_RATE_HZ);
 		updateTriggers(scenario);
+		nextShmemReadTime = steady_clock::now() + shmemReadDuration(1);
 	}
 	else{
-		RCLCPP_WARN(get_logger(), "Received unexpected start command (current state: %u)",static_cast<unsigned char>(state));
+		RCLCPP_WARN(get_logger(), "Received unexpected start command (current state: %s)",stateToString.at(state));
 	}
 }
 void ScenarioControl::onArmMessage(const Empty::SharedPtr){
@@ -117,27 +134,39 @@ void ScenarioControl::onDisconnectMessage(const Empty::SharedPtr){
 }
 
 
-void ScenarioControl::executeScenario(){
+/*!
+ * \brief Executes triggered actions in a scenario, also resets ISO triggers and updates triggers.
+ * Triggers are updated and executed at different frequencies (determined by scenarioDuration and shmemReadDuration).
+ */
+void ScenarioControl::manageTriggers(){
 	while (!quit){
-		usleep(10000000);
+		auto end_time = steady_clock::now() + scenarioDuration(1);
 		if (state == RUNNING) {
 			scenario.executeTriggeredActions();
+
 			// Allow for retriggering on received TREO messages
 			scenario.resetISOTriggers();
-		
-if (std::chono::steady_clock::now() > nextShmemReadTime) {
-  nextShmemReadTime += shmemReadInterval;
-  doStuff();
-  }
-			TimeSetToCurrentSystemTime(&tvTime);
-			if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
-				updateObjectCheckTimer(&nextSHMEMreadTime, SHMEM_READ_RATE_HZ);
+
+			auto now = steady_clock::now();
+			if (now > nextShmemReadTime){
+				nextShmemReadTime = getNextReadTime(now);
 				updateTriggers(scenario);
 			}
 		}
+		std::this_thread::sleep_until(end_time);
 	}
 }
 
+
+time_point<steady_clock> ScenarioControl::getNextReadTime(time_point<steady_clock> now){
+	if (( now - nextShmemReadTime ) > shmemReadDuration(1)){
+		nextShmemReadTime += shmemReadDuration(1);
+	}
+	else{
+		nextShmemReadTime = now + shmemReadDuration(1);
+	}
+	return nextShmemReadTime;
+}
 
 /*!
  * \brief updateTriggers reads monr messages from the shared memory and passes the iformation along to scenario which handles trigger updates.
@@ -183,33 +212,3 @@ int ScenarioControl::updateTriggers(Scenario& scenario) {
 	}
 	return 0;
 }
-
-
-/*!
- * \brief updateObjectCheckTimer Adds a time interval onto the specified time struct in accordance
- *			with the rate parameter
- * \param currentSHMEMReadTime Struct containing the timewhen at when SHMEM was last accessed. After this
- *			function has been executed, the struct contains the time at which the shared memory will be accessed is to be
- *			accessed next time.
- * \param SHMEMReadRate_Hz Rate at which SHMEM is read - if this parameter is 0 the value
- *			is clamped to 1 Hz
- */
-void ScenarioControl::updateObjectCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz) {
-	struct timeval SHMEMTimeInterval, timeDiff, currentTime;
-
-	SHMEMReadRate_Hz = SHMEMReadRate_Hz == 0 ? 1 : SHMEMReadRate_Hz;	// Minimum frequency 1 Hz
-	SHMEMTimeInterval.tv_sec = static_cast<long>(1.0 / SHMEMReadRate_Hz);
-	SHMEMTimeInterval.tv_usec = static_cast<long>((1.0 / SHMEMReadRate_Hz - SHMEMTimeInterval.tv_sec) * 1000000.0);
-
-	// If there is a large difference between the current time and the time at which time at which shared memory was updated, update based
-	// on current time instead of last send time to not spam messages until caught up
-	TimeSetToCurrentSystemTime(&currentTime);
-	timersub(&currentTime, currentSHMEMReadTime, &timeDiff);
-	if (timercmp(&timeDiff, &SHMEMTimeInterval, <)) {
-		timeradd(currentSHMEMReadTime, &SHMEMTimeInterval, currentSHMEMReadTime);
-	}
-	else {
-		timeradd(&currentTime, &SHMEMTimeInterval, currentSHMEMReadTime);
-	}
-}
-
