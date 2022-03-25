@@ -10,6 +10,9 @@
 
 #include "util.h"
 #include "iso22133.h"
+#include "maestro_interfaces/msg/trigger_event.hpp"
+
+using maestro_interfaces::msg::TriggerEvent;
 
 class Trigger
 {
@@ -94,7 +97,7 @@ public:
 	virtual TriggerReturnCode_t update(float, struct timeval)   { throw std::invalid_argument("Invalid signal type float"); }
 	virtual TriggerReturnCode_t update(double, struct timeval)  { throw std::invalid_argument("Invalid signal type double"); }
 	virtual TriggerReturnCode_t update(CartesianPosition, struct timeval) { throw std::invalid_argument("Invalid signal type cartesian position"); }
-	virtual TriggerReturnCode_t update(TREOData) { throw std::invalid_argument("Invalid signal type TREO data"); }
+	virtual TriggerReturnCode_t update(TriggerEvent::SharedPtr) { throw std::invalid_argument("Invalid signal type TREO data"); }
 	virtual TriggerReturnCode_t update(ObjectDataType) { throw std::invalid_argument("Invalid signal type monitor data"); }
 
 
