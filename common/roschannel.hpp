@@ -12,7 +12,6 @@
 #include "maestro_interfaces/msg/manoeuvre_command.hpp"
 #include "maestro_interfaces/msg/control_signal_percentage.hpp"
 #include "maestro_interfaces/msg/trigger_event.hpp"
-#include "maestro_interfaces/msg/object_state.hpp"
 
 namespace ROSChannels {
 
@@ -403,21 +402,6 @@ namespace ControlSignalPercentage {
 namespace ObjectsConnected {
     const std::string topicName = "objects_connected";
     using message_type = std_msgs::msg::Empty;
-
-    class Pub : public BasePub<message_type> {
-    public:
-        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
-    };
-
-    class Sub : public BaseSub<message_type> {
-    public:
-        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
-    };
-}
-
-namespace ObjectState {
-    const std::string topicName = "object_state";
-    using message_type = maestro_interfaces::msg::ObjectState;
 
     class Pub : public BasePub<message_type> {
     public:
