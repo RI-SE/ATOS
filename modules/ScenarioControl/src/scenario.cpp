@@ -439,11 +439,11 @@ Scenario::ScenarioReturnCode_t Scenario::linkTriggerWithActions(Trigger *tp, std
 	return linkTriggersWithActions(tps, aps);
 }
 
-void Scenario::refresh(void) const
+void Scenario::executeTriggeredActions(void) const
 {
 	for (const Causality &c : causalities)
 	{
-		c.refresh();
+		c.executeIfActive();
 	}
 }
 

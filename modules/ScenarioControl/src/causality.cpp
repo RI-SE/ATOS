@@ -47,7 +47,7 @@ std::string Causality::getOperatorString() const
 	return oper == OR ? "OR" : "AND";
 }
 
-void Causality::refresh(void) const
+void Causality::executeIfActive(void) const
 {
 	if (isActive())
 	{

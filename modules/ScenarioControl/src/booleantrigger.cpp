@@ -34,6 +34,7 @@ Trigger::TriggerReturnCode_t BooleanTrigger::checkIfTriggered() const
 	case INVALID_MODE:
 		throw std::logic_error("Boolean trigger cannot be triggered if mode invalid");
 	}
+	return NO_TRIGGER_OCCURRED;
 }
 
 

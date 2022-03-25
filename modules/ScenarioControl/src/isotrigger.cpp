@@ -1,8 +1,8 @@
 #include "isotrigger.h"
 
-Trigger::TriggerReturnCode_t ISOTrigger::update(TREOData data)
+Trigger::TriggerReturnCode_t ISOTrigger::update(TriggerEvent::SharedPtr data)
 {
-	if (data.triggerID == getID() && data.ip == triggerObjectIP)
+	if (data->trigger_id == getID() && data->ip == triggerObjectIP)
 	{
 		wasTriggeredByLastUpdate = TRIGGER_OCCURRED;
 		return checkIfTriggered();

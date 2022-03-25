@@ -12,6 +12,7 @@
 #include "maestro_interfaces/msg/object_enabled.hpp"
 #include "maestro_interfaces/msg/monitor.hpp"
 #include "maestro_interfaces/msg/control_signal_percentage.hpp"
+#include "maestro_interfaces/msg/trigger_event.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_msgs/msg/int8.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -23,6 +24,7 @@ using maestro_interfaces::msg::ManoeuvreCommand;
 using maestro_interfaces::msg::ObjectEnabled;
 using maestro_interfaces::msg::Monitor;
 using maestro_interfaces::msg::ControlSignalPercentage;
+using maestro_interfaces::msg::TriggerEvent;
 using rclcpp::Node;
 using std::placeholders::_1;
 using std_msgs::msg::Empty;
@@ -140,6 +142,7 @@ class Module : public Node {
 	virtual void onBackToStartResponse(const Int8::SharedPtr){};
 	virtual void onDataDictResponse(const Empty::SharedPtr){};
 	virtual void onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr){};
+	virtual void onTriggerEventMessage(const TriggerEvent::SharedPtr){};
 
 	virtual void onExitMessage(const Empty::SharedPtr);
 
