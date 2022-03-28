@@ -39,7 +39,7 @@ void ObjectListener::listen() {
 				auto monr = obj->readMonitorMessage();
 				TimeSetToCurrentSystemTime(&currentTime);
 				if (handler->controlMode == ScenarioHandler::RELATIVE_KINEMATICS && !obj->isAnchor()) {
-					monr.second = transformCoordinate(monr.second, handler->getLastAnchorData(), true);
+					monr.second = transformCoordinate(monr.second, handler->getLastAnchorData(), false);
 				}
 
 				// Disable thread cancelling while accessing shared memory and journals
