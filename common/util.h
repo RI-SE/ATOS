@@ -171,24 +171,6 @@ enum ObjectFileParameter {
 	OBJECT_SETTING_IS_OSI_COMPATIBLE
 };
 
-
-#define UNKNOWN 0
-#define C8_CODE  1
-#define U8_CODE  2
-#define I8_CODE  3
-#define U16_CODE  4
-#define I16_CODE  5
-#define U32_CODE  6
-#define I32_CODE  7
-#define U48_CODE  8
-#define I48_CODE  9
-#define U64_CODE  10
-#define I64_CODE  11
-#define DBL_CODE  12
-#define FLT_CODE  13
-#define STRUCT_CODE  254
-#define RESERVED_CODE  255
-
 #define C8 uint8_t
 #define U8 uint8_t
 #define I8 int8_t
