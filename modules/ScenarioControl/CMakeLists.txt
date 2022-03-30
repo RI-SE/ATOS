@@ -9,6 +9,29 @@ project(scenario_control LANGUAGES C CXX)
 find_package(rclcpp REQUIRED)
 find_package(maestro_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
+#find_package(xodr CONFIG REQUIRED)
+
+set(AD_XOLIB_LIB_PATH "/usr/local/lib/ad-xolib")
+set(AD_XOLIB_INCLUDE_PATH "/usr/local/include/ad-xolib")
+
+find_library(XOSC_LIBRARY
+NAMES xosc
+HINTS "${AD_XOLIB_LIB_PATH}"
+)
+find_library(XODR_LIBRARY
+NAMES xodr
+HINTS "${AD_XOLIB_LIB_PATH}"
+)
+find_path(AD_XOLIB_INCLUDE
+NAMES xosc.h xodr.h common.h 
+PATHS "${AD_XOLIB_INCLUDE_PATH}"
+)
+
+#find_package(xodr CONFIG REQUIRED)
+#find_library(XOSC xosc REQUIRED)
+#if(NOT XODR_LIBRARY)
+#  message(FATAL_ERROR "library not found")
+#endif()
 
 # Define target names
 set(SCENARIO_CONTROL_TARGET ${PROJECT_NAME})
@@ -43,10 +66,14 @@ target_link_libraries(${SCENARIO_CONTROL_TARGET}
 	${POSITIONING_LIBRARY}
 	${ISO_22133_LIBRARY}
 	${COMMON_LIBRARY}
+	${XODR_LIBRARY}
+	${XOSC_LIBRARY}
+
 )
 target_include_directories(${SCENARIO_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
+	${AD_XOLIB_INCLUDE}
 )
 
 # ROS specific rules
