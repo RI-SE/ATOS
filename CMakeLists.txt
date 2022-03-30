@@ -13,7 +13,10 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 # point out where CMake scripts are located
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/util/cmake)
+set(PROJECT_CMAKE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+set(UTIL_CMAKE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/util/cmake")
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_CMAKE_ROOT}")
+list(APPEND CMAKE_MODULE_PATH "${UTIL_CMAKE_ROOT}")
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
@@ -34,9 +37,6 @@ set(WITH_TIME_CONTROL ON CACHE BOOL "Enable TimeControl module")
 set(WITH_JOURNAL_CONTROL ON CACHE BOOL "Enable JournalControl module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
-
-# Dependencies
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/util/cmake)
 
 # Create list of all enabled modules
 if(WITH_SCENARIO_CONTROL)

@@ -2,10 +2,10 @@
 
 #include "scenariocontrol.hpp"
 
-/*
-#include "ad-xolib/xodr.h"
-#include "ad-xolib/xosc.h"
-*/
+
+#include "xodr.h"
+#include "xosc.h"
+
 using namespace std::chrono;
 
 namespace maestro{
