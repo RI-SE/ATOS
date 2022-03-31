@@ -180,19 +180,19 @@ public:
 
 private:
 	static inline std::string const moduleName = "object_control";
-	void onInitMessage(const Empty::SharedPtr) override;
-	void onConnectMessage(const Empty::SharedPtr) override;
-	void onArmMessage(const Empty::SharedPtr) override;
-	void onStartMessage(const Empty::SharedPtr) override;
-	void onDisconnectMessage(const Empty::SharedPtr) override;
-	void onStopMessage(const Empty::SharedPtr) override;
-	void onAbortMessage(const Empty::SharedPtr) override;
-	void onAllClearMessage(const Empty::SharedPtr) override;
-	void onACCMMessage(const Accm::SharedPtr) override;
-	void onEXACMessage(const Exac::SharedPtr) override;
-	void onRemoteControlEnableMessage(const Empty::SharedPtr) override;
-	void onRemoteControlDisableMessage(const Empty::SharedPtr) override;
-	void onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr) override;
+	void onInitMessage(const std_msg::Empty::SharedPtr) override;
+	void onConnectMessage(const std_msg::Empty::SharedPtr) override;
+	void onArmMessage(const std_msg::Empty::SharedPtr) override;
+	void onStartMessage(const std_msg::Empty::SharedPtr) override;
+	void onDisconnectMessage(const std_msg::Empty::SharedPtr) override;
+	void onStopMessage(const std_msg::Empty::SharedPtr) override;
+	void onAbortMessage(const std_msg::Empty::SharedPtr) override;
+	void onAllClearMessage(const std_msg::Empty::SharedPtr) override;
+	void onACCMMessage(const maestro_msg::Accm::SharedPtr) override;
+	void onEXACMessage(const maestro_msg::Exac::SharedPtr) override;
+	void onRemoteControlEnableMessage(const std_msg::Empty::SharedPtr) override;
+	void onRemoteControlDisableMessage(const std_msg::Empty::SharedPtr) override;
+	void onControlSignalPercentageMessage(const maestro_msg::ControlSignalPercentage::SharedPtr) override;
 
 	using clock = std::chrono::steady_clock;
 

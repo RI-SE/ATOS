@@ -62,7 +62,7 @@ void MaestroBase::onInitDataDictionary(
 	res->message = message;
 }
 
-void MaestroBase::onExitMessage(const Empty::SharedPtr msg)
+void MaestroBase::onExitMessage(const std_msg::Empty::SharedPtr msg)
 {
     RCLCPP_INFO(get_logger(), "Received exit message");
     auto result = DataDictionaryDestructor();

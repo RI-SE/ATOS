@@ -25,8 +25,8 @@ private:
 	size_t handleUnknownMessage(std::vector<char>& byteData);
 	ROSChannels::ControlSignalPercentage::Pub controlSignalPercentagePub;
 
-	void onAbortMessage(const Empty::SharedPtr) override;
-	void onAllClearMessage(const Empty::SharedPtr) override;
+	void onAbortMessage(const std_msg::Empty::SharedPtr) override;
+	void onAllClearMessage(const std_msg::Empty::SharedPtr) override;
 
 	std::unique_ptr<std::thread> receiveThread;
 	std::unique_ptr<std::thread> receiveThreadUDP;

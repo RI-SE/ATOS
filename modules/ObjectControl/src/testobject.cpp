@@ -337,7 +337,7 @@ void TestObject::sendStart() {
 	this->comms.cmd << strt;
 }
 
-void TestObject::sendControlSignal(const ControlSignalPercentage::SharedPtr csp) {
+void TestObject::sendControlSignal(const maestro_msg::ControlSignalPercentage::SharedPtr csp) {
 	this->comms.cmd << csp;
 }
 
@@ -530,7 +530,7 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 	return chnl;
 }
 
-Channel& operator<<(Channel& chnl, const ControlSignalPercentage::SharedPtr csp) {
+Channel& operator<<(Channel& chnl, const maestro_msg::ControlSignalPercentage::SharedPtr csp) {
 	RemoteControlManoeuvreMessageType rcmm;
 	rcmm.command = MANOEUVRE_NONE;
 	rcmm.isThrottleManoeuvreValid = true;

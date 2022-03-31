@@ -58,12 +58,12 @@ void JournalControl::initialize()
 	}
 }
 
-void JournalControl::onArmMessage(const Empty::SharedPtr msg)
+void JournalControl::onArmMessage(const std_msg::Empty::SharedPtr msg)
 {
 	journals.placeStartBookmarks();
 }
 
-void JournalControl::onStopMessage(const Empty::SharedPtr msg)
+void JournalControl::onStopMessage(const std_msg::Empty::SharedPtr msg)
 {
 	try {
 		// Save stop references
@@ -78,18 +78,18 @@ void JournalControl::onStopMessage(const Empty::SharedPtr msg)
 	}
 }
 
-void JournalControl::onAbortMessage(const Empty::SharedPtr msg)
+void JournalControl::onAbortMessage(const std_msg::Empty::SharedPtr msg)
 {
 	// Temporary: Treat ABORT as stop signal
 	onStopMessage(msg);
 }
 
-void JournalControl::onReplayMessage(const Empty::SharedPtr msg)
+void JournalControl::onReplayMessage(const std_msg::Empty::SharedPtr msg)
 {
 	LogMessage(LOG_LEVEL_WARNING, "Replay function out of date");
 }
 
-void Module::onExitMessage(const Empty::SharedPtr){
+void Module::onExitMessage(const std_msg::Empty::SharedPtr){
     this->quit=true;
 }
 

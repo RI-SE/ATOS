@@ -5,7 +5,7 @@ bool Module::shouldExit(){
     return this->quit;
 }
 
-void Module::onExitMessage(const Empty::SharedPtr){
+void Module::onExitMessage(const std_msg::Empty::SharedPtr){
     this->quit=true;
 }
 

@@ -38,10 +38,10 @@ private:
 
 	JournalCollection journals;
 
-	void onArmMessage(const Empty::SharedPtr) override;
-	void onStopMessage(const Empty::SharedPtr) override;
-	void onAbortMessage(const Empty::SharedPtr) override;
-  void onReplayMessage(const Empty::SharedPtr) override;
+	void onArmMessage(const std_msg::Empty::SharedPtr) override;
+	void onStopMessage(const std_msg::Empty::SharedPtr) override;
+	void onAbortMessage(const std_msg::Empty::SharedPtr) override;
+  void onReplayMessage(const std_msg::Empty::SharedPtr) override;
 
   ROSChannels::Arm::Sub armSub;
   ROSChannels::Stop::Sub stopSub;

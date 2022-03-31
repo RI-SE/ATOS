@@ -15,25 +15,21 @@
 
 #include "objectcontrol.hpp"
 
-using std_msgs::msg::Empty;
-using std_msgs::msg::String;
-using std_msgs::msg::UInt8;
-
 ObjectControl::ObjectControl()
 	: Module(ObjectControl::moduleName),
-	scnInitSub(*this, std::bind(&ObjectControl::onInitMessage, this, _1)),
-	scnStartSub(*this, std::bind(&ObjectControl::onStartMessage, this, _1)),
-	scnArmSub(*this, std::bind(&ObjectControl::onArmMessage, this, _1)),
-	scnStopSub(*this, std::bind(&ObjectControl::onStopMessage, this, _1)),
-	scnAbortSub(*this, std::bind(&ObjectControl::onAbortMessage, this, _1)),
-	scnAllClearSub(*this, std::bind(&ObjectControl::onAllClearMessage, this, _1)),
-	scnConnectSub(*this, std::bind(&ObjectControl::onConnectMessage, this, _1)),
-	scnDisconnectSub(*this, std::bind(&ObjectControl::onDisconnectMessage, this, _1)),
-	scnActionSub(*this, std::bind(&ObjectControl::onEXACMessage, this, _1)),
-	scnActionConfigSub(*this, std::bind(&ObjectControl::onACCMMessage, this, _1)),
-	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, _1)),
-	scnRemoteControlEnableSub(*this, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1)),
-	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
+	scnInitSub(*this, std::bind(&ObjectControl::onInitMessage, this, std::placeholders::_1)),
+	scnStartSub(*this, std::bind(&ObjectControl::onStartMessage, this, std::placeholders::_1)),
+	scnArmSub(*this, std::bind(&ObjectControl::onArmMessage, this, std::placeholders::_1)),
+	scnStopSub(*this, std::bind(&ObjectControl::onStopMessage, this, std::placeholders::_1)),
+	scnAbortSub(*this, std::bind(&ObjectControl::onAbortMessage, this, std::placeholders::_1)),
+	scnAllClearSub(*this, std::bind(&ObjectControl::onAllClearMessage, this, std::placeholders::_1)),
+	scnConnectSub(*this, std::bind(&ObjectControl::onConnectMessage, this, std::placeholders::_1)),
+	scnDisconnectSub(*this, std::bind(&ObjectControl::onDisconnectMessage, this, std::placeholders::_1)),
+	scnActionSub(*this, std::bind(&ObjectControl::onEXACMessage, this, std::placeholders::_1)),
+	scnActionConfigSub(*this, std::bind(&ObjectControl::onACCMMessage, this, std::placeholders::_1)),
+	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, std::placeholders::_1)),
+	scnRemoteControlEnableSub(*this, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, std::placeholders::_1)),
+	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, std::placeholders::_1)),
 	failurePub(*this),
 	scnAbortPub(*this),
 	monitorPub(*this)
@@ -115,64 +111,64 @@ void ObjectControl::handleExecuteActionCommand(
 	thd.detach();
 }
 
-void ObjectControl::onInitMessage(const Empty::SharedPtr){
+void ObjectControl::onInitMessage(const std_msg::Empty::SharedPtr){
 	COMMAND cmd = COMM_INIT;
 	auto f_try = [&]() { this->state->initializeRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<std_msg::UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,ROSChannels::Init::topicName, get_logger());
 }
 
-void ObjectControl::onConnectMessage(const Empty::SharedPtr){	
+void ObjectControl::onConnectMessage(const std_msg::Empty::SharedPtr){	
 	COMMAND cmd = COMM_CONNECT;
 	auto f_try = [&]() { this->state->connectRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<std_msg::UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,ROSChannels::Connect::topicName, get_logger());
 }
 
-void ObjectControl::onArmMessage(const Empty::SharedPtr){	
+void ObjectControl::onArmMessage(const std_msg::Empty::SharedPtr){	
 	COMMAND cmd = COMM_ARM;
 	auto f_try = [&]() { this->state->armRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<std_msg::UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,ROSChannels::Arm::topicName, get_logger());
 }
 
-void ObjectControl::onStartMessage(const Empty::SharedPtr){	
+void ObjectControl::onStartMessage(const std_msg::Empty::SharedPtr){	
 	COMMAND cmd = COMM_STRT;
 	auto f_try = [&]() { this->state->startRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<std_msg::UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,ROSChannels::Start::topicName, get_logger());
 }
 
-void ObjectControl::onDisconnectMessage(const Empty::SharedPtr){	
+void ObjectControl::onDisconnectMessage(const std_msg::Empty::SharedPtr){	
 	COMMAND cmd = COMM_DISCONNECT;
 	auto f_try = [&]() { this->state->disconnectRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<std_msg::UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,ROSChannels::Disconnect::topicName, get_logger());
 }
 
-void ObjectControl::onStopMessage(const Empty::SharedPtr){
+void ObjectControl::onStopMessage(const std_msg::Empty::SharedPtr){
 	COMMAND cmd = COMM_STOP;
 	auto f_try = [&]() { this->state->stopRequest(*this); };
 	auto f_catch = [&]() {
-			failurePub.publish(msgCtr1<UInt8>(cmd));
-			scnAbortPub.publish(Empty());
+			failurePub.publish(msgCtr1<std_msg::UInt8>(cmd));
+			scnAbortPub.publish(std_msg::Empty());
 	};
 	this->tryHandleMessage(f_try,f_catch,ROSChannels::Stop::topicName, get_logger());	
 }
 
-void ObjectControl::onAbortMessage(const Empty::SharedPtr){	
+void ObjectControl::onAbortMessage(const std_msg::Empty::SharedPtr){	
 	// Any exceptions here should crash the program
 	this->state->abortRequest(*this);
 }
 
-void ObjectControl::onAllClearMessage(const Empty::SharedPtr){	
+void ObjectControl::onAllClearMessage(const std_msg::Empty::SharedPtr){	
 	COMMAND cmd = COMM_ABORT_DONE;
 	auto f_try = [&]() { this->state->allClearRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<std_msg::UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,ROSChannels::AllClear::topicName, get_logger());
 }
 
-void ObjectControl::onACCMMessage(const Accm::SharedPtr accm){
+void ObjectControl::onACCMMessage(const maestro_msg::Accm::SharedPtr accm){
 	COMMAND cmd = COMM_ACCM;
 	auto f_try = [&]() {
 		if (accm->action_type == ACTION_TEST_SCENARIO_COMMAND) {
@@ -183,11 +179,11 @@ void ObjectControl::onACCMMessage(const Accm::SharedPtr accm){
 			handleActionConfigurationCommand(cmdAction);
 		}
 	};
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<std_msg::UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,ROSChannels::ActionConfiguration::topicName, get_logger());
 }
 
-void ObjectControl::onEXACMessage(const Exac::SharedPtr exac){
+void ObjectControl::onEXACMessage(const maestro_msg::Exac::SharedPtr exac){
 	COMMAND cmd = COMM_EXAC;
 	auto f_try = [&]() {
 		using namespace std::chrono;
@@ -196,29 +192,29 @@ void ObjectControl::onEXACMessage(const Exac::SharedPtr exac){
 		auto startOfWeek = system_clock::time_point(weeks(TimeGetAsGPSweek(&now)));
 		handleExecuteActionCommand(exac->action_id, startOfWeek+qmsow);	
 	};
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<std_msg::UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,ROSChannels::ExecuteAction::topicName, get_logger());
 }
 
-void ObjectControl::onRemoteControlEnableMessage(const Empty::SharedPtr){
+void ObjectControl::onRemoteControlEnableMessage(const std_msg::Empty::SharedPtr){
 	COMMAND cmd = COMM_REMOTECTRL_ENABLE;
 	auto f_try = [&]() { this->state->enableRemoteControlRequest(*this); };
 	auto f_catch = [&]() {
-			failurePub.publish(msgCtr1<UInt8>(cmd));
+			failurePub.publish(msgCtr1<std_msg::UInt8>(cmd));
 	};
 	this->tryHandleMessage(f_try,f_catch,ROSChannels::RemoteControlEnable::topicName, get_logger());	
 }
 
-void ObjectControl::onRemoteControlDisableMessage(const Empty::SharedPtr){
+void ObjectControl::onRemoteControlDisableMessage(const std_msg::Empty::SharedPtr){
 	COMMAND cmd = COMM_REMOTECTRL_DISABLE;
 	auto f_try = [&]() { this->state->disableRemoteControlRequest(*this); };
 	auto f_catch = [&]() {
-			failurePub.publish(msgCtr1<UInt8>(cmd));
+			failurePub.publish(msgCtr1<std_msg::UInt8>(cmd));
 	};
 	this->tryHandleMessage(f_try,f_catch,ROSChannels::RemoteControlDisable::topicName, get_logger());	
 }
 
-void ObjectControl::onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr csp){
+void ObjectControl::onControlSignalPercentageMessage(const maestro_msg::ControlSignalPercentage::SharedPtr csp){
 	try{
 		objects.at(csp->maestro_header.object_id).sendControlSignal(csp);
 	}
@@ -626,7 +622,7 @@ bool ObjectControl::areAllObjectsIn(
 }
 
 void ObjectControl::startControlSignalSubscriber(){
-	controlSignalPercentageSub = std::make_shared<ROSChannels::ControlSignalPercentage::Sub>(*this, std::bind(&ObjectControl::onControlSignalPercentageMessage, this, _1));
+	controlSignalPercentageSub = std::make_shared<ROSChannels::ControlSignalPercentage::Sub>(*this, std::bind(&ObjectControl::onControlSignalPercentageMessage, this, std::placeholders::_1));
 }
 void ObjectControl::stopControlSignalSubscriber(){
 	this->controlSignalPercentageSub.reset();

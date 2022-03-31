@@ -52,14 +52,14 @@ namespace maestro{
 
 		time_point<steady_clock> nextShmemReadTime;
 
-		void onInitMessage(const Empty::SharedPtr) override;
-		void onArmMessage(const Empty::SharedPtr) override;
-		void onStartMessage(const Empty::SharedPtr) override;
-		void onAbortMessage(const Empty::SharedPtr) override;
-		void onExitMessage(const Empty::SharedPtr) override;
-		void onObjectsConnectedMessage(const Empty::SharedPtr) override;
-		void onDisconnectMessage(const Empty::SharedPtr) override;
-		void onTriggerEventMessage(const TriggerEvent::SharedPtr) override;
+		void onInitMessage(const std_msg::Empty::SharedPtr) override;
+		void onArmMessage(const std_msg::Empty::SharedPtr) override;
+		void onStartMessage(const std_msg::Empty::SharedPtr) override;
+		void onAbortMessage(const std_msg::Empty::SharedPtr) override;
+		void onExitMessage(const std_msg::Empty::SharedPtr) override;
+		void onObjectsConnectedMessage(const std_msg::Empty::SharedPtr) override;
+		void onDisconnectMessage(const std_msg::Empty::SharedPtr) override;
+		void onTriggerEventMessage(const maestro_msg::TriggerEvent::SharedPtr) override;
 
 		void manageTriggers();
 		int updateTriggers(Scenario& scenario);

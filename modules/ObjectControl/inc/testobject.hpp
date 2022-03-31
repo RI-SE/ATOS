@@ -9,8 +9,6 @@
 #include "maestro_interfaces/msg/control_signal_percentage.hpp"
 #include "loggable.hpp"
 
-using maestro_interfaces::msg::ControlSignalPercentage;
-
 // GCC version 8.1 brings non-experimental support for std::filesystem
 #if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
 #include <filesystem>
@@ -19,6 +17,8 @@ namespace fs = std::filesystem;
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 #endif
+
+namespace maestro_msg = maestro_interfaces::msg;
 
 struct MonitorMessage : std::pair<uint32_t,ObjectMonitorType> {};
 
@@ -57,7 +57,7 @@ public:
 	friend Channel& operator<<(Channel&,const ObjectCommandType&);
 	friend Channel& operator<<(Channel&,const StartMessageType&);
 	friend Channel& operator<<(Channel&,const std::vector<char>&);
-	friend Channel& operator<<(Channel&,const ControlSignalPercentage::SharedPtr csp);
+	friend Channel& operator<<(Channel&,const maestro_msg::ControlSignalPercentage::SharedPtr csp);
 
 	friend Channel& operator>>(Channel&,MonitorMessage&);
 	friend Channel& operator>>(Channel&,ObjectPropertiesType&);
@@ -140,7 +140,7 @@ public:
 					 const std::string& projStr,
 					 const std::chrono::system_clock::time_point& timestamp);
 
-	void sendControlSignal(const ControlSignalPercentage::SharedPtr csp);
+	void sendControlSignal(const maestro_msg::ControlSignalPercentage::SharedPtr csp);
 
 	std::chrono::milliseconds getTimeSinceLastMonitor() const {
 		if (lastMonitorTime.time_since_epoch().count() == 0) {

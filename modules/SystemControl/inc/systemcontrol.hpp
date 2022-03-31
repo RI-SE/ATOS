@@ -116,11 +116,11 @@ private:
 	} MSCPRemoteControlCommand;
 	
 	/* callbacks */
-	void onGetStatusResponse(const String::SharedPtr) override;
-	void onFailureMessage(const UInt8::SharedPtr) override;
-	void onBackToStartResponse(const Int8::SharedPtr) override;
-	void onAbortMessage(const Empty::SharedPtr) override;
-	void onAllClearMessage(const Empty::SharedPtr) override;
+	void onGetStatusResponse(const std_msg::String::SharedPtr) override;
+	void onFailureMessage(const std_msg::UInt8::SharedPtr) override;
+	void onBackToStartResponse(const std_msg::Int8::SharedPtr) override;
+	void onAbortMessage(const std_msg::Empty::SharedPtr) override;
+	void onAllClearMessage(const std_msg::Empty::SharedPtr) override;
 
 	/* methods */
 	SystemControlCommand_t SystemControlFindCommand(const char *CommandBuffer,

@@ -14,10 +14,10 @@ void TimeControl::signalHandler(int signo) {
 	}
 }
 
-void TimeControl::onExitMessage(Empty::SharedPtr) {
+void TimeControl::onExitMessage(const std_msg::Empty::SharedPtr) {
 	iExit=1;
 }
-void TimeControl::onAbortMessage(Empty::SharedPtr) {};
+void TimeControl::onAbortMessage(const std_msg::Empty::SharedPtr) {};
 
 bool TimeControl::shouldExit() const{
 	return iExit;

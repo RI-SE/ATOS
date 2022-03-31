@@ -7,8 +7,6 @@
 #include "datadictionary.h"
 #include "maestro_interfaces/msg/control_signal_percentage.hpp"
 
-using maestro_interfaces::msg::ControlSignalPercentage;
-
 #define TCP_BUFFER_SIZE 2048
 
 /** @class DmMsg
@@ -19,8 +17,8 @@ class DmMsg{
 public:
 	DmMsg(){};
 
-	ControlSignalPercentage toMaestroMsg(){
-		ControlSignalPercentage cspmsg = ControlSignalPercentage();
+	maestro_msg::ControlSignalPercentage toMaestroMsg(){
+		maestro_msg::ControlSignalPercentage cspmsg = maestro_msg::ControlSignalPercentage();
 		cspmsg.maestro_header.object_id = this->objectId;
 		// Convert throttle brake and steering angle to integers between 0,100 and -100,100 respectively.  
 		cspmsg.throttle = round(this->throttle * 100);
@@ -88,9 +86,9 @@ private:
 
 //! Message queue callbacks
 
-void DirectControl::onAbortMessage(const Empty::SharedPtr) {}
+void DirectControl::onAbortMessage(const std_msg::Empty::SharedPtr) {}
 
-void DirectControl::onAllClearMessage(const Empty::SharedPtr) {}
+void DirectControl::onAllClearMessage(const std_msg::Empty::SharedPtr) {}
 
 //! Class methods
 
@@ -131,7 +129,7 @@ void DirectControl::readUDPSocketData() {
 			// Have to think abt if/what kind of re-ordering makes sense for 
 			// the application (driver model).
 			if (bytesParsed != -1){
-				ControlSignalPercentage cspmsg = dmMsg.toMaestroMsg();
+				maestro_msg::ControlSignalPercentage cspmsg = dmMsg.toMaestroMsg();
 				controlSignalPercentagePub.publish(cspmsg);
 			}
 		}

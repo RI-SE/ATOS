@@ -59,7 +59,7 @@ namespace maestro{
 		return retval;
 	}
 
-	void ScenarioControl::onInitMessage(const Empty::SharedPtr){
+	void ScenarioControl::onInitMessage(const std_msg::Empty::SharedPtr){
 		if (state == UNINITIALIZED) {
 			try {
 				RCLCPP_INFO(get_logger(), "Initializing scenario");
@@ -79,7 +79,7 @@ namespace maestro{
 			RCLCPP_WARN(get_logger(), "Received unexpected initialize command (current state: %s)",stateToString.at(state));
 		}
 	}
-	void ScenarioControl::onObjectsConnectedMessage(const Empty::SharedPtr msg){
+	void ScenarioControl::onObjectsConnectedMessage(const std_msg::Empty::SharedPtr msg){
 		static int recursionDepth = 0;
 		if (state == INITIALIZED) {
 			state = CONNECTED;
@@ -98,7 +98,7 @@ namespace maestro{
 	}
 
 
-	void ScenarioControl::onTriggerEventMessage(const TriggerEvent::SharedPtr treo){
+	void ScenarioControl::onTriggerEventMessage(const maestro_msg::TriggerEvent::SharedPtr treo){
 		if (state == RUNNING) {
 			// Trigger corresponding trigger
 			scenario.updateTrigger(treo->trigger_id, treo);
@@ -108,13 +108,13 @@ namespace maestro{
 		}
 	}
 
-	void ScenarioControl::onAbortMessage(const Empty::SharedPtr){
+	void ScenarioControl::onAbortMessage(const std_msg::Empty::SharedPtr){
 		RCLCPP_INFO(get_logger(), "Received abort command");
 		if (state == RUNNING) {
 			state = CONNECTED;
 		}
 	}
-	void ScenarioControl::onStartMessage(const Empty::SharedPtr){
+	void ScenarioControl::onStartMessage(const std_msg::Empty::SharedPtr){
 		if (state == CONNECTED) {
 			RCLCPP_INFO(get_logger(), "Received start message - transitioning to running state");
 			state = RUNNING;
@@ -128,18 +128,18 @@ namespace maestro{
 			RCLCPP_WARN(get_logger(), "Received unexpected start command (current state: %s)",stateToString.at(state));
 		}
 	}
-	void ScenarioControl::onArmMessage(const Empty::SharedPtr){
+	void ScenarioControl::onArmMessage(const std_msg::Empty::SharedPtr){
 		RCLCPP_INFO(get_logger(), "Resetting scenario");
 		scenario.reset();
 	}
 
-	void ScenarioControl::onExitMessage(const Empty::SharedPtr){
+	void ScenarioControl::onExitMessage(const std_msg::Empty::SharedPtr){
 		LogMessage(LOG_LEVEL_INFO, "Received exit command");
 		quit=true;
 		rclcpp::shutdown();
 	}
 
-	void ScenarioControl::onDisconnectMessage(const Empty::SharedPtr){
+	void ScenarioControl::onDisconnectMessage(const std_msg::Empty::SharedPtr){
 		LogMessage(LOG_LEVEL_INFO,"Received disconnect command");
 		state = UNINITIALIZED;
 	}

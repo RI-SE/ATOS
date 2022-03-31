@@ -86,8 +86,8 @@ private:
 	static const int PROTO2_SETUP_TIME_FEED_INTERVAL_FAST = 100;
 
 	/* callbacks */
-	void onAbortMessage(Empty::SharedPtr) override;
-	void onExitMessage(Empty::SharedPtr) override;
+	void onAbortMessage(const std_msg::Empty::SharedPtr) override;
+	void onExitMessage(const std_msg::Empty::SharedPtr) override;
 
 	/* variables */
 	volatile int iExit = 0;

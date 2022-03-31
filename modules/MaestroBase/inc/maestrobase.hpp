@@ -15,9 +15,9 @@ class MaestroBase : public Module {
 	static inline std::string const moduleName = "maestro_base";
 	rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr initDataDictionaryService;
 
-	void onExitMessage(const Empty::SharedPtr) override;
+	void onExitMessage(const std_msg::Empty::SharedPtr) override;
 	// Module only provides plumbing, no need to handle abort
-	void onAbortMessage(const Empty::SharedPtr) override{};
+	void onAbortMessage(const std_msg::Empty::SharedPtr) override{};
 
 	void onInitDataDictionary(const std::shared_ptr<std_srvs::srv::SetBool::Request>,
 							  std::shared_ptr<std_srvs::srv::SetBool::Response>);
