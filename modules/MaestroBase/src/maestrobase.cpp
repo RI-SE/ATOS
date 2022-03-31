@@ -1,5 +1,6 @@
 #include "maestrobase.hpp"
 #include "datadictionary.h"
+#include "objectconfig.hpp"
 #include <functional>
 
 MaestroBase::MaestroBase()
@@ -9,6 +10,8 @@ MaestroBase::MaestroBase()
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d", get_name(), getpid());
 	initDataDictionaryService = create_service<std_srvs::srv::SetBool>(ServiceNames::initDataDict,
 		std::bind(&MaestroBase::onInitDataDictionary, this, std::placeholders::_1, std::placeholders::_2));
+	getObjectIdsService = create_service<maestro_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds,
+		std::bind(&MaestroBase::onRequestObjectIDs, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 MaestroBase::~MaestroBase()
@@ -70,4 +73,43 @@ void MaestroBase::onExitMessage(const Empty::SharedPtr msg)
         RCLCPP_ERROR(get_logger(), "Unable to clear shared memory space");
     }
     rclcpp::shutdown();
+}
+
+void MaestroBase::onRequestObjectIDs(
+	const std::shared_ptr<maestro_interfaces::srv::GetObjectIds::Request> req,
+	std::shared_ptr<maestro_interfaces::srv::GetObjectIds::Response> res)
+{
+	char path[PATH_MAX];
+	std::vector<std::invalid_argument> errors;
+	RCLCPP_INFO(get_logger(), "Received object ID information request");
+
+	UtilGetObjectDirectoryPath(path, sizeof (path));
+	fs::path objectDir(path);
+	if (!fs::exists(objectDir)) {
+		throw std::ios_base::failure("Object directory does not exist");
+	}
+
+	std::vector<uint32_t> objectIDs;
+	for (const auto& entry : fs::directory_iterator(objectDir)) {
+		if (!fs::is_regular_file(entry.status())) {
+			continue;
+		}
+
+		ObjectConfig conf;
+		conf.parseConfigurationFile(entry.path());
+
+		RCLCPP_DEBUG(get_logger(), "Loaded configuration: %s", conf.toString().c_str());
+		// Check preexisting
+		auto foundID = std::find(objectIDs.begin(), objectIDs.end(), conf.getTransmitterID());
+		if (foundID == objectIDs.end()) {
+			objectIDs.push_back(conf.getTransmitterID());
+		}
+		else {
+			std::string errMsg = "Duplicate object ID " + std::to_string(conf.getTransmitterID())
+					+ " detected in object files";
+			throw std::invalid_argument(errMsg);
+		}
+	}
+
+	res->ids = objectIDs;
 }

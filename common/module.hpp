@@ -72,6 +72,7 @@ static std::map<COMMAND, std::string> topicNames = {
 
 namespace ServiceNames {
 const std::string initDataDict = "init_data_dictionary";
+const std::string getObjectIds = "get_object_ids";
 }
 
 // TODO move somewhere else? also make generic to allow more args (variadic template)?
