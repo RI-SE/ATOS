@@ -7,6 +7,7 @@
 #include <functional>
 #include <thread>
 #include <dirent.h>
+#include <exception>
 
 #include "state.hpp"
 #include "util.h"
@@ -223,7 +224,13 @@ void ObjectControl::onControlSignalPercentageMessage(const ControlSignalPercenta
 		objects.at(csp->maestro_header.object_id).sendControlSignal(csp);
 	}
 	catch(...){
-		RCLCPP_WARN(get_logger(), "Failed to translate/send Control Signal Percentage to rcmm");
+		auto expPtr = std::current_exception();
+		try{
+			if(expPtr) std::rethrow_exception(expPtr);
+		}
+		catch(const std::exception& e){
+			RCLCPP_ERROR(get_logger(), "Failed to translate/send Control Signal Percentage: %s", e.what());
+		}
 	}
 }
 
@@ -514,7 +521,6 @@ void ObjectControl::connectToObject(
 							throw std::runtime_error("No monitor reply after " + std::to_string(maxConnHeabs) + " heartbeats. Details:\n" + e.what());
 						}
 					}
-
 					switch (objState) {
 					case OBJECT_STATE_ARMED:
 					case OBJECT_STATE_REMOTE_CONTROL:
@@ -563,6 +569,11 @@ void ObjectControl::connectToObject(
 	}
 };
 
+void ObjectControl::remoteControlObjects() {
+	for (auto& id : getVehicleIDs()) {
+		objects.at(id).sendRemoteControl();
+	}
+}
 
 void ObjectControl::armObjects() {
 	for (auto& id : getVehicleIDs()) {

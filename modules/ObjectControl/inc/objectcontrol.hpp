@@ -271,6 +271,8 @@ private:
 	//! \brief
 	void allClearObjects();
 	//! \brief TODO
+	void remoteControlObjects();
+	//! \brief TODO
 	void injectObjectData(const MonitorMessage& monr);
 	//! \brief TODO
 	OsiHandler::LocalObjectGroundTruth_t buildOSILocalGroundTruth(const MonitorMessage&) const;

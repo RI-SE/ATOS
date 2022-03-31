@@ -134,6 +134,7 @@ public:
 	void sendHeartbeat(const ControlCenterStatusType ccStatus);
 	void sendArm();
 	void sendDisarm();
+	void sendRemoteControl();
 	void sendStart();
 	void sendAllClear();
 	void sendOsiData(const OsiHandler::LocalObjectGroundTruth_t& osidata,

@@ -313,6 +313,10 @@ void TestObject::sendAllClear() {
 	this->comms.cmd << OBJECT_COMMAND_ALL_CLEAR;
 }
 
+void TestObject::sendRemoteControl() {
+	this->comms.cmd << OBJECT_COMMAND_REMOTE_CONTROL;
+}
+
 //void TestObject::sendOsiGlobalObjectGroundTruth(
 //	GlobalObjectGroundTruth_t gogt) {
 	//this->comms.osi << llls;
@@ -546,7 +550,6 @@ Channel& operator<<(Channel& chnl, const ControlSignalPercentage::SharedPtr csp)
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to encode RCM message: ") + strerror(errno));
 	}
-
 	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
 	if (nBytes < 0) {
 		throw std::runtime_error(std::string("Failed to send RCM: ") + strerror(errno));

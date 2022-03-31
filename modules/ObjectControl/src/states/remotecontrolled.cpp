@@ -10,6 +10,7 @@ void AbstractKinematics::RemoteControlled::disableRemoteControlRequest(
 }
 
 void AbstractKinematics::RemoteControlled::onEnter(ObjectControl& handler){
+	handler.remoteControlObjects();
 	handler.startControlSignalSubscriber();
 }
 
