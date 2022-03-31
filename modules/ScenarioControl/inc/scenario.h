@@ -9,19 +9,24 @@
 #include "causality.h"
 #include "logging.h"
 #include "journal.h"
+#include "loggable.hpp"
+#include "xodr.h"
+#include "xosc.h"
+
 
 namespace maestro {
-    class Scenario
+    class Scenario : public Loggable
     {
     public:
         typedef enum {OK, NOT_OK, DUPLICATE_ELEMENT, INVALID_ARGUMENT, NOT_FOUND} ScenarioReturnCode_t;
 
-        Scenario(const std::string scenarioFilePath);
-        Scenario() {}
+        Scenario(const std::string scenarioFilePath, rclcpp::Logger log);
         ~Scenario();
 
         void initialize(const std::string scenarioFilePath);
         void sendConfiguration(void) const;
+        void loadOpenDrive(const std::string openDriveFilePath);
+        void loadOpenScenario(const std::string openScenarioFilePath);
 
         ScenarioReturnCode_t linkTriggersWithActions(std::set<Trigger*> tps, std::set<Action*> aps);
         ScenarioReturnCode_t linkTriggersWithAction(std::set<Trigger*> tps, Action* ap);
@@ -61,6 +66,8 @@ namespace maestro {
         ScenarioReturnCode_t updateTrigger(const ObjectDataType&);
 
     private:
+        std::shared_ptr<OpenDRIVE> openDriveObject;
+        std::shared_ptr<OpenSCENARIO> openScenarioObject;
         std::set<Causality> causalities;
         std::set<Trigger*> allTriggers;
         std::set<Action*> allActions;

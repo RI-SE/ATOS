@@ -15,7 +15,7 @@
 
 namespace maestro {
 
-	Scenario::Scenario(const std::string scenarioFilePath)
+	Scenario::Scenario(const std::string scenarioFilePath, rclcpp::Logger log) : Loggable(log)
 	{
 		initialize(scenarioFilePath);
 	}
@@ -73,6 +73,30 @@ namespace maestro {
 
 		debugStr.pop_back();
 		LogMessage(LOG_LEVEL_DEBUG, debugStr.c_str());
+	}
+
+	void Scenario::loadOpenDrive(const std::string openDriveFilePath)
+	{
+		xodr openDriveParser;
+		openDriveParser.load(openDriveFilePath);
+		openDriveParser.parse();
+		openDriveObject = openDriveParser.m_OpenDRIVE;
+
+
+		//Just some debug prints
+		RCLCPP_INFO(get_logger(), "Open Drive header rev major: %d", openDriveObject->m_header->revMajor);
+		auto rightLaneId = openDriveObject->m_roads[0]->m_lanes->m_laneSections[0]->m_right->m_lanes[0]->id;
+		RCLCPP_INFO(get_logger(), "Road 0 Right lane id: %d", rightLaneId);
+	}
+	void Scenario::loadOpenScenario(const std::string openScenarioFilePath)
+	{
+		xosc openScenarioParser;
+		openScenarioParser.load(openScenarioFilePath);
+		openScenarioParser.parse();
+		openScenarioObject = openScenarioParser.m_OpenSCENARIO;
+
+		//Just a debug prints
+		RCLCPP_INFO(get_logger(), "Open Scenario description: %s",openScenarioParser.m_OpenSCENARIO->m_FileHeader->description.m_string.c_str());
 	}
 
 	void Scenario::reset() {

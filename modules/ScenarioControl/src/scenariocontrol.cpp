@@ -2,7 +2,6 @@
 
 #include "scenariocontrol.hpp"
 
-
 #include "xodr.h"
 #include "xosc.h"
 
@@ -49,13 +48,12 @@ namespace maestro{
 		//! Start thread
 		manageTriggersThread=std::make_unique<std::thread>(&ScenarioControl::manageTriggers, this);
 		//! Load configuration
-		/*
-		xosc _xosc;
-		_xosc.load("/home/victor/lane_change_simple.xosc");
-		_xosc.parse();
-		RCLCPP_INFO(get_logger(), "string: %s",_xosc.m_OpenSCENARIO->m_FileHeader->description.m_string.c_str());*/
-		UtilGetConfDirectoryPath(configPath, sizeof(configPath));
-		strcat(configPath,TRIGGER_ACTION_FILE_NAME);
+		UtilGetConfDirectoryPath(triggerActionConfigPath, sizeof(triggerActionConfigPath));
+		UtilGetConfDirectoryPath(openDriveConfigPathPath, sizeof(openDriveConfigPathPath));
+		UtilGetConfDirectoryPath(openScenarioConfigPath, sizeof(openScenarioConfigPath));
+		strcat(triggerActionConfigPath,triggerActionFileName.c_str());
+		strcat(openDriveConfigPathPath,openDriveFileName.c_str());
+		strcat(openScenarioConfigPath,openScenarioFileName.c_str());
 		return retval;
 	}
 
@@ -63,7 +61,7 @@ namespace maestro{
 		if (state == UNINITIALIZED) {
 			try {
 				RCLCPP_INFO(get_logger(), "Initializing scenario");
-				scenario.initialize(configPath);
+				scenario = std::make_shared<Scenario>(triggerActionConfigPath,get_logger());
 				state = INITIALIZED;
 			}
 			catch (std::invalid_argument e) {
@@ -71,9 +69,12 @@ namespace maestro{
 				util_error(errMsg.c_str());
 			}
 			catch (std::ifstream::failure) {
-				std::string errMsg = "Unable to open scenario file <" + std::string(configPath) + ">";
+				std::string errMsg = "Unable to open scenario file <" + std::string(triggerActionConfigPath) + ">";
 				util_error(errMsg.c_str());
 			}
+			// Load openScenario and openDrive files also
+			scenario->loadOpenDrive(openDriveConfigPathPath);
+			scenario->loadOpenScenario(openScenarioConfigPath);
 		}
 		else{
 			RCLCPP_WARN(get_logger(), "Received unexpected initialize command (current state: %s)",stateToString.at(state));
@@ -84,7 +85,7 @@ namespace maestro{
 		if (state == INITIALIZED) {
 			state = CONNECTED;
 			RCLCPP_INFO(get_logger(), "Distributing scenario configuration");
-			scenario.sendConfiguration();
+			scenario->sendConfiguration();
 		}
 		else { // if not initialized, try to initialize once and then send conf to objects.
 			if (recursionDepth == 0){
@@ -101,7 +102,7 @@ namespace maestro{
 	void ScenarioControl::onTriggerEventMessage(const maestro_msg::TriggerEvent::SharedPtr treo){
 		if (state == RUNNING) {
 			// Trigger corresponding trigger
-			scenario.updateTrigger(treo->trigger_id, treo);
+			scenario->updateTrigger(treo->trigger_id, treo);
 		}
 		else {
 			RCLCPP_WARN(get_logger(), "Received unexpected trigger action command (current state: %s)",stateToString.at(state));
@@ -130,7 +131,7 @@ namespace maestro{
 	}
 	void ScenarioControl::onArmMessage(const std_msg::Empty::SharedPtr){
 		RCLCPP_INFO(get_logger(), "Resetting scenario");
-		scenario.reset();
+		scenario->reset();
 	}
 
 	void ScenarioControl::onExitMessage(const std_msg::Empty::SharedPtr){
@@ -153,10 +154,10 @@ namespace maestro{
 		while (!quit){
 			auto end_time = steady_clock::now() + scenarioDuration(1);
 			if (state == RUNNING) {
-				scenario.executeTriggeredActions();
+				scenario->executeTriggeredActions();
 
 				// Allow for retriggering on received TREO messages
-				scenario.resetISOTriggers();
+				scenario->resetISOTriggers();
 
 				auto now = steady_clock::now();
 				if (now > nextShmemReadTime){
@@ -184,7 +185,7 @@ namespace maestro{
 	*			with the rate parameter
 	* \param Scenario scenario object keeping information about which trigger is linked to which action and the updating and parsing of the same.
 	*/
-	int ScenarioControl::updateTriggers(Scenario& scenario) {
+	int ScenarioControl::updateTriggers(std::shared_ptr<Scenario> scenario) {
 
 		std::vector<uint32_t> transmitterIDs;
 		uint32_t numberOfObjects;
@@ -217,7 +218,7 @@ namespace maestro{
 				return -1;
 			}
 			else {
-				scenario.updateTrigger(monitorData);
+				scenario->updateTrigger(monitorData);
 			}
 
 		}

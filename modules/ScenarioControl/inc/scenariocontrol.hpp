@@ -41,9 +41,14 @@ namespace maestro{
 			{CONNECTED,"Connected"},
 			{RUNNING,"Running"}
 		};
-		Scenario scenario;
+		std::shared_ptr<Scenario> scenario;
 		static inline const std::string triggerActionFileName = "triggeraction.conf";
-		char configPath[MAX_FILE_PATH];
+		static inline const std::string openDriveFileName = "opendrive.xodr";
+		static inline const std::string openScenarioFileName = "openscenario.xosc";
+		char triggerActionConfigPath[MAX_FILE_PATH];
+		char openDriveConfigPathPath[MAX_FILE_PATH];
+		char openScenarioConfigPath[MAX_FILE_PATH];
+			
 
 		//! Scenario is executed with x hz
 		typedef duration<int, std::ratio<1, 1000>> scenarioDuration;
@@ -62,7 +67,7 @@ namespace maestro{
 		void onTriggerEventMessage(const maestro_msg::TriggerEvent::SharedPtr) override;
 
 		void manageTriggers();
-		int updateTriggers(Scenario& scenario);
+		int updateTriggers(std::shared_ptr<Scenario> scenario);
 		time_point<steady_clock> getNextReadTime(time_point<steady_clock> now);
 	};
 }
