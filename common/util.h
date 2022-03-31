@@ -257,7 +257,7 @@ typedef struct
   double Longitude;
   double Altitude;
   double Heading;
-} GeoPosition;
+} GeoPositionType;
 
 
 typedef enum {
@@ -282,7 +282,7 @@ typedef struct {
 	ObjectPropertiesType properties;
 	bool propertiesReceived;
 	struct timeval lastDataUpdate;
-  GeoPosition origin;
+  GeoPositionType origin;
 	RequestControlActionType requestedControlAction;
 } ObjectDataType;
 
@@ -739,7 +739,7 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter, c
 int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char* objectFilePath,
 							 const size_t filePathLength, char* objectSetting,
 							 const size_t objectSettingSize);
-int UtilReadOriginConfiguration(GeoPosition* origin);
+int UtilReadOriginConfiguration(GeoPositionType* origin);
 
 int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectDataType *monitorData);
 int UtilPopulateTREODataStructFromMQ(char* rawTREO, size_t rawTREOsize, TREOData *treoData);

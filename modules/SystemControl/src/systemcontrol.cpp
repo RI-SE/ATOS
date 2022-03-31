@@ -1823,7 +1823,7 @@ I32 SystemControl::SystemControlSetServerParameter(char * parameterName, char * 
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 	U32 object_transmitter_ids[MAX_OBJECTS];
 	U32 numberOfObjects;
-	GeoPosition origin;
+	GeoPositionType origin;
 	char *endptr;
 
 	if (parameterName == NULL || newValue == NULL) {

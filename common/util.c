@@ -4000,8 +4000,8 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 	return returnValue;
 }
 
-int UtilReadOriginConfiguration(GeoPosition* origin) {
-	GeoPosition retval;
+int UtilReadOriginConfiguration(GeoPositionType* origin) {
+	GeoPositionType retval;
 	char setting[20];
 	char* endptr;
 	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
