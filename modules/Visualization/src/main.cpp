@@ -277,7 +277,7 @@ int transmitTrajectories(TCPHandler& tcpPort) {
 
 int transmitOSEM(TCPHandler& tcp) {
 	ObjectSettingsType osem;
-	GeoPosition originPosition;
+	GeoPositionType originPosition;
 	std::vector<char> tcpTransmitBuffer(MONR_BUFFER_LENGTH);
 	std::vector<uint32_t> transmitterIDs;
 	int bytesSent;
