@@ -56,7 +56,7 @@ private:
 	void onStartMessage(const Empty::SharedPtr) override;
 	void onAbortMessage(const Empty::SharedPtr) override;
 	void onExitMessage(const Empty::SharedPtr) override;
-	void onObjectsConnectedMessage(const Empty::SharedPtr) override;
+	void onObjectsConnectedMessage(const maestro_interfaces::msg::ObjectIdArray::SharedPtr) override;
 	void onDisconnectMessage(const Empty::SharedPtr) override;
 	void onTriggerEventMessage(const TriggerEvent::SharedPtr) override;
 

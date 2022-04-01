@@ -66,7 +66,7 @@ void AbstractKinematics::Connecting::objectAborting(
 void AbstractKinematics::Connecting::allObjectsConnected(
 		ObjectControl& handler) {
 	handler.startListeners();
-	iCommSend(COMM_OBJECTS_CONNECTED, nullptr, 0);
+	handler.notifyObjectsConnected();
 }
 
 

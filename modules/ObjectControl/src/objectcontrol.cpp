@@ -36,7 +36,8 @@ ObjectControl::ObjectControl()
 	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
 	failurePub(*this),
 	scnAbortPub(*this),
-	monitorPub(*this)
+	monitorPub(*this),
+	objectsConnectedPub(*this)
 {
 	int queueSize=0;
 
@@ -474,6 +475,12 @@ void ObjectControl::startListeners() {
 	for (const auto& id : getVehicleIDs()) {
 		objectListeners.try_emplace(id, this, &objects.at(id), monitorPub, get_logger());
 	}
+}
+
+void ObjectControl::notifyObjectsConnected() const {
+	maestro_interfaces::msg::ObjectIdArray msg;
+	//TODO
+	//objectsConnectedPub.publish(std::make_shared<std::vector<uint32_t>>(getVehicleIDs()));
 }
 
 void ObjectControl::connectToObject(

@@ -13,6 +13,7 @@
 #include "maestro_interfaces/msg/monitor.hpp"
 #include "maestro_interfaces/msg/control_signal_percentage.hpp"
 #include "maestro_interfaces/msg/trigger_event.hpp"
+#include "maestro_interfaces/msg/object_id_array.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_msgs/msg/int8.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -121,7 +122,7 @@ class Module : public Node {
 	virtual void onRemoteControlDisableMessage(const Empty::SharedPtr){};
 	virtual void onRemoteControlManoeuvreMessage(const Empty::SharedPtr){};
 	virtual void onEnableObjectMessage(const ObjectEnabled::SharedPtr){};
-	virtual void onObjectsConnectedMessage(const Empty::SharedPtr){};
+	virtual void onObjectsConnectedMessage(const maestro_interfaces::msg::ObjectIdArray::SharedPtr){};
 	virtual void onDataDictMessage(const Empty::SharedPtr){};
 	virtual void onOSEMMessage(const Empty::SharedPtr){};
 	virtual void onASPMessage(const Empty::SharedPtr){};

@@ -3,7 +3,9 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/u_int8.hpp>
+#include <maestro_interfaces/msg/object_id_array.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <nav_msgs/msg/path.hpp>
 #include <string>
 #include <functional>
 
@@ -443,7 +445,7 @@ namespace Monitor {
 
 namespace ObjectsConnected {
     const std::string topicName = "objects_connected";
-    using message_type = std_msgs::msg::Empty;
+    using message_type = maestro_interfaces::msg::ObjectIdArray;
 
     class Pub : public BasePub<message_type> {
     public:
@@ -456,7 +458,7 @@ namespace ObjectsConnected {
     };
 }
 
-namespace TriggerEvent{
+namespace TriggerEvent {
     const std::string topicName = "trigger_event";
     using message_type = maestro_interfaces::msg::TriggerEvent;
 
@@ -468,6 +470,21 @@ namespace TriggerEvent{
     class Sub : public BaseSub<message_type> {
     public:
         Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
+    };
+}
+
+namespace Trajectory {
+    const std::string topicName = "trajectory";
+    using message_type = nav_msgs::msg::Path;
+
+    class Pub : public BasePub<message_type> {
+    public:
+        Pub(rclcpp::Node& node, const uint32_t objectId) : BasePub<message_type>(node, topicName + "/" + std::to_string(objectId)) {}
+    };
+
+    class Sub : public BaseSub<message_type> {
+    public:
+        Sub(rclcpp::Node& node, const uint32_t objectId, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName + "/" + std::to_string(objectId), callback) {}
     };
 }
 } // namespace ROSChannels

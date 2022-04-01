@@ -68,7 +68,7 @@ void ScenarioControl::onInitMessage(const Empty::SharedPtr){
 		RCLCPP_WARN(get_logger(), "Received unexpected initialize command (current state: %s)",stateToString.at(state));
 	}
 }
-void ScenarioControl::onObjectsConnectedMessage(const Empty::SharedPtr msg){
+void ScenarioControl::onObjectsConnectedMessage(const maestro_interfaces::msg::ObjectIdArray::SharedPtr msg){
 	static int recursionDepth = 0;
 	if (state == INITIALIZED) {
 		state = CONNECTED;
@@ -79,7 +79,7 @@ void ScenarioControl::onObjectsConnectedMessage(const Empty::SharedPtr msg){
 		if (recursionDepth == 0){
 			recursionDepth=1;
 			RCLCPP_INFO(get_logger(), "Received objects connected message when not in initialized state, trying to initialize");
-			onInitMessage(msg);
+			onInitMessage(std_msgs::msg::Empty::SharedPtr());
 			onObjectsConnectedMessage(msg);
 		}
 	}
