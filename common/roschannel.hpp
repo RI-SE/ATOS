@@ -3,6 +3,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/u_int8.hpp>
+#include <std_msgs/msg/int8.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <string>
 #include <functional>
@@ -283,7 +284,7 @@ namespace BackToStart {
 
 namespace BackToStartResponse {
     const std::string topicName = "back_to_start_response";
-    using message_type = std_msgs::msg::String;
+    using message_type = std_msgs::msg::Int8;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
@@ -409,8 +410,8 @@ namespace Replay {
     };
 }
 
-namespace ControlSignalPercentage {
-    const std::string topicName = "control_signal_pct";
+namespace ControlSignal {
+    const std::string topicName = "control_signal";
     using message_type = maestro_interfaces::msg::ControlSignalPercentage;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepLast(1));
 

@@ -34,16 +34,19 @@ namespace fs = std::filesystem;
 #else
 namespace fs = std::experimental::filesystem;
 #endif
+using namespace ROSChannels;
+using std::placeholders::_1;
+
 static void signalHandler(int signo);
 
 JournalControl::JournalControl()
 	: Module(JournalControl::moduleName),
 	journals(get_logger()),
-	armSub(*this, std::bind(&JournalControl::onArmMessage, this, std::placeholders::_1)),
-	stopSub(*this, std::bind(&JournalControl::onStopMessage, this, std::placeholders::_1)),
-	abortSub(*this, std::bind(&JournalControl::onAbortMessage, this, std::placeholders::_1)),
-	replaySub(*this, std::bind(&JournalControl::onReplayMessage, this, std::placeholders::_1)),
-	exitSub(*this, std::bind(&JournalControl::onExitMessage, this, std::placeholders::_1))
+	armSub(*this, std::bind(&JournalControl::onArmMessage, this, _1)),
+	stopSub(*this, std::bind(&JournalControl::onStopMessage, this, _1)),
+	abortSub(*this, std::bind(&JournalControl::onAbortMessage, this, _1)),
+	replaySub(*this, std::bind(&JournalControl::onReplayMessage, this, _1)),
+	exitSub(*this, std::bind(&JournalControl::onExitMessage, this, _1))
 {
 	initialize();
 }
@@ -58,12 +61,12 @@ void JournalControl::initialize()
 	}
 }
 
-void JournalControl::onArmMessage(const Empty::SharedPtr msg)
+void JournalControl::onArmMessage(const Arm::message_type::SharedPtr msg)
 {
 	journals.placeStartBookmarks();
 }
 
-void JournalControl::onStopMessage(const Empty::SharedPtr msg)
+void JournalControl::onStopMessage(const Stop::message_type::SharedPtr msg)
 {
 	try {
 		// Save stop references
@@ -78,18 +81,18 @@ void JournalControl::onStopMessage(const Empty::SharedPtr msg)
 	}
 }
 
-void JournalControl::onAbortMessage(const Empty::SharedPtr msg)
+void JournalControl::onAbortMessage(const Abort::message_type::SharedPtr msg)
 {
 	// Temporary: Treat ABORT as stop signal
 	onStopMessage(msg);
 }
 
-void JournalControl::onReplayMessage(const Empty::SharedPtr msg)
+void JournalControl::onReplayMessage(const Replay::message_type::SharedPtr msg)
 {
 	LogMessage(LOG_LEVEL_WARNING, "Replay function out of date");
 }
 
-void Module::onExitMessage(const Empty::SharedPtr){
+void Module::onExitMessage(const Exit::message_type::SharedPtr){
     this->quit=true;
 }
 

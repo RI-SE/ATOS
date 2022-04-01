@@ -1,6 +1,9 @@
 #include "module.hpp"
 #include <std_srvs/srv/set_bool.hpp>
 
+using namespace std_msgs::msg;
+using namespace std_srvs::srv;
+
 bool Module::shouldExit(){
     return this->quit;
 }
@@ -40,8 +43,8 @@ void Module::tryHandleMessage(
 bool Module::requestDataDictInitialization(int maxRetries) {
     int retries = 0;
     bool success = false;
-    auto client = create_client<std_srvs::srv::SetBool>(ServiceNames::initDataDict);
-    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
+    auto client = create_client<SetBool>(ServiceNames::initDataDict);
+    auto request = std::make_shared<SetBool::Request>();
 
     do {
         while (client->wait_for_service(std::chrono::seconds(1)) != true) {

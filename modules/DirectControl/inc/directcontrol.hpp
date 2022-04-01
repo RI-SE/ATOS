@@ -23,10 +23,10 @@ private:
 	void handleISOMessage(std::vector<char>& byteData, size_t receivedBytes);
 	size_t handleRDCAMessage(std::vector<char>& byteData);
 	size_t handleUnknownMessage(std::vector<char>& byteData);
-	ROSChannels::ControlSignalPercentage::Pub controlSignalPercentagePub;
+	ROSChannels::ControlSignal::Pub controlSignalPub;
 
-	void onAbortMessage(const Empty::SharedPtr) override;
-	void onAllClearMessage(const Empty::SharedPtr) override;
+	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
+	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
 
 	std::unique_ptr<std::thread> receiveThread;
 	std::unique_ptr<std::thread> receiveThreadUDP;
