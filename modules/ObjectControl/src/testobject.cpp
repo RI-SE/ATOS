@@ -342,7 +342,7 @@ void TestObject::sendStart() {
 }
 
 void TestObject::sendControlSignal(const ControlSignalPercentage::SharedPtr csp) {
-	this->comms.cmd << csp;
+	this->comms.mntr << csp;
 }
 
 
