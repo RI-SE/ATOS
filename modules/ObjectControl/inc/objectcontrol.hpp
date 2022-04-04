@@ -245,7 +245,7 @@ private:
 	void connectToObject(TestObject& obj, std::shared_future<void>& connStopReq);
 
 	void startListeners();
-	void notifyObjectsConnected() const;
+	void notifyObjectsConnected();
 
 	void startSafetyThread();
 	void heartbeat();

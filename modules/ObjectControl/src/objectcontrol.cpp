@@ -477,10 +477,10 @@ void ObjectControl::startListeners() {
 	}
 }
 
-void ObjectControl::notifyObjectsConnected() const {
+void ObjectControl::notifyObjectsConnected() {
 	maestro_interfaces::msg::ObjectIdArray msg;
-	//TODO
-	//objectsConnectedPub.publish(std::make_shared<std::vector<uint32_t>>(getVehicleIDs()));
+	msg.ids = getVehicleIDs();
+	objectsConnectedPub.publish(msg);
 }
 
 void ObjectControl::connectToObject(
