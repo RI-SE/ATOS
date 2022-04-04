@@ -18,7 +18,7 @@ void TrajectoryStreamer::onInitMessage(const std_msgs::msg::Empty::SharedPtr) {
     loadObjectFiles();
 }
 
-void TrajectoryStreamer::onObjectsConnectedMessage(const std_msgs::msg::UInt32MultiArray::SharedPtr) {
+void TrajectoryStreamer::onObjectsConnectedMessage(const maestro_interfaces::msg::ObjectIdArray::SharedPtr) {
     // TODO setup and first chunk transmission
     RCLCPP_INFO(get_logger(), "Starting trajectory publishers");
     for (const auto& conf : objectConfigurations) {
@@ -27,7 +27,9 @@ void TrajectoryStreamer::onObjectsConnectedMessage(const std_msgs::msg::UInt32Mu
 }
 
 void TrajectoryStreamer::onStartMessage(const std_msgs::msg::Empty::SharedPtr) {
-    // TODO save timestamp and start transmitting chunks based on time into traj
+    for (auto& pub : publishers) {
+        pub.handleStart();
+    }
 }
 
 void TrajectoryStreamer::loadObjectFiles() {

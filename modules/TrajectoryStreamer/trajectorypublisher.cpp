@@ -13,34 +13,70 @@ TrajectoryPublisher::TrajectoryPublisher(
     pub(node,objectId),
     objectId(objectId)
 {
+    beginPublish();
+}
 
+void TrajectoryPublisher::handleStart() {
+    using std::chrono::steady_clock;
+    startTime.reset(new steady_clock::time_point(steady_clock::now()));
+}
+
+
+nav_msgs::msg::Path TrajectoryPublisher::extractChunk() {
+    using std::chrono::steady_clock;
+
+    nav_msgs::msg::Path ret;
+    auto firstPoint = traj->points.begin();
+    auto now = steady_clock::now();
+    auto diff = steady_clock::duration(0);
+    if (startTime) {
+        diff = now-*startTime;
+        firstPoint = std::upper_bound(traj->points.begin(), traj->points.end(), diff,
+            [](const steady_clock::duration& dur, const Trajectory::TrajectoryPoint& pt) {
+                return pt.getTime() > dur;
+            });
+        if (firstPoint == traj->points.end()) {
+            return ret;
+        }
+    }
+    auto endTime = diff + chunkLength;
+    auto lastPoint = std::upper_bound(firstPoint, traj->points.end(), endTime,
+        [](const steady_clock::duration& dur, const Trajectory::TrajectoryPoint& pt) {
+            return pt.getTime() > dur;
+        }
+    );
+    
+    auto firstPointTime = rclcpp::Time(
+        (firstPoint->getTime() + (startTime ? *startTime : now))
+        .time_since_epoch().count());
+
+    ret.header.frame_id = "map";
+    ret.header.stamp = firstPointTime;
+
+    std::transform(firstPoint, lastPoint, std::back_inserter(ret.poses),
+        [&](const Trajectory::TrajectoryPoint& pt){
+            geometry_msgs::msg::PoseStamped pose;
+            pose.header.frame_id = ret.header.frame_id;
+            pose.header.stamp = firstPointTime + rclcpp::Duration(pt.getTime());
+            pose.pose.position.x = pt.getXCoord();
+            pose.pose.position.y = pt.getYCoord();
+            pose.pose.position.z = pt.getZCoord();
+            tf2::Quaternion q;
+            q.setRPY(0, 0, pt.getHeading());
+            tf2::convert(q, pose.pose.orientation);
+            return pose;
+        }
+    );
+    return ret;
 }
 
 void TrajectoryPublisher::beginPublish() {
     pubThread = std::thread([this]() {
         while (true) {
-            nav_msgs::msg::Path trajMsg;
-            trajMsg.header.stamp = rclcpp::Clock().now();
-            trajMsg.header.frame_id = "map";
-            for (const auto& trajPt : traj->points) {
-                geometry_msgs::msg::PoseStamped pose;
-                pose.header.stamp = trajMsg.header.stamp; // TODO
-                pose.header.frame_id = trajMsg.header.frame_id;
-
-                pose.pose.position.x = trajPt.getXCoord();
-                pose.pose.position.y = trajPt.getYCoord();
-                try {
-                    pose.pose.position.z = trajPt.getZCoord();
-                } catch (std::exception&) {
-                    pose.pose.position.z = 0;
-                }
-		        tf2::Quaternion orientation;
-		        orientation.setRPY(0, 0, trajPt.getHeading());
-		        pose.pose.orientation = tf2::toMsg(orientation);
-                trajMsg.poses.push_back(pose);
-            }
+            auto wakeTime = std::chrono::steady_clock::now() + publishPeriod;
+            auto trajMsg = extractChunk();
             pub.publish(trajMsg);
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            std::this_thread::sleep_until(wakeTime);
         }
     });
 }

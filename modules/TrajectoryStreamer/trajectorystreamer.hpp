@@ -14,7 +14,7 @@ public:
 private:
 	static inline std::string const moduleName = "trajectory_streamer";
     void onInitMessage(const std_msgs::msg::Empty::SharedPtr);
-    void onObjectsConnectedMessage(const std_msgs::msg::Empty::SharedPtr);
+    void onObjectsConnectedMessage(const maestro_interfaces::msg::ObjectIdArray::SharedPtr);
     void onStartMessage(const std_msgs::msg::Empty::SharedPtr);
     void onAbortMessage(const std_msgs::msg::Empty::SharedPtr) override {}
 
