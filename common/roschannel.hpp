@@ -479,7 +479,7 @@ namespace Trajectory {
 
     class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node, const uint32_t objectId) : BasePub<message_type>(node, topicName + "/" + std::to_string(objectId)) {}
+        Pub(rclcpp::Node& node, const uint32_t objectId) : BasePub<message_type>(node, topicName + "/object" + std::to_string(objectId)) {}
     };
 
     class Sub : public BaseSub<message_type> {
