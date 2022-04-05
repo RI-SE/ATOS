@@ -7,11 +7,11 @@ using namespace maestro;
 
 TrajectoryPublisher::TrajectoryPublisher(
     rclcpp::Node& node,
-    const Trajectory& traj,
+    const Trajectory& _traj,
     const uint32_t objectId)
-    : traj(std::make_shared<Trajectory>(traj)),
-    pub(node,objectId),
-    objectId(objectId)
+    : traj(std::make_unique<const Trajectory>(_traj)),
+    pub(node, objectId),
+    lastPublishedChunk(traj->points.end(), traj->points.end())
 {
     beginPublish();
 }
@@ -22,7 +22,29 @@ void TrajectoryPublisher::handleStart() {
 }
 
 
-nav_msgs::msg::Path TrajectoryPublisher::extractChunk() {
+TrajectoryPublisher::Chunk TrajectoryPublisher::extractChunk(
+    std::chrono::steady_clock::duration beginTime,
+    std::chrono::steady_clock::duration endTime)
+{
+    using std::chrono::steady_clock;
+    auto ret = Chunk(traj->points.cbegin(), traj->points.cend());
+
+    ret.first = std::upper_bound(traj->points.cbegin(), traj->points.cend(), beginTime,
+        [](const steady_clock::duration& dur, const Trajectory::TrajectoryPoint& pt) {
+            return pt.getTime() > dur;
+        });
+    if (ret.first == traj->points.cend()) {
+        return ret;
+    }
+    ret.second = std::upper_bound(ret.first, traj->points.cend(), endTime,
+        [](const steady_clock::duration& dur, const Trajectory::TrajectoryPoint& pt) {
+            return pt.getTime() > dur;
+        }
+    );
+    return ret;
+}
+/*
+nav_msgs::msg::Path TrajectoryPublisher::extractChunkOld() {
     using std::chrono::steady_clock;
 
     nav_msgs::msg::Path ret;
@@ -69,13 +91,57 @@ nav_msgs::msg::Path TrajectoryPublisher::extractChunk() {
     );
     return ret;
 }
+*/
+nav_msgs::msg::Path TrajectoryPublisher::chunkToPath(
+    Chunk chunk,
+    std::chrono::steady_clock::time_point relTimeOffset)
+{
+    nav_msgs::msg::Path ret;
+    ret.header.frame_id = "map";
+    auto rosTimeOffset = rclcpp::Time(relTimeOffset.time_since_epoch().count());
+    ret.header.stamp = rosTimeOffset;
+
+    std::transform(chunk.first, chunk.second, std::back_inserter(ret.poses),
+        [&](const Trajectory::TrajectoryPoint& pt){
+            geometry_msgs::msg::PoseStamped pose;
+            pose.header.stamp = rosTimeOffset + rclcpp::Duration(pt.getTime());
+            pose.pose.position.x = pt.getXCoord();
+            pose.pose.position.y = pt.getYCoord();
+            pose.pose.position.z = pt.getZCoord();
+            tf2::Quaternion q;
+            q.setRPY(0, 0, pt.getHeading());
+            tf2::convert(q, pose.pose.orientation);
+            return pose;
+        }
+    );
+    // Force same coordinate frame as header
+    for (auto& pose : ret.poses) {
+        pose.header.frame_id = ret.header.frame_id;
+    }
+    return ret;
+}
 
 void TrajectoryPublisher::beginPublish() {
+    using std::chrono::steady_clock;
     pubThread = std::thread([this]() {
         while (true) {
             auto wakeTime = std::chrono::steady_clock::now() + publishPeriod;
-            auto trajMsg = extractChunk();
-            pub.publish(trajMsg);
+
+            auto now = steady_clock::now();
+            auto trajTimeOffset = now;
+            auto timeIntoTraj = steady_clock::duration(0);
+            if (startTime) {
+                timeIntoTraj = now-*startTime;
+                trajTimeOffset = *startTime;
+            }
+
+            auto chunk = extractChunk(timeIntoTraj, timeIntoTraj + chunkLength);
+            if (chunk != lastPublishedChunk) {
+                auto trajMsg = chunkToPath(chunk, trajTimeOffset);
+                pub.publish(trajMsg);
+                lastPublishedChunk = chunk;
+            }
+
             std::this_thread::sleep_until(wakeTime);
         }
     });

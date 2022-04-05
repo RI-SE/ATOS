@@ -55,6 +55,7 @@ void TrajectoryStreamer::loadObjectFiles() {
 
 
 void TrajectoryStreamer::clearScenario() {
+    publishers.clear();
 	objectConfigurations.clear();
 }
 
