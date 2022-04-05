@@ -313,8 +313,9 @@ void TestObject::sendAllClear() {
 	this->comms.cmd << OBJECT_COMMAND_ALL_CLEAR;
 }
 
-void TestObject::sendRemoteControl() {
-	this->comms.cmd << OBJECT_COMMAND_REMOTE_CONTROL;
+void TestObject::sendRemoteControl(bool on) {
+	
+	this->comms.cmd << (on ? OBJECT_COMMAND_REMOTE_CONTROL : OBJECT_COMMAND_DISARM);
 }
 
 //void TestObject::sendOsiGlobalObjectGroundTruth(

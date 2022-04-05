@@ -271,7 +271,7 @@ private:
 	//! \brief
 	void allClearObjects();
 	//! \brief TODO
-	void remoteControlObjects();
+	void remoteControlObjects(bool on);
 	//! \brief TODO
 	void injectObjectData(const MonitorMessage& monr);
 	//! \brief TODO

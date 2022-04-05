@@ -569,9 +569,9 @@ void ObjectControl::connectToObject(
 	}
 };
 
-void ObjectControl::remoteControlObjects() {
+void ObjectControl::remoteControlObjects(bool on) {
 	for (auto& id : getVehicleIDs()) {
-		objects.at(id).sendRemoteControl();
+		objects.at(id).sendRemoteControl(on);
 	}
 }
 
