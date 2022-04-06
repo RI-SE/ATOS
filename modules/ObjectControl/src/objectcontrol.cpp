@@ -223,14 +223,8 @@ void ObjectControl::onControlSignalPercentageMessage(const ControlSignalPercenta
 	try{
 		objects.at(csp->maestro_header.object_id).sendControlSignal(csp);
 	}
-	catch(...){
-		auto expPtr = std::current_exception();
-		try{
-			if(expPtr) std::rethrow_exception(expPtr);
-		}
-		catch(const std::exception& e){
-			RCLCPP_ERROR(get_logger(), "Failed to translate/send Control Signal Percentage: %s", e.what());
-		}
+	catch(const std::exception& e){
+		RCLCPP_ERROR(get_logger(), "Failed to translate/send Control Signal Percentage: %s", e.what());
 	}
 }
 
