@@ -8,6 +8,7 @@
 #include "maestro_interfaces/msg/control_signal_percentage.hpp"
 
 using maestro_interfaces::msg::ControlSignalPercentage;
+using namespace ROSChannels;
 
 #define TCP_BUFFER_SIZE 2048
 
@@ -88,15 +89,15 @@ private:
 
 //! Message queue callbacks
 
-void DirectControl::onAbortMessage(const Empty::SharedPtr) {}
+void DirectControl::onAbortMessage(const Abort::message_type::SharedPtr) {}
 
-void DirectControl::onAllClearMessage(const Empty::SharedPtr) {}
+void DirectControl::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 
 //! Class methods
 
 DirectControl::DirectControl() :
 	Module(moduleName),
-	controlSignalPercentagePub(*this),
+	controlSignalPub(*this),
 	tcpHandler(TCPPort, "", "off", 1, O_NONBLOCK), 
 	udpServer("0.0.0.0",UDPPort) {}
 
@@ -132,7 +133,7 @@ void DirectControl::readUDPSocketData() {
 			// the application (driver model).
 			if (bytesParsed != -1){
 				ControlSignalPercentage cspmsg = dmMsg.toMaestroMsg();
-				controlSignalPercentagePub.publish(cspmsg);
+				controlSignalPub.publish(cspmsg);
 			}
 		}
 		catch(const SocketErrors::DisconnectedError& error){

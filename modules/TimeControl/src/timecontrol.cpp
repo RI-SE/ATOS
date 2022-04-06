@@ -1,8 +1,9 @@
 #include "timecontrol.hpp"
-
+using namespace ROSChannels;
+using std::placeholders::_1;
 TimeControl::TimeControl()
 : Module(TimeControl::module_name),
-exitSub(*this,std::bind(&TimeControl::onExitMessage,this,std::placeholders::_1)) {}
+exitSub(*this,std::bind(&TimeControl::onExitMessage,this,_1)) {}
 
 void TimeControl::signalHandler(int signo) {
 	if (signo == SIGINT) {
@@ -14,10 +15,10 @@ void TimeControl::signalHandler(int signo) {
 	}
 }
 
-void TimeControl::onExitMessage(Empty::SharedPtr) {
+void TimeControl::onExitMessage(const Exit::message_type::SharedPtr) {
 	iExit=1;
 }
-void TimeControl::onAbortMessage(Empty::SharedPtr) {};
+void TimeControl::onAbortMessage(const Exit::message_type::SharedPtr) {};
 
 bool TimeControl::shouldExit() const{
 	return iExit;

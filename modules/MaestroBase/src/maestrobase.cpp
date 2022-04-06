@@ -2,13 +2,17 @@
 #include "datadictionary.h"
 #include <functional>
 
+using namespace ROSChannels;
+using namespace std_srvs::srv;
+using std::placeholders::_1, std::placeholders::_2;
+
 MaestroBase::MaestroBase()
     : Module(MaestroBase::moduleName),
-	exitSub(*this, std::bind(&MaestroBase::onExitMessage, this, std::placeholders::_1))
+	exitSub(*this, std::bind(&MaestroBase::onExitMessage, this, _1))
 {
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d", get_name(), getpid());
-	initDataDictionaryService = create_service<std_srvs::srv::SetBool>(ServiceNames::initDataDict,
-		std::bind(&MaestroBase::onInitDataDictionary, this, std::placeholders::_1, std::placeholders::_2));
+	initDataDictionaryService = create_service<SetBool>(ServiceNames::initDataDict,
+		std::bind(&MaestroBase::onInitDataDictionary, this, _1, _2));
 }
 
 MaestroBase::~MaestroBase()
@@ -36,8 +40,8 @@ void MaestroBase::initialize()
 }
 
 void MaestroBase::onInitDataDictionary(
-	const std::shared_ptr<std_srvs::srv::SetBool::Request> req,
-	std::shared_ptr<std_srvs::srv::SetBool::Response> res)
+	const SetBool::Request::SharedPtr req,
+	SetBool::Response::SharedPtr res)
 {
 	RCLCPP_DEBUG(get_logger(), "Received request to initialize data dictionary, ignoring value %d", req->data);
 	
@@ -62,7 +66,7 @@ void MaestroBase::onInitDataDictionary(
 	res->message = message;
 }
 
-void MaestroBase::onExitMessage(const Empty::SharedPtr msg)
+void MaestroBase::onExitMessage(const Exit::message_type::SharedPtr)
 {
     RCLCPP_INFO(get_logger(), "Received exit message");
     auto result = DataDictionaryDestructor();

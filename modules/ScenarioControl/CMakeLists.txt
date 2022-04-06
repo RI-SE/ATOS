@@ -9,6 +9,7 @@ project(scenario_control LANGUAGES C CXX)
 find_package(rclcpp REQUIRED)
 find_package(maestro_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(ad-xolib REQUIRED)
 
 # Define target names
 set(SCENARIO_CONTROL_TARGET ${PROJECT_NAME})
@@ -43,10 +44,13 @@ target_link_libraries(${SCENARIO_CONTROL_TARGET}
 	${POSITIONING_LIBRARY}
 	${ISO_22133_LIBRARY}
 	${COMMON_LIBRARY}
+	${ad-xolib_LIBRARIES}
+
 )
 target_include_directories(${SCENARIO_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
+	${ad-xolib_INCLUDE_DIRS}
 )
 
 # ROS specific rules
