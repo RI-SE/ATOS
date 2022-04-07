@@ -93,10 +93,10 @@ namespace maestro {
 			loadOpenScenario(openScenarioFilePath);
 		}
 		catch(const std::exception &e){
-			RCLCPP_WARN(get_logger(),"Failed to parse OpenDrive: %s", e.what());
+			RCLCPP_WARN(get_logger(),"Failed to parse OpenSCENARIO: %s", e.what());
 		}
 		catch(...){
-			RCLCPP_WARN(get_logger(),"Failed to parse OpenDrive");
+			RCLCPP_WARN(get_logger(),"Failed to parse OpenSCENARIO");
 		}
 
 		debugStr =  "\nTriggers:\n";
