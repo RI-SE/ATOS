@@ -66,7 +66,7 @@ void ScenarioControl::onInitMessage(const ROSChannels::Init::message_type::Share
 	if (state == UNINITIALIZED) {
 		try {
 			RCLCPP_INFO(get_logger(), "Initializing scenario");
-			scenario = std::make_shared<Scenario>(triggerActionConfigPath, openDriveConfigPathPath, openScenarioConfigPath,  get_logger());
+			scenario = std::make_unique<Scenario>(triggerActionConfigPath, openDriveConfigPathPath, openScenarioConfigPath,  get_logger());
 			state = INITIALIZED;
 		}
 		catch (std::invalid_argument e) {
@@ -87,9 +87,7 @@ void ScenarioControl::onObjectsConnectedMessage(const ObjectsConnected::message_
 	if (state == INITIALIZED) {
 		state = CONNECTED;
 		RCLCPP_INFO(get_logger(), "Distributing scenario configuration");
-		auto triggers = scenario->getTriggers();
-		auto actions = scenario->getActions();
-		sendConfiguration(actions,triggers);
+		sendConfiguration();
 	}
 	else { // if not initialized, try to initialize once and then send conf to objects.
 		if (recursionDepth == 0){
@@ -103,13 +101,17 @@ void ScenarioControl::onObjectsConnectedMessage(const ObjectsConnected::message_
 }
 
 
-void ScenarioControl::sendConfiguration(std::set<Action*> actions, std::set<Trigger*> triggers){
-	for (auto trigger : triggers){
-		trcmPub.publish(trigger->getConfigurationMessageData());
+void ScenarioControl::sendConfiguration(){
+	std::shared_ptr<std::set<Causality>> causalities = scenario->getCausalities();
+	for (const Causality& causality : *causalities){
+		for (Action* action : causality.getActions()){
+			accmPub.publish(action->getConfigurationMessageData());
+		}
+		for (Trigger* trigger : causality.getTriggers()){
+			trcmPub.publish(trigger->getConfigurationMessageData());
+		}
 	}
-	for (auto action : actions){
-		accmPub.publish(action->getConfigurationMessageData());
-	}
+	RCLCPP_INFO(get_logger(),"Sent config!");
 }
 
 void ScenarioControl::onTriggerEventMessage(const ROSChannels::TriggerEvent::message_type::SharedPtr treo){
@@ -135,7 +137,7 @@ void ScenarioControl::onStartMessage(const Start::message_type::SharedPtr){
 		// Update the triggers immediately on transition
 		// to ensure they are always in a valid state when
 		// they are checked for the first time
-		updateTriggers(scenario);
+		updateTriggers();
 		nextShmemReadTime = steady_clock::now() + shmemReadPeriod;
 	}
 	else{
@@ -167,9 +169,7 @@ void ScenarioControl::manageTriggers() {
 	while (!quit){
 		auto end_time = steady_clock::now() + scenarioCheckPeriod;
 		if (state == RUNNING) {
-			std::vector<ROSChannels::ExecuteAction::message_type> exacMsgs;
-			scenario->executeTriggeredActions(exacMsgs);
-			sendExacs(exacMsgs);
+			scenario->executeTriggeredActions(exacPub);
 
 			// Allow for retriggering on received TREO messages
 			scenario->resetISOTriggers();
@@ -177,16 +177,10 @@ void ScenarioControl::manageTriggers() {
 			auto now = steady_clock::now();
 			if (now > nextShmemReadTime){
 				nextShmemReadTime = getNextReadTime(now);
-				updateTriggers(scenario);
+				updateTriggers();
 			}
 		}
 		std::this_thread::sleep_until(end_time);
-	}
-}
-
-void ScenarioControl::sendExacs(std::vector<ROSChannels::ExecuteAction::message_type> exacMsgs) {
-	for (auto msg : exacMsgs){
-		exacPub.publish(msg);
 	}
 }
 
@@ -205,7 +199,7 @@ time_point<steady_clock> ScenarioControl::getNextReadTime(time_point<steady_cloc
 *			with the rate parameter
 * \param Scenario scenario object keeping information about which trigger is linked to which action and the updating and parsing of the same.
 */
-int ScenarioControl::updateTriggers(std::shared_ptr<Scenario> scenario) {
+int ScenarioControl::updateTriggers() {
 
 	std::vector<uint32_t> transmitterIDs;
 	uint32_t numberOfObjects;

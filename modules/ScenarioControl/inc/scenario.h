@@ -9,7 +9,7 @@
 #include "causality.h"
 #include "logging.h"
 #include "journal.h"
-#include "maestro_interfaces/msg/exac.hpp"
+#include "roschannel.hpp"
 
 #include "ad-xolib/xodr.h"
 #include "ad-xolib/xosc.h"
@@ -42,9 +42,7 @@ namespace maestro {
         ScenarioReturnCode_t addTrigger(Trigger* tp);
         ScenarioReturnCode_t addAction(Action* ap);
 
-        std::set<Causality> getCausalities(void);
-        std::set<Action*>& getActions();
-        std::set<Trigger*>& getTriggers();
+        std::shared_ptr<std::set<Causality>> getCausalities();
 
         template<typename T>
         ScenarioReturnCode_t updateTrigger(Trigger::TriggerID_t id, T value)
@@ -67,7 +65,7 @@ namespace maestro {
         }
 
         void resetISOTriggers(void);
-        void executeTriggeredActions(std::vector<maestro_interfaces::msg::Exac>& exacMsgs);
+        void executeTriggeredActions(ROSChannels::ExecuteAction::Pub&) const;
         void reset(void);
         void clear(void);
 
@@ -76,7 +74,7 @@ namespace maestro {
     private:
         std::shared_ptr<OpenDRIVE> openDriveObject;
         std::shared_ptr<OpenSCENARIO> openScenarioObject;
-        std::set<Causality> causalities;
+        std::shared_ptr<std::set<Causality>> causalities;
         std::set<Trigger*> allTriggers;
         std::set<Action*> allActions;
 

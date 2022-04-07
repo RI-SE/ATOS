@@ -16,7 +16,7 @@ namespace maestro {
 
 	Scenario::Scenario(const std::string scenarioFilePath, 
 						const std::string openDriveFilePath, 
-						const std::string openScenarioFilePath, 
+						const std::string openScenarioFilePath,  
 						rclcpp::Logger log) : Loggable(log)
 	{
 		initialize(scenarioFilePath, openDriveFilePath, openScenarioFilePath);
@@ -36,7 +36,7 @@ namespace maestro {
 		for (Action* ap : allActions)
 			delete ap;
 
-		causalities.clear();
+		causalities->clear();
 		allTriggers.clear();
 		allActions.clear();
 	}
@@ -60,6 +60,7 @@ namespace maestro {
 	{
 		std::ifstream file;
 		std::string debugStr;
+		causalities = std::make_shared<std::set<Causality>>();
 
 		clear();
 		RCLCPP_DEBUG(get_logger(), "Opening scenario file <%s>", scenarioFilePath.c_str());
@@ -117,15 +118,6 @@ namespace maestro {
 		}
 	}
 
-	std::set<Trigger*>& Scenario::getTriggers()
-	{
-		return allTriggers;
-	}
-
-	std::set<Action*>& Scenario::getActions()
-	{
-		return allActions;
-	}
 	/*!
 	* \brief Scenario::splitLine Splits a line at specified delimiter and stores the generated substrings in a vector (excluding the delimiters)
 	* \param line Line to be split
@@ -412,6 +404,10 @@ namespace maestro {
 		return OK;
 	}
 
+	std::shared_ptr<std::set<Causality>> Scenario::getCausalities() {
+		return causalities;
+	}
+
 	/*!
 	* \brief Scenario::addAction Appends an action to the list of known actions, unless another action of the same ID is already in place.
 	* \param ap Action pointer to be added
@@ -441,7 +437,7 @@ namespace maestro {
 			c.addAction(ap);
 		}
 
-		causalities.insert(c);
+		causalities->insert(c);
 		return OK;
 	}
 
@@ -468,11 +464,11 @@ namespace maestro {
 		return linkTriggersWithActions(tps, aps);
 	}
 
-	void Scenario::executeTriggeredActions(std::vector<maestro_interfaces::msg::Exac>& exacMsgs)
+	void Scenario::executeTriggeredActions(ROSChannels::ExecuteAction::Pub& exacPub) const
 	{
-		for (auto c : causalities)
+		for (const Causality& c : *causalities)
 		{
-			c.executeIfActive(exacMsgs);
+			c.executeIfActive(exacPub);
 		}
 	}
 

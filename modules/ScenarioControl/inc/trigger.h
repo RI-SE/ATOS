@@ -10,8 +10,8 @@
 
 #include "util.h"
 #include "iso22133.h"
-#include "maestro_interfaces/msg/trcm.hpp"
-#include "maestro_interfaces/msg/trigger_event.hpp"
+#include "roschannel.hpp"
+
 
 namespace maestro {
     class Trigger
@@ -81,7 +81,7 @@ namespace maestro {
         static std::string getTypeAsString(TriggerTypeCode_t typeCode);
         static std::string getParameterAsString(TriggerParameter_t param);
         std::string getParametersString(void) const;
-        maestro_interfaces::msg::Trcm getConfigurationMessageData(void) const;
+        ROSChannels::TriggerConfiguration::message_type getConfigurationMessageData(void) const;
 
         /*!
         * \brief update Update tracked signal (i.e. signal which causes the trigger to occur).
