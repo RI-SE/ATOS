@@ -7,6 +7,9 @@
 #include "logging.h"
 #include "maestroTime.h"
 
+using maestro_interfaces::msg::Exac;
+using maestro_interfaces::msg::Accm;
+
 namespace maestro {
 	/*!
 	* \brief Action::Action Constructor for Action objects.
@@ -40,7 +43,7 @@ namespace maestro {
 	* \brief Action::execute Runs the action if allowed and decrements the number of remaining allowed action executions.
 	* \return Value according to ::ActionReturnCode_t
 	*/
-	Action::ActionReturnCode_t Action::execute(void)
+	Action::ActionReturnCode_t Action::execute(std::vector<Exac>& executedActions)
 	{
 		if (remainingAllowedRuns == 0)
 			return NO_REMAINING_RUNS;
@@ -285,42 +288,42 @@ namespace maestro {
 	* \brief Action::getConfigurationMessageData Constructs a ACCMData struct from object members
 	* \return A struct which can be sent on message bus
 	*/
-	ACCMData Action::getConfigurationMessageData(void) const
+	Accm Action::getConfigurationMessageData(void) const
 	{
-		ACCMData retval;
-		retval.actionID = actionID;
-		retval.actionType = actionTypeCode;
+		Accm message = Accm();
+		message.action_id = actionID;
+		message.action_type = actionTypeCode;
 
 		if (actionObjectIP == 0) LogMessage(LOG_LEVEL_WARNING, "Constructing action configuration message with no IP");
 
-		retval.ip = actionObjectIP;
+		message.ip = actionObjectIP;
 
 		switch(parameters.size())
 		{
 		case 3:
-			retval.actionTypeParameter1 = parameters[0];
-			retval.actionTypeParameter2 = parameters[1];
-			retval.actionTypeParameter3 = parameters[2];
+			message.action_type_parameter1 = parameters[0];
+			message.action_type_parameter2 = parameters[1];
+			message.action_type_parameter3 = parameters[2];
 			break;
 		case 2:
-			retval.actionTypeParameter1 = parameters[0];
-			retval.actionTypeParameter2 = parameters[1];
-			retval.actionTypeParameter3 = ACTION_PARAMETER_UNAVAILABLE;
+			message.action_type_parameter1 = parameters[0];
+			message.action_type_parameter2 = parameters[1];
+			message.action_type_parameter3 = ACTION_PARAMETER_UNAVAILABLE;
 			break;
 		case 1:
-			retval.actionTypeParameter1 = parameters[0];
-			retval.actionTypeParameter2 = ACTION_PARAMETER_UNAVAILABLE;
-			retval.actionTypeParameter3 = ACTION_PARAMETER_UNAVAILABLE;
+			message.action_type_parameter1 = parameters[0];
+			message.action_type_parameter2 = ACTION_PARAMETER_UNAVAILABLE;
+			message.action_type_parameter3 = ACTION_PARAMETER_UNAVAILABLE;
 			break;
 		case 0:
-			retval.actionTypeParameter1 = ACTION_PARAMETER_UNAVAILABLE;
-			retval.actionTypeParameter2 = ACTION_PARAMETER_UNAVAILABLE;
-			retval.actionTypeParameter3 = ACTION_PARAMETER_UNAVAILABLE;
+			message.action_type_parameter1 = ACTION_PARAMETER_UNAVAILABLE;
+			message.action_type_parameter2 = ACTION_PARAMETER_UNAVAILABLE;
+			message.action_type_parameter3 = ACTION_PARAMETER_UNAVAILABLE;
 			break;
 		default:
 			throw std::invalid_argument("Action contains too many parameters for an ISO message");
 		}
-		return retval;
+		return message;
 	}
 
 	/*!

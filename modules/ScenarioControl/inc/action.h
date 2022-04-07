@@ -7,9 +7,10 @@
 #include <set>
 #include <netinet/in.h>
 
-
 #include "util.h"
 #include "iso22133.h"
+#include "maestro_interfaces/msg/accm.hpp"
+#include "maestro_interfaces/msg/exac.hpp"
 
 namespace maestro {
 
@@ -43,7 +44,7 @@ namespace maestro {
         ActionTypeCode_t getTypeCode() const { return actionTypeCode; }
 
         /*! Run the action once, if allowed */
-        virtual ActionReturnCode_t execute(void);
+        virtual ActionReturnCode_t execute(std::vector<maestro_interfaces::msg::Exac>& exacMsgs);
 
         /*! Reset to start state */
         ActionReturnCode_t reset(void);
@@ -58,7 +59,7 @@ namespace maestro {
         static std::string getTypeAsString(ActionTypeCode_t type);
         static std::string getParameterAsString(ActionParameter_t param);
         std::string getParametersString(void) const;
-        ACCMData getConfigurationMessageData(void) const;
+        maestro_interfaces::msg::Accm getConfigurationMessageData(void) const;
         in_addr_t getObjectIP(void) const { return actionObjectIP; }
         std::string getObjectIPAsString(void) const;
         void setObjectIP(in_addr_t ipAddr) { actionObjectIP = ipAddr; }

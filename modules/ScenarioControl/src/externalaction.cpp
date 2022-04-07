@@ -9,32 +9,40 @@
 #include "journal.h"
 #include "util.h"
 #include "maestroTime.h"
+#include "maestro_interfaces/msg/exac.hpp"
+
+using maestro_interfaces::msg::Exac;
 
 namespace maestro {
-	Action::ActionReturnCode_t ExternalAction::execute(void)
+	Action::ActionReturnCode_t ExternalAction::execute(std::vector<Exac>& executedActions)
 	{
-		EXACData data;
-		struct timeval systemTime;
-
 		if (remainingAllowedRuns == 0)
 			return NO_REMAINING_RUNS;
 		else {
+			Exac msg = Exac();
+
+			struct timeval systemTime;
 			TimeSetToCurrentSystemTime(&systemTime);
 
-			data.actionID = actionID;
-			data.executionTime_qmsoW  = actionDelayTime_qms == 0 ? TimeGetAsGPSqmsOfWeek(&systemTime) : TimeGetAsGPSqmsOfWeek(&systemTime) + actionDelayTime_qms;
+			msg.action_id = actionID;
+			msg.executiontime_qmsow  = actionDelayTime_qms == 0 ? TimeGetAsGPSqmsOfWeek(&systemTime) : TimeGetAsGPSqmsOfWeek(&systemTime) + actionDelayTime_qms;
 
-			data.ip = actionObjectIP;
+			msg.ip = actionObjectIP;
 			std::string type = getTypeAsString(getTypeCode());
 			JournalRecordData(JOURNAL_RECORD_EVENT, "Executing action %s (ID %d) - to occur at time %u [seconds of week]",
-							type.c_str(), actionID, data.executionTime_qmsoW);
+							type.c_str(), actionID, msg.executiontime_qmsow);
 
 			LogMessage(LOG_LEVEL_INFO, "Sending execute action message over message bus (action ID %u)", actionID);
-			if(iCommSendEXAC(data) == -1)
-				return NOT_OK;
-
+			Action::ActionReturnCode_t returncode;
+			try{
+				executedActions.push_back(msg);
+				returncode = OK;
+			}
+			catch(...){
+				returncode = NOT_OK;
+			}
 			remainingAllowedRuns--;
-			return OK;
+			return returncode;
 		}
 	}
 

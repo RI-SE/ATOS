@@ -1,7 +1,7 @@
 #include "isotrigger.h"
 
 namespace maestro {
-	Trigger::TriggerReturnCode_t ISOTrigger::update(TriggerEvent::SharedPtr data)
+	Trigger::TriggerReturnCode_t ISOTrigger::update(maestro_interfaces::msg::TriggerEvent::SharedPtr data)
 	{
 		if (data->trigger_id == getID() && data->ip == triggerObjectIP)
 		{

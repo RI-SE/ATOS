@@ -21,7 +21,10 @@ ScenarioControl::ScenarioControl()
 	getStatusSub(*this, std::bind(&ScenarioControl::onGetStatusMessage, this, _1)),
 	objectsConnectedSub(*this, std::bind(&ScenarioControl::onObjectsConnectedMessage, this, _1)),
 	disconnectSub(*this, std::bind(&ScenarioControl::onDisconnectMessage, this, _1)),
-	triggerEventSub(*this, std::bind(&ScenarioControl::onTriggerEventMessage, this, _1))
+	triggerEventSub(*this, std::bind(&ScenarioControl::onTriggerEventMessage, this, _1)),
+	accmPub(*this),
+	trcmPub(*this),
+	exacPub(*this)
 {
 	initialize();
 }
@@ -50,13 +53,12 @@ int ScenarioControl::initialize()
 	//! Start thread
 	manageTriggersThread=std::make_unique<std::thread>(&ScenarioControl::manageTriggers, this);
 	//! Load configuration
-	/*
-	xosc _xosc;
-	_xosc.load("/home/victor/lane_change_simple.xosc");
-	_xosc.parse();
-	RCLCPP_INFO(get_logger(), "string: %s",_xosc.m_OpenSCENARIO->m_FileHeader->description.m_string.c_str());*/
-	UtilGetConfDirectoryPath(configPath, sizeof(configPath));
-	strcat(configPath,TRIGGER_ACTION_FILE_NAME);
+	UtilGetConfDirectoryPath(triggerActionConfigPath, sizeof(triggerActionConfigPath));
+	UtilGetConfDirectoryPath(openDriveConfigPathPath, sizeof(openDriveConfigPathPath));
+	UtilGetConfDirectoryPath(openScenarioConfigPath, sizeof(openScenarioConfigPath));
+	strcat(triggerActionConfigPath,triggerActionFileName.c_str());
+	strcat(openDriveConfigPathPath,openDriveFileName.c_str());
+	strcat(openScenarioConfigPath,openScenarioFileName.c_str());
 	return retval;
 }
 
@@ -64,7 +66,7 @@ void ScenarioControl::onInitMessage(const ROSChannels::Init::message_type::Share
 	if (state == UNINITIALIZED) {
 		try {
 			RCLCPP_INFO(get_logger(), "Initializing scenario");
-			scenario.initialize(configPath);
+			scenario = std::make_shared<Scenario>(triggerActionConfigPath, openDriveConfigPathPath, openScenarioConfigPath,  get_logger());
 			state = INITIALIZED;
 		}
 		catch (std::invalid_argument e) {
@@ -72,7 +74,7 @@ void ScenarioControl::onInitMessage(const ROSChannels::Init::message_type::Share
 			util_error(errMsg.c_str());
 		}
 		catch (std::ifstream::failure) {
-			std::string errMsg = "Unable to open scenario file <" + std::string(configPath) + ">";
+			std::string errMsg = "Unable to open scenario file <" + std::string(triggerActionConfigPath) + ">";
 			util_error(errMsg.c_str());
 		}
 	}
@@ -85,7 +87,9 @@ void ScenarioControl::onObjectsConnectedMessage(const ObjectsConnected::message_
 	if (state == INITIALIZED) {
 		state = CONNECTED;
 		RCLCPP_INFO(get_logger(), "Distributing scenario configuration");
-		scenario.sendConfiguration();
+		auto triggers = scenario->getTriggers();
+		auto actions = scenario->getActions();
+		sendConfiguration(actions,triggers);
 	}
 	else { // if not initialized, try to initialize once and then send conf to objects.
 		if (recursionDepth == 0){
@@ -99,10 +103,19 @@ void ScenarioControl::onObjectsConnectedMessage(const ObjectsConnected::message_
 }
 
 
+void ScenarioControl::sendConfiguration(std::set<Action*> actions, std::set<Trigger*> triggers){
+	for (auto trigger : triggers){
+		trcmPub.publish(trigger->getConfigurationMessageData());
+	}
+	for (auto action : actions){
+		accmPub.publish(action->getConfigurationMessageData());
+	}
+}
+
 void ScenarioControl::onTriggerEventMessage(const ROSChannels::TriggerEvent::message_type::SharedPtr treo){
 	if (state == RUNNING) {
 		// Trigger corresponding trigger
-		scenario.updateTrigger(treo->trigger_id, treo);
+		scenario->updateTrigger(treo->trigger_id, treo);
 	}
 	else {
 		RCLCPP_WARN(get_logger(), "Received unexpected trigger action command (current state: %s)",stateToString.at(state));
@@ -131,7 +144,7 @@ void ScenarioControl::onStartMessage(const Start::message_type::SharedPtr){
 }
 void ScenarioControl::onArmMessage(const Arm::message_type::SharedPtr){
 	RCLCPP_INFO(get_logger(), "Resetting scenario");
-	scenario.reset();
+	scenario->reset();
 }
 
 void ScenarioControl::onExitMessage(const Exit::message_type::SharedPtr){
@@ -154,10 +167,12 @@ void ScenarioControl::manageTriggers() {
 	while (!quit){
 		auto end_time = steady_clock::now() + scenarioCheckPeriod;
 		if (state == RUNNING) {
-			scenario.executeTriggeredActions();
+			std::vector<ROSChannels::ExecuteAction::message_type> exacMsgs;
+			scenario->executeTriggeredActions(exacMsgs);
+			sendExacs(exacMsgs);
 
 			// Allow for retriggering on received TREO messages
-			scenario.resetISOTriggers();
+			scenario->resetISOTriggers();
 
 			auto now = steady_clock::now();
 			if (now > nextShmemReadTime){
@@ -169,6 +184,11 @@ void ScenarioControl::manageTriggers() {
 	}
 }
 
+void ScenarioControl::sendExacs(std::vector<ROSChannels::ExecuteAction::message_type> exacMsgs) {
+	for (auto msg : exacMsgs){
+		exacPub.publish(msg);
+	}
+}
 
 time_point<steady_clock> ScenarioControl::getNextReadTime(time_point<steady_clock> now) {
 	if (( now - nextShmemReadTime ) > shmemReadPeriod){
@@ -185,7 +205,7 @@ time_point<steady_clock> ScenarioControl::getNextReadTime(time_point<steady_cloc
 *			with the rate parameter
 * \param Scenario scenario object keeping information about which trigger is linked to which action and the updating and parsing of the same.
 */
-int ScenarioControl::updateTriggers(Scenario& scenario) {
+int ScenarioControl::updateTriggers(std::shared_ptr<Scenario> scenario) {
 
 	std::vector<uint32_t> transmitterIDs;
 	uint32_t numberOfObjects;
@@ -218,7 +238,7 @@ int ScenarioControl::updateTriggers(Scenario& scenario) {
 			return -1;
 		}
 		else {
-			scenario.updateTrigger(monitorData);
+			scenario->updateTrigger(monitorData);
 		}
 
 	}

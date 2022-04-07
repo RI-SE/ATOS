@@ -31,7 +31,7 @@ namespace maestro {
         TriggerOperator_t getOperator(void) const { return oper; }
         std::string getOperatorString(void) const;
 
-        void executeIfActive(void) const;
+        void executeIfActive(std::vector<maestro_interfaces::msg::Exac>& exacMsgs);
         bool isActive(void) const;
 
         void addAction(Action* ap) { actions.insert(ap); }

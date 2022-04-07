@@ -7,7 +7,6 @@
 
 #include "scenario.h"
 
-
 #include "isotrigger.h"
 #include "externalaction.h"
 #include "braketrigger.h"
@@ -15,9 +14,12 @@
 
 namespace maestro {
 
-	Scenario::Scenario(const std::string scenarioFilePath)
+	Scenario::Scenario(const std::string scenarioFilePath, 
+						const std::string openDriveFilePath, 
+						const std::string openScenarioFilePath, 
+						rclcpp::Logger log) : Loggable(log)
 	{
-		initialize(scenarioFilePath);
+		initialize(scenarioFilePath, openDriveFilePath, openScenarioFilePath);
 	}
 
 
@@ -39,13 +41,28 @@ namespace maestro {
 		allActions.clear();
 	}
 
-	void Scenario::initialize(const std::string scenarioFilePath)
+	void Scenario::loadOpenDrive(const std::string openDriveFilePath)
+	{
+		xodr openDriveParser;
+		openDriveParser.load(openDriveFilePath);
+		openDriveParser.parse();
+		openDriveObject = openDriveParser.m_OpenDRIVE;
+	}
+	void Scenario::loadOpenScenario(const std::string openScenarioFilePath)
+	{
+		xosc openScenarioParser;
+		openScenarioParser.load(openScenarioFilePath);
+		openScenarioParser.parse();
+		openScenarioObject = openScenarioParser.m_OpenSCENARIO;
+	}
+
+	void Scenario::initialize(const std::string scenarioFilePath,std::string openDriveFilePath, std::string openScenarioFilePath)
 	{
 		std::ifstream file;
 		std::string debugStr;
 
 		clear();
-		LogMessage(LOG_LEVEL_DEBUG, "Opening scenario file <%s>", scenarioFilePath.c_str());
+		RCLCPP_DEBUG(get_logger(), "Opening scenario file <%s>", scenarioFilePath.c_str());
 		file.open(scenarioFilePath);
 
 		if (file.is_open())
@@ -61,7 +78,26 @@ namespace maestro {
 		else {
 			throw std::ifstream::failure("Unable to open file <" + scenarioFilePath + ">");
 		}
-		LogMessage(LOG_LEVEL_INFO, "Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
+		RCLCPP_INFO(get_logger(),"Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
+
+		try{
+			loadOpenDrive(openDriveFilePath);
+		}
+		catch(const std::exception &e){
+			RCLCPP_WARN(get_logger(),"Failed to parse OpenDrive: %s", e.what());
+		}
+		catch(...){
+			RCLCPP_WARN(get_logger(),"Failed to parse OpenDrive");
+		}
+		try{
+			loadOpenScenario(openScenarioFilePath);
+		}
+		catch(const std::exception &e){
+			RCLCPP_WARN(get_logger(),"Failed to parse OpenDrive: %s", e.what());
+		}
+		catch(...){
+			RCLCPP_WARN(get_logger(),"Failed to parse OpenDrive");
+		}
 
 		debugStr =  "\nTriggers:\n";
 		for (Trigger* tp : allTriggers)
@@ -72,7 +108,7 @@ namespace maestro {
 			debugStr += "\t" + ap->getObjectIPAsString() + "\t" + ap->getTypeAsString(ap->getTypeCode()) + "\n";
 
 		debugStr.pop_back();
-		LogMessage(LOG_LEVEL_DEBUG, debugStr.c_str());
+		RCLCPP_DEBUG(get_logger(),debugStr.c_str());
 	}
 
 	void Scenario::reset() {
@@ -81,24 +117,15 @@ namespace maestro {
 		}
 	}
 
-	/*!
-	* \brief Scenario::sendConfiguration Sends TRCM and ACCM according to previously initialized scenario
-	*/
-	void Scenario::sendConfiguration(void) const
+	std::set<Trigger*>& Scenario::getTriggers()
 	{
-		for (Trigger* tp : allTriggers)
-		{
-			if(iCommSendTRCM(tp->getConfigurationMessageData()) == -1)
-				util_error("Fatal communication error sending TRCM");
-		}
-
-		for (Action* ap : allActions)
-		{
-			if(iCommSendACCM(ap->getConfigurationMessageData()) == -1)
-				util_error("Fatal communication error sending ACCM");
-		}
+		return allTriggers;
 	}
 
+	std::set<Action*>& Scenario::getActions()
+	{
+		return allActions;
+	}
 	/*!
 	* \brief Scenario::splitLine Splits a line at specified delimiter and stores the generated substrings in a vector (excluding the delimiters)
 	* \param line Line to be split
@@ -149,13 +176,13 @@ namespace maestro {
 			case TRIGGER_IP:
 				if(!regex_match(part,ipAddrPattern)) {
 					errMsg = "Specified trigger IP address field <" + part + "> is invalid";
-					LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+					RCLCPP_ERROR(get_logger(), errMsg.c_str());
 					throw invalid_argument(errMsg);
 				}
 
 				if(inet_pton(AF_INET, part.c_str(), &triggerIP) <= 0) {
 					errMsg = "Error parsing IP string <" + part + ">";
-					LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+					RCLCPP_ERROR(get_logger(), errMsg.c_str());
 					throw invalid_argument(errMsg);
 				}
 				parseState = TRIGGER;
@@ -163,7 +190,7 @@ namespace maestro {
 			case TRIGGER:
 				if(!regex_match(part,triggerActionPattern)) {
 					errMsg = "Trigger configuration field <" + part + "> is invalid";
-					LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+					RCLCPP_ERROR(get_logger(), errMsg.c_str());
 					throw invalid_argument(errMsg);
 				}
 
@@ -186,13 +213,13 @@ namespace maestro {
 			case ACTION_IP:
 				if(!regex_match(part,ipAddrPattern)) {
 					errMsg = "Specified action IP address field <" + part + "> is invalid";
-					LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+					RCLCPP_ERROR(get_logger(), errMsg.c_str());
 					throw invalid_argument(errMsg);
 				}
 
 				if(inet_pton(AF_INET, part.c_str(), &actionIP) <= 0) {
 					errMsg = "Error parsing IP string <" + part + ">";
-					LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+					RCLCPP_ERROR(get_logger(), errMsg.c_str());
 					throw invalid_argument(errMsg);
 				}
 				parseState = ACTION;
@@ -200,7 +227,7 @@ namespace maestro {
 			case ACTION:
 				if(!regex_match(part,triggerActionPattern)) {
 					errMsg = "Action configuration field <" + part + "> is invalid";
-					LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+					RCLCPP_ERROR(get_logger(), errMsg.c_str());
 					throw invalid_argument(errMsg);
 				}
 
@@ -212,7 +239,7 @@ namespace maestro {
 				parseState = DONE;
 				break;
 			case DONE:
-				if (part.length() != 0) LogMessage(LOG_LEVEL_WARNING,"Ignored tail field of row in configuration file: <%s>",part.c_str());
+				if (part.length() != 0) RCLCPP_WARN(get_logger(),"Ignored tail field of row in configuration file: <%s>",part.c_str());
 				break;
 			}
 		}
@@ -250,7 +277,7 @@ namespace maestro {
 			if (!regex_search(config, match, triggerPattern))
 			{
 				errMsg = "The following is not a valid configuration: <" + config + ">";
-				LogMessage(LOG_LEVEL_ERROR,errMsg.c_str());
+				RCLCPP_ERROR(get_logger(), errMsg.c_str());
 				throw invalid_argument(errMsg);
 			}
 
@@ -319,7 +346,7 @@ namespace maestro {
 			if (!regex_search(config, match, triggerPattern))
 			{
 				errMsg = "The following is not a valid configuration: <" + config + ">";
-				LogMessage(LOG_LEVEL_ERROR,errMsg.c_str());
+				RCLCPP_ERROR(get_logger(), errMsg.c_str());
 				throw invalid_argument(errMsg);
 			}
 
@@ -363,7 +390,7 @@ namespace maestro {
 	*/
 	void Scenario::parseScenarioFile(std::ifstream &file)
 	{
-		LogMessage(LOG_LEVEL_DEBUG, "Parsing scenario file");
+		RCLCPP_DEBUG(get_logger(), "Parsing scenario file");
 
 		std::string line;
 		while ( std::getline(file, line) ) parseScenarioFileLine(line);
@@ -380,7 +407,7 @@ namespace maestro {
 		for (Trigger* knownTrigger : allTriggers)
 			if (knownTrigger->getID() == tp->getID()) return DUPLICATE_ELEMENT;
 
-		LogMessage(LOG_LEVEL_DEBUG,"Adding trigger with ID: %d",tp->getID());
+		RCLCPP_DEBUG(get_logger(), "Adding trigger with ID: %d", tp->getID());
 		allTriggers.insert(tp);
 		return OK;
 	}
@@ -441,11 +468,11 @@ namespace maestro {
 		return linkTriggersWithActions(tps, aps);
 	}
 
-	void Scenario::executeTriggeredActions(void) const
+	void Scenario::executeTriggeredActions(std::vector<maestro_interfaces::msg::Exac>& exacMsgs)
 	{
-		for (const Causality &c : causalities)
+		for (auto c : causalities)
 		{
-			c.executeIfActive();
+			c.executeIfActive(exacMsgs);
 		}
 	}
 
@@ -475,7 +502,7 @@ namespace maestro {
 						result = tp->update(monr.MonrData.speed.longitudinal_m_s, monr.MonrData.timestamp);
 					}
 					else {
-						LogMessage(LOG_LEVEL_WARNING, "Could not update trigger type %s due to invalid monitor data values",
+						RCLCPP_WARN(get_logger(), "Could not update trigger type %s due to invalid monitor data values",
 								tp->getTypeAsString(tp->getTypeCode()).c_str());
 					}
 					break;
@@ -484,12 +511,12 @@ namespace maestro {
 						result = tp->update(monr);
 					}
 					else {
-						LogMessage(LOG_LEVEL_WARNING, "Could not update trigger type %s due to invalid monitor data values",
+						RCLCPP_WARN(get_logger(), "Could not update trigger type %s due to invalid monitor data values",
 								tp->getTypeAsString(tp->getTypeCode()).c_str());
 					}
 					break;
 				default:
-					LogMessage(LOG_LEVEL_WARNING, "Unhandled trigger type in update: %s",
+					RCLCPP_WARN(get_logger(), "Unhandled trigger type in update: %s",
 							tp->getTypeAsString(tp->getTypeCode()).c_str());
 				}
 				if (result == Trigger::TRIGGER_OCCURRED) {
