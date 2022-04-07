@@ -35,7 +35,8 @@ ObjectControl::ObjectControl()
 	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
 	failurePub(*this),
 	scnAbortPub(*this),
-	monitorPub(*this)
+	monitorPub(*this),
+	objectsConnectedPub(*this)
 {
 	int queueSize=0;
 
@@ -629,4 +630,11 @@ void ObjectControl::startControlSignalSubscriber(){
 }
 void ObjectControl::stopControlSignalSubscriber(){
 	this->controlSignalSub.reset();
+}
+
+void ObjectControl::sendObjectsConnected(){
+	this->objectsConnectedPub.publish(ROSChannels::ObjectsConnected::message_type());
+}
+void ObjectControl::sendAbort(){
+	this->scnAbortPub.publish(ROSChannels::Abort::message_type());
 }

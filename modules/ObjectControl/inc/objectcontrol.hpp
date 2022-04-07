@@ -135,6 +135,8 @@ public:
 	void handleActionConfigurationCommand(const TestScenarioCommandAction&);
 	//! \brief Performs actions in response to an action execution request.
 	void handleExecuteActionCommand(const uint16_t& actionID, const std::chrono::system_clock::time_point& when);
+	void sendObjectsConnected();
+	void sendAbort();
 
 	//! Getters
 	//! \brief Get transmitter ID of anchor object participating in test.
@@ -227,6 +229,7 @@ private:
 	ROSChannels::Failure::Pub failurePub;					//!< Publisher to scenario failure reports
 	ROSChannels::Abort::Pub scnAbortPub;					//!< Publisher to scenario abort reports
 	ROSChannels::Monitor::Pub monitorPub;					//!< Publisher to monitor data
+	ROSChannels::ObjectsConnected::Pub objectsConnectedPub;
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
 	//!			and can be terminated by calling ::abortConnectionAttempt or setting ::connStopReqFuture.
