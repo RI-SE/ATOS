@@ -87,7 +87,7 @@ void SystemControl::onFailureMessage(const Failure::message_type::SharedPtr msg)
 	}
 }
 
-void SystemControl::onGetStatusResponse(const String::SharedPtr msg){
+void SystemControl::onGetStatusResponse(const GetStatusResponse::message_type::SharedPtr msg){
 	moduleResponseTable[msg->data] = std::chrono::steady_clock::now();
 }
 
