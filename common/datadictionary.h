@@ -26,101 +26,81 @@ ReadWriteAccess_t DataDictionarySetScenarioName(const char* name, const size_t n
 ReadWriteAccess_t DataDictionaryGetScenarioName(char* name, const size_t nameLength);
 
 //TODO: We should have one call for the origin, this in order to make sure that all the three parts of the position are updated at the same time, otherwise there is a small risk of us using old and new values for origin thereby we might get a completely messed up origin
-ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(GSDType *GSD, C8 *Latitude);
-ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(GSDType *GSD, dbl *Latitude);
-ReadWriteAccess_t DataDictionaryGetOriginLatitudeC8(GSDType *GSD, C8 *Latitude, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(const char* latitude);
+ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(double_t* latitude);
+ReadWriteAccess_t DataDictionaryGetOriginLatitudeString(char* latitude, const size_t bufferLength);
 
-ReadWriteAccess_t DataDictionaryInitOriginLongitudeDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(GSDType *GSD, C8 *Longitude);
-ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(GSDType *GSD, dbl *Longitude);
-ReadWriteAccess_t DataDictionaryGetOriginLongitudeC8(GSDType *GSD, C8 *Longitude, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(const char* longitude);
+ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(double_t* longitude);
+ReadWriteAccess_t DataDictionaryGetOriginLongitudeString(char* longitude, const size_t bufferLength);
 
-ReadWriteAccess_t DataDictionaryInitOriginAltitudeDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(GSDType *GSD, C8 *Altitude);
-ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(GSDType *GSD, dbl *Altitude);
-ReadWriteAccess_t DataDictionaryGetOriginAltitudeC8(GSDType *GSD, C8 *Altitude, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(const char*  altitude);
+ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(double_t* altitude);
+ReadWriteAccess_t DataDictionaryGetOriginAltitudeString(char* altitude, const size_t bufferLength);
 
-ReadWriteAccess_t DataDictionaryInitVisualizationServerU32(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetVisualizationServerU32(GSDType *GSD, C8 *IP);
-ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(GSDType *GSD, U32 *IP);
-ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType *GSD, C8 *IP, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetVisualizationServerU32(const char* IP);
+ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(in_addr_t* IP);
+ReadWriteAccess_t DataDictionaryGetVisualizationServerIPString(char* IP, const size_t bufferLength);
 
-ReadWriteAccess_t DataDictionaryInitASPMaxTimeDiffDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(GSDType *GSD, C8 *ASPMaxTimeDiff);
-ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(GSDType *GSD, dbl *ASPMaxTimeDiff);
+ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(const char *ASPMaxTimeDiff);
+ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(double_t *ASPMaxTimeDiff);
 
-ReadWriteAccess_t DataDictionaryInitASPMaxTrajDiffDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(GSDType *GSD, C8 *ASPMaxTimeDiff);
-ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(GSDType *GSD, dbl *ASPMaxTimeDiff);
+ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(const char *ASPMaxTimeDiff);
+ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(double_t *ASPMaxTimeDiff);
 
-ReadWriteAccess_t DataDictionaryInitASPStepBackCountU32(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(GSDType *GSD, C8 *ASPStepBackCount);
-ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(GSDType *GSD, U32 *ASPStepBackCount);
+ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(const char *ASPStepBackCount);
+ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(uint32_t *ASPStepBackCount);
 
-ReadWriteAccess_t DataDictionaryInitASPFilterLevelDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(GSDType *GSD, C8 *ASPFilterLevel);
-ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(GSDType *GSD, dbl *ASPFilterLevel);
+ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(const char *ASPFilterLevel);
+ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(double_t *ASPFilterLevel);
 
-ReadWriteAccess_t DataDictionaryInitASPMaxDeltaTimeDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(GSDType *GSD, C8 *ASPMaxDeltaTime);
-ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(GSDType *GSD, dbl *ASPMaxDeltaTime);
+ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(const char *ASPMaxDeltaTime);
+ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(double_t *ASPMaxDeltaTime);
 
-ReadWriteAccess_t DataDictionaryInitTimeServerIPU32(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetTimeServerIPU32(GSDType *GSD, C8 *TimeServerIP);
-ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(GSDType *GSD, U32 *TimeServerIP);
-ReadWriteAccess_t DataDictionaryGetTimeServerIPC8(GSDType *GSD, C8 *TimeServerIP, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetTimeServerIPU32(const char* timeServerIP);
+ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(in_addr_t* timeServerIP);
+ReadWriteAccess_t DataDictionaryGetTimeServerIPString(char* timeServerIP, size_t bufferLength);
 
-ReadWriteAccess_t DataDictionaryInitTimeServerPortU16(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetTimeServerPortU16(GSDType *GSD, C8 *TimeServerPort);
-ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(GSDType *GSD, U16 *TimeServerPort);
+ReadWriteAccess_t DataDictionarySetTimeServerPortU16(const char* timeServerPort);
+ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(uint16_t* timeServerPort);
 
-ReadWriteAccess_t DataDictionaryInitSimulatorIPU32(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetSimulatorIPU32(GSDType *GSD, C8 *SimulatorIP);
-ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(GSDType *GSD, U32 *SimulatorIP);
-ReadWriteAccess_t DataDictionaryGetSimulatorIPC8(GSDType *GSD, C8 *SimulatorIP, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetSimulatorIPU32(const char* simulatorIP);
+ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(in_addr_t* simulatorIP);
+ReadWriteAccess_t DataDictionaryGetSimulatorIPString(char* simulatorIP, const size_t bufferLength);
 
-ReadWriteAccess_t DataDictionaryInitSimulatorTCPPortU16(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(GSDType *GSD, C8 *SimulatorTCPPort);
-ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(GSDType *GSD, U16 *SimulatorTCPPort);
+ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(const char* simulatorTCPPort);
+ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(uint16_t* simulatorTCPPort);
 
-ReadWriteAccess_t DataDictionaryInitSimulatorUDPPortU16(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(GSDType *GSD, C8 *SimulatorUDPPort);
-ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(GSDType *GSD, U16 *SimulatorUDPPort);
+ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(const char* simulatorUDPPort);
+ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(uint16_t* simulatorUDPPort);
 
-ReadWriteAccess_t DataDictionaryInitSimulatorModeU8(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetSimulatorModeU8(GSDType *GSD, C8 *SimulatorMode);
-ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(GSDType *GSD, U8 *SimulatorMode);
+ReadWriteAccess_t DataDictionarySetSimulatorModeU8(const char* simulatorMode);
+ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(uint8_t* simulatorMode);
 
-ReadWriteAccess_t DataDictionaryInitVOILReceiversC8(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetVOILReceiversC8(GSDType *GSD, C8 *VOILReceivers);
-ReadWriteAccess_t DataDictionaryGetVOILReceiversC8(GSDType *GSD, C8 *VOILReceivers, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetVOILReceiversString(const char* VOILReceivers);
+ReadWriteAccess_t DataDictionaryGetVOILReceiversString(char* VOILReceivers, const size_t buflen);
 
-ReadWriteAccess_t DataDictionaryInitDTMReceiversC8(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetDTMReceiversC8(GSDType *GSD, C8 *DTMReceivers);
-ReadWriteAccess_t DataDictionaryGetDTMReceiversC8(GSDType *GSD, C8 *DTMReceivers, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetDTMReceiversString(const char *DTMReceivers);
+ReadWriteAccess_t DataDictionaryGetDTMReceiversString(char *DTMReceivers, const size_t buflen);
 
-ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(GSDType *GSD, C8 *IP);
-ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(GSDType *GSD, U32 *IP);
-ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPC8(GSDType *GSD, C8 *IP, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(const char *IP);
+ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(uint32_t *IP);
+ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPString(char *IP, uint32_t buflen);
 
-ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(GSDType *GSD, C8 *SupervisorTCPPort);
-ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(GSDType *GSD, U16 *SupervisorTCPPort);
+ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(const char* SupervisorTCPPort);
+ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(uint16_t *SupervisorTCPPort);
 
-ReadWriteAccess_t DataDictionaryInitRVSSConfigU32(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetRVSSConfigU32(GSDType *GSD, U32 RVSSConfig);
-ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(GSDType *GSD, U32 *RVSSConfig);
+ReadWriteAccess_t DataDictionarySetRVSSConfigU32(uint32_t RVSSConfig);
+ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(uint32_t *RVSSConfig);
 
-ReadWriteAccess_t DataDictionaryInitRVSSRateU8(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetRVSSRateU8(GSDType *GSD, U8 RVSSRate);
-ReadWriteAccess_t DataDictionaryGetRVSSRateU8(GSDType *GSD, U8 *RVSSRate);
+ReadWriteAccess_t DataDictionarySetRVSSRateU8(uint8_t RVSSRate);
+ReadWriteAccess_t DataDictionaryGetRVSSRateU8(uint8_t *RVSSRate);
 
-ReadWriteAccess_t DataDictionarySetRVSSAsp(GSDType *GSD, ASPType *ASPData);
-ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType *GSD, ASPType *ASPData);
+ReadWriteAccess_t DataDictionaryInitRVSSAsp();
+ReadWriteAccess_t DataDictionarySetRVSSAsp(ASPType *ASPData);
+ReadWriteAccess_t DataDictionaryGetRVSSAsp(ASPType *ASPData);
+ReadWriteAccess_t DataDictionaryFreeRVSSAsp();
 
-ReadWriteAccess_t DataDictionaryInitMiscData(void);
 ReadWriteAccess_t DataDictionarySetMiscData(const char * miscData, const size_t datalen);
 ReadWriteAccess_t DataDictionaryGetMiscData(char* miscData, const size_t buflen);
 
@@ -129,7 +109,7 @@ ReadWriteAccess_t DataDictionarySetOBCState(const OBCState_t OBCState);
 ReadWriteAccess_t DataDictionaryGetOBCState(OBCState_t* OBCState);
 ReadWriteAccess_t DataDictionaryFreeStateData();
 
-ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
+ReadWriteAccess_t DataDictionaryConstructor();
 ReadWriteAccess_t DataDictionaryDestructor();
 
 ReadWriteAccess_t DataDictionaryInitMaxPacketsLost(void);

@@ -19,7 +19,7 @@ set(THREAD_LIBRARY pthread)
 set(OSI_LIBRARY OSIHandler)
 
 get_target_property(OSI_HEADERS ${OSI_LIBRARY} INCLUDE_DIRECTORIES)
-get_target_property(OSI_HEADERS ${TIME_LIBRARY} INCLUDE_DIRECTORIES)
+get_target_property(TIME_HEADERS ${TIME_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 

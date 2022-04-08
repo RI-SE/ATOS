@@ -126,6 +126,7 @@ public:
 	void sendArm();
 	void sendDisarm();
 	void sendStart();
+	void sendAllClear();
 	void sendOsiData(const OsiHandler::LocalObjectGroundTruth_t& osidata,
 					 const std::string& projStr,
 					 const std::chrono::system_clock::time_point& timestamp);

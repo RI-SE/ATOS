@@ -47,6 +47,7 @@
 
 // File paths
 #define TEST_DIR_ENV_VARIABLE_NAME "MAESTRO_TEST_DIR"
+#define SYSCONF_DIR_NAME "/usr/etc"
 #define JOURNAL_DIR_NAME "journal"
 #define MAESTRO_TEST_DIR_NAME ".maestro"
 #define CONFIGURATION_DIR_NAME "conf"
@@ -90,6 +91,7 @@
 #define PRIO_COMM_TRAJ_FROMSUP 12
 #define PRIO_COMM_GETSTATUS 10
 #define PRIO_COMM_REMOTECTRL_MANOEUVRE 12
+#define PRIO_COMM_BACKTOSTART 12
 #define PRIO_COMM_GETSTATUS_OK 255
 
 // Unused messages TODO: double check the priority of unused messages
@@ -2171,6 +2173,12 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_REMOTECTRL_MANOEUVRE:
 		uiMessagePrio = PRIO_COMM_REMOTECTRL_MANOEUVRE;
 		break;
+	case COMM_BACKTOSTART_CALL:
+        uiMessagePrio = PRIO_COMM_BACKTOSTART;
+        break;
+	case COMM_BACKTOSTART_RESPONSE:
+		uiMessagePrio = PRIO_COMM_BACKTOSTART;
+		break;
 	case COMM_ENABLE_OBJECT:
 		uiMessagePrio = PRIO_COMM_ENABLE_OBJECT;
 		break;
@@ -2349,6 +2357,66 @@ int iCommSendACCM(ACCMData data) {
   -- File system functions
   ------------------------------------------------------------*/
 /*!
+ * \brief UtilVerifyTestDirectory Copies a file from source to destination
+ * \param source File to be copied
+ * \param sourceLen Length of path to file to be copied
+ * \param dest Target path
+ * \param destLen Length of path to target
+ * \return 0 if successfully verified, -1 otherwise
+ */
+int UtilCopyFile(
+	const char* source,
+	const size_t sourceLen,
+	const char* dest,
+	const size_t destLen)
+{
+	int fd_to, fd_from;
+    char buf[4096];
+    ssize_t nread;
+
+    fd_from = open(source, O_RDONLY);
+    if (fd_from < 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to open file %s", source);
+        return -1;
+	}
+
+    fd_to = open(dest, O_WRONLY | O_CREAT | O_EXCL, S_IWUSR | S_IRUSR | S_IWGRP | S_IRGRP | S_IROTH);
+    if (fd_to < 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to open file %s", dest);
+		close(fd_from);
+		return -1;
+	}
+
+    while ((nread = read(fd_from, buf, sizeof buf)) > 0) {
+        char *out_ptr = buf;
+
+        do {
+        	ssize_t nwritten = write(fd_to, out_ptr, nread);
+
+            if (nwritten >= 0) {
+                nread -= nwritten;
+                out_ptr += nwritten;
+            }
+            else if (errno != EINTR) {
+				close(fd_from);
+				close(fd_to);
+				LogMessage(LOG_LEVEL_ERROR, "Failed to write to file %s", dest);
+            }
+        } while (nread > 0);
+    }
+	close(fd_to);
+	close(fd_from);
+
+    if (nread == 0) {
+        return 0;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to read from file %s", source);
+		return -1;
+	}
+}
+
+/*!
  * \brief UtilVerifyTestDirectory Checks so that all the required directories exist
  * (i.e. traj, conf etc.) and that a configuration file exists.
  * \return 0 if successfully verified, -1 otherwise
@@ -2383,11 +2451,15 @@ int UtilVerifyTestDirectory() {
 
 	// Check top level dir
 	dir = opendir(testDir);
-	if (dir)
+	if (dir) {
 		closedir(dir);
+	}
 	else if (errno == ENOENT) {
-		LogMessage(LOG_LEVEL_ERROR, "Nonexistent top level test directory %s", testDir);
-		return -1;
+		result = mkdir(testDir, 0755);
+		if (result < 0) {
+			LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", testDir);
+			return -1;
+		}
 	}
 	else if (errno == EACCES) {
 		LogMessage(LOG_LEVEL_ERROR,
@@ -2411,14 +2483,17 @@ int UtilVerifyTestDirectory() {
 		strcat(subDir, expectedDirs[i]);
 
 		dir = opendir(subDir);
-		if (dir)
+		if (dir) {	
 			closedir(dir);
+		}
 		else if (errno == ENOENT) {
 			// It did not exist: create it
 			LogMessage(LOG_LEVEL_INFO, "Directory %s does not exist: creating it", subDir);
-			result = mkdir(subDir, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
-			if (result < 0)
-				util_error("Unable to create directory");
+			result = mkdir(subDir, 0755);
+			if (result < 0) {
+				LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", subDir);
+				return -1;
+			}
 		}
 		else {
 			LogMessage(LOG_LEVEL_ERROR, "Error opening directory %s", subDir);
@@ -2433,11 +2508,16 @@ int UtilVerifyTestDirectory() {
 
 	if (file != NULL) {
 		fclose(file);
-		return 0;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Configuration file %s does not exist", subDir);
-		return -1;
+		char sysConfDir[MAX_FILE_PATH];
+		strcpy(sysConfDir, SYSCONF_DIR_NAME "/" CONF_FILE_NAME);
+		LogMessage(LOG_LEVEL_INFO, "Configuration file %s does not exist, copying default from %s",
+			subDir, sysConfDir);
+		if (UtilCopyFile(sysConfDir, sizeof(sysConfDir), subDir, sizeof(subDir)) < 0) {
+			LogMessage(LOG_LEVEL_ERROR, "Failed to copy file");
+			return -1;
+		}
 	}
 }
 

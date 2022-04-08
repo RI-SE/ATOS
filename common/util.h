@@ -171,24 +171,6 @@ enum ObjectFileParameter {
 	OBJECT_SETTING_IS_OSI_COMPATIBLE
 };
 
-
-#define UNKNOWN 0
-#define C8_CODE  1
-#define U8_CODE  2
-#define I8_CODE  3
-#define U16_CODE  4
-#define I16_CODE  5
-#define U32_CODE  6
-#define I32_CODE  7
-#define U48_CODE  8
-#define I48_CODE  9
-#define U64_CODE  10
-#define I64_CODE  11
-#define DBL_CODE  12
-#define FLT_CODE  13
-#define STRUCT_CODE  254
-#define RESERVED_CODE  255
-
 #define C8 uint8_t
 #define U8 uint8_t
 #define I8 int8_t
@@ -250,12 +232,14 @@ COMM_TREO = 23,
 COMM_ACCM = 24,
 COMM_TRCM = 25,
 COMM_DISARM = 26,
-COMM_GETSTATUS = 237,
-COMM_GETSTATUS_OK = 238,
-COMM_REMOTECTRL_ENABLE = 27,
-COMM_REMOTECTRL_DISABLE = 28,
-COMM_REMOTECTRL_MANOEUVRE = 29,
-COMM_ENABLE_OBJECT = 30,
+COMM_GETSTATUS = 27,
+COMM_GETSTATUS_OK = 28,
+COMM_BACKTOSTART_CALL = 29,
+COMM_BACKTOSTART_RESPONSE = 30,
+COMM_REMOTECTRL_ENABLE = 31,
+COMM_REMOTECTRL_DISABLE = 32,
+COMM_REMOTECTRL_MANOEUVRE = 33,
+COMM_ENABLE_OBJECT = 34,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
 COMM_INV = 255
@@ -280,6 +264,12 @@ typedef enum {
 	OBJECT_DISABLED = 2,
 	OBJECT_UNDEFINED = 3
 } ObjectEnabledType;
+
+typedef enum {
+	BTS_FAIL = -2,
+	BTS_ERROR = -1,
+	BTS_PASS = 0
+} BTSResponse;
 
 
 typedef struct {
@@ -560,15 +550,16 @@ typedef struct {
 
 /*! Data dictionary read/write return codes. */
 typedef enum {
-    UNDEFINED, /*!< Undefined result */
-    WRITE_OK, /*!< Write successful */
-    READ_OK, /*!< Read successful */
-	UNINITIALIZED, /*!< Read successful but data not initialized */
-    READ_WRITE_OK, /*!< Combined read/write successful */
-    PARAMETER_NOTFOUND, /*!< Read/write not successful */
-    OUT_OF_RANGE /*!< Attempted to read out of range */
+	UNDEFINED = -3, /*!< Undefined result */
+	WRITE_OK = 1,  /*!< Write successful */
+	READ_OK = 2,   /*!< Read successful */
+	WRITE_FAIL = -1, /*! Write unsuccessful */
+	READ_FAIL = -2,  /*! Read unsuccessful */
+	UNINITIALIZED = -4,		/*!< Read successful but data not initialized */
+	READ_WRITE_OK = 0,		/*!< Combined read/write successful */
+	PARAMETER_NOTFOUND = -5, /*!< Read/write not successful */
+	OUT_OF_RANGE = -6		/*!< Attempted to read out of range */
 } ReadWriteAccess_t;
-
 
 #pragma pack(push,1)
 
@@ -654,6 +645,7 @@ int iCommSendACCM(ACCMData data);
 
 // File system functions
 int UtilVerifyTestDirectory();
+int UtilCopyFile(const char* source, const size_t sourceLen, const char* dest, const size_t destLen);
 void UtilGetTestDirectoryPath(char* path, size_t pathLen);
 void UtilGetJournalDirectoryPath(char* path, size_t pathLen);
 void UtilGetConfDirectoryPath(char* path, size_t pathLen);

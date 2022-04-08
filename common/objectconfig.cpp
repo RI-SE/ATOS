@@ -1,6 +1,7 @@
 #include "objectconfig.hpp"
 #include "util.h"
 #include "logging.h"
+#include <iomanip>
 
 ObjectConfig::ObjectConfig() {
 	origin.latitude_deg = origin.longitude_deg = origin.altitude_m = 0.0;
@@ -249,8 +250,8 @@ void ObjectConfig::split(std::string &str, char delim, std::vector<int> &out) {
 std::string ObjectConfig::getProjString() const {
 	std::stringstream projStr;
 	projStr << "+proj=topocentric +ellps=GRS80 ";
-	projStr << "+lat_0=" << this->getOrigin().latitude_deg << " ";
-	projStr << "+lon_0=" << this->getOrigin().longitude_deg << " ";
-	projStr << "+h_0=" << this->getOrigin().altitude_m;
+	projStr << std::setprecision(10) << "+lat_0=" << this->getOrigin().latitude_deg << " ";
+	projStr << std::setprecision(10) << "+lon_0=" << this->getOrigin().longitude_deg << " ";
+	projStr << std::setprecision(10) << "+h_0=" << this->getOrigin().altitude_m;
 	return projStr.str();
 }

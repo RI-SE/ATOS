@@ -562,7 +562,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								//Build ASP debug data and set to GSD
 								//bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
 								//ObjectControlBuildASPMessage(buffer, &ASPData, 0);
-								DataDictionarySetRVSSAsp(GSD, &ASPData);
+								DataDictionarySetRVSSAsp(&ASPData);
 
 								if (TimeGetAsGPSqmsOfWeek(&monitorData.MonrData.timestamp) % ASPDebugRate ==
 									0) {
@@ -1286,13 +1286,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_DATA_DICT) {
 
 				LogMessage(LOG_LEVEL_INFO, "Updating variables from DataDictionary.");
-				DataDictionaryGetOriginLatitudeC8(GSD, OriginLatitude, SMALL_BUFFER_SIZE_0);
-				DataDictionaryGetOriginLongitudeC8(GSD, OriginLongitude, SMALL_BUFFER_SIZE_0);
-				DataDictionaryGetOriginAltitudeC8(GSD, OriginAltitude, SMALL_BUFFER_SIZE_0);
+				DataDictionaryGetOriginLatitudeString(OriginLatitude, SMALL_BUFFER_SIZE_0);
+				DataDictionaryGetOriginLongitudeString(OriginLongitude, SMALL_BUFFER_SIZE_0);
+				DataDictionaryGetOriginAltitudeString(OriginAltitude, SMALL_BUFFER_SIZE_0);
 
-				DataDictionaryGetOriginLatitudeDbl(GSD, &OriginLatitudeDbl);
-				DataDictionaryGetOriginLongitudeDbl(GSD, &OriginLongitudeDbl);
-				DataDictionaryGetOriginAltitudeDbl(GSD, &OriginAltitudeDbl);
+				DataDictionaryGetOriginLatitudeDbl(&OriginLatitudeDbl);
+				DataDictionaryGetOriginLongitudeDbl(&OriginLongitudeDbl);
+				DataDictionaryGetOriginAltitudeDbl(&OriginAltitudeDbl);
 
 				OriginLatitudeDbl = atof(OriginLatitude);
 				OriginLongitudeDbl = atof(OriginLongitude);
@@ -1303,14 +1303,14 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				OriginPosition.Altitude = OriginAltitudeDbl;
 				OriginPosition.Heading = OriginHeadingDbl;
 
-				DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ASPMaxTimeDiffDbl);
-				DataDictionaryGetASPMaxTrajDiffDbl(GSD, &ASPMaxTrajDiffDbl);
-				DataDictionaryGetASPStepBackCountU32(GSD, &ASPStepBackCount);
-				DataDictionaryGetASPFilterLevelDbl(GSD, &ASPFilterLevelDbl);
-				DataDictionaryGetASPMaxDeltaTimeDbl(GSD, &ASPMaxDeltaTimeDbl);
+				DataDictionaryGetASPMaxTimeDiffDbl(&ASPMaxTimeDiffDbl);
+				DataDictionaryGetASPMaxTrajDiffDbl(&ASPMaxTrajDiffDbl);
+				DataDictionaryGetASPStepBackCountU32(&ASPStepBackCount);
+				DataDictionaryGetASPFilterLevelDbl(&ASPFilterLevelDbl);
+				DataDictionaryGetASPMaxDeltaTimeDbl(&ASPMaxDeltaTimeDbl);
 				ASPDebugRate = 1;
-				DataDictionaryGetVOILReceiversC8(GSD, VOILReceivers, SMALL_BUFFER_SIZE_254);
-				DataDictionaryGetDTMReceiversC8(GSD, DTMReceivers, SMALL_BUFFER_SIZE_254);
+				DataDictionaryGetVOILReceiversString(VOILReceivers, SMALL_BUFFER_SIZE_254);
+				DataDictionaryGetDTMReceiversString(DTMReceivers, SMALL_BUFFER_SIZE_254);
 			}
 			else if (iCommand == COMM_DISCONNECT) {
 				LogMessage(LOG_LEVEL_INFO, "DISCONNECT received");
