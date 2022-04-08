@@ -14,7 +14,7 @@ namespace maestro {
 
         using Trigger::update;
         TriggerReturnCode_t update(void) override { return wasTriggeredByLastUpdate = NO_TRIGGER_OCCURRED; }
-        TriggerReturnCode_t update(TriggerEvent::SharedPtr) override;
+        TriggerReturnCode_t update(ROSChannels::TriggerEvent::message_type::SharedPtr) override;
     private:
         TriggerReturnCode_t checkIfTriggered() const override;
         const std::set<TriggerParameter_t> getAcceptedParameters() const override

@@ -9,19 +9,30 @@
 #include "causality.h"
 #include "logging.h"
 #include "journal.h"
+#include "roschannel.hpp"
+
+#include "ad-xolib/xodr.h"
+#include "ad-xolib/xosc.h"
+
+#include "loggable.hpp"
 
 namespace maestro {
-    class Scenario
+    class Scenario : public Loggable
     {
     public:
         typedef enum {OK, NOT_OK, DUPLICATE_ELEMENT, INVALID_ARGUMENT, NOT_FOUND} ScenarioReturnCode_t;
 
-        Scenario(const std::string scenarioFilePath);
-        Scenario() {}
+        Scenario(const std::string scenarioFilePath, 
+                 const std::string openDriveFilePath, 
+                 const std::string openScenarioFilePath,  
+                 rclcpp::Logger log);
         ~Scenario();
 
-        void initialize(const std::string scenarioFilePath);
-        void sendConfiguration(void) const;
+        void initialize(const std::string scenarioFilePath, 
+                        const std::string openDriveFilePath, 
+                        const std::string openScenarioFilePath);
+        void loadOpenDrive(const std::string openDriveFilePath);
+        void loadOpenScenario(const std::string openScenarioFilePath);
 
         ScenarioReturnCode_t linkTriggersWithActions(std::set<Trigger*> tps, std::set<Action*> aps);
         ScenarioReturnCode_t linkTriggersWithAction(std::set<Trigger*> tps, Action* ap);
@@ -31,7 +42,7 @@ namespace maestro {
         ScenarioReturnCode_t addTrigger(Trigger* tp);
         ScenarioReturnCode_t addAction(Action* ap);
 
-        std::set<Causality> getCausalities(void);
+        std::shared_ptr<std::set<Causality>> getCausalities();
 
         template<typename T>
         ScenarioReturnCode_t updateTrigger(Trigger::TriggerID_t id, T value)
@@ -54,14 +65,16 @@ namespace maestro {
         }
 
         void resetISOTriggers(void);
-        void executeTriggeredActions(void) const;
+        void executeTriggeredActions(ROSChannels::ExecuteAction::Pub&) const;
         void reset(void);
         void clear(void);
 
         ScenarioReturnCode_t updateTrigger(const ObjectDataType&);
 
     private:
-        std::set<Causality> causalities;
+        std::shared_ptr<OpenDRIVE> openDriveObject;
+        std::shared_ptr<OpenSCENARIO> openScenarioObject;
+        std::shared_ptr<std::set<Causality>> causalities;
         std::set<Trigger*> allTriggers;
         std::set<Action*> allActions;
 

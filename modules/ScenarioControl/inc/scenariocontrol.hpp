@@ -30,8 +30,13 @@ private:
 	ROSChannels::TriggerEvent::Sub triggerEventSub;
 	ROSChannels::GetStatus::Sub getStatusSub;
 
+	ROSChannels::ActionConfiguration::Pub accmPub;
+	ROSChannels::TriggerConfiguration::Pub trcmPub;
+	ROSChannels::ExecuteAction::Pub exacPub;
+
 	std::unique_ptr<std::thread> manageTriggersThread;
 
+	void sendConfiguration();
 	enum state_t {UNINITIALIZED, INITIALIZED, CONNECTED, RUNNING};
 	state_t state = UNINITIALIZED;
 	const std::map<state_t,std::string> stateToString = {
@@ -40,9 +45,13 @@ private:
 		{CONNECTED,"Connected"},
 		{RUNNING,"Running"}
 	};
-	Scenario scenario;
+	std::unique_ptr<Scenario> scenario;
 	static inline const std::string triggerActionFileName = "triggeraction.conf";
-	char configPath[MAX_FILE_PATH];
+	static inline const std::string openDriveFileName = "opendrive.xodr";
+	static inline const std::string openScenarioFileName = "openscenario.xosc";
+	char triggerActionConfigPath[MAX_FILE_PATH];
+	char openDriveConfigPathPath[MAX_FILE_PATH];
+	char openScenarioConfigPath[MAX_FILE_PATH];
 
 	//! Scenario is executed with x hz
 	static constexpr auto scenarioCheckPeriod = std::chrono::milliseconds(1);
@@ -61,7 +70,7 @@ private:
 	void onTriggerEventMessage(const ROSChannels::TriggerEvent::message_type::SharedPtr) override;
 
 	void manageTriggers();
-	int updateTriggers(Scenario& scenario);
+	int updateTriggers();
 	std::chrono::time_point<std::chrono::steady_clock> getNextReadTime(std::chrono::time_point<std::chrono::steady_clock> now);
 };
 

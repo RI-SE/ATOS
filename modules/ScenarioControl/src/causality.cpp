@@ -48,13 +48,13 @@ namespace maestro {
 		return oper == OR ? "OR" : "AND";
 	}
 
-	void Causality::executeIfActive(void) const
+	void Causality::executeIfActive(ROSChannels::ExecuteAction::Pub& exacPub) const
 	{
 		if (isActive())
 		{
 			for (Action* ap : actions)
 			{
-				ap->execute();
+				ap->execute(exacPub);
 			}
 		}
 	}

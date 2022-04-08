@@ -9,7 +9,7 @@ namespace maestro {
 	public:
 		using Action::Action;
 
-		ActionReturnCode_t execute(void) override;
+		ActionReturnCode_t execute(ROSChannels::ExecuteAction::Pub&) override;
 		ActionReturnCode_t parseParameters(void) override { return OK; }
 	};
 

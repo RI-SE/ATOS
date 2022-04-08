@@ -9,6 +9,7 @@
 #include <functional>
 
 #include "maestro_interfaces/msg/accm.hpp"
+#include "maestro_interfaces/msg/trcm.hpp"
 #include "maestro_interfaces/msg/exac.hpp"
 #include "maestro_interfaces/msg/object_enabled.hpp"
 #include "maestro_interfaces/msg/monitor.hpp"
@@ -189,6 +190,22 @@ namespace AllClear {
 namespace ActionConfiguration {
     const std::string topicName = "action_configuration";
     using message_type = maestro_interfaces::msg::Accm;
+    const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
+
+    class Pub : public BasePub<message_type> {
+    public:
+        Pub(rclcpp::Node& node, const rclcpp::QoS& qos = defaultQoS) : BasePub<message_type>(node, topicName, qos) {}
+    };
+
+    class Sub : public BaseSub<message_type> {
+    public:
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback, const rclcpp::QoS& qos = defaultQoS) : BaseSub<message_type>(node, topicName, callback, qos) {}
+    };
+}
+
+namespace TriggerConfiguration {
+    const std::string topicName = "trigger_configuration";
+    using message_type = maestro_interfaces::msg::Trcm;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
