@@ -368,10 +368,10 @@ void ObjectControl::disconnectObjects() {
 	catch (std::future_error) {
 		// Attempted to stop when none in progress
 	}
+	objectListeners.clear();
 	for (const auto id : getVehicleIDs()) {
 		objects.at(id).disconnect();
 	}
-	objectListeners.clear();
 }
 
 void ObjectControl::disconnectObject(
