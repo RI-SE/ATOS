@@ -13,10 +13,11 @@ public:
     TrajectoryStreamer();
 private:
 	static inline std::string const moduleName = "trajectory_streamer";
-    void onInitMessage(const std_msgs::msg::Empty::SharedPtr);
-    void onObjectsConnectedMessage(const maestro_interfaces::msg::ObjectIdArray::SharedPtr);
-    void onStartMessage(const std_msgs::msg::Empty::SharedPtr);
-    void onAbortMessage(const std_msgs::msg::Empty::SharedPtr) override {}
+    void onInitMessage(const ROSChannels::Init::message_type::SharedPtr);
+    void onObjectsConnectedMessage(const ROSChannels::ObjectsConnected::message_type::SharedPtr);
+    void onStartMessage(const ROSChannels::Start::message_type::SharedPtr);
+    void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
+    void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) override;
 
     void loadObjectFiles();
     void clearScenario();
@@ -26,6 +27,8 @@ private:
     ROSChannels::Init::Sub initSub;
     ROSChannels::ObjectsConnected::Sub connectedSub;
     ROSChannels::Start::Sub startSub;
+    ROSChannels::Abort::Sub abortSub;
+    ROSChannels::Stop::Sub stopSub;
 
     std::vector<TrajectoryPublisher> publishers;
 

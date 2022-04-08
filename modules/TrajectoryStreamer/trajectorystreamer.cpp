@@ -3,12 +3,16 @@
 #include <algorithm>
 
 using namespace maestro;
+using namespace ROSChannels;
+using std::placeholders::_1;
 
 TrajectoryStreamer::TrajectoryStreamer()
     : Module(TrajectoryStreamer::moduleName),
-    initSub(*this, std::bind(&TrajectoryStreamer::onInitMessage, this, std::placeholders::_1)),
-    connectedSub(*this, std::bind(&TrajectoryStreamer::onObjectsConnectedMessage, this, std::placeholders::_1)),
-    startSub(*this, std::bind(&TrajectoryStreamer::onStartMessage, this, std::placeholders::_1))
+    initSub(*this, std::bind(&TrajectoryStreamer::onInitMessage, this, _1)),
+    connectedSub(*this, std::bind(&TrajectoryStreamer::onObjectsConnectedMessage, this, _1)),
+    startSub(*this, std::bind(&TrajectoryStreamer::onStartMessage, this, _1)),
+    stopSub(*this, std::bind(&TrajectoryStreamer::onStopMessage, this, _1)),
+    abortSub(*this, std::bind(&TrajectoryStreamer::onAbortMessage, this, _1))
 {
 
 }
@@ -64,4 +68,12 @@ std::vector<uint32_t> TrajectoryStreamer::getObjectIds() const {
     std::transform(objectConfigurations.begin(), objectConfigurations.end(), std::back_inserter(retval),
         [](const auto& conf){ return conf->getTransmitterID(); });
     return retval;
+}
+
+void TrajectoryStreamer::onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) {
+    // TODO
+}
+
+void TrajectoryStreamer::onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) {
+    // TODO
 }
