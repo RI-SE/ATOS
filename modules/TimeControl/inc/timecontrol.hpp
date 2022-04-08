@@ -86,8 +86,8 @@ private:
 	static const int PROTO2_SETUP_TIME_FEED_INTERVAL_FAST = 100;
 
 	/* callbacks */
-	void onAbortMessage(Empty::SharedPtr) override;
-	void onExitMessage(Empty::SharedPtr) override;
+	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
+	void onExitMessage(const ROSChannels::Exit::message_type::SharedPtr) override;
 
 	/* variables */
 	volatile int iExit = 0;

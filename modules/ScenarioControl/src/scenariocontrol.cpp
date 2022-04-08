@@ -2,19 +2,29 @@
 
 #include "scenariocontrol.hpp"
 
-using namespace std::chrono;
 
+#include "xodr.h"
+#include "xosc.h"
+
+using namespace std::chrono;
+using namespace maestro;
+using namespace ROSChannels;
+using std::placeholders::_1;
+	
 ScenarioControl::ScenarioControl()
 	: Module(ScenarioControl::moduleName),
-	initSub(*this, std::bind(&ScenarioControl::onInitMessage, this, std::placeholders::_1)),
-	armSub(*this, std::bind(&ScenarioControl::onArmMessage, this, std::placeholders::_1)),
-	startSub(*this, std::bind(&ScenarioControl::onStartMessage, this, std::placeholders::_1)),
-	abortSub(*this, std::bind(&ScenarioControl::onAbortMessage, this, std::placeholders::_1)),
-	exitSub(*this, std::bind(&ScenarioControl::onExitMessage, this, std::placeholders::_1)),
-	getStatusSub(*this, std::bind(&ScenarioControl::onGetStatusMessage, this, std::placeholders::_1)),
-	objectsConnectedSub(*this, std::bind(&ScenarioControl::onObjectsConnectedMessage, this, std::placeholders::_1)),
-	disconnectSub(*this, std::bind(&ScenarioControl::onDisconnectMessage, this, std::placeholders::_1)),
-	triggerEventSub(*this, std::bind(&ScenarioControl::onTriggerEventMessage, this, std::placeholders::_1))
+	initSub(*this, std::bind(&ScenarioControl::onInitMessage, this, _1)),
+	armSub(*this, std::bind(&ScenarioControl::onArmMessage, this, _1)),
+	startSub(*this, std::bind(&ScenarioControl::onStartMessage, this, _1)),
+	abortSub(*this, std::bind(&ScenarioControl::onAbortMessage, this, _1)),
+	exitSub(*this, std::bind(&ScenarioControl::onExitMessage, this, _1)),
+	getStatusSub(*this, std::bind(&ScenarioControl::onGetStatusMessage, this, _1)),
+	objectsConnectedSub(*this, std::bind(&ScenarioControl::onObjectsConnectedMessage, this, _1)),
+	disconnectSub(*this, std::bind(&ScenarioControl::onDisconnectMessage, this, _1)),
+	triggerEventSub(*this, std::bind(&ScenarioControl::onTriggerEventMessage, this, _1)),
+	accmPub(*this),
+	trcmPub(*this),
+	exacPub(*this)
 {
 	initialize();
 }
@@ -43,16 +53,20 @@ int ScenarioControl::initialize()
 	//! Start thread
 	manageTriggersThread=std::make_unique<std::thread>(&ScenarioControl::manageTriggers, this);
 	//! Load configuration
-	UtilGetConfDirectoryPath(configPath, sizeof(configPath));
-	strcat(configPath,TRIGGER_ACTION_FILE_NAME);
+	UtilGetConfDirectoryPath(triggerActionConfigPath, sizeof(triggerActionConfigPath));
+	UtilGetConfDirectoryPath(openDriveConfigPathPath, sizeof(openDriveConfigPathPath));
+	UtilGetConfDirectoryPath(openScenarioConfigPath, sizeof(openScenarioConfigPath));
+	strcat(triggerActionConfigPath,triggerActionFileName.c_str());
+	strcat(openDriveConfigPathPath,openDriveFileName.c_str());
+	strcat(openScenarioConfigPath,openScenarioFileName.c_str());
 	return retval;
 }
 
-void ScenarioControl::onInitMessage(const Empty::SharedPtr){
+void ScenarioControl::onInitMessage(const ROSChannels::Init::message_type::SharedPtr){
 	if (state == UNINITIALIZED) {
 		try {
 			RCLCPP_INFO(get_logger(), "Initializing scenario");
-			scenario.initialize(configPath);
+			scenario = std::make_unique<Scenario>(triggerActionConfigPath, openDriveConfigPathPath, openScenarioConfigPath,  get_logger());
 			state = INITIALIZED;
 		}
 		catch (std::invalid_argument e) {
@@ -60,7 +74,7 @@ void ScenarioControl::onInitMessage(const Empty::SharedPtr){
 			util_error(errMsg.c_str());
 		}
 		catch (std::ifstream::failure) {
-			std::string errMsg = "Unable to open scenario file <" + std::string(configPath) + ">";
+			std::string errMsg = "Unable to open scenario file <" + std::string(triggerActionConfigPath) + ">";
 			util_error(errMsg.c_str());
 		}
 	}
@@ -68,12 +82,13 @@ void ScenarioControl::onInitMessage(const Empty::SharedPtr){
 		RCLCPP_WARN(get_logger(), "Received unexpected initialize command (current state: %s)",stateToString.at(state));
 	}
 }
-void ScenarioControl::onObjectsConnectedMessage(const maestro_interfaces::msg::ObjectIdArray::SharedPtr msg){
+
+void ScenarioControl::onObjectsConnectedMessage(const ObjectsConnected::message_type::SharedPtr msg){
 	static int recursionDepth = 0;
 	if (state == INITIALIZED) {
 		state = CONNECTED;
 		RCLCPP_INFO(get_logger(), "Distributing scenario configuration");
-		scenario.sendConfiguration();
+		sendConfiguration();
 	}
 	else { // if not initialized, try to initialize once and then send conf to objects.
 		if (recursionDepth == 0){
@@ -87,93 +102,105 @@ void ScenarioControl::onObjectsConnectedMessage(const maestro_interfaces::msg::O
 }
 
 
-void ScenarioControl::onTriggerEventMessage(const TriggerEvent::SharedPtr treo){
+void ScenarioControl::sendConfiguration(){
+	std::shared_ptr<std::set<Causality>> causalities = scenario->getCausalities();
+	for (const Causality& causality : *causalities){
+		for (Action* action : causality.getActions()){
+			accmPub.publish(action->getConfigurationMessageData());
+		}
+		for (Trigger* trigger : causality.getTriggers()){
+			trcmPub.publish(trigger->getConfigurationMessageData());
+		}
+	}
+	RCLCPP_INFO(get_logger(),"Sent config!");
+}
+
+void ScenarioControl::onTriggerEventMessage(const ROSChannels::TriggerEvent::message_type::SharedPtr treo){
 	if (state == RUNNING) {
 		// Trigger corresponding trigger
-		scenario.updateTrigger(treo->trigger_id, treo);
+		scenario->updateTrigger(treo->trigger_id, treo);
 	}
 	else {
 		RCLCPP_WARN(get_logger(), "Received unexpected trigger action command (current state: %s)",stateToString.at(state));
 	}
 }
 
-void ScenarioControl::onAbortMessage(const Empty::SharedPtr){
+void ScenarioControl::onAbortMessage(const Abort::message_type::SharedPtr){
 	RCLCPP_INFO(get_logger(), "Received abort command");
 	if (state == RUNNING) {
 		state = CONNECTED;
 	}
 }
-void ScenarioControl::onStartMessage(const Empty::SharedPtr){
+void ScenarioControl::onStartMessage(const Start::message_type::SharedPtr){
 	if (state == CONNECTED) {
 		RCLCPP_INFO(get_logger(), "Received start message - transitioning to running state");
 		state = RUNNING;
 		// Update the triggers immediately on transition
 		// to ensure they are always in a valid state when
 		// they are checked for the first time
-		updateTriggers(scenario);
-		nextShmemReadTime = steady_clock::now() + shmemReadDuration(1);
+		updateTriggers();
+		nextShmemReadTime = steady_clock::now() + shmemReadPeriod;
 	}
 	else{
 		RCLCPP_WARN(get_logger(), "Received unexpected start command (current state: %s)",stateToString.at(state));
 	}
 }
-void ScenarioControl::onArmMessage(const Empty::SharedPtr){
+void ScenarioControl::onArmMessage(const Arm::message_type::SharedPtr){
 	RCLCPP_INFO(get_logger(), "Resetting scenario");
-	scenario.reset();
+	scenario->reset();
 }
 
-void ScenarioControl::onExitMessage(const Empty::SharedPtr){
+void ScenarioControl::onExitMessage(const Exit::message_type::SharedPtr){
 	LogMessage(LOG_LEVEL_INFO, "Received exit command");
 	quit=true;
 	rclcpp::shutdown();
 }
 
-void ScenarioControl::onDisconnectMessage(const Empty::SharedPtr){
+void ScenarioControl::onDisconnectMessage(const Disconnect::message_type::SharedPtr){
 	LogMessage(LOG_LEVEL_INFO,"Received disconnect command");
 	state = UNINITIALIZED;
 }
 
 
 /*!
- * \brief Executes triggered actions in a scenario, also resets ISO triggers and updates triggers.
- * Triggers are updated and executed at different frequencies (determined by scenarioDuration and shmemReadDuration).
- */
-void ScenarioControl::manageTriggers(){
+* \brief Executes triggered actions in a scenario, also resets ISO triggers and updates triggers.
+* Triggers are updated and executed at different frequencies (determined by scenarioDuration and shmemReadDuration).
+*/
+void ScenarioControl::manageTriggers() {
 	while (!quit){
-		auto end_time = steady_clock::now() + scenarioDuration(1);
+		auto end_time = steady_clock::now() + scenarioCheckPeriod;
 		if (state == RUNNING) {
-			scenario.executeTriggeredActions();
+			scenario->executeTriggeredActions(exacPub);
 
 			// Allow for retriggering on received TREO messages
-			scenario.resetISOTriggers();
+			scenario->resetISOTriggers();
 
 			auto now = steady_clock::now();
 			if (now > nextShmemReadTime){
 				nextShmemReadTime = getNextReadTime(now);
-				updateTriggers(scenario);
+				updateTriggers();
 			}
 		}
 		std::this_thread::sleep_until(end_time);
 	}
 }
 
-
-time_point<steady_clock> ScenarioControl::getNextReadTime(time_point<steady_clock> now){
-	if (( now - nextShmemReadTime ) > shmemReadDuration(1)){
-		nextShmemReadTime += shmemReadDuration(1);
+time_point<steady_clock> ScenarioControl::getNextReadTime(time_point<steady_clock> now) {
+	if (( now - nextShmemReadTime ) > shmemReadPeriod){
+		nextShmemReadTime += shmemReadPeriod;
 	}
 	else{
-		nextShmemReadTime = now + shmemReadDuration(1);
+		nextShmemReadTime = now + shmemReadPeriod;
 	}
 	return nextShmemReadTime;
 }
 
 /*!
- * \brief updateTriggers reads monr messages from the shared memory and passes the iformation along to scenario which handles trigger updates.
- *			with the rate parameter
- * \param Scenario scenario object keeping information about which trigger is linked to which action and the updating and parsing of the same.
- */
-int ScenarioControl::updateTriggers(Scenario& scenario) {
+* \brief updateTriggers reads monr messages from the shared memory and passes the iformation along to scenario which handles trigger updates.
+*			with the rate parameter
+* \param Scenario scenario object keeping information about which trigger is linked to which action and the updating and parsing of the same.
+*/
+int ScenarioControl::updateTriggers() {
 
 	std::vector<uint32_t> transmitterIDs;
 	uint32_t numberOfObjects;
@@ -182,7 +209,7 @@ int ScenarioControl::updateTriggers(Scenario& scenario) {
 	// Get number of objects present in shared memory
 	if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
 		LogMessage(LOG_LEVEL_ERROR,
-				   "Data dictionary number of objects read error - Cannot update triggers");
+				"Data dictionary number of objects read error - Cannot update triggers");
 		return -1;
 	}
 	if (numberOfObjects == 0) {
@@ -193,7 +220,7 @@ int ScenarioControl::updateTriggers(Scenario& scenario) {
 	// Get transmitter IDs for all connected objects
 	if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size()) != READ_OK) {
 		LogMessage(LOG_LEVEL_ERROR,
-				   "Data dictionary transmitter ID read error - Cannot update triggers");
+				"Data dictionary transmitter ID read error - Cannot update triggers");
 		return -1;
 	}
 
@@ -201,12 +228,12 @@ int ScenarioControl::updateTriggers(Scenario& scenario) {
 	for (const uint32_t &transmitterID : transmitterIDs) {
 		if (DataDictionaryGetMonitorData(transmitterID, &monitorData.MonrData) && DataDictionaryGetObjectIPByTransmitterID(transmitterID, &monitorData.ClientIP) != READ_OK) {
 			LogMessage(LOG_LEVEL_ERROR,
-					   "Data dictionary monitor data read error for transmitter ID %u",
-					   transmitterID);
+					"Data dictionary monitor data read error for transmitter ID %u",
+					transmitterID);
 			return -1;
 		}
 		else {
-			scenario.updateTrigger(monitorData);
+			scenario->updateTrigger(monitorData);
 		}
 
 	}

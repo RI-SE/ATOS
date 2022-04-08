@@ -19,20 +19,6 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/u_int8.hpp"
 
-using maestro_interfaces::msg::Accm;
-using maestro_interfaces::msg::Exac;
-using maestro_interfaces::msg::ManoeuvreCommand;
-using maestro_interfaces::msg::ObjectEnabled;
-using maestro_interfaces::msg::Monitor;
-using maestro_interfaces::msg::ControlSignalPercentage;
-using maestro_interfaces::msg::TriggerEvent;
-using rclcpp::Node;
-using std::placeholders::_1;
-using std_msgs::msg::Empty;
-using std_msgs::msg::Int8;
-using std_msgs::msg::String;
-using std_msgs::msg::UInt8;
-
 // TODO move somewhere else
 static std::map<COMMAND, std::string> topicNames = {
 	{COMM_STRT, "/start"},
@@ -95,7 +81,7 @@ Msg_T msgCtr1(MsgData_T data) {
  * It provides an interface for all modules.
  * \param name name of the module. Is passed to the ROS node.
  */
-class Module : public Node {
+class Module : public rclcpp::Node {
    public:
 	Module(const std::string name) : Node(name), getStatusResponsePub(*this) {};
 	Module() = default;
@@ -106,47 +92,47 @@ class Module : public Node {
 
 	ROSChannels::GetStatusResponse::Pub getStatusResponsePub;
 
-	virtual void onFailureMessage(const UInt8::SharedPtr){};
-	virtual void onGetStatusResponse(const String::SharedPtr){};
-	virtual void onGetStatusMessage(const Empty::SharedPtr) {
-		auto msg = String();
+	virtual void onFailureMessage(const ROSChannels::Failure::message_type::SharedPtr){};
+	virtual void onGetStatusResponse(const ROSChannels::GetStatusResponse::message_type::SharedPtr){};
+	virtual void onGetStatusMessage(const ROSChannels::GetStatus::message_type::SharedPtr) {
+		auto msg = std_msgs::msg::String();
 		msg.data = this->get_name();
 		getStatusResponsePub.publish(msg);
 	};
-	virtual void onInitMessage(const Empty::SharedPtr){};
-	virtual void onConnectMessage(const Empty::SharedPtr){};
-	virtual void onDisconnectMessage(const Empty::SharedPtr){};
-	virtual void onArmMessage(const Empty::SharedPtr){};
-	virtual void onDisarmMessage(const Empty::SharedPtr){};
-	virtual void onRemoteControlEnableMessage(const Empty::SharedPtr){};
-	virtual void onRemoteControlDisableMessage(const Empty::SharedPtr){};
-	virtual void onRemoteControlManoeuvreMessage(const Empty::SharedPtr){};
-	virtual void onEnableObjectMessage(const ObjectEnabled::SharedPtr){};
-	virtual void onObjectsConnectedMessage(const maestro_interfaces::msg::ObjectIdArray::SharedPtr){};
-	virtual void onDataDictMessage(const Empty::SharedPtr){};
-	virtual void onOSEMMessage(const Empty::SharedPtr){};
-	virtual void onASPMessage(const Empty::SharedPtr){};
-	virtual void onTrajMessage(const Empty::SharedPtr){};
-	virtual void onTrajToSupMessage(const Empty::SharedPtr){};
-	virtual void onTrajFromSupMessage(const Empty::SharedPtr){};
-	virtual void onAllClearMessage(const Empty::SharedPtr){};
-	virtual void onOBCStateMessage(const Empty::SharedPtr){};
-	virtual void onVIOPMessage(const Empty::SharedPtr){};
-	virtual void onStartMessage(const Empty::SharedPtr){};
-	virtual void onStopMessage(const Empty::SharedPtr){};
-	virtual void onAbortMessage(const Empty::SharedPtr) = 0;
-	virtual void onACCMMessage(const Accm::SharedPtr){};
-	virtual void onTRCMMessage(const Empty::SharedPtr){};
-	virtual void onEXACMessage(const Exac::SharedPtr){};
-	virtual void onTREOMessage(const Empty::SharedPtr){};
-	virtual void onReplayMessage(const Empty::SharedPtr){};
-	virtual void onBackToStartMessage(const Empty::SharedPtr){};
-	virtual void onBackToStartResponse(const Int8::SharedPtr){};
-	virtual void onDataDictResponse(const Empty::SharedPtr){};
-	virtual void onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr){};
-	virtual void onTriggerEventMessage(const TriggerEvent::SharedPtr){};
 
-	virtual void onExitMessage(const Empty::SharedPtr);
+	virtual void onInitMessage(const ROSChannels::Init::message_type::SharedPtr){};
+	virtual void onConnectMessage(const ROSChannels::Connect::message_type::SharedPtr){};
+	virtual void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr){};
+	virtual void onArmMessage(const ROSChannels::Arm::message_type::SharedPtr){};
+	virtual void onDisarmMessage(const ROSChannels::Disarm::message_type::SharedPtr){};
+	virtual void onRemoteControlEnableMessage(const ROSChannels::RemoteControlEnable::message_type::SharedPtr){};
+	virtual void onRemoteControlDisableMessage(const ROSChannels::RemoteControlDisable::message_type::SharedPtr){};
+	virtual void onRemoteControlManoeuvreMessage(const ROSChannels::RemoteControlManoeuvre::message_type::SharedPtr){};
+	virtual void onEnableObjectMessage(const ROSChannels::EnableObject::message_type::SharedPtr){};
+	virtual void onObjectsConnectedMessage(const ROSChannels::ObjectsConnected::message_type::SharedPtr){};
+	virtual void onDataDictMessage(const ROSChannels::DataDictionary::message_type::SharedPtr){};
+	virtual void onOSEMMessage(const ROSChannels::Init::message_type::SharedPtr){}; // TODO remove
+	virtual void onASPMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO once channel defined swap type
+	virtual void onTrajMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO once channel defined swap type
+	virtual void onTrajToSupMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO once channel defined swap type
+	virtual void onTrajFromSupMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO once channel defined swap type
+	virtual void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr){};
+	virtual void onOBCStateMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO remove
+	virtual void onVIOPMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO remove or swap type
+	virtual void onStartMessage(const ROSChannels::Start::message_type::SharedPtr){};
+	virtual void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr){};
+	virtual void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) = 0;
+	virtual void onACCMMessage(const ROSChannels::ActionConfiguration::message_type::SharedPtr){};
+	virtual void onTRCMMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO
+	virtual void onEXACMessage(const ROSChannels::ExecuteAction::message_type::SharedPtr){};
+	virtual void onReplayMessage(const ROSChannels::Replay::message_type::SharedPtr){};
+	virtual void onBackToStartMessage(const ROSChannels::BackToStart::message_type::SharedPtr){};
+	virtual void onBackToStartResponse(const ROSChannels::BackToStartResponse::message_type::SharedPtr){};
+	virtual void onDataDictResponse(const std_msgs::msg::Empty::SharedPtr){}; // TODO remove
+	virtual void onControlSignalMessage(const ROSChannels::ControlSignal::message_type::SharedPtr){};
+	virtual void onTriggerEventMessage(const ROSChannels::TriggerEvent::message_type::SharedPtr){};
+
+	virtual void onExitMessage(const ROSChannels::Exit::message_type::SharedPtr);
 
 
 	static void tryHandleMessage(std::function<void()> tryExecute,

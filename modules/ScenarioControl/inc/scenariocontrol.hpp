@@ -9,7 +9,7 @@
 #include "util.h"
 #include "journal.h"
 
-using namespace std::chrono;
+namespace maestro {
 
 class ScenarioControl : public Module
 {
@@ -30,8 +30,13 @@ private:
 	ROSChannels::TriggerEvent::Sub triggerEventSub;
 	ROSChannels::GetStatus::Sub getStatusSub;
 
+	ROSChannels::ActionConfiguration::Pub accmPub;
+	ROSChannels::TriggerConfiguration::Pub trcmPub;
+	ROSChannels::ExecuteAction::Pub exacPub;
+
 	std::unique_ptr<std::thread> manageTriggersThread;
 
+	void sendConfiguration();
 	enum state_t {UNINITIALIZED, INITIALIZED, CONNECTED, RUNNING};
 	state_t state = UNINITIALIZED;
 	const std::map<state_t,std::string> stateToString = {
@@ -40,27 +45,33 @@ private:
 		{CONNECTED,"Connected"},
 		{RUNNING,"Running"}
 	};
-	Scenario scenario;
+	std::unique_ptr<Scenario> scenario;
 	static inline const std::string triggerActionFileName = "triggeraction.conf";
-	char configPath[MAX_FILE_PATH];
+	static inline const std::string openDriveFileName = "opendrive.xodr";
+	static inline const std::string openScenarioFileName = "openscenario.xosc";
+	char triggerActionConfigPath[MAX_FILE_PATH];
+	char openDriveConfigPathPath[MAX_FILE_PATH];
+	char openScenarioConfigPath[MAX_FILE_PATH];
 
 	//! Scenario is executed with x hz
-	typedef duration<int, std::ratio<1, 1000>> scenarioDuration;
+	static constexpr auto scenarioCheckPeriod = std::chrono::milliseconds(1);
 	//! Shmem is read with x hz
-	typedef duration<int, std::ratio<1, 100>> shmemReadDuration;
+	static constexpr auto shmemReadPeriod = std::chrono::milliseconds(10);
 
-	time_point<steady_clock> nextShmemReadTime;
+	std::chrono::time_point<std::chrono::steady_clock> nextShmemReadTime;
 
-	void onInitMessage(const Empty::SharedPtr) override;
-	void onArmMessage(const Empty::SharedPtr) override;
-	void onStartMessage(const Empty::SharedPtr) override;
-	void onAbortMessage(const Empty::SharedPtr) override;
-	void onExitMessage(const Empty::SharedPtr) override;
-	void onObjectsConnectedMessage(const maestro_interfaces::msg::ObjectIdArray::SharedPtr) override;
-	void onDisconnectMessage(const Empty::SharedPtr) override;
-	void onTriggerEventMessage(const TriggerEvent::SharedPtr) override;
+	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
+	void onArmMessage(const ROSChannels::Arm::message_type::SharedPtr) override;
+	void onStartMessage(const ROSChannels::Start::message_type::SharedPtr) override;
+	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
+	void onExitMessage(const ROSChannels::Exit::message_type::SharedPtr) override;
+	void onObjectsConnectedMessage(const ROSChannels::ObjectsConnected::message_type::SharedPtr) override;
+	void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr) override;
+	void onTriggerEventMessage(const ROSChannels::TriggerEvent::message_type::SharedPtr) override;
 
 	void manageTriggers();
-	int updateTriggers(Scenario& scenario);
-	time_point<steady_clock> getNextReadTime(time_point<steady_clock> now);
+	int updateTriggers();
+	std::chrono::time_point<std::chrono::steady_clock> getNextReadTime(std::chrono::time_point<std::chrono::steady_clock> now);
 };
+
+} // namespace maestro

@@ -2871,7 +2871,7 @@ ReadWriteAccess_t DataDictionaryResetRequestedControlAction(const uint32_t trans
  * \param origin Geoposition data.
  * \return ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t * transmitterID, const GeoPosition * origin) {
+ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t * transmitterID, const GeoPositionType * origin) {
 
 	ReadWriteAccess_t result;
 
@@ -2925,7 +2925,7 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t * transmitterID, const 
  * \param origin Return variable pointer
  * \return ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosition * origin) {
+ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPositionType * origin) {
 
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 
@@ -2945,7 +2945,7 @@ ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosit
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (objectDataMemory[i].ClientID == transmitterID) {
-			memcpy(origin, &objectDataMemory[i].origin, sizeof (GeoPosition));
+			memcpy(origin, &objectDataMemory[i].origin, sizeof (GeoPositionType));
 			result = READ_OK;
 		}
 	}
@@ -2966,7 +2966,7 @@ ReadWriteAccess_t DataDictionaryInitOrigin() {
 	ReadWriteAccess_t retval = WRITE_OK;
 
 	// should it be write or read Iam writeing to memory but also reading from config file?
-	GeoPosition origin;
+	GeoPositionType origin;
 
 	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
 									   resultBuffer, sizeof (resultBuffer)) > 0) {

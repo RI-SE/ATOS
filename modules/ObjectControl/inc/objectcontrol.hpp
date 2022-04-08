@@ -180,19 +180,19 @@ public:
 
 private:
 	static inline std::string const moduleName = "object_control";
-	void onInitMessage(const Empty::SharedPtr) override;
-	void onConnectMessage(const Empty::SharedPtr) override;
-	void onArmMessage(const Empty::SharedPtr) override;
-	void onStartMessage(const Empty::SharedPtr) override;
-	void onDisconnectMessage(const Empty::SharedPtr) override;
-	void onStopMessage(const Empty::SharedPtr) override;
-	void onAbortMessage(const Empty::SharedPtr) override;
-	void onAllClearMessage(const Empty::SharedPtr) override;
-	void onACCMMessage(const Accm::SharedPtr) override;
-	void onEXACMessage(const Exac::SharedPtr) override;
-	void onRemoteControlEnableMessage(const Empty::SharedPtr) override;
-	void onRemoteControlDisableMessage(const Empty::SharedPtr) override;
-	void onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr) override;
+	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
+	void onConnectMessage(const ROSChannels::Connect::message_type::SharedPtr) override;
+	void onArmMessage(const ROSChannels::Arm::message_type::SharedPtr) override;
+	void onStartMessage(const ROSChannels::Start::message_type::SharedPtr) override;
+	void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr) override;
+	void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) override;
+	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
+	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
+	void onACCMMessage(const ROSChannels::ActionConfiguration::message_type::SharedPtr) override;
+	void onEXACMessage(const ROSChannels::ExecuteAction::message_type::SharedPtr) override;
+	void onRemoteControlEnableMessage(const ROSChannels::RemoteControlEnable::message_type::SharedPtr) override;
+	void onRemoteControlDisableMessage(const ROSChannels::RemoteControlDisable::message_type::SharedPtr) override;
+	void onControlSignalMessage(const ROSChannels::ControlSignal::message_type::SharedPtr) override;
 
 	using clock = std::chrono::steady_clock;
 
@@ -222,7 +222,7 @@ private:
 	ROSChannels::RemoteControlEnable::Sub scnRemoteControlEnableSub;		//!< Subscriber to remote control enable requests
 	ROSChannels::RemoteControlDisable::Sub scnRemoteControlDisableSub;	//!< Subscriber to remote control disable requests
 	ROSChannels::GetStatus::Sub getStatusSub;				//!< Subscriber to scenario get status requests
-	std::shared_ptr<ROSChannels::ControlSignalPercentage::Sub> controlSignalPercentageSub;	//!< Pointer to subscriber to receive control signal messages with percentage
+	std::shared_ptr<ROSChannels::ControlSignal::Sub> controlSignalSub;	//!< Pointer to subscriber to receive control signal messages with percentage
 
 	ROSChannels::Failure::Pub failurePub;					//!< Publisher to scenario failure reports
 	ROSChannels::Abort::Pub scnAbortPub;					//!< Publisher to scenario abort reports
@@ -272,6 +272,8 @@ private:
 	void startObjects();
 	//! \brief
 	void allClearObjects();
+	//! \brief TODO
+	void remoteControlObjects(bool on);
 	//! \brief TODO
 	void injectObjectData(const MonitorMessage& monr);
 	//! \brief TODO

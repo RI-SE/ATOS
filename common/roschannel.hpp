@@ -4,12 +4,14 @@
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/u_int8.hpp>
 #include <maestro_interfaces/msg/object_id_array.hpp>
+#include <std_msgs/msg/int8.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <string>
 #include <functional>
 
 #include "maestro_interfaces/msg/accm.hpp"
+#include "maestro_interfaces/msg/trcm.hpp"
 #include "maestro_interfaces/msg/exac.hpp"
 #include "maestro_interfaces/msg/object_enabled.hpp"
 #include "maestro_interfaces/msg/monitor.hpp"
@@ -203,6 +205,22 @@ namespace ActionConfiguration {
     };
 }
 
+namespace TriggerConfiguration {
+    const std::string topicName = "trigger_configuration";
+    using message_type = maestro_interfaces::msg::Trcm;
+    const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
+
+    class Pub : public BasePub<message_type> {
+    public:
+        Pub(rclcpp::Node& node, const rclcpp::QoS& qos = defaultQoS) : BasePub<message_type>(node, topicName, qos) {}
+    };
+
+    class Sub : public BaseSub<message_type> {
+    public:
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback, const rclcpp::QoS& qos = defaultQoS) : BaseSub<message_type>(node, topicName, callback, qos) {}
+    };
+}
+
 namespace ExecuteAction {
     const std::string topicName = "execute_action";
     using message_type = maestro_interfaces::msg::Exac;
@@ -285,7 +303,7 @@ namespace BackToStart {
 
 namespace BackToStartResponse {
     const std::string topicName = "back_to_start_response";
-    using message_type = std_msgs::msg::String;
+    using message_type = std_msgs::msg::Int8;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
@@ -411,8 +429,8 @@ namespace Replay {
     };
 }
 
-namespace ControlSignalPercentage {
-    const std::string topicName = "control_signal_pct";
+namespace ControlSignal {
+    const std::string topicName = "control_signal";
     using message_type = maestro_interfaces::msg::ControlSignalPercentage;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepLast(1));
 

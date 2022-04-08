@@ -147,8 +147,8 @@ ReadWriteAccess_t DataDictionarySetObjectProperties(const uint32_t transmitterID
 ReadWriteAccess_t DataDictionaryGetObjectProperties(const uint32_t transmitterID, ObjectPropertiesType* objectProperties);
 ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitterID);
 
-ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosition * origin);
-ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t* transmitterID, const GeoPosition * origin);
+ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPositionType * origin);
+ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t* transmitterID, const GeoPositionType * origin);
 ReadWriteAccess_t DataDictionaryInitOrigin();
 
 ReadWriteAccess_t DataDictionarySetRequestedControlAction(const uint32_t transmitterID, const RequestControlActionType* reqCtrlAction);
