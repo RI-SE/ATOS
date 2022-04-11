@@ -25,6 +25,12 @@ def generate_launch_description():
             executable='object_control',
             name='object_control'
         ),
+        Node(
+            package='maestro',
+            namespace='maestro',
+            executable='trajectory_streamer',
+            name='trajectory_streamer'
+        ),
         #Node(
         #    package='maestro',
         #    namespace='maestro',
@@ -48,5 +54,11 @@ def generate_launch_description():
             namespace='maestro',
             executable='journal_control',
             name='journal_control'
+        ),
+        Node(
+            package='rviz2',
+            namespace='maestro',
+            executable='rviz2',
+            name='rviz2'
         )
     ])

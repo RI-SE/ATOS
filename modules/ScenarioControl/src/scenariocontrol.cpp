@@ -82,6 +82,7 @@ void ScenarioControl::onInitMessage(const ROSChannels::Init::message_type::Share
 		RCLCPP_WARN(get_logger(), "Received unexpected initialize command (current state: %s)",stateToString.at(state));
 	}
 }
+
 void ScenarioControl::onObjectsConnectedMessage(const ObjectsConnected::message_type::SharedPtr msg){
 	static int recursionDepth = 0;
 	if (state == INITIALIZED) {
@@ -93,7 +94,7 @@ void ScenarioControl::onObjectsConnectedMessage(const ObjectsConnected::message_
 		if (recursionDepth == 0){
 			recursionDepth=1;
 			RCLCPP_INFO(get_logger(), "Received objects connected message when not in initialized state, trying to initialize");
-			onInitMessage(msg);
+			onInitMessage(std_msgs::msg::Empty::SharedPtr());
 			onObjectsConnectedMessage(msg);
 		}
 	}

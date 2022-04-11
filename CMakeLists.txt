@@ -35,6 +35,7 @@ set(WITH_BACK_TO_START OFF CACHE BOOL "Enable BackToStart module")
 set(WITH_SYSTEM_CONTROL ON CACHE BOOL "Enable SystemControl module")
 set(WITH_TIME_CONTROL ON CACHE BOOL "Enable TimeControl module")
 set(WITH_JOURNAL_CONTROL ON CACHE BOOL "Enable JournalControl module")
+set(WITH_TRAJECTORYLET_STREAMER ON CACHE BOOL "Enable TrajectoryletStreamer module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -68,6 +69,10 @@ if(WITH_OBJECT_CONTROL)
 endif()
 if(WITH_JOURNAL_CONTROL)
 	list(APPEND ENABLED_MODULES JournalControl)
+endif()
+
+if(WITH_TRAJECTORY_SEGMENT_STREAMER)
+        list(APPEND ENABLED_MODULES TrajectoryletStreamer)
 endif()
 
 # Add corresponding subprojects

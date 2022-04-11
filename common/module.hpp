@@ -13,6 +13,7 @@
 #include "maestro_interfaces/msg/monitor.hpp"
 #include "maestro_interfaces/msg/control_signal_percentage.hpp"
 #include "maestro_interfaces/msg/trigger_event.hpp"
+#include "maestro_interfaces/msg/object_id_array.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_msgs/msg/int8.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -58,6 +59,7 @@ static std::map<COMMAND, std::string> topicNames = {
 
 namespace ServiceNames {
 const std::string initDataDict = "init_data_dictionary";
+const std::string getObjectIds = "get_object_ids";
 }
 
 // TODO move somewhere else? also make generic to allow more args (variadic template)?
@@ -97,6 +99,7 @@ class Module : public rclcpp::Node {
 		msg.data = this->get_name();
 		getStatusResponsePub.publish(msg);
 	};
+
 	virtual void onInitMessage(const ROSChannels::Init::message_type::SharedPtr){};
 	virtual void onConnectMessage(const ROSChannels::Connect::message_type::SharedPtr){};
 	virtual void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr){};
