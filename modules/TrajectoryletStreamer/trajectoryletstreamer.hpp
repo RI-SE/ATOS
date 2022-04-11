@@ -8,11 +8,11 @@
 
 namespace maestro {
 
-class TrajectoryStreamer : public Module {
+class TrajectoryletStreamer : public Module {
 public:
-    TrajectoryStreamer();
+    TrajectoryletStreamer();
 private:
-	static inline std::string const moduleName = "trajectory_streamer";
+	static inline std::string const moduleName = "trajectorylet_streamer";
     void onInitMessage(const ROSChannels::Init::message_type::SharedPtr);
     void onObjectsConnectedMessage(const ROSChannels::ObjectsConnected::message_type::SharedPtr);
     void onStartMessage(const ROSChannels::Start::message_type::SharedPtr);

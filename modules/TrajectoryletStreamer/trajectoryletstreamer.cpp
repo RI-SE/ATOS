@@ -1,4 +1,4 @@
-#include "trajectorystreamer.hpp"
+#include "trajectoryletstreamer.hpp"
 #include "maestro_interfaces/srv/get_object_ids.hpp"
 #include <algorithm>
 
@@ -6,23 +6,23 @@ using namespace maestro;
 using namespace ROSChannels;
 using std::placeholders::_1;
 
-TrajectoryStreamer::TrajectoryStreamer()
-    : Module(TrajectoryStreamer::moduleName),
-    initSub(*this, std::bind(&TrajectoryStreamer::onInitMessage, this, _1)),
-    connectedSub(*this, std::bind(&TrajectoryStreamer::onObjectsConnectedMessage, this, _1)),
-    startSub(*this, std::bind(&TrajectoryStreamer::onStartMessage, this, _1)),
-    stopSub(*this, std::bind(&TrajectoryStreamer::onStopMessage, this, _1)),
-    abortSub(*this, std::bind(&TrajectoryStreamer::onAbortMessage, this, _1))
+TrajectoryletStreamer::TrajectoryletStreamer()
+    : Module(TrajectoryletStreamer::moduleName),
+    initSub(*this, std::bind(&TrajectoryletStreamer::onInitMessage, this, _1)),
+    connectedSub(*this, std::bind(&TrajectoryletStreamer::onObjectsConnectedMessage, this, _1)),
+    startSub(*this, std::bind(&TrajectoryletStreamer::onStartMessage, this, _1)),
+    stopSub(*this, std::bind(&TrajectoryletStreamer::onStopMessage, this, _1)),
+    abortSub(*this, std::bind(&TrajectoryletStreamer::onAbortMessage, this, _1))
 {
 
 }
 
-void TrajectoryStreamer::onInitMessage(const std_msgs::msg::Empty::SharedPtr) {
+void TrajectoryletStreamer::onInitMessage(const std_msgs::msg::Empty::SharedPtr) {
     // Parse trajectory files into trajectories
     loadObjectFiles();
 }
 
-void TrajectoryStreamer::onObjectsConnectedMessage(const maestro_interfaces::msg::ObjectIdArray::SharedPtr) {
+void TrajectoryletStreamer::onObjectsConnectedMessage(const maestro_interfaces::msg::ObjectIdArray::SharedPtr) {
     // TODO setup and first chunk transmission
     RCLCPP_INFO(get_logger(), "Starting trajectory publishers");
     for (const auto& conf : objectConfigurations) {
@@ -30,13 +30,13 @@ void TrajectoryStreamer::onObjectsConnectedMessage(const maestro_interfaces::msg
     }
 }
 
-void TrajectoryStreamer::onStartMessage(const std_msgs::msg::Empty::SharedPtr) {
+void TrajectoryletStreamer::onStartMessage(const std_msgs::msg::Empty::SharedPtr) {
     for (auto& pub : publishers) {
         pub.handleStart();
     }
 }
 
-void TrajectoryStreamer::loadObjectFiles() {
+void TrajectoryletStreamer::loadObjectFiles() {
 	clearScenario();
 	char path[MAX_FILE_PATH];
 	std::vector<std::invalid_argument> errors;
@@ -58,22 +58,22 @@ void TrajectoryStreamer::loadObjectFiles() {
 }
 
 
-void TrajectoryStreamer::clearScenario() {
+void TrajectoryletStreamer::clearScenario() {
     publishers.clear();
 	objectConfigurations.clear();
 }
 
-std::vector<uint32_t> TrajectoryStreamer::getObjectIds() const {
+std::vector<uint32_t> TrajectoryletStreamer::getObjectIds() const {
     std::vector<uint32_t> retval;
     std::transform(objectConfigurations.begin(), objectConfigurations.end(), std::back_inserter(retval),
         [](const auto& conf){ return conf->getTransmitterID(); });
     return retval;
 }
 
-void TrajectoryStreamer::onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) {
+void TrajectoryletStreamer::onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) {
     // TODO
 }
 
-void TrajectoryStreamer::onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) {
+void TrajectoryletStreamer::onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) {
     // TODO
 }
