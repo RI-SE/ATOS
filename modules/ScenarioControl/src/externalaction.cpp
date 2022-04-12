@@ -9,12 +9,12 @@
 #include "journal.h"
 #include "util.h"
 #include "maestroTime.h"
-#include "maestro_interfaces/msg/exac.hpp"
+#include "roschannel.hpp"
 
 using maestro_interfaces::msg::Exac;
 
 namespace maestro {
-	Action::ActionReturnCode_t ExternalAction::execute(std::vector<Exac>& executedActions)
+	Action::ActionReturnCode_t ExternalAction::execute(ROSChannels::ExecuteAction::Pub& exacPub)
 	{
 		if (remainingAllowedRuns == 0)
 			return NO_REMAINING_RUNS;
@@ -33,16 +33,9 @@ namespace maestro {
 							type.c_str(), actionID, msg.executiontime_qmsow);
 
 			LogMessage(LOG_LEVEL_INFO, "Sending execute action message over message bus (action ID %u)", actionID);
-			Action::ActionReturnCode_t returncode;
-			try{
-				executedActions.push_back(msg);
-				returncode = OK;
-			}
-			catch(...){
-				returncode = NOT_OK;
-			}
+			exacPub.publish(msg);
 			remainingAllowedRuns--;
-			return returncode;
+			return OK;
 		}
 	}
 

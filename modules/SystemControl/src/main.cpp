@@ -33,6 +33,7 @@ void systemcontrol_task(LOG_LEVEL logLevel, int argc, char** argv){
 		sc->receiveUserCommand();
 		sc->processUserCommand();
 		sc->sendUnsolicitedData();
+		sc->pollModuleStatus();
 
 		// If SystemControl is not in work state and clientResult < 0 then wait at most QUEUE_EMPTY_POLL_PERIOD for a msg
 		// else keep running at full speed.

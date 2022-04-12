@@ -7,6 +7,7 @@
 #include <functional>
 #include <thread>
 #include <dirent.h>
+#include <exception>
 
 #include "state.hpp"
 #include "util.h"
@@ -222,8 +223,8 @@ void ObjectControl::onControlSignalMessage(const ControlSignal::message_type::Sh
 	try{
 		objects.at(csp->maestro_header.object_id).sendControlSignal(csp);
 	}
-	catch(...){
-		RCLCPP_WARN(get_logger(), "Failed to translate/send Control Signal Percentage to rcmm");
+	catch(const std::exception& e){
+		RCLCPP_ERROR(get_logger(), "Failed to translate/send Control Signal Percentage: %s", e.what());
 	}
 }
 
@@ -367,10 +368,10 @@ void ObjectControl::disconnectObjects() {
 	catch (std::future_error) {
 		// Attempted to stop when none in progress
 	}
+	objectListeners.clear();
 	for (const auto id : getVehicleIDs()) {
 		objects.at(id).disconnect();
 	}
-	objectListeners.clear();
 }
 
 void ObjectControl::disconnectObject(
@@ -476,6 +477,12 @@ void ObjectControl::startListeners() {
 	}
 }
 
+void ObjectControl::notifyObjectsConnected() {
+	maestro_interfaces::msg::ObjectIdArray msg;
+	msg.ids = getVehicleIDs();
+	objectsConnectedPub.publish(msg);
+}
+
 void ObjectControl::connectToObject(
 		TestObject &obj,
 		std::shared_future<void> &connStopReq) {
@@ -514,7 +521,6 @@ void ObjectControl::connectToObject(
 							throw std::runtime_error("No monitor reply after " + std::to_string(maxConnHeabs) + " heartbeats. Details:\n" + e.what());
 						}
 					}
-
 					switch (objState) {
 					case OBJECT_STATE_ARMED:
 					case OBJECT_STATE_REMOTE_CONTROL:
@@ -563,6 +569,11 @@ void ObjectControl::connectToObject(
 	}
 };
 
+void ObjectControl::remoteControlObjects(bool on) {
+	for (auto& id : getVehicleIDs()) {
+		objects.at(id).sendRemoteControl(on);
+	}
+}
 
 void ObjectControl::armObjects() {
 	for (auto& id : getVehicleIDs()) {

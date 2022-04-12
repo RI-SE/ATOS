@@ -36,7 +36,7 @@ private:
 
 	std::unique_ptr<std::thread> manageTriggersThread;
 
-	void sendConfiguration(std::set<Action*> actions, std::set<Trigger*> triggers);
+	void sendConfiguration();
 	enum state_t {UNINITIALIZED, INITIALIZED, CONNECTED, RUNNING};
 	state_t state = UNINITIALIZED;
 	const std::map<state_t,std::string> stateToString = {
@@ -45,7 +45,7 @@ private:
 		{CONNECTED,"Connected"},
 		{RUNNING,"Running"}
 	};
-	std::shared_ptr<Scenario> scenario;
+	std::unique_ptr<Scenario> scenario;
 	static inline const std::string triggerActionFileName = "triggeraction.conf";
 	static inline const std::string openDriveFileName = "opendrive.xodr";
 	static inline const std::string openScenarioFileName = "openscenario.xosc";
@@ -69,9 +69,8 @@ private:
 	void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr) override;
 	void onTriggerEventMessage(const ROSChannels::TriggerEvent::message_type::SharedPtr) override;
 
-	void sendExacs(std::vector<ROSChannels::ExecuteAction::message_type> exacMsgs);
 	void manageTriggers();
-	int updateTriggers(std::shared_ptr<Scenario> scenario);
+	int updateTriggers();
 	std::chrono::time_point<std::chrono::steady_clock> getNextReadTime(std::chrono::time_point<std::chrono::steady_clock> now);
 };
 

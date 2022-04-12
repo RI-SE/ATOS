@@ -88,7 +88,7 @@ void SystemControl::onFailureMessage(const Failure::message_type::SharedPtr msg)
 }
 
 void SystemControl::onGetStatusResponse(const GetStatusResponse::message_type::SharedPtr msg){
-	SystemControlGetStatusMessage(msg->data.c_str(), 0);
+	moduleResponseTable[msg->data] = std::chrono::steady_clock::now();
 }
 
 void SystemControl::onBackToStartResponse(const BackToStartResponse::message_type::SharedPtr msg){
@@ -373,7 +373,7 @@ void SystemControl::receiveUserCommand()
 			SystemControlCommand = SystemControlCommand;
 		}
 		else if (SystemControlCommand == GetServerStatus_0) {
-			RCLCPP_INFO(get_logger(), "State: %s, OBCState: %s, PreviousCommand: %s",
+			RCLCPP_DEBUG(get_logger(), "State: %s, OBCState: %s, PreviousCommand: %s",
 						SystemControlStatesArr[SystemControlState],
 						SystemControlOBCStatesArr[objectControlState],
 						SystemControlCommandsArr[PreviousSystemControlCommand]);
@@ -398,9 +398,6 @@ void SystemControl::receiveUserCommand()
 			SystemControlCommand = PreviousSystemControlCommand;
 		}
 	}
-
-	//Call this from the loop to send
-	SystemControlGetStatusMessage("", 0);
 }
 
 void SystemControl::sendUnsolicitedData(){
@@ -450,7 +447,7 @@ void SystemControl::processUserCommand()
 	case GetServerStatus_0:
 		DataDictionaryGetOBCState(&objectControlState);
 		if (SystemControlCommand != PreviousSystemControlCommand) {
-			RCLCPP_INFO(get_logger(), "State: %s, OBCState: %s",
+			RCLCPP_DEBUG(get_logger(), "State: %s, OBCState: %s",
 						SystemControlStatesArr[SystemControlState],
 						SystemControlOBCStatesArr[objectControlState]);
 		}
@@ -1205,6 +1202,15 @@ void SystemControl::processUserCommand()
 	default:
 
 		break;
+	}
+}
+
+void SystemControl::pollModuleStatus() {
+	static auto nextPollTime = std::chrono::steady_clock::now();
+	constexpr auto pollPeriod = std::chrono::seconds(1);
+	if (std::chrono::steady_clock::now() > nextPollTime) {
+		getStatusPub.publish(ROSChannels::GetStatus::message_type());
+		nextPollTime = std::chrono::steady_clock::now() + pollPeriod;
 	}
 }
 
@@ -2757,115 +2763,6 @@ I32 SystemControl::SystemControlBuildRVSSAspChannelMessage(char * RVSSData, U32 
 
 	return 0;
 }
-
-/*!
- * \brief SystemControlGetStatusMessage Send a COMM_GETSTATUS message to all connected modules on the MQ-BUS.
- * \param respondingModule Name of the responding module.
- * \param debug Enable debug or not.
- * \return
- */
-I32 SystemControl::SystemControlGetStatusMessage(const char *respondingModule, U8 debug) {
-
-	static struct timeval getStatusSendTimer;
-	static struct timeval getStatusTimeoutTimer;
-	static struct timeval currentSystemTime;
-	static uint8_t numberOfResponses = 0;
-
-	static enum {
-		GETSTATUS_SEND,
-		GETSTATUS_WAITFORRESPONSE
-	} getStatusState = GETSTATUS_SEND;
-
-	//Set current time
-	TimeSetToCurrentSystemTime(&currentSystemTime);
-
-	switch (getStatusState) {
-
-
-		//Waits until it's time to send getStatus
-	case GETSTATUS_SEND:
-
-		//If current time is more than sendTime
-		if (timercmp(&getStatusSendTimer, &currentSystemTime, <)) {
-
-			//Set next sendTime
-			TimeSetToCurrentSystemTime(&getStatusSendTimer);
-			getStatusSendTimer.tv_sec += SYSTEM_CONTROL_GETSTATUS_TIME_MS / 1000;
-
-			//Set when to timeout
-			TimeSetToCurrentSystemTime(&getStatusTimeoutTimer);
-			getStatusTimeoutTimer.tv_sec += SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS / 1000;
-
-			//Send getstatus
-			this->getStatusPub.publish(GetStatus::message_type());
-
-			if (debug) {
-				RCLCPP_INFO(get_logger(), "GETSTATUS SENT");
-			}
-
-			//Next Case
-			getStatusState = GETSTATUS_WAITFORRESPONSE;
-
-			return 1;
-		}
-		break;
-
-		//Waits until timeout-time and counts responses. Warn if too few or too many.
-	case GETSTATUS_WAITFORRESPONSE:
-		if (respondingModule == NULL) {
-			errno = EINVAL;
-			RCLCPP_ERROR(get_logger(), "Responding module parameter is null");
-			return -1;
-		}
-
-		//Did a module respond
-		if (respondingModule[0]) {
-			numberOfResponses++;
-		}
-
-		if (timercmp(&getStatusTimeoutTimer, &currentSystemTime, <)) {
-
-			//Too many
-			if (numberOfResponses > SYSTEM_CONTROL_NO_OF_MODULES_IN_USE) {
-
-				U8 diff = numberOfResponses - SYSTEM_CONTROL_NO_OF_MODULES_IN_USE;
-
-				RCLCPP_ERROR(get_logger(), "%d too many responses to GET_STATUS command", diff);
-
-			}
-
-			//Too few
-			else if (numberOfResponses < SYSTEM_CONTROL_NO_OF_MODULES_IN_USE) {
-
-				U8 diff = SYSTEM_CONTROL_NO_OF_MODULES_IN_USE - numberOfResponses;
-
-				RCLCPP_ERROR(get_logger(), "%d module(s) not responding to GET_STATUS command", diff);
-			}
-
-			//Just right
-			else {
-				if (debug) {
-					LogPrint("GET_STATUS OK, received %d responses from %d modules.", numberOfResponses,
-							 SYSTEM_CONTROL_NO_OF_MODULES_IN_USE);
-				}
-			}
-
-			numberOfResponses = 0;
-			getStatusState = GETSTATUS_SEND;
-
-		}
-
-		break;
-
-	default:
-		RCLCPP_INFO(get_logger(), "getStatusState: %d", getStatusState);
-		break;
-	}
-
-
-	return 0;
-}
-
 
 void SystemControl::appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize) {
 

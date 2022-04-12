@@ -43,7 +43,7 @@ namespace maestro {
 	* \brief Action::execute Runs the action if allowed and decrements the number of remaining allowed action executions.
 	* \return Value according to ::ActionReturnCode_t
 	*/
-	Action::ActionReturnCode_t Action::execute(std::vector<Exac>& executedActions)
+	Action::ActionReturnCode_t Action::execute(ROSChannels::ExecuteAction::Pub& exacPub)
 	{
 		if (remainingAllowedRuns == 0)
 			return NO_REMAINING_RUNS;

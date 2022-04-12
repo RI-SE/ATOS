@@ -25,6 +25,9 @@
 #include "datadictionary.h"
 #include "util.h"
 
+#include <chrono>
+#include <map>
+
 class SystemControl : public Module
 {
 public:
@@ -37,6 +40,7 @@ public:
 	void receiveUserCommand();
 	void processUserCommand();
 	void sendUnsolicitedData();
+	void pollModuleStatus();
 
 private:
 	static inline std::string const module_name = "system_control";
@@ -268,6 +272,8 @@ private:
 	U32 RVSSMessageLengthU32;
 	U16 PCDMessageCodeU16;
 	char RxFilePath[MAX_FILE_PATH];
+
+	std::map<std::string, std::chrono::steady_clock::time_point> moduleResponseTable;
 
 	ROSChannels::Init::Pub initPub;
 	ROSChannels::Connect::Pub connectPub;
