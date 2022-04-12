@@ -643,6 +643,6 @@ void ObjectControl::stopControlSignalSubscriber(){
 	this->controlSignalSub.reset();
 }
 
-void ObjectControl::sendAbort(){
+void ObjectControl::sendAbortNotification(){
 	this->scnAbortPub.publish(ROSChannels::Abort::message_type());
 }
