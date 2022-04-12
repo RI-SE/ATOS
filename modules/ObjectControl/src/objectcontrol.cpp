@@ -643,9 +643,6 @@ void ObjectControl::stopControlSignalSubscriber(){
 	this->controlSignalSub.reset();
 }
 
-void ObjectControl::sendObjectsConnected(){
-	this->objectsConnectedPub.publish(ROSChannels::ObjectsConnected::message_type());
-}
 void ObjectControl::sendAbort(){
 	this->scnAbortPub.publish(ROSChannels::Abort::message_type());
 }
