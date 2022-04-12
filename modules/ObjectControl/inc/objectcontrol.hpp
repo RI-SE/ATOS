@@ -135,6 +135,7 @@ public:
 	void handleActionConfigurationCommand(const TestScenarioCommandAction&);
 	//! \brief Performs actions in response to an action execution request.
 	void handleExecuteActionCommand(const uint16_t& actionID, const std::chrono::system_clock::time_point& when);
+	void sendAbortNotification();
 
 	//! Getters
 	//! \brief Get transmitter ID of anchor object participating in test.
