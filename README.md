@@ -222,6 +222,8 @@ Create symlinks to maestro and maestro_interfaces
 
 ```
 ln -s path/to/Maestro ~/dev_ws/src/maestro
+
+Download and install Maestro interfaces from https://github.com/RI-SE/maestro-interfaces
 ln -s path/to/maestro-interfaces ~/dev_ws/src/maestro_interfaces
 ```
 
