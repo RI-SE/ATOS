@@ -208,6 +208,11 @@ sudo apt install ros-foxy-desktop
 sudo apt install python3-colcon-common-extensions
 ```
 
+clone maestro-interfaces from github to your git folder:
+```
+git clone https://github.com/RI-SE/maestro-interfaces
+```
+
 Install opensimulation interface as above, and then make sure that the linker knows where it is located:
 ```
 echo /usr/local/lib/osi3 > /etc/ld.so.conf.d/osi3.conf
@@ -228,8 +233,6 @@ Create symlinks to maestro and maestro_interfaces
 
 ```
 ln -s path/to/Maestro ~/dev_ws/src/maestro
-
-Download and install Maestro interfaces from https://github.com/RI-SE/maestro-interfaces
 ln -s path/to/maestro-interfaces ~/dev_ws/src/maestro_interfaces
 ```
 
