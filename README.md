@@ -246,7 +246,7 @@ Source the project setup file:
 ```
 source ~/dev_ws/install/setup.bash
 ```
-Also add this line to ~/.bashrc or similar.
+Also add the above line to ~/.bashrc or similar.
 
 Launch Maestro
 ```
