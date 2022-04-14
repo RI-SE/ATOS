@@ -208,6 +208,12 @@ sudo apt install ros-foxy-desktop
 sudo apt install python3-colcon-common-extensions
 ```
 
+Install opensimulation interface as above, and then make sure that the linker knows where it is located:
+```
+echo /usr/local/lib/osi3 > /etc/ld.so.conf.d/osi3.conf
+sudo ldconfig
+```
+
 source the setup script:
 ```
 source /opt/ros/foxy/setup.bash
@@ -232,6 +238,12 @@ Change directory into the workspace and build
 cd ~/dev_ws
 colcon build
 ```
+
+Source the project setup file:
+```
+source ~/dev_ws/install/setup.bash
+```
+Also add this line to ~/.bashrc or similar.
 
 Launch Maestro
 ```
