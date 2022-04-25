@@ -144,7 +144,7 @@ typedef enum {
 	SetObjectEnableStatus_2,
 	GetObjectEnableStatus_1,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
-	start_ext_trigg_1, ClearAllScenario_0 , DownloadDirectoryContent_1, DownloadTrajFiles_0, nocommand
+	start_ext_trigg_1, ClearAllScenario_0, DownloadDirectoryContent_1, DownloadTrajFiles_0, nocommand
 } SystemControlCommand_t;
 
 static const char *SystemControlCommandsArr[] = {
@@ -510,10 +510,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								}
 							}
 
-                            if (CmdPtr != NULL) {
-                                SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
-                                LogMessage(LOG_LEVEL_DEBUG, "Received MSCP command %s", SystemControlCommand);
-                            }
+							if (CmdPtr != NULL) {
+								SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
+								LogMessage(LOG_LEVEL_DEBUG, "Received MSCP command %s", SystemControlCommand);
+							}
 							else
 								LogMessage(LOG_LEVEL_WARNING, "Invalid MSCP command received");
 						}
@@ -622,21 +622,18 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		case COMM_BACKTOSTART_RESPONSE:
 
-			if(*pcRecvBuffer == BTS_FAIL){
+			if (*pcRecvBuffer == BTS_FAIL) {
+				LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", pcRecvBuffer);
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:", "0", 1, &ClientSocket, 0);	//TODO: Send SMCP response the right way(?)
+			}
+			else if (*pcRecvBuffer == BTS_PASS) {
 				LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", pcRecvBuffer);
 				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
-												 "0", 1,
-												 &ClientSocket, 0);		//TODO: Send SMCP response the right way(?)
+												 "1", 1, &ClientSocket, 0);
 			}
-			else if(*pcRecvBuffer == BTS_PASS){
-				LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", pcRecvBuffer);
-				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
-												 "1", 1,
-												 &ClientSocket, 0);
-			}
-			else{
+			else {
 				LogMessage(LOG_LEVEL_ERROR, "Cannot parse COMM_BACKTOSTART_RESPONSE message.");
 			}
 			break;
@@ -645,7 +642,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", iCommand);
 		}
 
-        switch (SystemControlCommand) {
+		switch (SystemControlCommand) {
 			// can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
 		case Idle_0:
 			break;
@@ -903,69 +900,81 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case DownloadTrajFiles_0:
-		case DownloadDirectoryContent_1:	
+		case DownloadDirectoryContent_1:
 			if (CurrentInputArgCount == CommandArgCount) {
 				char functionReturnName[50];
+
 				memset(functionReturnName, 0, 50);
 				memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				if(SystemControlCommand == DownloadTrajFiles_0){
+				if (SystemControlCommand == DownloadTrajFiles_0) {
 					strcat(functionReturnName, "DownloadTrajFiles:");
 					ControlResponseBuffer[0] = FOLDER_EXIST;
-				} else if(SystemControlCommand == DownloadDirectoryContent_1){
+				}
+				else if (SystemControlCommand == DownloadDirectoryContent_1) {
 					strcat(functionReturnName, "DownloadDirectoryContent:");
 					SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
 				}
-				if(ControlResponseBuffer[0] == FOLDER_EXIST){
-					if(SystemControlCommand == DownloadTrajFiles_0){
+				if (ControlResponseBuffer[0] == FOLDER_EXIST) {
+					if (SystemControlCommand == DownloadTrajFiles_0) {
 						UtilCreateDirContent(MAESTRO_TRAJ_DIRECTORY_STRING, "dir.info");
-					} else if(SystemControlCommand == DownloadDirectoryContent_1){
+					}
+					else if (SystemControlCommand == DownloadDirectoryContent_1) {
 						UtilCreateDirContent(SystemControlArgument[0], "dir.info");
 					}
 
 					char TestDirectoryPath[MAX_PATH_LENGTH];
-					memset(TestDirectoryPath, 0,MAX_PATH_LENGTH);
+
+					memset(TestDirectoryPath, 0, MAX_PATH_LENGTH);
 					char CompletePath[MAX_PATH_LENGTH];
+
 					memset(CompletePath, 0, MAX_PATH_LENGTH);
 					char InPath[MAX_PATH_LENGTH];
+
 					memset(InPath, 0, MAX_PATH_LENGTH);
-	
+
 					UtilGetTestDirectoryPath(TestDirectoryPath, sizeof (TestDirectoryPath));
 					strcat(CompletePath, TestDirectoryPath);
-					strcat(CompletePath,"dir.info");
+					strcat(CompletePath, "dir.info");
 					int rows = UtilCountFileRowsInPath(CompletePath, strlen(CompletePath));
 					char RowBuffer[SMALL_BUFFER_SIZE_128];
 
-					for(int i = 0; i < rows; i ++)
-					{
+					for (int i = 0; i < rows; i++) {
 						memset(CompletePath, 0, MAX_PATH_LENGTH);
 						strcat(CompletePath, TestDirectoryPath);
-						strcat(CompletePath,"dir.info");
-						UtilGetRowInFile(CompletePath, strlen(CompletePath), i, RowBuffer, SMALL_BUFFER_SIZE_128);
-						if(*RowBuffer == 'F'){
+						strcat(CompletePath, "dir.info");
+						UtilGetRowInFile(CompletePath, strlen(CompletePath), i, RowBuffer,
+										 SMALL_BUFFER_SIZE_128);
+						if (*RowBuffer == 'F') {
 							memset(InPath, 0, MAX_PATH_LENGTH);
-							if(SystemControlCommand == DownloadTrajFiles_0) strcat(InPath, MAESTRO_TRAJ_DIRECTORY_STRING);
-							else if(SystemControlCommand == DownloadDirectoryContent_1) strcat(InPath, SystemControlArgument[0]);
-							strcat(InPath, strstr(RowBuffer, "-")+1);
+							if (SystemControlCommand == DownloadTrajFiles_0)
+								strcat(InPath, MAESTRO_TRAJ_DIRECTORY_STRING);
+							else if (SystemControlCommand == DownloadDirectoryContent_1)
+								strcat(InPath, SystemControlArgument[0]);
+							strcat(InPath, strstr(RowBuffer, "-") + 1);
 							memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 							FileLengthI32 = SystemControlBuildFileContentInfo(InPath, 0);
-							SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
-													  FileLengthI32, &ClientSocket, 0);
+							SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK,
+															  functionReturnName, FileLengthI32,
+															  &ClientSocket, 0);
 							SystemControlSendFileContent(&ClientSocket, InPath,
-												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
-												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 1);
+														 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
+														 SystemControlDirectoryInfo.info_buffer, KEEP_FILE,
+														 1);
 							SystemControlDestroyFileContentInfo(InPath, 0);
 						}
 
 					}
-					SystemControlDirectoryInfo.exist = 1; //Force to exist
+					SystemControlDirectoryInfo.exist = 1;	//Force to exist
 					SystemControlDestroyFileContentInfo("dir.info", 1);
 
-				} else {
+				}
+				else {
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
-														ControlResponseBuffer, 3, &ClientSocket, 0);
+													 ControlResponseBuffer, 3, &ClientSocket, 0);
 				}
 				SystemControlCommand = Idle_0;
-			} else {
+			}
+			else {
 				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
 				SystemControlCommand = Idle_0;
 			}
@@ -1159,7 +1168,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 						switch (atoi(SystemControlArgument[1])) {
 						case MSCP_BACK_TO_START:
-                            rcCommand.manoeuvre = MANOEUVRE_BACK_TO_START;
+							rcCommand.manoeuvre = MANOEUVRE_BACK_TO_START;
 							break;
 						default:
 							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
@@ -1330,7 +1339,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 													 ControlResponseBuffer, 1, &ClientSocket, 0);
 				}
 			}
-		break;
+			break;
 		case ClearAllScenario_0:
 			if (iCommSend(COMM_ABORT_DONE, NULL, 0) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending COMM_ABORT_DONE command");
@@ -1346,7 +1355,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 													 ControlResponseBuffer, 1, &ClientSocket, 0);
 				}
 			}
-		break;
+			break;
 		case Exit_0:
 			if (iCommSend(COMM_EXIT, NULL, 0) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending EXIT command");
@@ -2312,6 +2321,7 @@ I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 	struct stat st;
 	C8 CompletePath[MAX_FILE_PATH];
+
 	bzero(CompletePath, MAX_FILE_PATH);
 	if (SystemControlDirectoryInfo.exist)
 		return -1;
@@ -2333,7 +2343,7 @@ I32 SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile) {
 	char CompletePath[MAX_FILE_PATH];
 	struct stat st;
 
-	if (!SystemControlDirectoryInfo.exist){
+	if (!SystemControlDirectoryInfo.exist) {
 		return -1;
 	}
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));

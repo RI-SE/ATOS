@@ -34,7 +34,7 @@ typedef struct {
 
 static volatile ObjectDataType *objectDataMemory = NULL;
 static volatile StateDataType *stateDataMemory = NULL;
-static volatile ASPType *rvssAspDataMemory = NULL; 
+static volatile ASPType *rvssAspDataMemory = NULL;
 
 /*------------------------------------------------------------
   -- Static function definitions
@@ -151,7 +151,7 @@ ReadWriteAccess_t DataDictionaryGetScenarioName(char *name, const size_t nameLen
  * \param Latitude
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(const char* latitude) {
+ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(const char *latitude) {
 	if (latitude == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
@@ -172,10 +172,11 @@ ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(const char* latitude) {
  * \param Latitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(double_t* latitude) {
+ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(double_t * latitude) {
 	char readValue[DD_CONTROL_BUFFER_SIZE_20];
-	char* endptr;
+	char *endptr;
 	ReadWriteAccess_t retval;
+
 	if (latitude == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
@@ -201,15 +202,14 @@ ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(double_t* latitude) {
  * \param Latitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLatitudeString(char* latitude, const size_t bufferLength) {
+ReadWriteAccess_t DataDictionaryGetOriginLatitudeString(char *latitude, const size_t bufferLength) {
 	if (latitude == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
 	}
 
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, latitude, bufferLength) > 0) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, latitude, bufferLength) > 0) {
 		return READ_OK;
 	}
 	else {
@@ -226,7 +226,7 @@ ReadWriteAccess_t DataDictionaryGetOriginLatitudeString(char* latitude, const si
  * \param Longitude
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(const char* longitude) {
+ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(const char *longitude) {
 	if (longitude == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
@@ -247,10 +247,11 @@ ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(const char* longitude) {
  * \param Longitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(double_t* longitude) {
+ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(double_t * longitude) {
 	char readValue[DD_CONTROL_BUFFER_SIZE_20];
-	char* endptr;
+	char *endptr;
 	ReadWriteAccess_t retval;
+
 	if (longitude == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
@@ -276,15 +277,14 @@ ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(double_t* longitude) {
  * \param Longitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLongitudeString(char* longitude, const size_t bufferLength) {
+ReadWriteAccess_t DataDictionaryGetOriginLongitudeString(char *longitude, const size_t bufferLength) {
 	if (longitude == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
 	}
 
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, longitude, bufferLength) > 0) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, longitude, bufferLength) > 0) {
 		return READ_OK;
 	}
 	else {
@@ -301,7 +301,7 @@ ReadWriteAccess_t DataDictionaryGetOriginLongitudeString(char* longitude, const 
  * \param Altitude
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(const char* altitude) {
+ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(const char *altitude) {
 	if (altitude == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
@@ -322,10 +322,11 @@ ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(const char* altitude) {
  * \param Altitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(double_t* altitude) {
+ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(double_t * altitude) {
 	char readValue[DD_CONTROL_BUFFER_SIZE_20];
-	char* endptr;
+	char *endptr;
 	ReadWriteAccess_t retval;
+
 	if (altitude == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
@@ -351,15 +352,14 @@ ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(double_t* altitude) {
  * \param Altitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginAltitudeString(char* altitude, const size_t bufferLength) {
+ReadWriteAccess_t DataDictionaryGetOriginAltitudeString(char *altitude, const size_t bufferLength) {
 	if (altitude == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
 	}
 
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, altitude, bufferLength) > 0) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, altitude, bufferLength) > 0) {
 		return READ_OK;
 	}
 	else {
@@ -367,6 +367,7 @@ ReadWriteAccess_t DataDictionaryGetOriginAltitudeString(char* altitude, const si
 		return PARAMETER_NOTFOUND;
 	}
 }
+
 /*END of Origin Altitude*/
 
 /*VisualizationServer*/
@@ -375,7 +376,7 @@ ReadWriteAccess_t DataDictionaryGetOriginAltitudeString(char* altitude, const si
  * \param IP
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetVisualizationServerU32(const char* IP) {
+ReadWriteAccess_t DataDictionarySetVisualizationServerU32(const char *IP) {
 	ReadWriteAccess_t retval;
 	int result;
 	in_addr_t inaddr;
@@ -392,7 +393,7 @@ ReadWriteAccess_t DataDictionarySetVisualizationServerU32(const char* IP) {
 		LogMessage(LOG_LEVEL_ERROR, "Specified IP %s is not valid", IP);
 		return WRITE_FAIL;
 	}
-	
+
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME, IP, strlen(IP) + 1)) {
 		retval = WRITE_OK;
@@ -408,7 +409,7 @@ ReadWriteAccess_t DataDictionarySetVisualizationServerU32(const char* IP) {
  * \param IP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(in_addr_t* IP) {
+ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(in_addr_t * IP) {
 	char ipString[INET_ADDRSTRLEN];
 	ReadWriteAccess_t retval;
 	int result;
@@ -444,7 +445,7 @@ ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(in_addr_t* IP) {
  * \param bufferLength Size of return variable buffer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetVisualizationServerIPString(char* IP, const size_t bufferLength) {
+ReadWriteAccess_t DataDictionaryGetVisualizationServerIPString(char *IP, const size_t bufferLength) {
 	if (IP == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
@@ -452,7 +453,7 @@ ReadWriteAccess_t DataDictionaryGetVisualizationServerIPString(char* IP, const s
 	}
 
 	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME,
-				IP, bufferLength) > 0) {
+									   IP, bufferLength) > 0) {
 		return READ_OK;
 	}
 	else {
@@ -470,7 +471,7 @@ ReadWriteAccess_t DataDictionaryGetVisualizationServerIPString(char* IP, const s
   * \param ASPMaxTimeDiff
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(const char * ASPMaxTimeDiff) {
+ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(const char *ASPMaxTimeDiff) {
 	ReadWriteAccess_t Res;
 
 
@@ -537,7 +538,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(double_t * ASPMaxTimeDiff) 
  * \param ASPMaxTrajDiff
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(const char * ASPMaxTrajDiff) {
+ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(const char *ASPMaxTrajDiff) {
 	ReadWriteAccess_t Res;
 
 	if (ASPMaxTrajDiff == NULL) {
@@ -602,7 +603,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(double_t * ASPMaxTrajDiff) 
  * \param ASPStepBackCount
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(const char * ASPStepBackCount) {
+ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(const char *ASPStepBackCount) {
 	ReadWriteAccess_t Res;
 
 	if (ASPStepBackCount == NULL) {
@@ -667,7 +668,7 @@ ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(uint32_t * ASPStepBackCou
  * \param ASPFilterLevel
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(const char * ASPFilterLevel) {
+ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(const char *ASPFilterLevel) {
 	ReadWriteAccess_t Res;
 
 	if (ASPFilterLevel == NULL) {
@@ -732,7 +733,7 @@ ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(dbl * ASPFilterLevel) {
  * \param ASPMaxDeltaTime
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(const char * ASPMaxDeltaTime) {
+ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(const char *ASPMaxDeltaTime) {
 	ReadWriteAccess_t Res;
 
 	if (ASPMaxDeltaTime == NULL) {
@@ -795,7 +796,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(double_t * ASPMaxDeltaTime
  * \param TimeServerIP
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetTimeServerIPU32(const char* timeServerIP) {
+ReadWriteAccess_t DataDictionarySetTimeServerIPU32(const char *timeServerIP) {
 	ReadWriteAccess_t retval;
 	int result;
 	in_addr_t inaddr;
@@ -812,7 +813,7 @@ ReadWriteAccess_t DataDictionarySetTimeServerIPU32(const char* timeServerIP) {
 		LogMessage(LOG_LEVEL_ERROR, "Specified IP %s is not valid", timeServerIP);
 		return WRITE_FAIL;
 	}
-	
+
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_TIME_SERVER_IP, timeServerIP, strlen(timeServerIP) + 1)) {
 		retval = WRITE_OK;
@@ -828,7 +829,7 @@ ReadWriteAccess_t DataDictionarySetTimeServerIPU32(const char* timeServerIP) {
  * \param TimeServerIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(in_addr_t* timeServerIP) {
+ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(in_addr_t * timeServerIP) {
 	char ipString[INET_ADDRSTRLEN];
 	ReadWriteAccess_t retval;
 	int result;
@@ -863,7 +864,7 @@ ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(in_addr_t* timeServerIP) {
  * \param bufferLength Size of return variable buffer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetTimeServerIPString(char * timeServerIP, const size_t bufferLength) {
+ReadWriteAccess_t DataDictionaryGetTimeServerIPString(char *timeServerIP, const size_t bufferLength) {
 
 	if (timeServerIP == NULL) {
 		errno = EINVAL;
@@ -872,7 +873,7 @@ ReadWriteAccess_t DataDictionaryGetTimeServerIPString(char * timeServerIP, const
 	}
 
 	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_TIME_SERVER_IP,
-				timeServerIP, bufferLength) > 0) {
+									   timeServerIP, bufferLength) > 0) {
 		return READ_OK;
 	}
 	else {
@@ -888,7 +889,7 @@ ReadWriteAccess_t DataDictionaryGetTimeServerIPString(char * timeServerIP, const
  * \param TimeServerPort
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetTimeServerPortU16(const char* timeServerPort) {
+ReadWriteAccess_t DataDictionarySetTimeServerPortU16(const char *timeServerPort) {
 
 	if (timeServerPort == NULL) {
 		errno = EINVAL;
@@ -922,7 +923,7 @@ ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(uint16_t * timeServerPort) 
 	}
 
 	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_TIME_SERVER_PORT,
-				resultBuffer, sizeof(resultBuffer)) > 0) {
+									   resultBuffer, sizeof (resultBuffer)) > 0) {
 		*timeServerPort = strtoul(resultBuffer, &endptr, 10);
 		if (endptr == resultBuffer) {
 			*timeServerPort = 0;
@@ -947,7 +948,7 @@ ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(uint16_t * timeServerPort) 
  * \param SimulatorIP
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSimulatorIPU32(const char* simulatorIP) {
+ReadWriteAccess_t DataDictionarySetSimulatorIPU32(const char *simulatorIP) {
 	ReadWriteAccess_t retval;
 	int result;
 	in_addr_t inaddr;
@@ -964,7 +965,7 @@ ReadWriteAccess_t DataDictionarySetSimulatorIPU32(const char* simulatorIP) {
 		LogMessage(LOG_LEVEL_ERROR, "Specified IP %s is not valid", simulatorIP);
 		return WRITE_FAIL;
 	}
-	
+
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_SIMULATOR_IP, simulatorIP, strlen(simulatorIP) + 1)) {
 		retval = WRITE_OK;
@@ -980,7 +981,7 @@ ReadWriteAccess_t DataDictionarySetSimulatorIPU32(const char* simulatorIP) {
  * \param SimulatorIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(in_addr_t* simulatorIP) {
+ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(in_addr_t * simulatorIP) {
 	char ipString[INET_ADDRSTRLEN];
 	ReadWriteAccess_t retval;
 	int result;
@@ -1014,15 +1015,14 @@ ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(in_addr_t* simulatorIP) {
  * \param SimulatorIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorIPString(char* simulatorIP, const size_t bufferLength) {
+ReadWriteAccess_t DataDictionaryGetSimulatorIPString(char *simulatorIP, const size_t bufferLength) {
 	if (simulatorIP == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
 	}
 
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_IP,
-				simulatorIP, bufferLength) > 0) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_IP, simulatorIP, bufferLength) > 0) {
 		return READ_OK;
 	}
 	else {
@@ -1040,7 +1040,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorIPString(char* simulatorIP, const si
  * \param SimulatorTCPPort
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(const char* simulatorTCPPort) {
+ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(const char *simulatorTCPPort) {
 	if (simulatorTCPPort == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
@@ -1062,7 +1062,7 @@ ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(const char* simulatorTCPP
  * \param SimulatorTCPPort Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(uint16_t* simulatorTCPPort) {
+ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(uint16_t * simulatorTCPPort) {
 	char resultBuffer[10];
 	char *endptr = NULL;
 
@@ -1073,7 +1073,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(uint16_t* simulatorTCPPor
 	}
 
 	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP,
-				resultBuffer, sizeof(resultBuffer)) > 0) {
+									   resultBuffer, sizeof (resultBuffer)) > 0) {
 		*simulatorTCPPort = strtoul(resultBuffer, &endptr, 10);
 		if (endptr == resultBuffer) {
 			*simulatorTCPPort = 0;
@@ -1096,7 +1096,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(uint16_t* simulatorTCPPor
  * \param SimulatorUDPPort
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(const char* simulatorUDPPort) {
+ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(const char *simulatorUDPPort) {
 	if (simulatorUDPPort == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
@@ -1118,8 +1118,8 @@ ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(const char* simulatorUDPP
  * \param SimulatorUDPPort Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(uint16_t* simulatorUDPPort) {
-	
+ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(uint16_t * simulatorUDPPort) {
+
 	char resultBuffer[10];
 	char *endptr = NULL;
 
@@ -1130,7 +1130,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(uint16_t* simulatorUDPPor
 	}
 
 	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP,
-				resultBuffer, sizeof(resultBuffer)) > 0) {
+									   resultBuffer, sizeof (resultBuffer)) > 0) {
 		*simulatorUDPPort = strtoul(resultBuffer, &endptr, 10);
 		if (endptr == resultBuffer) {
 			*simulatorUDPPort = 0;
@@ -1153,7 +1153,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(uint16_t* simulatorUDPPor
  * \param SimulatorMode
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSimulatorModeU8(const char* simulatorMode) {
+ReadWriteAccess_t DataDictionarySetSimulatorModeU8(const char *simulatorMode) {
 	ReadWriteAccess_t retval;
 
 	if (simulatorMode == NULL) {
@@ -1161,7 +1161,7 @@ ReadWriteAccess_t DataDictionarySetSimulatorModeU8(const char* simulatorMode) {
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
 	}
-	
+
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_SIMULATOR_MODE, simulatorMode, strlen(simulatorMode) + 1)) {
 		retval = WRITE_OK;
@@ -1177,9 +1177,9 @@ ReadWriteAccess_t DataDictionarySetSimulatorModeU8(const char* simulatorMode) {
  * \param SimulatorMode Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(uint8_t* simulatorMode) {
+ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(uint8_t * simulatorMode) {
 	char readValue[10];
-	char* endptr;
+	char *endptr;
 
 	if (simulatorMode == NULL) {
 		errno = EINVAL;
@@ -1187,8 +1187,8 @@ ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(uint8_t* simulatorMode) {
 		return UNDEFINED;
 	}
 
-	if (UtilReadConfigurationParameter(
-		CONFIGURATION_PARAMETER_SIMULATOR_MODE, readValue, sizeof (readValue)) > 0) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_MODE, readValue, sizeof (readValue))
+		> 0) {
 		*simulatorMode = strtoul(readValue, &endptr, 10);
 		if (endptr == readValue) {
 			*simulatorMode = 0;
@@ -1213,7 +1213,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(uint8_t* simulatorMode) {
  * \param VOILReceivers
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetVOILReceiversString(const char * VOILReceivers) {
+ReadWriteAccess_t DataDictionarySetVOILReceiversString(const char *VOILReceivers) {
 	ReadWriteAccess_t Res;
 
 	if (VOILReceivers == NULL) {
@@ -1221,7 +1221,7 @@ ReadWriteAccess_t DataDictionarySetVOILReceiversString(const char * VOILReceiver
 		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
 		return UNDEFINED;
 	}
-	
+
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_VOIL_RECEIVERS, VOILReceivers, strlen(VOILReceivers) + 1)) {
@@ -1237,7 +1237,7 @@ ReadWriteAccess_t DataDictionarySetVOILReceiversString(const char * VOILReceiver
  * \param VOILReceivers Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetVOILReceiversString(char * VOILReceivers, const size_t buflen) {
+ReadWriteAccess_t DataDictionaryGetVOILReceiversString(char *VOILReceivers, const size_t buflen) {
 	ReadWriteAccess_t Res;
 
 	if (VOILReceivers == NULL) {
@@ -1246,8 +1246,7 @@ ReadWriteAccess_t DataDictionaryGetVOILReceiversString(char * VOILReceivers, con
 		return UNDEFINED;
 	}
 
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_VOIL_RECEIVERS, VOILReceivers, buflen)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_VOIL_RECEIVERS, VOILReceivers, buflen)) {
 		return READ_OK;
 	}
 	else {
@@ -1268,7 +1267,7 @@ ReadWriteAccess_t DataDictionaryGetVOILReceiversString(char * VOILReceivers, con
  * \param DTMReceivers
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetDTMReceiversString(const char * DTMReceivers) {
+ReadWriteAccess_t DataDictionarySetDTMReceiversString(const char *DTMReceivers) {
 	ReadWriteAccess_t Res;
 
 	if (DTMReceivers == NULL) {
@@ -1276,7 +1275,7 @@ ReadWriteAccess_t DataDictionarySetDTMReceiversString(const char * DTMReceivers)
 		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
 		return UNDEFINED;
 	}
-	
+
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_DTM_RECEIVERS, DTMReceivers, strlen(DTMReceivers) + 1)) {
@@ -1292,7 +1291,7 @@ ReadWriteAccess_t DataDictionarySetDTMReceiversString(const char * DTMReceivers)
  * \param DTMReceivers Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetDTMReceiversString(char* DTMReceivers, const size_t buflen) {
+ReadWriteAccess_t DataDictionaryGetDTMReceiversString(char *DTMReceivers, const size_t buflen) {
 	ReadWriteAccess_t Res;
 
 	if (DTMReceivers == NULL) {
@@ -1301,8 +1300,7 @@ ReadWriteAccess_t DataDictionaryGetDTMReceiversString(char* DTMReceivers, const 
 		return UNDEFINED;
 	}
 
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_DTM_RECEIVERS, DTMReceivers, buflen)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_DTM_RECEIVERS, DTMReceivers, buflen)) {
 		return READ_OK;
 	}
 	else {
@@ -1324,7 +1322,7 @@ ReadWriteAccess_t DataDictionaryGetDTMReceiversString(char* DTMReceivers, const 
  * \param IP
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(const char* IP) {
+ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(const char *IP) {
 	ReadWriteAccess_t Res;
 
 	if (IP == NULL) {
@@ -1333,7 +1331,7 @@ ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(const char* IP) {
 		return UNDEFINED;
 	}
 
-	if(UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, IP, strlen(IP) + 1)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, IP, strlen(IP) + 1)) {
 		Res = WRITE_OK;
 	}
 	else
@@ -1347,7 +1345,7 @@ ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(const char* IP) {
  * \param externalSupervisorIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(in_addr_t* externalSupervisorIP) {
+ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(in_addr_t * externalSupervisorIP) {
 	char ipString[INET_ADDRSTRLEN];
 	ReadWriteAccess_t retval;
 	int result;
@@ -1383,7 +1381,7 @@ ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(in_addr_t* externalSu
  * \param buflen Return parameter buffer length
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPString(char * externalSupervisorIP, uint32_t buflen) {
+ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPString(char *externalSupervisorIP, uint32_t buflen) {
 	ReadWriteAccess_t Res;
 
 	if (externalSupervisorIP == NULL) {
@@ -1414,7 +1412,7 @@ ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPString(char * externalSup
  * \param SupervisorTCPPort
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(const char * SupervisorTCPPort) {
+ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(const char *SupervisorTCPPort) {
 	ReadWriteAccess_t Res;
 
 
@@ -1423,7 +1421,7 @@ ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(const char * SupervisorT
 		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
 		return UNDEFINED;
 	}
-	
+
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP, SupervisorTCPPort,
@@ -1451,7 +1449,7 @@ ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(uint16_t * SupervisorTCP
 	}
 
 	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP,
-				resultBuffer, sizeof(resultBuffer)) > 0) {
+									   resultBuffer, sizeof (resultBuffer)) > 0) {
 		*SupervisorTCPPort = strtoul(resultBuffer, &endptr, 10);
 		if (endptr == resultBuffer) {
 			*SupervisorTCPPort = 0;
@@ -1648,13 +1646,14 @@ ReadWriteAccess_t DataDictionarySetRVSSAsp(ASPType * ASPD) {
  * \return Result according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryGetRVSSAsp(ASPType * ASPD) {
-	
+
 
 	rvssAspDataMemory = claimSharedMemory(rvssAspDataMemory);
 	memcpy(ASPD, &rvssAspDataMemory, sizeof (ASPType));
 	rvssAspDataMemory = releaseSharedMemory(rvssAspDataMemory);
 	return READ_OK;
 }
+
 /*!
  * \brief DataDictionaryFreeRVSSAsp Releases data structure for saving RVSS asp data
  * \return Result according to ::ReadWriteAccess_t
@@ -1679,9 +1678,7 @@ ReadWriteAccess_t DataDictionaryFreeRVSSAsp() {
  * \param miscData The misc data string (ASCII).
  * \return ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMiscData(
-		const char* data,
-		const size_t datalen) {
+ReadWriteAccess_t DataDictionarySetMiscData(const char *data, const size_t datalen) {
 	// TODO implement setting of conf file
 	return UNDEFINED;
 }
@@ -1691,11 +1688,10 @@ ReadWriteAccess_t DataDictionarySetMiscData(
  * \param MiscData Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMiscData(char * miscDataBuffer, const size_t buflen) {
+ReadWriteAccess_t DataDictionaryGetMiscData(char *miscDataBuffer, const size_t buflen) {
 	ReadWriteAccess_t result = UNDEFINED;
 
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_MISC_DATA, miscDataBuffer, buflen)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_MISC_DATA, miscDataBuffer, buflen)) {
 		return READ_OK;
 	}
 	else {
@@ -1704,6 +1700,7 @@ ReadWriteAccess_t DataDictionaryGetMiscData(char * miscDataBuffer, const size_t 
 		memset(miscDataBuffer, 0, buflen);
 	}
 }
+
 /*END of MiscData*/
 
 
@@ -1714,6 +1711,7 @@ ReadWriteAccess_t DataDictionaryGetMiscData(char * miscDataBuffer, const size_t 
  */
 ReadWriteAccess_t DataDictionaryInitStateData() {
 	int createdMemory;
+
 	stateDataMemory = createSharedMemory(STATE_DATA_FILENAME, 0, sizeof (StateDataType), &createdMemory);
 	if (stateDataMemory == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared state data memory");
