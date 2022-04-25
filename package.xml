@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>maestro</name>
+  <version>0.5.0</version>
+  <description>The maestro package</description>
+  <license>TODO</license>
+  <maintainer email="lukas.wikander@astazero.com">lukas</maintainer> 
+
+  <author email="lukas.wikander@astazero.com">Lukas Wikander</author>
+  <author email="sebastian.lindholm@astazero.com">Sebastian Loh Lindholm</author>
+  <author email="viktor.johansson@astazero.com">Viktor Johansson</author>
+  <author email="adam.eriksson@astazero.com">Adam Eriksson</author>
+  <author email="alfred.aronsson@astazero.com">Alfred Aronsson</author>
+  <author email="jesper.blidkvist@astazero.com">Jesper Blidkvist</author>
+  <author email="oscar.johansson@astazero.com">Oscar Johansson</author>
+  <author email="frida.reichenberg@astazero.com">Frida Reichenberg</author>
+  <author email="victor.jarlow@astazero.com">Victor Jarlow</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>maestro_interfaces</depend>
+  <doc_depend>doxygen</doc_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+       <build_type>ament_cmake</build_type>
+  </export>
+</package>

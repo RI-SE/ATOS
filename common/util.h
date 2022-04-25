@@ -8,12 +8,9 @@
   -- Reference   :
   ------------------------------------------------------------------------------*/
 
-#ifndef __UTIL_H_INCLUDED__
-#define __UTIL_H_INCLUDED__
+#pragma once
 
-#ifdef __cplusplus
-extern "C"{
-#endif
+
 
 /*------------------------------------------------------------
   -- Include files.
@@ -34,6 +31,10 @@ extern "C"{
 #include "iso22133.h"
 #include "logging.h"
 #include "positioning.h"
+
+#ifdef __cplusplus
+extern "C"{
+#endif
 
 /*------------------------------------------------------------
   -- Defines
@@ -72,7 +73,6 @@ extern "C"{
 
 #define MAX_UTIL_VARIBLE_SIZE 512
 
-#define PI	3.141592653589793
 #define ORIGO_DISTANCE_CALC_ITERATIONS 14
 #define TRAJECTORY_LINE_LENGTH 100
 #define NUMBER_CHAR_LENGTH 20
@@ -240,13 +240,14 @@ COMM_REMOTECTRL_ENABLE = 31,
 COMM_REMOTECTRL_DISABLE = 32,
 COMM_REMOTECTRL_MANOEUVRE = 33,
 COMM_ENABLE_OBJECT = 34,
+COMM_CONTROL_SIGNAL_PERCENTAGE = 35,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
 COMM_INV = 255
 };
 
 typedef struct {
-	RemoteControlManoeuvreCommandType manoeuvre;
+	enum RemoteControlManoeuvreCommandType manoeuvre;
 	in_addr_t objectIP;
 } ManoeuvreCommandType;
 
@@ -256,7 +257,7 @@ typedef struct
   double Longitude;
   double Altitude;
   double Heading;
-} GeoPosition;
+} GeoPositionType;
 
 
 typedef enum {
@@ -281,7 +282,7 @@ typedef struct {
 	ObjectPropertiesType properties;
 	bool propertiesReceived;
 	struct timeval lastDataUpdate;
-  GeoPosition origin;
+  GeoPositionType origin;
 	RequestControlActionType requestedControlAction;
 } ObjectDataType;
 
@@ -738,7 +739,7 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter, c
 int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char* objectFilePath,
 							 const size_t filePathLength, char* objectSetting,
 							 const size_t objectSettingSize);
-int UtilReadOriginConfiguration(GeoPosition* origin);
+int UtilReadOriginConfiguration(GeoPositionType* origin);
 
 int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectDataType *monitorData);
 int UtilPopulateTREODataStructFromMQ(char* rawTREO, size_t rawTREOsize, TREOData *treoData);
@@ -778,4 +779,3 @@ void traj2ldm ( float      time ,
 }
 #endif
 
-#endif //__UTIL_H_INCLUDED__

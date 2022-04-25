@@ -186,3 +186,69 @@ To include ObjectControl in the build again run the same command with OFF, see f
 ```sh
 cmake .. -DWITH_RELATIVE_KINEMATICS=OFF
 ```
+
+## Installing ROS2 and building for the first time with colcon
+### Ubuntu
+Download prerequisites:
+```
+sudo apt update && sudo apt install curl gnupg2 lsb-release
+```
+Authorize the ros2 gpg key with apt:
+```sudo apt update && sudo apt install curl gnupg2 lsb-release
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key  -o /usr/share/keyrings/ros-archive-keyring.gpg
+```
+Add the ROS2 repo to sources list:
+```
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(source /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+```
+Install ros foxy for desktop and colcon
+```
+sudo apt update
+sudo apt install ros-foxy-desktop
+sudo apt install python3-colcon-common-extensions
+```
+
+clone maestro-interfaces from github to your git folder:
+```
+git clone https://github.com/RI-SE/maestro-interfaces
+```
+
+Install opensimulation interface as above, and then make sure that the linker knows where it is located:
+```
+echo /usr/local/lib/osi3 > /etc/ld.so.conf.d/osi3.conf
+sudo ldconfig
+```
+
+source the setup script:
+```
+source /opt/ros/foxy/setup.bash
+```
+Add the above line to ~/.bashrc or similar startup script to automate this process.
+
+Create a workspace:
+```
+mkdir -p ~/dev_ws/src
+```
+Create symlinks to maestro and maestro_interfaces
+
+```
+ln -s path/to/Maestro ~/dev_ws/src/maestro
+ln -s path/to/maestro-interfaces ~/dev_ws/src/maestro_interfaces
+```
+
+Change directory into the workspace and build
+```
+cd ~/dev_ws
+colcon build
+```
+
+Source the project setup file:
+```
+source ~/dev_ws/install/setup.bash
+```
+Also add the above line to ~/.bashrc or similar.
+
+Launch Maestro
+```
+ros2 launch maestro maestro_launch.py
+```

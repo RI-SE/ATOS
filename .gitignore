@@ -43,6 +43,7 @@
 build*/
 .vscode*/
 PlaygroundPlatform*/
+.cache*/
 
 # Autosave files
 *.save

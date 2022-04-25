@@ -127,7 +127,7 @@ static void disconnectObject(ObjectConnection * objectConnection);
 static void disconnectAllObjects(ObjectConnection objectConnections[], const unsigned int numberOfObjects);
 static int connectAllObjects(ObjectConnection objectConnections[], const unsigned int numberOfObjects);
 static int configureAllObjects(ObjectConnection objectConnections[],
-							   const GeoPosition originPosition,
+							   const GeoPositionType originPosition,
 							   const struct timeval currentTime,
 							   const char trajectoryFiles[MAX_OBJECTS][MAX_FILE_PATH],
 							   const unsigned int numberOfObjects);
@@ -255,7 +255,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	ACCMData mqACCMData;
 	EXACData mqEXACData;
 	TRCMData mqTRCMData;
-	GeoPosition OriginPosition;
+	GeoPositionType OriginPosition;
 	ASPType ASPData;
 
 	ASPData.MTSPU32 = 0;
@@ -371,9 +371,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			size_t receivedMONRData = 0;
 			size_t receivedTCPData = 0;
 
-			CurrentTimeU32 =
-				((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime)) << 2) +
-				GPSTime->MicroSecondU16;
+			CurrentTimeU32 = TimeGetAsGPSqmsOfWeek(&currentTime);
 
 			 /*MTSP*/ if (timercmp(&currentTime, &nextAdaptiveSyncMessageTime, >)) {
 
@@ -1041,7 +1039,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					// Enable all objects at INIT
 					LogMessage(LOG_LEVEL_DEBUG, "Initializing object data");
 					ObjectDataType objectData;
-					GeoPosition origin;
+					GeoPositionType origin;
 
 					for (iIndex = 0; iIndex < nbr_objects; iIndex++) {
 						LogMessage(LOG_LEVEL_DEBUG, "Configuring object data for object %u",
@@ -1909,7 +1907,7 @@ void disconnectAllObjects(ObjectConnection objectConnections[], const unsigned i
 }
 
 int configureAllObjects(ObjectConnection objectConnections[],
-						const GeoPosition originPosition,
+						const GeoPositionType originPosition,
 						const struct timeval currentTime,
 						const char trajectoryFiles[MAX_OBJECTS][MAX_FILE_PATH],
 						const unsigned int numberOfObjects) {
