@@ -17,7 +17,6 @@
 #include "objectcontrol.hpp"
 
 using std::placeholders::_1;
-using std::placeholders::_2;
 using namespace ROSChannels;
 
 ObjectControl::ObjectControl()
@@ -280,14 +279,7 @@ void ObjectControl::loadObjectFiles() {
 			catch (std::invalid_argument& e) {
 				RCLCPP_ERROR(get_logger(), e.what());
 				errors.push_back(e);
-			}
-			//auto monrPub = ROSChannels::Monitor::Pub(*this,object.getTransmitterID());
-			//auto trajSub = ROSChannels::Trajectory::Sub(*this,object.getTransmitterID());
-			//monrPubs[object.getTransmitterID()]=monrPub;
-			//trajSubs[object.getTransmitterID()]=trajSub;
-			//object.setTrajSub()
-			//object.setMonrPub()
-			
+			}			
 		}
 	}
 
