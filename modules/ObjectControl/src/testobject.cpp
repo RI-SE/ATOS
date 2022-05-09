@@ -76,7 +76,6 @@ void TestObject::setTriggerStart(
 void TestObject::setLastReceivedTrajectory(ROSChannels::Trajectory::message_type::SharedPtr trajlet){
 	// Warning: ensure thread safety here if other thread uses
 	// lastReceivedTrajectory.
-	RCLCPP_INFO(get_logger(),"Got it!: ");
 	this->lastReceivedTrajectory = trajlet;
 }
 

@@ -17,10 +17,8 @@ static maestro_interfaces::msg::Monitor createROSMessage(const MonitorMessage& d
 ObjectListener::ObjectListener(
 		ObjectControl* sh,
 		std::shared_ptr<TestObject> ob,
-		//ROSChannels::Monitor::Pub& mc,
 		rclcpp::Logger log)
 	:  obj(ob), handler(sh),
-	// monitorChannel(mc), 
 	 Loggable(log)
 {
 	if (!obj->isConnected()) {

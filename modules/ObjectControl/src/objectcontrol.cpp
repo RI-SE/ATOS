@@ -8,7 +8,6 @@
 #include <thread>
 #include <dirent.h>
 #include <exception>
-#include <string> 
 
 #include "state.hpp"
 #include "util.h"
@@ -510,13 +509,11 @@ void ObjectControl::connectToObject(
 			try {
 				obj->establishConnection(connStopReq);
 				obj->sendSettings();
-				// VJCOM: start object lifecycle node here
 			}
 			catch (std::runtime_error& e) {
 				RCLCPP_ERROR(get_logger(), "Connection attempt for object %u failed: %s",
 						   obj->getTransmitterID(), e.what());
 				obj->disconnect();
-				// VJCOM: Stop lifecycle nodes here
 				return;
 				// TODO connection failed event?
 			}
@@ -577,7 +574,6 @@ void ObjectControl::connectToObject(
 						   obj->getTransmitterID(), e.what());
 				obj->disconnect();
 				// TODO: connection failed event?
-				// VJCOM: Stop lifecycle nodes here
 			}
 		}
 	}
@@ -585,7 +581,6 @@ void ObjectControl::connectToObject(
 		RCLCPP_ERROR(get_logger(), "Bad connection attempt for object %u: %s",
 				   obj->getTransmitterID(), e.what());
 		obj->disconnect();
-		// VJCOM: Stop lifecycle nodes here
 		// TODO: connection failed event?
 	}
 };
