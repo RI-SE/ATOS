@@ -4,10 +4,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+#set(CMAKE_BUILD_TYPE Debug)
+
 project(object_control)
 
 find_package(rclcpp REQUIRED)
 find_package(maestro_interfaces REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 
@@ -63,6 +66,7 @@ target_link_libraries(${OBJECT_CONTROL_TARGET}
 ament_target_dependencies(${OBJECT_CONTROL_TARGET}
   rclcpp
   std_msgs
+  nav_msgs
   maestro_interfaces
   tf2
 )
