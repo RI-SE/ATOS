@@ -24,12 +24,13 @@ def generate_launch_description():
             namespace='maestro',
             executable='object_control',
             name='object_control'
+            #,prefix="xterm -e gdb --args" #Useful for debugging
         ),
         Node(
             package='maestro',
             namespace='maestro',
-            executable='trajectory_streamer',
-            name='trajectory_streamer'
+            executable='trajectorylet_streamer',
+            name='trajectorylet_streamer'
         ),
         #Node(
         #    package='maestro',
