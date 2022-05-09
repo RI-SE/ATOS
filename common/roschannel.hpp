@@ -3,7 +3,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/u_int8.hpp>
-#include <maestro_interfaces/msg/object_id_array.hpp>
 #include <std_msgs/msg/int8.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <nav_msgs/msg/path.hpp>
@@ -18,6 +17,7 @@
 #include "maestro_interfaces/msg/manoeuvre_command.hpp"
 #include "maestro_interfaces/msg/control_signal_percentage.hpp"
 #include "maestro_interfaces/msg/trigger_event.hpp"
+#include "maestro_interfaces/msg/object_id_array.hpp"
 
 namespace ROSChannels {
 
@@ -452,18 +452,25 @@ namespace Monitor {
 
     class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node, const rclcpp::QoS& qos = defaultQoS) : BasePub<message_type>(node, topicName, qos) {}
+        const uint32_t objectId;
+        Pub(rclcpp::Node& node, const uint32_t id, const rclcpp::QoS& qos = defaultQoS) : 
+            objectId(id),
+            BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, qos) {}
     };
 
     class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback, const rclcpp::QoS& qos = defaultQoS) : BaseSub<message_type>(node, topicName, callback, qos) {}
+        const uint32_t objectId;
+        Sub(rclcpp::Node& node, const uint32_t id, std::function<void(const message_type::SharedPtr)> callback, const rclcpp::QoS& qos = defaultQoS) : 
+            objectId(id),
+            BaseSub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, callback, qos) {}
     };
 }
 
 namespace ObjectsConnected {
     const std::string topicName = "objects_connected";
     using message_type = maestro_interfaces::msg::ObjectIdArray;
+    const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
     public:
@@ -497,12 +504,18 @@ namespace Trajectory {
 
     class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node, const uint32_t objectId) : BasePub<message_type>(node, topicName + "/object" + std::to_string(objectId)) {}
+        const uint32_t objectId;
+        Pub(rclcpp::Node& node, const uint32_t id) :
+            objectId(id),
+            BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName) {}
     };
 
     class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, const uint32_t objectId, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName + "/" + std::to_string(objectId), callback) {}
+        const uint32_t objectId;
+        Sub(rclcpp::Node& node, const uint32_t id, std::function<void(const message_type::SharedPtr)> callback) : 
+            objectId(id),
+            BaseSub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, callback) {}
     };
 }
 } // namespace ROSChannels
