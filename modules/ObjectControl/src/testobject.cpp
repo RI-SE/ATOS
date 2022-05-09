@@ -4,10 +4,16 @@
 #include "datadictionary.h"
 #include "osi_handler.hpp"
 
-TestObject::TestObject(rclcpp::Logger log) :
+TestObject::TestObject(rclcpp::Logger log,
+		std::shared_ptr<ROSChannels::Trajectory::Sub> trajSub,
+		std::shared_ptr<ROSChannels::Monitor::Pub> monrPub
+	) :
 	osiChannel(SOCK_STREAM, log),
 	comms(log),
-	Loggable(log) {
+	Loggable(log),
+	trajSub(trajSub),
+	monrPub(monrPub)
+	 {
 }
 
 TestObject::TestObject(TestObject&& other) :
@@ -65,6 +71,13 @@ void TestObject::setTriggerStart(
 		errMsg << objectStateToASCII(st);
 		throw std::invalid_argument(errMsg.str());
 	}
+}
+
+void TestObject::setLastReceivedTrajectory(ROSChannels::Trajectory::message_type::SharedPtr trajlet){
+	// Warning: ensure thread safety here if other thread uses
+	// lastReceivedTrajectory.
+	RCLCPP_INFO(get_logger(),"Got it!: ");
+	this->lastReceivedTrajectory = trajlet;
 }
 
 ObjectDataType TestObject::getAsObjectData() const {
@@ -133,6 +146,10 @@ ObjectStateType TestObject::getState(
 		}
 	}
 	return this->getState();
+}
+
+void TestObject::publishMonr(const ROSChannels::Monitor::message_type monr){
+	monrPub->publish(monr);
 }
 
 std::string TestObject::toString() const {
@@ -334,7 +351,6 @@ void TestObject::sendOsiData(
 	this->osiChannel << vec;
 }
 
-
 void TestObject::sendStart() {
 	StartMessageType strt;
 	TimeSetToCurrentSystemTime(&strt.startTime); // TODO make possible to modify
@@ -345,7 +361,6 @@ void TestObject::sendStart() {
 void TestObject::sendControlSignal(const ControlSignalPercentage::SharedPtr csp) {
 	this->comms.mntr << csp;
 }
-
 
 ISOMessageID Channel::pendingMessageType(bool awaitNext) {
 	auto result = recv(this->socket, this->receiveBuffer.data(), this->receiveBuffer.size(), (awaitNext ? 0 : MSG_DONTWAIT) | MSG_PEEK);
@@ -565,8 +580,6 @@ Channel& operator<<(Channel& chnl, const std::vector<char>& data) {
 	}
 	return chnl;
 }
-
-
 
 std::string Channel::remoteIP() const {
 	char ipString[INET_ADDRSTRLEN];

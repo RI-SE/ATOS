@@ -13,12 +13,15 @@ class ObjectControlState;
 class ObjectListener : public Loggable
 {
 public:
-	ObjectListener(ObjectControl*, TestObject*, ROSChannels::Monitor::Pub&, rclcpp::Logger);
+	ObjectListener(
+		ObjectControl*,
+		std::shared_ptr<TestObject>,
+		rclcpp::Logger
+	);
 	~ObjectListener();
 private:
-	TestObject* obj;
+	std::shared_ptr<TestObject> obj;
 	ObjectControl* handler;
-	ROSChannels::Monitor::Pub& monitorChannel;
 	std::thread listener;
 
 	void listen();
