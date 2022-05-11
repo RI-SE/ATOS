@@ -187,6 +187,17 @@ To include ObjectControl in the build again run the same command with OFF, see f
 cmake .. -DWITH_RELATIVE_KINEMATICS=OFF
 ```
 
+## Installing ad-xolib
+Clone, build, and install the library
+```
+git clone https://github.com/javedulu/ad-xolib.git
+mkdir build
+cd build
+cmake .. -DBUILD_EMBED_TARGETS=OFF
+make
+sudo make install
+```
+
 ## Installing ROS2 and building for the first time with colcon
 ### Ubuntu
 Download prerequisites:
@@ -218,6 +229,8 @@ Install opensimulation interface as above, and then make sure that the linker kn
 echo /usr/local/lib/osi3 > /etc/ld.so.conf.d/osi3.conf
 sudo ldconfig
 ```
+
+Install ad-xolib as above. 
 
 source the setup script:
 ```
@@ -252,3 +265,4 @@ Launch Maestro
 ```
 ros2 launch maestro maestro_launch.py
 ```
+
