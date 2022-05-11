@@ -36,7 +36,6 @@ ObjectControl::ObjectControl()
 	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
 	failurePub(*this),
 	scnAbortPub(*this),
-	monitorPub(*this),
 	objectsConnectedPub(*this)
 {
 	int queueSize=0;
@@ -94,9 +93,9 @@ void ObjectControl::handleActionConfigurationCommand(
 	this->state->settingModificationRequested(*this);
 	if (action.command == ACTION_PARAMETER_VS_SEND_START) {
 		RCLCPP_INFO(get_logger(), "Configuring delayed start for object %u", action.objectID);
-		objects.at(action.objectID).setTriggerStart(true);
+		objects.at(action.objectID)->setTriggerStart(true);
 		this->storedActions[action.actionID] = std::bind(&TestObject::sendStart,
-														 &objects.at(action.objectID));
+														 objects.at(action.objectID));
 	}
 }
 
@@ -221,17 +220,21 @@ void ObjectControl::onRemoteControlDisableMessage(const RemoteControlDisable::me
 
 void ObjectControl::onControlSignalMessage(const ControlSignal::message_type::SharedPtr csp){
 	try{
-		objects.at(csp->maestro_header.object_id).sendControlSignal(csp);
+		objects.at(csp->maestro_header.object_id)->sendControlSignal(csp);
 	}
 	catch(const std::exception& e){
 		RCLCPP_ERROR(get_logger(), "Failed to translate/send Control Signal Percentage: %s", e.what());
 	}
 }
 
+void ObjectControl::onTrajectoryMessage(const Trajectory::message_type::SharedPtr trajlet,uint32_t id){
+	objects.at(id)->setLastReceivedTrajectory(trajlet);
+}
+
 void ObjectControl::loadScenario() {
 	this->loadObjectFiles();
-	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
-		auto data = o.second.getAsObjectData();
+	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, std::shared_ptr<TestObject>> &o) {
+		auto data = o.second->getAsObjectData();
 		DataDictionarySetObjectData(&data);
 	});
 }
@@ -250,38 +253,43 @@ void ObjectControl::loadObjectFiles() {
 	for (const auto& entry : fs::directory_iterator(objectDir)) {
 		if (fs::is_regular_file(entry.status())) {
 			const auto inputFile = entry.path();
-			TestObject object(get_logger());
+			ObjectConfig conf;
 			try {
-				object.parseConfigurationFile(entry.path());
-
-				RCLCPP_INFO(get_logger(), "Loaded configuration: %s", object.toString().c_str());
+				conf.parseConfigurationFile(inputFile);
+				uint32_t id = conf.getTransmitterID();
+				RCLCPP_INFO(get_logger(), "Loaded configuration: %s", conf.toString().c_str());
 				// Check preexisting
-				auto foundObject = objects.find(object.getTransmitterID());
+				auto foundObject = objects.find(id);
 				if (foundObject == objects.end()) {
-					objects.emplace(object.getTransmitterID(), std::move(object));
+					// Create sub and pub as unique ptrs, when TestObject is destroyed, these get destroyed too.
+					auto trajletSub = std::make_shared<Trajectory::Sub>(*this,id,std::bind(&ObjectControl::onTrajectoryMessage,this,_1,id));
+					auto monrPub = std::make_shared<Monitor::Pub>(*this,id);
+					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(get_logger(),trajletSub,monrPub);
+					object->parseConfigurationFile(inputFile);
+					objects.emplace(id, object);
 				}
 				else {
-					auto badID = object.getTransmitterID();
+					auto badID = conf.getTransmitterID();
 					std::string errMsg = "Duplicate object ID " + std::to_string(badID)
-							+ " detected in files " + objects.at(badID).getTrajectoryFileName()
-							+ " and " + object.getTrajectoryFileName();
+							+ " detected in files " + objects.at(badID)->getTrajectoryFileName()
+							+ " and " + conf.getTrajectoryFileName();
 					throw std::invalid_argument(errMsg);
 				}
 			}
 			catch (std::invalid_argument& e) {
 				RCLCPP_ERROR(get_logger(), e.what());
 				errors.push_back(e);
-			}
+			}			
 		}
 	}
 
 	// Fix injector ID maps - reverse their direction
 	for (const auto& id : getVehicleIDs()) {
-		auto injMap = objects.at(id).getObjectConfig().getInjectionMap();
+		auto injMap = objects.at(id)->getObjectConfig().getInjectionMap();
 		for (const auto& sourceID : injMap.sourceIDs) {
-			auto conf = objects.at(sourceID).getObjectConfig();
+			auto conf = objects.at(sourceID)->getObjectConfig();
 			conf.addInjectionTarget(id);
-			objects.at(sourceID).setObjectConfig(conf);
+			objects.at(sourceID)->setObjectConfig(conf);
 		}
 	}
 	
@@ -298,7 +306,7 @@ void ObjectControl::loadObjectFiles() {
 
 uint32_t ObjectControl::getAnchorObjectID() const {
 	for (auto& object : objects) {
-		if (object.second.isAnchor()) {
+		if (object.second->isAnchor()) {
 			return object.first;
 		}
 	}
@@ -307,13 +315,13 @@ uint32_t ObjectControl::getAnchorObjectID() const {
 
 ObjectMonitorType ObjectControl::getLastAnchorData() const {
 	auto anchorID = getAnchorObjectID();
-	return objects.at(anchorID).getLastMonitorData();
+	return objects.at(anchorID)->getLastMonitorData();
 }
 
 std::map<uint32_t,ObjectStateType> ObjectControl::getObjectStates() const {
 	std::map<uint32_t, ObjectStateType> retval;
 	for (const auto& elem : objects) {
-		retval[elem.first] = elem.second.getState();
+		retval[elem.first] = elem.second->getState();
 	}
 	return retval;
 }
@@ -325,10 +333,10 @@ void ObjectControl::transformScenarioRelativeTo(
 			// Skip for now TODO also here - maybe?
 			continue;
 		}
-		auto traj = objects.at(id).getTrajectory();
-		auto relTraj = traj.relativeTo(objects.at(objectID).getTrajectory());
+		auto traj = objects.at(id)->getTrajectory();
+		auto relTraj = traj.relativeTo(objects.at(objectID)->getTrajectory());
 
-		objects.at(id).setTrajectory(relTraj);
+		objects.at(id)->setTrajectory(relTraj);
 	}
 }
 
@@ -370,19 +378,19 @@ void ObjectControl::disconnectObjects() {
 	}
 	objectListeners.clear();
 	for (const auto id : getVehicleIDs()) {
-		objects.at(id).disconnect();
+		objects.at(id)->disconnect();
 	}
 }
 
 void ObjectControl::disconnectObject(
 		const uint32_t id) {
-	objects.at(id).disconnect();
+	objects.at(id)->disconnect();
 	objectListeners.erase(id);
 }
 
 void ObjectControl::uploadObjectConfiguration(
 		const uint32_t id) {
-	objects.at(id).sendSettings();
+	objects.at(id)->sendSettings();
 }
 
 void ObjectControl::startSafetyThread() {
@@ -403,12 +411,12 @@ void ObjectControl::heartbeat() {
 
 		// Check time since MONR for all objects
 		for (const auto& id : getVehicleIDs()) {
-			if (objects.at(id).isConnected()) {
-				auto diff = objects.at(id).getTimeSinceLastMonitor();
-				if (diff > objects.at(id).getMaxAllowedMonitorPeriod()) {
+			if (objects.at(id)->isConnected()) {
+				auto diff = objects.at(id)->getTimeSinceLastMonitor();
+				if (diff > objects.at(id)->getMaxAllowedMonitorPeriod()) {
 					RCLCPP_WARN(get_logger(), "MONR timeout for object %u: %d ms > %d ms", id,
-							   diff.count(), objects.at(id).getMaxAllowedMonitorPeriod().count());
-					objects.at(id).disconnect();
+							   diff.count(), objects.at(id)->getMaxAllowedMonitorPeriod().count());
+					objects.at(id)->disconnect();
 					this->state->disconnectedFromObject(*this, id);
 				}
 			}
@@ -417,13 +425,13 @@ void ObjectControl::heartbeat() {
 		// Send heartbeat
 		for (const auto& id : getVehicleIDs()) {
 			try {
-				if (objects.at(id).isConnected()) {
-					objects.at(id).sendHeartbeat(this->state->asControlCenterStatus());
+				if (objects.at(id)->isConnected()) {
+					objects.at(id)->sendHeartbeat(this->state->asControlCenterStatus());
 				}
 			}
 			catch (std::invalid_argument& e) {
 				RCLCPP_WARN(get_logger(), e.what());
-				objects.at(id).disconnect();
+				objects.at(id)->disconnect();
 				this->state->disconnectedFromObject(*this, id);
 			}
 		}
@@ -454,15 +462,15 @@ OsiHandler::LocalObjectGroundTruth_t ObjectControl::buildOSILocalGroundTruth(
 }
 
 void ObjectControl::injectObjectData(const MonitorMessage &monr) {
-	if (!objects.at(monr.first).getObjectConfig().getInjectionMap().targetIDs.empty()) {
+	if (!objects.at(monr.first)->getObjectConfig().getInjectionMap().targetIDs.empty()) {
 		std::chrono::system_clock::time_point ts;
 		auto secs = std::chrono::seconds(monr.second.timestamp.tv_sec);
 		auto usecs = std::chrono::microseconds(monr.second.timestamp.tv_usec);
 		ts += secs + usecs;
 		auto osiGtData = buildOSILocalGroundTruth(monr);
-		for (const auto& targetID : objects.at(monr.first).getObjectConfig().getInjectionMap().targetIDs) {
-			if (objects.at(targetID).isOsiCompatible()) {
-				objects.at(targetID).sendOsiData(osiGtData, objects.at(targetID).getProjString(), ts);
+		for (const auto& targetID : objects.at(monr.first)->getObjectConfig().getInjectionMap().targetIDs) {
+			if (objects.at(targetID)->isOsiCompatible()) {
+				objects.at(targetID)->sendOsiData(osiGtData, objects.at(targetID)->getProjString(), ts);
 			}
 		}
 	}
@@ -473,7 +481,7 @@ void ObjectControl::startListeners() {
 	RCLCPP_DEBUG(get_logger(), "Starting listeners");
 	objectListeners.clear();
 	for (const auto& id : getVehicleIDs()) {
-		objectListeners.try_emplace(id, this, &objects.at(id), monitorPub, get_logger());
+		objectListeners.try_emplace(id, this, objects.at(id), get_logger());
 	}
 }
 
@@ -484,20 +492,20 @@ void ObjectControl::notifyObjectsConnected() {
 }
 
 void ObjectControl::connectToObject(
-		TestObject &obj,
+		std::shared_ptr<TestObject> obj,
 		std::shared_future<void> &connStopReq) {
 	constexpr int maxConnHeabs = 10;
 	constexpr int maxConnMonrs = 10;
 	try {
-		if (!obj.isConnected()) {
+		if (!obj->isConnected()) {
 			try {
-				obj.establishConnection(connStopReq);
-				obj.sendSettings();
+				obj->establishConnection(connStopReq);
+				obj->sendSettings();
 			}
 			catch (std::runtime_error& e) {
 				RCLCPP_ERROR(get_logger(), "Connection attempt for object %u failed: %s",
-						   obj.getTransmitterID(), e.what());
-				obj.disconnect();
+						   obj->getTransmitterID(), e.what());
+				obj->disconnect();
 				return;
 				// TODO connection failed event?
 			}
@@ -509,9 +517,9 @@ void ObjectControl::connectToObject(
 					ObjectStateType objState = OBJECT_STATE_UNKNOWN;
 					auto nextSendTime = std::chrono::system_clock::now();
 					try {
-						obj.sendHeartbeat(this->state->asControlCenterStatus());
+						obj->sendHeartbeat(this->state->asControlCenterStatus());
 						nextSendTime += heartbeatPeriod;
-						objState = obj.getState(true, heartbeatPeriod);
+						objState = obj->getState(true, heartbeatPeriod);
 					} catch (std::runtime_error& e) {
 						if (connectionHeartbeats-- > 0) {
 							std::this_thread::sleep_until(nextSendTime);
@@ -524,67 +532,67 @@ void ObjectControl::connectToObject(
 					switch (objState) {
 					case OBJECT_STATE_ARMED:
 					case OBJECT_STATE_REMOTE_CONTROL:
-						RCLCPP_INFO(get_logger(), "Connected to armed object ID %u", obj.getTransmitterID());
-						this->state->connectedToArmedObject(*this, obj.getTransmitterID());
+						RCLCPP_INFO(get_logger(), "Connected to armed object ID %u", obj->getTransmitterID());
+						this->state->connectedToArmedObject(*this, obj->getTransmitterID());
 						break;
 					case OBJECT_STATE_ABORTING:
 					case OBJECT_STATE_POSTRUN:
 					case OBJECT_STATE_RUNNING:
-						RCLCPP_INFO(get_logger(), "Connected to running object ID %u", obj.getTransmitterID());
-						this->state->connectedToLiveObject(*this, obj.getTransmitterID());
+						RCLCPP_INFO(get_logger(), "Connected to running object ID %u", obj->getTransmitterID());
+						this->state->connectedToLiveObject(*this, obj->getTransmitterID());
 						break;
 					case OBJECT_STATE_INIT:
 						if (initializingMonrs-- > 0) {
 							continue;
 						}
 						else {
-							RCLCPP_INFO(get_logger(), "Connected object %u in initializing state after connection", obj.getTransmitterID());
-							this->state->connectedToLiveObject(*this, obj.getTransmitterID());
+							RCLCPP_INFO(get_logger(), "Connected object %u in initializing state after connection", obj->getTransmitterID());
+							this->state->connectedToLiveObject(*this, obj->getTransmitterID());
 						}
 						break;
 					case OBJECT_STATE_DISARMED:
-						RCLCPP_INFO(get_logger(), "Connected to disarmed object ID %u", obj.getTransmitterID());
-						this->state->connectedToObject(*this, obj.getTransmitterID());
+						RCLCPP_INFO(get_logger(), "Connected to disarmed object ID %u", obj->getTransmitterID());
+						this->state->connectedToObject(*this, obj->getTransmitterID());
 						break;
 					default:
-						RCLCPP_INFO(get_logger(), "Connected to object %u in unknown state", obj.getTransmitterID());
-						this->state->connectedToLiveObject(*this, obj.getTransmitterID());
+						RCLCPP_INFO(get_logger(), "Connected to object %u in unknown state", obj->getTransmitterID());
+						this->state->connectedToLiveObject(*this, obj->getTransmitterID());
 					}
 					break;
 				}
 			}
 			catch (std::runtime_error &e) {
 				RCLCPP_ERROR(get_logger(), "Connection startup procedure failed for object %u: %s",
-						   obj.getTransmitterID(), e.what());
-				obj.disconnect();
+						   obj->getTransmitterID(), e.what());
+				obj->disconnect();
 				// TODO: connection failed event?
 			}
 		}
 	}
 	catch (std::invalid_argument &e) {
 		RCLCPP_ERROR(get_logger(), "Bad connection attempt for object %u: %s",
-				   obj.getTransmitterID(), e.what());
-		obj.disconnect();
+				   obj->getTransmitterID(), e.what());
+		obj->disconnect();
 		// TODO: connection failed event?
 	}
 };
 
 void ObjectControl::remoteControlObjects(bool on) {
 	for (auto& id : getVehicleIDs()) {
-		objects.at(id).sendRemoteControl(on);
+		objects.at(id)->sendRemoteControl(on);
 	}
 }
 
 void ObjectControl::armObjects() {
 	for (auto& id : getVehicleIDs()) {
-		objects.at(id).sendArm();
+		objects.at(id)->sendArm();
 	}
 }
 
 void ObjectControl::disarmObjects() {
 	for (auto& id : getVehicleIDs()) {
 		try {
-			objects.at(id).sendDisarm();
+			objects.at(id)->sendDisarm();
 		}
 		catch (std::invalid_argument& e) {
 			RCLCPP_ERROR(get_logger(), "Unable to disarm object %u: %s", id, e.what());
@@ -595,44 +603,44 @@ void ObjectControl::disarmObjects() {
 
 void ObjectControl::startObjects() {
 	for (auto& id : getVehicleIDs()) {
-		if (!objects.at(id).isStartingOnTrigger()) {
-			objects.at(id).sendStart();
+		if (!objects.at(id)->isStartingOnTrigger()) {
+			objects.at(id)->sendStart();
 		}
 	}
 }
 
 void ObjectControl::allClearObjects() {
 	for (auto& id : getVehicleIDs()) {
-		objects.at(id).sendAllClear();
+		objects.at(id)->sendAllClear();
 	}
 	this->state->allObjectsAbortDisarmed(*this); // TODO wait for all objects really are disarmed
 }
 
 bool ObjectControl::isAnyObjectIn(
 		const ObjectStateType state) {
-	return std::any_of(objects.cbegin(), objects.cend(), [state](const std::pair<const uint32_t,TestObject>& obj) {
-		return obj.second.getState() == state;
+	return std::any_of(objects.cbegin(), objects.cend(), [state](const std::pair<const uint32_t,std::shared_ptr<TestObject>>& obj) {
+		return obj.second->getState() == state;
 	});
 }
 
 bool ObjectControl::areAllObjectsIn(
 		const ObjectStateType state) {
-	return std::all_of(objects.cbegin(), objects.cend(), [state](const std::pair<const uint32_t,TestObject>& obj) {
-		return obj.second.getState() == state;
+	return std::all_of(objects.cbegin(), objects.cend(), [state](const std::pair<const uint32_t,std::shared_ptr<TestObject>>& obj) {
+		return obj.second->getState() == state;
 	});
 }
 
 bool ObjectControl::isAnyObjectIn(
 		const std::set<ObjectStateType>& states) {
-	return std::any_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,TestObject>& obj) {
-		return states.find(obj.second.getState()) != states.end();
+	return std::any_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,std::shared_ptr<TestObject>>& obj) {
+		return states.find(obj.second->getState()) != states.end();
 	});
 }
 
 bool ObjectControl::areAllObjectsIn(
 		const std::set<ObjectStateType>& states) {
-	return std::all_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,TestObject>& obj) {
-		return states.find(obj.second.getState()) != states.end();
+	return std::all_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,std::shared_ptr<TestObject>>& obj) {
+		return states.find(obj.second->getState()) != states.end();
 	});
 }
 

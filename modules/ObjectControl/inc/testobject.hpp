@@ -6,7 +6,7 @@
 #include "trajectory.hpp"
 #include "objectconfig.hpp"
 #include "osi_handler.hpp"
-#include "maestro_interfaces/msg/control_signal_percentage.hpp"
+#include "roschannel.hpp"
 #include "loggable.hpp"
 
 using maestro_interfaces::msg::ControlSignalPercentage;
@@ -90,7 +90,10 @@ public:
 class TestObject : public Loggable {
 	using clock = std::chrono::steady_clock;
 public:
-	TestObject(rclcpp::Logger log);
+	TestObject(rclcpp::Logger, 
+		std::shared_ptr<ROSChannels::Trajectory::Sub>, 
+		std::shared_ptr<ROSChannels::Monitor::Pub>
+	);
 	TestObject(const TestObject&) = delete;
 	TestObject(TestObject&&);
 
@@ -109,6 +112,7 @@ public:
 	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
 	ObjectConfig getObjectConfig() const { return conf; }
 	void setTrajectory(const Trajectory& newTrajectory) { conf.setTrajectory(newTrajectory); }
+	void setLastReceivedTrajectory(ROSChannels::Trajectory::message_type::SharedPtr);
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
 	void setOsiAddress(const sockaddr_in& newAddr);
@@ -142,6 +146,7 @@ public:
 					 const std::chrono::system_clock::time_point& timestamp);
 
 	void sendControlSignal(const ControlSignalPercentage::SharedPtr csp);
+	void publishMonr(const ROSChannels::Monitor::message_type);
 
 	std::chrono::milliseconds getTimeSinceLastMonitor() const {
 		if (lastMonitorTime.time_since_epoch().count() == 0) {
@@ -175,6 +180,11 @@ private:
 	ObjectConnection comms;		//!< Channel for communication with object over the ISO 22133 protocol
 	Channel osiChannel;			//!< Channel for communication with object over the OSI protocol
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
+	std::shared_ptr<ROSChannels::Monitor::Pub> monrPub;
+	std::shared_ptr<ROSChannels::Trajectory::Sub> trajSub;
+	std::shared_ptr<ROSChannels::Trajectory::message_type> lastReceivedTrajectory;
+
+	void onTrajMessage(const ROSChannels::Trajectory::message_type::SharedPtr);
 
 	ObjectConfig conf;
 

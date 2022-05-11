@@ -24,6 +24,7 @@ def generate_launch_description():
             namespace='maestro',
             executable='object_control',
             name='object_control'
+            #,prefix="xterm -e gdb --args" #Useful for debugging
         ),
         Node(
             package='maestro',

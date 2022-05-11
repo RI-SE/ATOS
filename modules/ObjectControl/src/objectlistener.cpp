@@ -16,10 +16,10 @@ static maestro_interfaces::msg::Monitor createROSMessage(const MonitorMessage& d
 
 ObjectListener::ObjectListener(
 		ObjectControl* sh,
-		TestObject* ob,
-		ROSChannels::Monitor::Pub& mc,
+		std::shared_ptr<TestObject> ob,
 		rclcpp::Logger log)
-	:  obj(ob), handler(sh), monitorChannel(mc), Loggable(log)
+	:  obj(ob), handler(sh),
+	 Loggable(log)
 {
 	if (!obj->isConnected()) {
 		throw std::invalid_argument("Attempted to start listener for disconnected object");
@@ -57,8 +57,8 @@ void ObjectListener::listen() {
 				auto objData = obj->getAsObjectData();
 				objData.MonrData = monr.second;
 				JournalRecordMonitorData(&objData);
-
-				monitorChannel.publish(createROSMessage(monr));
+				obj->publishMonr(createROSMessage(monr));
+				
 				// Reset thread cancelling
 				pthread_setcancelstate(oldCancelState, nullptr);
 

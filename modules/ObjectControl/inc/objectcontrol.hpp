@@ -153,8 +153,8 @@ public:
 
 	[[deprecated("Avoid referring to objects by IP")]]
 	uint32_t getVehicleIDByIP(const in_addr_t& ip) {
-		auto res = std::find_if(objects.begin(), objects.end(), [&](const std::pair<const uint32_t,TestObject>& elem){
-			return elem.second.getObjectConfig().getIP() == ip;
+		auto res = std::find_if(objects.begin(), objects.end(), [&](const std::pair<const uint32_t,std::shared_ptr<TestObject>>& elem){
+			return elem.second->getObjectConfig().getIP() == ip;
 		});
 		return res->first;
 	}
@@ -194,12 +194,13 @@ private:
 	void onRemoteControlEnableMessage(const ROSChannels::RemoteControlEnable::message_type::SharedPtr) override;
 	void onRemoteControlDisableMessage(const ROSChannels::RemoteControlDisable::message_type::SharedPtr) override;
 	void onControlSignalMessage(const ROSChannels::ControlSignal::message_type::SharedPtr) override;
+	void onTrajectoryMessage(const ROSChannels::Trajectory::message_type::SharedPtr,const uint32_t) override;
 
 	using clock = std::chrono::steady_clock;
 
 	ControlMode controlMode;
 	ObjectControlState* state;					//!< State of module
-	std::map<uint32_t,TestObject> objects;		//!< List of configured test participants
+	std::map<uint32_t,std::shared_ptr<TestObject>> objects;		//!< List of configured test participants
 	std::map<uint32_t,ObjectListener> objectListeners;
 	std::map<uint16_t,std::function<void()>> storedActions;
 	std::mutex monitorTimeMutex;
@@ -227,7 +228,6 @@ private:
 
 	ROSChannels::Failure::Pub failurePub;					//!< Publisher to scenario failure reports
 	ROSChannels::Abort::Pub scnAbortPub;					//!< Publisher to scenario abort reports
-	ROSChannels::Monitor::Pub monitorPub;					//!< Publisher to monitor data
 	ROSChannels::ObjectsConnected::Pub objectsConnectedPub;	//!< Publisher to report connected objects
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
@@ -243,7 +243,7 @@ private:
 
 	//! \brief Establishe a connection to a specified object, and check the first
 	//!			MONR state. This is a blocking method.
-	void connectToObject(TestObject& obj, std::shared_future<void>& connStopReq);
+	void connectToObject(std::shared_ptr<TestObject> obj, std::shared_future<void>& connStopReq);
 
 	void startListeners();
 	void notifyObjectsConnected();
