@@ -139,7 +139,7 @@ void ObjectConfig::parseConfigurationFile(
 	if (origin.isAltitudeValid == origin.isLatitudeValid
 			&& origin.isLatitudeValid == origin.isLongitudeValid) {
 		if (!origin.isAltitudeValid) {
-			GeoPosition orig;
+			GeoPositionType orig;
 			if (UtilReadOriginConfiguration(&orig) != -1) {
 				this->origin.latitude_deg = orig.Latitude;
 				this->origin.longitude_deg = orig.Longitude;

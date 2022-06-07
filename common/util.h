@@ -8,12 +8,9 @@
   -- Reference   :
   ------------------------------------------------------------------------------*/
 
-#ifndef __UTIL_H_INCLUDED__
-#define __UTIL_H_INCLUDED__
+#pragma once
 
-#ifdef __cplusplus
-extern "C"{
-#endif
+
 
 /*------------------------------------------------------------
   -- Include files.
@@ -34,6 +31,10 @@ extern "C"{
 #include "iso22133.h"
 #include "logging.h"
 #include "positioning.h"
+
+#ifdef __cplusplus
+extern "C"{
+#endif
 
 /*------------------------------------------------------------
   -- Defines
@@ -62,7 +63,7 @@ extern "C"{
 #define DEFAULT_SUPERVISOR_TCP_PORT 53010
 #define DEFAULT_RVSS_CONF 3
 #define DEFAULT_RVSS_RATE 1
-#define DEFAULT_MAX_PACKETS_LOST 20
+#define DEFAULT_MAX_PACKETS_LOST 0
 #define DEFAULT_TRANSMITTER_ID 0
 
 #define MBUS_MAX_DATALEN (MQ_MSG_SIZE-9) // Message queue data minus one byte for the command and 8 for the data length
@@ -72,7 +73,6 @@ extern "C"{
 
 #define MAX_UTIL_VARIBLE_SIZE 512
 
-#define PI	3.141592653589793
 #define ORIGO_DISTANCE_CALC_ITERATIONS 14
 #define TRAJECTORY_LINE_LENGTH 100
 #define NUMBER_CHAR_LENGTH 20
@@ -171,24 +171,6 @@ enum ObjectFileParameter {
 	OBJECT_SETTING_IS_OSI_COMPATIBLE
 };
 
-
-#define UNKNOWN 0
-#define C8_CODE  1
-#define U8_CODE  2
-#define I8_CODE  3
-#define U16_CODE  4
-#define I16_CODE  5
-#define U32_CODE  6
-#define I32_CODE  7
-#define U48_CODE  8
-#define I48_CODE  9
-#define U64_CODE  10
-#define I64_CODE  11
-#define DBL_CODE  12
-#define FLT_CODE  13
-#define STRUCT_CODE  254
-#define RESERVED_CODE  255
-
 #define C8 uint8_t
 #define U8 uint8_t
 #define I8 int8_t
@@ -258,13 +240,14 @@ COMM_REMOTECTRL_ENABLE = 31,
 COMM_REMOTECTRL_DISABLE = 32,
 COMM_REMOTECTRL_MANOEUVRE = 33,
 COMM_ENABLE_OBJECT = 34,
+COMM_CONTROL_SIGNAL_PERCENTAGE = 35,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
 COMM_INV = 255
 };
 
 typedef struct {
-	RemoteControlManoeuvreCommandType manoeuvre;
+	enum RemoteControlManoeuvreCommandType manoeuvre;
 	in_addr_t objectIP;
 } ManoeuvreCommandType;
 
@@ -274,7 +257,7 @@ typedef struct
   double Longitude;
   double Altitude;
   double Heading;
-} GeoPosition;
+} GeoPositionType;
 
 
 typedef enum {
@@ -299,7 +282,7 @@ typedef struct {
 	ObjectPropertiesType properties;
 	bool propertiesReceived;
 	struct timeval lastDataUpdate;
-  GeoPosition origin;
+  GeoPositionType origin;
 	RequestControlActionType requestedControlAction;
 } ObjectDataType;
 
@@ -756,7 +739,7 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter, c
 int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char* objectFilePath,
 							 const size_t filePathLength, char* objectSetting,
 							 const size_t objectSettingSize);
-int UtilReadOriginConfiguration(GeoPosition* origin);
+int UtilReadOriginConfiguration(GeoPositionType* origin);
 
 int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectDataType *monitorData);
 int UtilPopulateTREODataStructFromMQ(char* rawTREO, size_t rawTREOsize, TREOData *treoData);
@@ -796,4 +779,3 @@ void traj2ldm ( float      time ,
 }
 #endif
 
-#endif //__UTIL_H_INCLUDED__
