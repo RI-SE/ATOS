@@ -26,10 +26,10 @@ Install necessary development packages:
 sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev
 ```
 
-Install OpenSimulationInterface (see [https://github.com/OpenSimulationInterface](https://github.com/OpenSimulationInterface/open-simulation-interface#installation)):
+Install OpenSimulationInterface v3.4.0 (see [https://github.com/OpenSimulationInterface](https://github.com/OpenSimulationInterface/open-simulation-interface#installation)):
 
 ```sh
-git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git
+git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git -b v3.4.0
 cd open-simulation-interface
 mkdir build
 cd build
