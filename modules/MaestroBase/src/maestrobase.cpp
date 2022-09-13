@@ -14,7 +14,11 @@ MaestroBase::MaestroBase()
 	exitSub(*this, std::bind(&MaestroBase::onExitMessage, this, _1))
 {
 
-	initialize();
+	std::string maestroPath = ament_index_cpp::get_package_prefix("maestro");
+	if (UtilVerifyTestDirectory(maestroPath.c_str()) == -1) {
+        throw std::runtime_error("Failed to verify test directory");
+  }
+
 
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d", get_name(), getpid());
 	initDataDictionaryService = create_service<SetBool>(ServiceNames::initDataDict,
@@ -28,30 +32,6 @@ MaestroBase::~MaestroBase()
 	auto result = DataDictionaryDestructor();
 	if (result != WRITE_OK && result != READ_WRITE_OK) {
 		RCLCPP_ERROR(get_logger(), "Unable to clear shared memory space");
-	}
-}
-
-void MaestroBase::initialize()
-{
-	std::string maestroDir = ament_index_cpp::get_package_prefix("maestro");
-	// RCLCPP_INFO(get_logger(), "Package path: %s", maestroDir.c_str());
-	// const char* test = maestroDir.c_str();
-	char maestroDirString[10000];
-	strcpy(maestroDirString, maestroDir.c_str());
-	RCLCPP_INFO(get_logger(), "AAAAAAAAAAAAAAAAAAAAAAAa: %s", maestroDirString);
-
-
-	if (UtilVerifyTestDirectory(maestroDirString) == -1) {
-        throw std::runtime_error("Failed to verify test directory");
-    }
-	RCLCPP_INFO(get_logger(), "Initializing data dictionary");
-	auto result = DataDictionaryConstructor();
-	if (result != READ_WRITE_OK) {
-		DataDictionaryDestructor();
-		throw std::runtime_error("Unable to initialize shared memory space");
-	}
-	else {
-		RCLCPP_INFO(get_logger(), "Data dictionary succesfully initialized");
 	}
 }
 
