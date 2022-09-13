@@ -47,7 +47,7 @@
 
 // File paths
 #define TEST_DIR_ENV_VARIABLE_NAME "MAESTRO_TEST_DIR"
-#define SYSCONF_DIR_NAME "/etc/test.conf"
+#define SYSCONF_FILE_NAME "/etc/test.conf"
 #define JOURNAL_DIR_NAME "journal"
 #define MAESTRO_TEST_DIR_NAME ".maestro"
 #define CONFIGURATION_DIR_NAME "conf"
@@ -2512,7 +2512,7 @@ int UtilVerifyTestDirectory(const char* maestroPath) {
 	else {
 		char sysConfDir[MAX_FILE_PATH];
 		strcpy(sysConfDir, maestroPath);
-		strcat(sysConfDir, SYSCONF_DIR_NAME);
+		strcat(sysConfDir, SYSCONF_FILE_NAME);
 		
 		LogMessage(LOG_LEVEL_INFO, "Configuration file %s does not exist, copying default from %s",
 			subDir, sysConfDir);
