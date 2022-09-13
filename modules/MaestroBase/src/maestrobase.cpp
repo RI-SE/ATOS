@@ -33,10 +33,15 @@ MaestroBase::~MaestroBase()
 
 void MaestroBase::initialize()
 {
-	std::string package_share_directory = ament_index_cpp::get_package_prefix("maestro");
-	RCLCPP_INFO(get_logger(), "PACKAGE PATH DIRECTORY: %s", package_share_directory.c_str());
+	std::string maestroDir = ament_index_cpp::get_package_prefix("maestro");
+	// RCLCPP_INFO(get_logger(), "Package path: %s", maestroDir.c_str());
+	// const char* test = maestroDir.c_str();
+	char maestroDirString[10000];
+	strcpy(maestroDirString, maestroDir.c_str());
+	RCLCPP_INFO(get_logger(), "AAAAAAAAAAAAAAAAAAAAAAAa: %s", maestroDirString);
 
-	if (UtilVerifyTestDirectory() == -1) {
+
+	if (UtilVerifyTestDirectory(maestroDirString) == -1) {
         throw std::runtime_error("Failed to verify test directory");
     }
 	RCLCPP_INFO(get_logger(), "Initializing data dictionary");

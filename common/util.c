@@ -2421,7 +2421,7 @@ int UtilCopyFile(
  * (i.e. traj, conf etc.) and that a configuration file exists.
  * \return 0 if successfully verified, -1 otherwise
  */
-int UtilVerifyTestDirectory() {
+int UtilVerifyTestDirectory(char* maestroDir) {
 	DIR *dir;
 	FILE *file;
 	char testDir[MAX_FILE_PATH];
@@ -2511,7 +2511,9 @@ int UtilVerifyTestDirectory() {
 	}
 	else {
 		char sysConfDir[MAX_FILE_PATH];
-		strcpy(sysConfDir, SYSCONF_DIR_NAME "/" CONF_FILE_NAME);
+		// strcpy(sysConfDir, SYSCONF_DIR_NAME "/" CONF_FILE_NAME);
+		strcpy(sysConfDir, maestroDir); // "/etc/test.config");
+		strcat(sysConfDir, "/etc/test.config");
 		LogMessage(LOG_LEVEL_INFO, "Configuration file %s does not exist, copying default from %s",
 			subDir, sysConfDir);
 		if (UtilCopyFile(sysConfDir, sizeof(sysConfDir), subDir, sizeof(subDir)) < 0) {
