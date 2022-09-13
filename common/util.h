@@ -645,7 +645,7 @@ int iCommSendEXAC(EXACData data);
 int iCommSendACCM(ACCMData data);
 
 // File system functions
-int UtilVerifyTestDirectory(const char* maestroPath);
+int UtilVerifyTestDirectory(const char* installationPath);
 int UtilCopyFile(const char* source, const size_t sourceLen, const char* dest, const size_t destLen);
 void UtilGetTestDirectoryPath(char* path, size_t pathLen);
 void UtilGetJournalDirectoryPath(char* path, size_t pathLen);

@@ -14,8 +14,8 @@ MaestroBase::MaestroBase()
 	exitSub(*this, std::bind(&MaestroBase::onExitMessage, this, _1))
 {
 
-	std::string maestroPath = ament_index_cpp::get_package_prefix("maestro");
-	if (UtilVerifyTestDirectory(maestroPath.c_str()) == -1) {
+	std::string installationPath = ament_index_cpp::get_package_prefix("maestro");
+	if (UtilVerifyTestDirectory(installationPath.c_str()) == -1) {
         throw std::runtime_error("Failed to verify test directory");
   }
 

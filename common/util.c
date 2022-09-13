@@ -47,7 +47,7 @@
 
 // File paths
 #define TEST_DIR_ENV_VARIABLE_NAME "MAESTRO_TEST_DIR"
-#define SYSCONF_FILE_NAME "/etc/test.conf"
+#define SYSCONF_DIR_NAME "/etc"
 #define JOURNAL_DIR_NAME "journal"
 #define MAESTRO_TEST_DIR_NAME ".maestro"
 #define CONFIGURATION_DIR_NAME "conf"
@@ -2419,9 +2419,10 @@ int UtilCopyFile(
 /*!
  * \brief UtilVerifyTestDirectory Checks so that all the required directories exist
  * (i.e. traj, conf etc.) and that a configuration file exists.
+ * \param installationPath Installation path where Maestro is installed
  * \return 0 if successfully verified, -1 otherwise
  */
-int UtilVerifyTestDirectory(const char* maestroPath) {
+int UtilVerifyTestDirectory(const char* installationPath) {
 	DIR *dir;
 	FILE *file;
 	char testDir[MAX_FILE_PATH];
@@ -2511,8 +2512,8 @@ int UtilVerifyTestDirectory(const char* maestroPath) {
 	}
 	else {
 		char sysConfDir[MAX_FILE_PATH];
-		strcpy(sysConfDir, maestroPath);
-		strcat(sysConfDir, SYSCONF_FILE_NAME);
+		strcpy(sysConfDir, installationPath);
+		strcat(sysConfDir, SYSCONF_DIR_NAME "/" CONF_FILE_NAME);
 		
 		LogMessage(LOG_LEVEL_INFO, "Configuration file %s does not exist, copying default from %s",
 			subDir, sysConfDir);
