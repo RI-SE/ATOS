@@ -3,6 +3,8 @@
 #include "objectconfig.hpp"
 #include <functional>
 
+#include <ament_index_cpp/get_package_prefix.hpp>
+
 using namespace ROSChannels;
 using namespace std_srvs::srv;
 using std::placeholders::_1, std::placeholders::_2;
@@ -11,6 +13,9 @@ MaestroBase::MaestroBase()
     : Module(MaestroBase::moduleName),
 	exitSub(*this, std::bind(&MaestroBase::onExitMessage, this, _1))
 {
+
+	initialize();
+
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d", get_name(), getpid());
 	initDataDictionaryService = create_service<SetBool>(ServiceNames::initDataDict,
 		std::bind(&MaestroBase::onInitDataDictionary, this, _1, _2));
@@ -28,6 +33,9 @@ MaestroBase::~MaestroBase()
 
 void MaestroBase::initialize()
 {
+	std::string package_share_directory = ament_index_cpp::get_package_prefix("maestro");
+	RCLCPP_INFO(get_logger(), "PACKAGE PATH DIRECTORY: %s", package_share_directory.c_str());
+
 	if (UtilVerifyTestDirectory() == -1) {
         throw std::runtime_error("Failed to verify test directory");
     }

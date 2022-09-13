@@ -10,6 +10,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(maestro_interfaces REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 
 # Define target names
 set(MAESTRO_BASE_TARGET ${PROJECT_NAME})
@@ -48,6 +49,7 @@ ament_target_dependencies(${MAESTRO_BASE_TARGET}
   std_msgs
   std_srvs
   maestro_interfaces
+	ament_index_cpp
 )
 
 # Installation rules
