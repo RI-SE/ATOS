@@ -2535,14 +2535,14 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		fclose(file);
 	}
 	else {
-		char triggerActionPath[MAX_FILE_PATH];
-		strcpy(triggerActionPath, installationPath);
-		strcat(triggerActionPath, SYSCONF_DIR_NAME "/" TRIGGER_ACTION_FILE_NAME);
+		char triggerActionFilePath[MAX_FILE_PATH];
+		strcpy(triggerActionFilePath, installationPath);
+		strcat(triggerActionFilePath, SYSCONF_DIR_NAME "/" TRIGGER_ACTION_FILE_NAME);
 		
 		LogMessage(LOG_LEVEL_INFO, "Trigger action %s file does not exist, copying default from %s",
-							subDir, triggerActionPath);
+							subDir, triggerActionFilePath);
 		
-		if (UtilCopyFile(triggerActionPath, sizeof(triggerActionPath), subDir, sizeof(subDir)) < 0) {
+		if (UtilCopyFile(triggerActionFilePath, sizeof(triggerActionFilePath), subDir, sizeof(subDir)) < 0) {
 			LogMessage(LOG_LEVEL_ERROR, "Failed to copy file");
 			return -1;
 		}
