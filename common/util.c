@@ -2428,10 +2428,12 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 	char testDir[MAX_FILE_PATH];
 	char subDir[MAX_FILE_PATH];
 
-	const char expectedDirs[][MAX_FILE_PATH] = { CONFIGURATION_DIR_NAME,
+	const char expectedDirs[][MAX_FILE_PATH] = {
+		CONFIGURATION_DIR_NAME,
 		GEOFENCE_DIR_NAME,
 		JOURNAL_DIR_NAME,
-		TRAJECTORY_DIR_NAME
+		TRAJECTORY_DIR_NAME,
+		OBJECT_DIR_NAME
 	};
 	char *envVar;
 	int result;
