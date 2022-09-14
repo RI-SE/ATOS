@@ -2524,6 +2524,29 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 			return -1;
 		}
 	}
+
+
+	// check so that a triggeraction.conf file exists
+	strcpy(subDir, testDir);
+	strcat(subDir, CONFIGURATION_DIR_NAME "/" TRIGGER_ACTION_FILE_NAME);
+	file = fopen(subDir, "r+");
+
+	if (file != NULL) {
+		fclose(file);
+	}
+	else {
+		char triggerActionPath[MAX_FILE_PATH];
+		strcpy(triggerActionPath, installationPath);
+		strcat(triggerActionPath, SYSCONF_DIR_NAME "/" TRIGGER_ACTION_FILE_NAME);
+		
+		LogMessage(LOG_LEVEL_INFO, "Trigger action %s file does not exist, copying default from %s",
+							subDir, triggerActionPath);
+		
+		if (UtilCopyFile(triggerActionPath, sizeof(triggerActionPath), subDir, sizeof(subDir)) < 0) {
+			LogMessage(LOG_LEVEL_ERROR, "Failed to copy file");
+			return -1;
+		}
+	}
 }
 
 /*!
