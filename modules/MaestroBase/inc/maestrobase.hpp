@@ -10,7 +10,6 @@ class MaestroBase : public Module {
    public:
 	MaestroBase();
 	~MaestroBase();
-	void initialize();
 
    private:
 	static inline std::string const moduleName = "maestro_base";
