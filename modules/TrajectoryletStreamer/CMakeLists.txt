@@ -10,6 +10,7 @@ find_package(rclcpp REQUIRED)
 find_package(maestro_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 
 set(MAESTRO_COMMON_LIBRARY MaestroCommon)
@@ -36,6 +37,7 @@ ament_target_dependencies(${TRAJECTORYLET_STREAMER_TARGET}
   rclcpp
   std_msgs
   nav_msgs
+  tf2_geometry_msgs
   maestro_interfaces
   tf2
 )
@@ -52,3 +54,4 @@ install(TARGETS ${TRAJECTORYLET_STREAMER_TARGET}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
+
