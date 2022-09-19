@@ -198,6 +198,7 @@ cd build
 cmake .. -DBUILD_EMBED_TARGETS=OFF
 make
 sudo make install
+sudo ldconfig
 ```
 
 ## Installing ROS2 and building for the first time with colcon
@@ -222,6 +223,7 @@ Install ros foxy for desktop and colcon
 sudo apt update
 sudo apt install ros-foxy-desktop
 sudo apt install python3-colcon-common-extensions
+sudo apt install ros-foxy-nav-msgs
 ```
 
 clone maestro-interfaces from github to your git folder:
