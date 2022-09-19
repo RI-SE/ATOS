@@ -203,8 +203,12 @@ sudo ldconfig
 
 ## Installing ROS2 and building for the first time with colcon
 ### Ubuntu 20.04
-Make sure that all submodules are present and up to date:
-``` git submodule update --init --recursive ```
+clone Maestro in your git folder, and make sure that all submodules are present and up to date:
+```
+git clone https://github.com/RI-SE/Maestro.git
+cd Maestro
+git submodule update --init --recursive
+```
 
 Download prerequisites:
 ```
