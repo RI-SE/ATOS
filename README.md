@@ -191,6 +191,8 @@ cmake .. -DWITH_RELATIVE_KINEMATICS=OFF
 Clone, build, and install the library
 ```
 git clone https://github.com/javedulu/ad-xolib.git
+cd ad-xolib
+git submodule update --init --recursive
 mkdir build
 cd build
 cmake .. -DBUILD_EMBED_TARGETS=OFF
@@ -199,7 +201,10 @@ sudo make install
 ```
 
 ## Installing ROS2 and building for the first time with colcon
-### Ubuntu
+### Ubuntu 20.04
+Make sure that all submodules are present and up to date:
+``` git submodule update --init --recursive ```
+
 Download prerequisites:
 ```
 sudo apt update && sudo apt install curl gnupg2 lsb-release
