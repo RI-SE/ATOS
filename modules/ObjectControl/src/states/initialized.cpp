@@ -25,8 +25,15 @@ void AbstractKinematics::Initialized::disconnectRequest(
  */
 void RelativeKinematics::Initialized::connectRequest(
 		ObjectControl& handler) {
-	AbstractKinematics::Initialized::connectRequest(handler);
-	setState(handler, new RelativeKinematics::Connecting);
+
+	if (handler.getVehicleIDs().empty()) {
+		RCLCPP_INFO(handler.get_logger(), "Object directory empty. Disconnecting...");
+		RelativeKinematics::Initialized::disconnectRequest(handler);
+	}
+	else {
+		AbstractKinematics::Initialized::connectRequest(handler);
+		setState(handler, new RelativeKinematics::Connecting);
+	}
 }
 
 void RelativeKinematics::Initialized::disconnectRequest(
@@ -42,8 +49,15 @@ void RelativeKinematics::Initialized::disconnectRequest(
  */
 void AbsoluteKinematics::Initialized::connectRequest(
 		ObjectControl& handler) {
-	AbstractKinematics::Initialized::connectRequest(handler);
-	setState(handler, new AbsoluteKinematics::Connecting);
+
+	if (handler.getVehicleIDs().empty()) {
+		RCLCPP_INFO(handler.get_logger(), "Object directory empty. Disconnecting...");
+		AbsoluteKinematics::Initialized::disconnectRequest(handler);
+	}
+	else {
+		AbstractKinematics::Initialized::connectRequest(handler);
+		setState(handler, new AbsoluteKinematics::Connecting);
+	}
 }
 
 void AbsoluteKinematics::Initialized::disconnectRequest(
