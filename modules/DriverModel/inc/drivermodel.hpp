@@ -1,14 +1,18 @@
 #pragma once
 
+#include <future>
+
 #include "module.hpp"
 
 class DriverModel : public Module
 {
   public:
-    void initialize();
+    int initialize();
     DriverModel();
 
   private:
-    static inline std::string const moduleName = "driver_model";
     void sendPosition();
+    static inline std::string const moduleName = "driver_model";
+    void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
+
 };
