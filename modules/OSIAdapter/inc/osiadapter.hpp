@@ -4,15 +4,15 @@
 
 #include "module.hpp"
 
-class DriverModel : public Module
+class OSIAdapter : public Module
 {
   public:
     int initialize();
-    DriverModel();
+    OSIAdapter();
 
   private:
     void sendPosition();
-    static inline std::string const moduleName = "driver_model";
+    static inline std::string const moduleName = "osi_adapter";
     void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 
 };

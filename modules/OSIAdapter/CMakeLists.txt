@@ -35,7 +35,7 @@ include(GNUInstallDirs)
 # Create project main executable target
 add_executable(${OBJECT_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/drivermodel.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/osiadapter.cpp
 )
 # Link project executable to util libraries
 target_link_libraries(${OBJECT_CONTROL_TARGET} 

@@ -1,12 +1,12 @@
 #include <iostream>
-#include "drivermodel.hpp"
+#include "osiadapter.hpp"
 
 
 int main(int argc, char** argv) {
 
   rclcpp::init(argc, argv);
-  auto driverModelNode = std::make_shared<DriverModel>();
-  rclcpp::spin(driverModelNode);
+  auto OSIAdapterNode = std::make_shared<OSIAdapter>();
+  rclcpp::spin(OSIAdapterNode);
   rclcpp::shutdown();
 
   return 0;
