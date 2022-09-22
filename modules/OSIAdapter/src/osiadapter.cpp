@@ -16,6 +16,7 @@ OSIAdapter::OSIAdapter() :
 
 int OSIAdapter::initialize() {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
+  RCLCPP_INFO(get_logger(), "AAAAAAAAAAAAAAAAAAAAAAAAAAA");
   return 0;
 }
 

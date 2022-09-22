@@ -6,7 +6,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 
 
-project(driver_model)
+project(osi_adapter)
 
 find_package(rclcpp REQUIRED)
 find_package(maestro_interfaces REQUIRED)
