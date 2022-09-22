@@ -6,6 +6,10 @@
 
 class OSIAdapter : public Module
 {
+
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher;
+  rclcpp::TimerBase::SharedPtr timer;
+
   public:
     int initialize();
     OSIAdapter();
