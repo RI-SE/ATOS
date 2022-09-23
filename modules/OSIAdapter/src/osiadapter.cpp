@@ -22,9 +22,7 @@ int OSIAdapter::initialize() {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
 
   // make socket to driver model
-  struct sockaddr_in addr;
   
-
 
 
   return 0;
