@@ -4,6 +4,8 @@
 #include "util.h"
 #include "osi_handler.hpp"
 #include "osiadapter.hpp"
+#include "tcphandler.hpp"
+#include "server.hpp"
 
 
 using namespace ROSChannels;
@@ -22,8 +24,10 @@ int OSIAdapter::initialize() {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
 
   // make socket to driver model
-  
-
+  const TCPServer::Address localAddress = "127.0.0.1";
+  const TCPServer::Port port = 55555;
+  tcp = TCPServer(localAddress, port, false);
+  auto connection = tcp.await(); // connect by running "nc 127.0.0.1 55555 in terminal"
 
   return 0;
 }
