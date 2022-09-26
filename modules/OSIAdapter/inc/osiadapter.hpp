@@ -6,6 +6,7 @@
 #include "osi_handler.hpp"
 #include "server.hpp"
 #include "tcphandler.hpp"
+#
 
 class OSIAdapter : public Module
 {
@@ -19,8 +20,9 @@ class OSIAdapter : public Module
 
     void sendPositionOSI();
     void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
+    const OsiHandler::LocalObjectGroundTruth_t makeTestOsiData();
+    
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher;
     rclcpp::TimerBase::SharedPtr timer;
-
     TCPServer tcp;
 };
