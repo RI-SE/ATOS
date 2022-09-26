@@ -50,7 +50,7 @@ void
 OSIAdapter::sendOSIData() {
   RCLCPP_INFO(get_logger(), "Sending OSI-data");
 
-  const OsiHandler::LocalObjectGroundTruth_t osiData = OSIAdapter::makeTestOsiData();
+  const OsiHandler::LocalObjectGroundTruth_t osiData = OSIAdapter::makeTestOSIData();
   std::vector<char> positionOSI = OSIAdapter::makeOSIMessage(osiData);
   
   try {
