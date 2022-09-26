@@ -11,6 +11,9 @@
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 55555
 #define DEFAULT_DEBUG_VALUE false
+#define QUALITY_OF_SERVICE 10
+#define SEND_INTERVAL 500ms
+
 
 class OSIAdapter : public Module
 {
@@ -20,6 +23,7 @@ class OSIAdapter : public Module
                    bool debug = DEFAULT_DEBUG_VALUE);
     OSIAdapter();
     ~OSIAdapter();
+
 
   private:
     static inline std::string const moduleName = "osi_adapter";

@@ -16,8 +16,8 @@ OSIAdapter::OSIAdapter() :
   Module(OSIAdapter::moduleName)
   {
     initialize();
-    publisher = this->create_publisher<std_msgs::msg::String>("position", 10);
-    timer = this->create_wall_timer(500ms, std::bind(&OSIAdapter::sendOSIData, this));
+    publisher = this->create_publisher<std_msgs::msg::String>("driver_model", QUALITY_OF_SERVICE);
+    timer = this->create_wall_timer(SEND_INTERVAL, std::bind(&OSIAdapter::sendOSIData, this));
   };
 
   OSIAdapter::~OSIAdapter() {
@@ -36,7 +36,6 @@ void
 OSIAdapter::initialize(const TCPServer::Address address, const TCPServer::Port port, bool debug) {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
 
-  // make socket to connect to
   RCLCPP_INFO(get_logger(), "Awaiting TCP connection...");
   tcp = TCPServer(address, port, debug);
   connection = tcp.await(address, port);
@@ -66,7 +65,8 @@ OSIAdapter::sendOSIData() {
 }
 
 /**
- * @brief Encodes SvGt message and returns vector to use for sending message in socket.
+ * @brief Encodes SvGt message and returns vector to use for sending message in socket. This is currently
+ * used for making a test message. In the future timestamp and projStr should come from MONR-message?
  * 
  * @param osiData OSI-data
  * @return std::vector<char> Vector from SvGt encoding
