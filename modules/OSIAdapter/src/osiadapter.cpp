@@ -17,8 +17,10 @@ OSIAdapter::OSIAdapter() :
   {
     initialize();
     publisher = this->create_publisher<std_msgs::msg::String>("position", 10);
-    timer = this->create_wall_timer(500ms, std::bind(&OSIAdapter::sendOSIData, this));  
+    timer = this->create_wall_timer(500ms, std::bind(&OSIAdapter::sendOSIData, this));
   };
+
+  OSIAdapter::~OSIAdapter() {}
 
 
 int
@@ -40,7 +42,16 @@ OSIAdapter::sendOSIData() {
 
   const OsiHandler::LocalObjectGroundTruth_t osiData = OSIAdapter::makeTestOsiData();
   std::vector<char> positionOSI = OSIAdapter::makeOSIMessage(osiData);
-  connection.send(positionOSI);
+  
+  try {
+    connection.send(positionOSI);
+  }
+  catch (SocketErrors::SocketSendError& e) {
+    RCLCPP_INFO(get_logger(), "Error: %s", e.what());
+  }
+  catch (SocketErrors::DisconnectedError& e) {
+    RCLCPP_INFO(get_logger(), "Error: %s", e.what());
+  }
 }
 
 

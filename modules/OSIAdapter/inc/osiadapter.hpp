@@ -1,6 +1,7 @@
 #pragma once
 
 #include <future>
+#include <exception>
 
 #include "module.hpp"
 #include "osi_handler.hpp"
@@ -18,6 +19,7 @@ class OSIAdapter : public Module
                    const TCPServer::Port port = DEFAULT_PORT,
                    bool debug = DEFAULT_DEBUG_VALUE);
     OSIAdapter();
+    ~OSIAdapter();
 
   private:
     static inline std::string const moduleName = "osi_adapter";
