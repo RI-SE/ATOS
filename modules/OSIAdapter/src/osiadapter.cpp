@@ -11,6 +11,7 @@
 using namespace ROSChannels;
 using namespace std::chrono_literals;
 
+
 OSIAdapter::OSIAdapter() :
   Module(OSIAdapter::moduleName)
   {
@@ -21,13 +22,11 @@ OSIAdapter::OSIAdapter() :
 
 
 int
-OSIAdapter::initialize() {
+OSIAdapter::initialize(const TCPServer::Address address, const TCPServer::Port port) {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
 
   // make socket to connect to
-  const TCPServer::Address localAddress = "127.0.0.1";
-  const TCPServer::Port port = 55555;
-  tcp = TCPServer(localAddress, port, false);
+  tcp = TCPServer(address, port, false);
   connection = tcp.await();
 
   return 0;
@@ -83,6 +82,7 @@ OSIAdapter::makeTestOsiData() {
 
   return osiData;
 }
+
 
 void
 OSIAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {
