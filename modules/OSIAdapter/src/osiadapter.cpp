@@ -15,10 +15,8 @@ OSIAdapter::OSIAdapter() :
   Module(OSIAdapter::moduleName)
   {
     initialize();
-    connection = tcp.await(); // connect by running "nc 127.0.0.1 55555" in terminal
-
     publisher = this->create_publisher<std_msgs::msg::String>("position", 10);
-    timer = this->create_wall_timer(500ms, std::bind(&OSIAdapter::sendPositionOSI, this));  
+    timer = this->create_wall_timer(500ms, std::bind(&OSIAdapter::sendOSIData, this));  
   };
 
 
@@ -30,22 +28,24 @@ OSIAdapter::initialize() {
   const TCPServer::Address localAddress = "127.0.0.1";
   const TCPServer::Port port = 55555;
   tcp = TCPServer(localAddress, port, false);
+  connection = tcp.await();
 
   return 0;
 }
 
 
 void
-OSIAdapter::sendPositionOSI() {
-  RCLCPP_INFO(get_logger(), "Sending position - testing!");
+OSIAdapter::sendOSIData() {
+  RCLCPP_INFO(get_logger(), "Sending OSI-data");
 
   const OsiHandler::LocalObjectGroundTruth_t osiData = OSIAdapter::makeTestOsiData();
-  std::vector<char> positionOSI = OSIAdapter::getPositionOSI(osiData);
+  std::vector<char> positionOSI = OSIAdapter::makeOSIMessage(osiData);
   connection.send(positionOSI);
 }
 
+
 std::vector<char>
-OSIAdapter::getPositionOSI(const OsiHandler::LocalObjectGroundTruth_t osiData) {
+OSIAdapter::makeOSIMessage(const OsiHandler::LocalObjectGroundTruth_t osiData) {
 
   OsiHandler osi;
   std::chrono::system_clock::time_point timestamp = std::chrono::system_clock::now();
@@ -54,9 +54,10 @@ OSIAdapter::getPositionOSI(const OsiHandler::LocalObjectGroundTruth_t osiData) {
 
   std::vector<char> vec(rawData.length());
   std::copy(rawData.begin(), rawData.end(), vec.begin());
+  
   return vec;
-
 }
+
 
 const OsiHandler::LocalObjectGroundTruth_t
 OSIAdapter::makeTestOsiData() {
