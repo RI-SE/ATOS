@@ -22,12 +22,13 @@ OSIAdapter::OSIAdapter() :
 
 
 int
-OSIAdapter::initialize(const TCPServer::Address address, const TCPServer::Port port) {
+OSIAdapter::initialize(const TCPServer::Address address, const TCPServer::Port port, bool debug) {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
 
   // make socket to connect to
-  tcp = TCPServer(address, port, false);
-  connection = tcp.await();
+  RCLCPP_INFO(get_logger(), "Awaiting TCP connection...");
+  tcp = TCPServer(address, port, debug);
+  connection = tcp.await(address, port);
 
   return 0;
 }
@@ -60,6 +61,7 @@ OSIAdapter::makeOSIMessage(const OsiHandler::LocalObjectGroundTruth_t osiData) {
 
 const OsiHandler::LocalObjectGroundTruth_t
 OSIAdapter::makeTestOsiData() {
+  
   OsiHandler::LocalObjectGroundTruth_t osiData;
 
   osiData.id = 1;

@@ -9,12 +9,14 @@
 
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 55555
+#define DEFAULT_DEBUG_VALUE false
 
 class OSIAdapter : public Module
 {
   public:
     int initialize(const TCPServer::Address address = DEFAULT_ADDRESS,
-                   const TCPServer::Port port = DEFAULT_PORT);
+                   const TCPServer::Port port = DEFAULT_PORT,
+                   bool debug = DEFAULT_DEBUG_VALUE);
     OSIAdapter();
 
   private:
