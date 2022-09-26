@@ -93,7 +93,7 @@ OSIAdapter::makeOSIMessage(const OsiHandler::LocalObjectGroundTruth_t osiData) {
  * @return const OsiHandler::LocalObjectGroundTruth_t OSI-data 
  */
 const OsiHandler::LocalObjectGroundTruth_t
-OSIAdapter::makeTestOsiData() {
+OSIAdapter::makeTestOSIData() {
   
   OsiHandler::LocalObjectGroundTruth_t osiData;
 

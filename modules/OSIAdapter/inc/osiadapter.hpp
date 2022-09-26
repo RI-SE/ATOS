@@ -30,7 +30,7 @@ class OSIAdapter : public Module
 
     void sendOSIData();
     std::vector<char> makeOSIMessage(const OsiHandler::LocalObjectGroundTruth_t osiData);
-    const OsiHandler::LocalObjectGroundTruth_t makeTestOsiData();
+    const OsiHandler::LocalObjectGroundTruth_t makeTestOSIData();
     
     void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
     
