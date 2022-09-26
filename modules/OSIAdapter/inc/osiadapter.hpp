@@ -15,7 +15,7 @@
 class OSIAdapter : public Module
 {
   public:
-    int initialize(const TCPServer::Address address = DEFAULT_ADDRESS,
+    void initialize(const TCPServer::Address address = DEFAULT_ADDRESS,
                    const TCPServer::Port port = DEFAULT_PORT,
                    bool debug = DEFAULT_DEBUG_VALUE);
     OSIAdapter();

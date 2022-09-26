@@ -20,10 +20,19 @@ OSIAdapter::OSIAdapter() :
     timer = this->create_wall_timer(500ms, std::bind(&OSIAdapter::sendOSIData, this));
   };
 
-  OSIAdapter::~OSIAdapter() {}
+  OSIAdapter::~OSIAdapter() {
+    tcp.close();
+  }
 
 
-int
+/**
+ * @brief Intializes socket and waits for someone to connect.
+ * 
+ * @param address Address to connect. Default: 127.0.0.1
+ * @param port Port to use. Default: 55555
+ * @param debug Debug or not. Default: false
+ */
+void
 OSIAdapter::initialize(const TCPServer::Address address, const TCPServer::Port port, bool debug) {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
 
@@ -31,11 +40,13 @@ OSIAdapter::initialize(const TCPServer::Address address, const TCPServer::Port p
   RCLCPP_INFO(get_logger(), "Awaiting TCP connection...");
   tcp = TCPServer(address, port, debug);
   connection = tcp.await(address, port);
-
-  return 0;
 }
 
 
+/**
+ * @brief Send OSI-data to the connection.
+ * 
+ */
 void
 OSIAdapter::sendOSIData() {
   RCLCPP_INFO(get_logger(), "Sending OSI-data");
@@ -47,14 +58,19 @@ OSIAdapter::sendOSIData() {
     connection.send(positionOSI);
   }
   catch (SocketErrors::SocketSendError& e) {
-    RCLCPP_INFO(get_logger(), "Error: %s", e.what());
+    RCLCPP_ERROR(get_logger(), "Error: %s", e.what());
   }
   catch (SocketErrors::DisconnectedError& e) {
-    RCLCPP_INFO(get_logger(), "Error: %s", e.what());
+    RCLCPP_ERROR(get_logger(), "Error: %s", e.what());
   }
 }
 
-
+/**
+ * @brief Encodes SvGt message and returns vector to use for sending message in socket.
+ * 
+ * @param osiData OSI-data
+ * @return std::vector<char> Vector from SvGt encoding
+ */
 std::vector<char>
 OSIAdapter::makeOSIMessage(const OsiHandler::LocalObjectGroundTruth_t osiData) {
 
@@ -70,6 +86,12 @@ OSIAdapter::makeOSIMessage(const OsiHandler::LocalObjectGroundTruth_t osiData) {
 }
 
 
+/**
+ * @brief This function creates test OSI-data for testing the module. Should be removed later,
+ * since this data should come from MONR-messages.
+ * 
+ * @return const OsiHandler::LocalObjectGroundTruth_t OSI-data 
+ */
 const OsiHandler::LocalObjectGroundTruth_t
 OSIAdapter::makeTestOsiData() {
   
