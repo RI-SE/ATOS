@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <signal.h>
 
 #include "util.h"
 #include "osi_handler.hpp"
@@ -52,6 +53,7 @@ OSIAdapter::sendOSIData() {
 
   const OsiHandler::LocalObjectGroundTruth_t osiData = OSIAdapter::makeTestOSIData();
   std::vector<char> positionOSI = OSIAdapter::makeOSIMessage(osiData);
+  
   
   try {
     connection.send(positionOSI);
@@ -117,6 +119,8 @@ OSIAdapter::makeTestOSIData() {
 
   return osiData;
 }
+
+
 
 
 void

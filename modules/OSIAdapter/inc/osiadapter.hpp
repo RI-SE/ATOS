@@ -2,6 +2,8 @@
 
 #include <future>
 #include <exception>
+#include <signal.h>
+
 
 #include "module.hpp"
 #include "osi_handler.hpp"
