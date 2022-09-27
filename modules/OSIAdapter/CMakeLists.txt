@@ -16,7 +16,7 @@ find_package(tf2 REQUIRED)
 
 
 # Define target names
-set(OBJECT_CONTROL_TARGET ${PROJECT_NAME})
+set(OSI_ADAPTER_TARGET ${PROJECT_NAME})
 
 set(COREUTILS_LIBRARY MaestroCoreUtil)
 set(ISO_22133_LIBRARY ISO22133)
@@ -34,12 +34,12 @@ get_target_property(TIME_HEADERS ${TIME_LIBRARY} INCLUDE_DIRECTORIES)
 include(GNUInstallDirs)
 
 # Create project main executable target
-add_executable(${OBJECT_CONTROL_TARGET}
+add_executable(${OSI_ADAPTER_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/osiadapter.cpp
 )
 # Link project executable to util libraries
-target_link_libraries(${OBJECT_CONTROL_TARGET} 
+target_link_libraries(${OSI_ADAPTER_TARGET} 
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${LOGGING_LIBRARY}
@@ -52,7 +52,7 @@ target_link_libraries(${OBJECT_CONTROL_TARGET}
 )
 
 # ROS specific settings
-ament_target_dependencies(${OBJECT_CONTROL_TARGET}
+ament_target_dependencies(${OSI_ADAPTER_TARGET}
   rclcpp
   std_msgs
   nav_msgs
@@ -60,7 +60,7 @@ ament_target_dependencies(${OBJECT_CONTROL_TARGET}
   tf2
 )
 
-target_include_directories(${OBJECT_CONTROL_TARGET} PUBLIC
+target_include_directories(${OSI_ADAPTER_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${OSI_HEADERS}
 	${TIME_HEADERS}
@@ -68,7 +68,7 @@ target_include_directories(${OBJECT_CONTROL_TARGET} PUBLIC
 
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${OBJECT_CONTROL_TARGET}\")")
-install(TARGETS ${OBJECT_CONTROL_TARGET}
+install(TARGETS ${OSI_ADAPTER_TARGET}
 	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
