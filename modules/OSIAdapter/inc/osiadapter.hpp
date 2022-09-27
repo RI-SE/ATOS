@@ -31,8 +31,8 @@ class OSIAdapter : public Module
     static inline std::string const moduleName = "osi_adapter";
 
     void sendOSIData();
-    std::vector<char> makeOSIMessage(const OsiHandler::LocalObjectGroundTruth_t osiData);
-    const OsiHandler::LocalObjectGroundTruth_t makeTestOSIData();
+    std::vector<char> makeOSIMessage(const OsiHandler::GlobalObjectGroundTruth_t osiData);
+    const OsiHandler::GlobalObjectGroundTruth_t makeTestOSIData();
     
     void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
     
