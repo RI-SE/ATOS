@@ -51,11 +51,11 @@ void MaestroBase::onInitDataDictionary(
 	std::string message;
 	if (isInitialized) {
 		message = "Data dictionary successfully initialized";
-		RCLCPP_INFO(get_logger(), message);
+		RCLCPP_INFO(get_logger(), message.c_str());
 	}
 	else {
 		message = "Failed to initialize data dictionary";
-		RCLCPP_ERROR(get_logger(), message);
+		RCLCPP_ERROR(get_logger(), message.c_str());
 		DataDictionaryDestructor();
 	}
 	res->success = isInitialized;
