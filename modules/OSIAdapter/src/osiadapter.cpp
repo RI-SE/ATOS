@@ -75,7 +75,7 @@ void
 OSIAdapter::sendOSIData() {
   boost::system::error_code ignored_error;
 
-  const OsiHandler::LocalObjectGroundTruth_t osiData = OSIAdapter::makeTestOSIData();
+  const OsiHandler::GlobalObjectGroundTruth_t osiData = OSIAdapter::makeTestOSIData();
   std::vector<char> positionOSI = OSIAdapter::makeOSIMessage(osiData);
   
   write(*socket, buffer(positionOSI), ignored_error);
@@ -99,7 +99,7 @@ OSIAdapter::sendOSIData() {
  * @return std::vector<char> Vector from SvGt encoding
  */
 std::vector<char>
-OSIAdapter::makeOSIMessage(const OsiHandler::LocalObjectGroundTruth_t osiData) {
+OSIAdapter::makeOSIMessage(const OsiHandler::GlobalObjectGroundTruth_t osiData) {
 
   OsiHandler osi;
   std::chrono::system_clock::time_point timestamp = std::chrono::system_clock::now();
@@ -119,24 +119,16 @@ OSIAdapter::makeOSIMessage(const OsiHandler::LocalObjectGroundTruth_t osiData) {
  * 
  * @return const OsiHandler::LocalObjectGroundTruth_t OSI-data 
  */
-const OsiHandler::LocalObjectGroundTruth_t
+const OsiHandler::GlobalObjectGroundTruth_t
 OSIAdapter::makeTestOSIData() {
   
-  OsiHandler::LocalObjectGroundTruth_t osiData;
+  OsiHandler::GlobalObjectGroundTruth_t osiData;
 
   osiData.id = 1;
 
   osiData.pos_m.x = 1;
   osiData.pos_m.y = 1;
   osiData.pos_m.z = 1;
-
-  osiData.vel_m_s.lat = 1;
-  osiData.vel_m_s.lon = 1;
-  osiData.vel_m_s.up = 1;
-
-  osiData.acc_m_s2.lat = 1;
-  osiData.acc_m_s2.lon = 1;
-  osiData.acc_m_s2.up = 1;
 
   osiData.orientation_rad.pitch = 1;
   osiData.orientation_rad.roll = 1;
