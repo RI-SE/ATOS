@@ -51,9 +51,9 @@ bool Module::requestDataDictInitialization(int maxRetries) {
             if (!rclcpp::ok()) {
                 throw std::runtime_error("Interrupted while waiting for service " + ServiceNames::initDataDict);
             }
-            RCLCPP_INFO(get_logger(), "Waiting for service " + ServiceNames::initDataDict + " ...");
+            RCLCPP_INFO(get_logger(), "Waiting for service %s ...", ServiceNames::initDataDict.c_str());
         }
-        RCLCPP_DEBUG(get_logger(), "Service " + ServiceNames::initDataDict + " found");
+        RCLCPP_DEBUG(get_logger(), "Service %s found", ServiceNames::initDataDict.c_str());
         
         auto response = client->async_send_request(request);
         if (rclcpp::spin_until_future_complete(get_node_base_interface(), response, std::chrono::seconds(1)) ==
@@ -63,7 +63,7 @@ bool Module::requestDataDictInitialization(int maxRetries) {
                 RCLCPP_INFO(get_logger(), "Data dictionary successfully initialized");
                 break;
             } else {
-                RCLCPP_ERROR(get_logger(), "Data dictionary initialization failed: " + response.get()->message);
+                RCLCPP_ERROR(get_logger(), "Data dictionary initialization failed: %s", response.get()->message.c_str());
             }
         } else {
             RCLCPP_ERROR(get_logger(), "Failed to call service %s", client->get_service_name());

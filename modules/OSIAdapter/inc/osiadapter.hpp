@@ -1,14 +1,9 @@
 #pragma once
 
-#include <future>
-#include <exception>
-#include <signal.h>
-
+#include <boost/asio.hpp>
 
 #include "module.hpp"
 #include "osi_handler.hpp"
-#include "server.hpp"
-#include "tcphandler.hpp"
 
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 55555
@@ -16,13 +11,12 @@
 #define QUALITY_OF_SERVICE 10
 #define SEND_INTERVAL 500ms
 
-
 class OSIAdapter : public Module
 {
   public:
-    void initialize(const TCPServer::Address address = DEFAULT_ADDRESS,
-                   const TCPServer::Port port = DEFAULT_PORT,
-                   bool debug = DEFAULT_DEBUG_VALUE);
+    void initialize(const std::string& address = DEFAULT_ADDRESS,
+                  const uint16_t port = DEFAULT_PORT,
+                  const bool debug = DEFAULT_DEBUG_VALUE);
     OSIAdapter();
     ~OSIAdapter();
 
@@ -38,6 +32,13 @@ class OSIAdapter : public Module
     
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher;
     rclcpp::TimerBase::SharedPtr timer;
-    TCPServer tcp;
-    Socket connection;
+
+    boost::asio::ip::tcp::endpoint endpoint;
+    std::shared_ptr<boost::asio::ip::tcp::acceptor> acceptor;
+    std::shared_ptr<boost::asio::io_service> io_service;
+    std::shared_ptr<boost::asio::ip::tcp::socket> socket;
+
+    void setupTCPServer(boost::asio::ip::tcp::endpoint endpoint);
+    void destroyTCPServer();
+    void resetTCPServer(boost::asio::ip::tcp::endpoint endpoint);
 };

@@ -15,6 +15,7 @@ find_package(Eigen3 REQUIRED IMPORTED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(maestro_interfaces REQUIRED)
 
 set(LOGGING_LIBRARY MaestroLogging)
@@ -85,6 +86,7 @@ ament_target_dependencies(${MAESTRO_COMMON_TARGET}
   rclcpp
   std_msgs
   std_srvs
+  nav_msgs
   maestro_interfaces
 )
 
