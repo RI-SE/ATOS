@@ -101,13 +101,15 @@ OSIAdapter::makeTestOSIData() {
 
   osiData.id = 1;
 
-  osiData.pos_m.x = 1;
-  osiData.pos_m.y = 1;
-  osiData.pos_m.z = 1;
+  osiData.pos_m.x = 1.0;
+  osiData.pos_m.y = 2.0;
+  osiData.pos_m.z = 3.0;
 
-  osiData.orientation_rad.pitch = 1;
-  osiData.orientation_rad.roll = 1;
-  osiData.orientation_rad.yaw = 1;
+  osiData.orientation_rad.pitch = 4.0;
+  osiData.orientation_rad.roll = 5.0;
+  osiData.orientation_rad.yaw = 6.0;
+
+
 
   return osiData;
 }
