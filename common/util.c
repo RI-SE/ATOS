@@ -4223,7 +4223,7 @@ struct timeval UtilGetPIDUptime(pid_t pID) {
 		return timeSinceStart;
 	}
 
-	char strval1[100] = { 0 };
+	char strval1[255] = { 0 };
 	fgets(strval1, 255, pidstat);
 
 	fclose(pidstat);
