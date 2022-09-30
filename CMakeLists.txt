@@ -36,6 +36,7 @@ set(WITH_SYSTEM_CONTROL ON CACHE BOOL "Enable SystemControl module")
 set(WITH_TIME_CONTROL ON CACHE BOOL "Enable TimeControl module")
 set(WITH_JOURNAL_CONTROL ON CACHE BOOL "Enable JournalControl module")
 set(WITH_TRAJECTORYLET_STREAMER ON CACHE BOOL "Enable TrajectoryletStreamer module")
+set(WITH_OSI_ADAPTER ON CACHE BOOL "Enable OSIAdapter module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -70,9 +71,11 @@ endif()
 if(WITH_JOURNAL_CONTROL)
 	list(APPEND ENABLED_MODULES JournalControl)
 endif()
-
 if(WITH_TRAJECTORYLET_STREAMER)
         list(APPEND ENABLED_MODULES TrajectoryletStreamer)
+endif()
+if(WITH_OSI_ADAPTER)
+        list(APPEND ENABLED_MODULES OSIAdapter)
 endif()
 
 # Add corresponding subprojects

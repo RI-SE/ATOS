@@ -47,7 +47,7 @@
 
 // File paths
 #define TEST_DIR_ENV_VARIABLE_NAME "MAESTRO_TEST_DIR"
-#define SYSCONF_DIR_NAME "/usr/etc"
+#define SYSCONF_DIR_NAME "/etc"
 #define JOURNAL_DIR_NAME "journal"
 #define MAESTRO_TEST_DIR_NAME ".maestro"
 #define CONFIGURATION_DIR_NAME "conf"
@@ -2419,18 +2419,21 @@ int UtilCopyFile(
 /*!
  * \brief UtilVerifyTestDirectory Checks so that all the required directories exist
  * (i.e. traj, conf etc.) and that a configuration file exists.
+ * \param installationPath Installation path where Maestro is installed
  * \return 0 if successfully verified, -1 otherwise
  */
-int UtilVerifyTestDirectory() {
+int UtilVerifyTestDirectory(const char* installationPath) {
 	DIR *dir;
 	FILE *file;
 	char testDir[MAX_FILE_PATH];
 	char subDir[MAX_FILE_PATH];
 
-	const char expectedDirs[][MAX_FILE_PATH] = { CONFIGURATION_DIR_NAME,
+	const char expectedDirs[][MAX_FILE_PATH] = {
+		CONFIGURATION_DIR_NAME,
 		GEOFENCE_DIR_NAME,
 		JOURNAL_DIR_NAME,
-		TRAJECTORY_DIR_NAME
+		TRAJECTORY_DIR_NAME,
+		OBJECT_DIR_NAME
 	};
 	char *envVar;
 	int result;
@@ -2511,10 +2514,35 @@ int UtilVerifyTestDirectory() {
 	}
 	else {
 		char sysConfDir[MAX_FILE_PATH];
-		strcpy(sysConfDir, SYSCONF_DIR_NAME "/" CONF_FILE_NAME);
+		strcpy(sysConfDir, installationPath);
+		strcat(sysConfDir, SYSCONF_DIR_NAME "/" CONF_FILE_NAME);
+		
 		LogMessage(LOG_LEVEL_INFO, "Configuration file %s does not exist, copying default from %s",
 			subDir, sysConfDir);
 		if (UtilCopyFile(sysConfDir, sizeof(sysConfDir), subDir, sizeof(subDir)) < 0) {
+			LogMessage(LOG_LEVEL_ERROR, "Failed to copy file");
+			return -1;
+		}
+	}
+
+
+	// check so that a triggeraction.conf file exists
+	strcpy(subDir, testDir);
+	strcat(subDir, CONFIGURATION_DIR_NAME "/" TRIGGER_ACTION_FILE_NAME);
+	file = fopen(subDir, "r+");
+
+	if (file != NULL) {
+		fclose(file);
+	}
+	else {
+		char triggerActionFilePath[MAX_FILE_PATH];
+		strcpy(triggerActionFilePath, installationPath);
+		strcat(triggerActionFilePath, SYSCONF_DIR_NAME "/" TRIGGER_ACTION_FILE_NAME);
+		
+		LogMessage(LOG_LEVEL_INFO, "Trigger action %s file does not exist, copying default from %s",
+							subDir, triggerActionFilePath);
+		
+		if (UtilCopyFile(triggerActionFilePath, sizeof(triggerActionFilePath), subDir, sizeof(subDir)) < 0) {
 			LogMessage(LOG_LEVEL_ERROR, "Failed to copy file");
 			return -1;
 		}
@@ -4195,7 +4223,7 @@ struct timeval UtilGetPIDUptime(pid_t pID) {
 		return timeSinceStart;
 	}
 
-	char strval1[100] = { 0 };
+	char strval1[255] = { 0 };
 	fgets(strval1, 255, pidstat);
 
 	fclose(pidstat);

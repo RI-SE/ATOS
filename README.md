@@ -26,10 +26,10 @@ Install necessary development packages:
 sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev
 ```
 
-Install OpenSimulationInterface (see [https://github.com/OpenSimulationInterface](https://github.com/OpenSimulationInterface/open-simulation-interface#installation)):
+Install OpenSimulationInterface v3.4.0 (see [https://github.com/OpenSimulationInterface](https://github.com/OpenSimulationInterface/open-simulation-interface#installation)):
 
 ```sh
-git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git
+git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git -b v3.4.0
 cd open-simulation-interface
 mkdir build
 cd build
@@ -191,15 +191,25 @@ cmake .. -DWITH_RELATIVE_KINEMATICS=OFF
 Clone, build, and install the library
 ```
 git clone https://github.com/javedulu/ad-xolib.git
+cd ad-xolib
+git submodule update --init --recursive
 mkdir build
 cd build
 cmake .. -DBUILD_EMBED_TARGETS=OFF
 make
 sudo make install
+sudo ldconfig
 ```
 
 ## Installing ROS2 and building for the first time with colcon
-### Ubuntu
+### Ubuntu 20.04
+clone Maestro in your git folder, and make sure that all submodules are present and up to date:
+```
+git clone https://github.com/RI-SE/Maestro.git
+cd Maestro
+git submodule update --init --recursive
+```
+
 Download prerequisites:
 ```
 sudo apt update && sudo apt install curl gnupg2 lsb-release
@@ -215,8 +225,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-a
 Install ros foxy for desktop and colcon
 ```
 sudo apt update
-sudo apt install ros-foxy-desktop
-sudo apt install python3-colcon-common-extensions
+sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs
 ```
 
 clone maestro-interfaces from github to your git folder:
