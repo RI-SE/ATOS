@@ -488,7 +488,6 @@ namespace maestro {
 	{
 		for (Trigger* tp : allTriggers)
 		{
-			if (tp == nullptr) continue;
 			if(tp->getObjectIP() == monr.ClientIP && dynamic_cast<ISOTrigger*>(tp) == nullptr)
 			{
 				Trigger::TriggerReturnCode_t result = Trigger::NO_TRIGGER_OCCURRED;
