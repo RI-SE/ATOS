@@ -22,7 +22,7 @@ void TrajectoryletStreamer::onInitMessage(const std_msgs::msg::Empty::SharedPtr)
     loadObjectFiles();
 }
 
-void TrajectoryletStreamer::onObjectsConnectedMessage(const maestro_interfaces::msg::ObjectIdArray::SharedPtr) {
+void TrajectoryletStreamer::onObjectsConnectedMessage(const ObjectsConnected::message_type::SharedPtr msg) {
     // TODO setup and first chunk transmission
     RCLCPP_INFO(get_logger(), "Starting trajectory publishers");
     for (const auto& conf : objectConfigurations) {

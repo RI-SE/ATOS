@@ -3,7 +3,9 @@
 #include <boost/asio.hpp>
 
 #include "module.hpp"
+#include "roschannel.hpp"
 #include "osi_handler.hpp"
+#include "unordered_map"
 
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 55555
@@ -30,7 +32,7 @@ class OSIAdapter : public Module
     
     void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
     
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher;
+    ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;	//!< Publisher to report connected objects
     rclcpp::TimerBase::SharedPtr timer;
 
     boost::asio::ip::tcp::endpoint endpoint;
@@ -41,4 +43,10 @@ class OSIAdapter : public Module
     void setupTCPServer(boost::asio::ip::tcp::endpoint endpoint);
     void destroyTCPServer();
     void resetTCPServer(boost::asio::ip::tcp::endpoint endpoint);
+
+    std::unordered_map<uint32_t,ROSChannels::Monitor::message_type> lastMonitors;
+    std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
+
+    void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
+    void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr msg, uint32_t id);
 };

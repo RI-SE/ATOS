@@ -18,6 +18,7 @@
 
 using std::placeholders::_1;
 using namespace ROSChannels;
+using namespace std::chrono_literals;
 
 ObjectControl::ObjectControl()
 	: Module(ObjectControl::moduleName),
@@ -36,9 +37,11 @@ ObjectControl::ObjectControl()
 	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
 	failurePub(*this),
 	scnAbortPub(*this),
-	objectsConnectedPub(*this)
+	objectsConnectedPub(*this),
+	connectedObjectIdsPub(*this)
 {
 	int queueSize=0;
+	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
 
 	if (this->initialize() == -1) {
 		throw std::runtime_error(std::string("Failed to initialize ") + get_name());
@@ -485,10 +488,14 @@ void ObjectControl::startListeners() {
 	}
 }
 
-void ObjectControl::notifyObjectsConnected() {
+void ObjectControl::publishObjectIds() {
 	maestro_interfaces::msg::ObjectIdArray msg;
 	msg.ids = getVehicleIDs();
-	objectsConnectedPub.publish(msg);
+	connectedObjectIdsPub.publish(msg);
+}
+
+void ObjectControl::notifyObjectsConnected() {
+	objectsConnectedPub.publish(ROSChannels::ObjectsConnected::message_type());
 }
 
 void ObjectControl::connectToObject(

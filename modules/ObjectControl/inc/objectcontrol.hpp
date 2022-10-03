@@ -226,9 +226,12 @@ private:
 	ROSChannels::GetStatus::Sub getStatusSub;				//!< Subscriber to scenario get status requests
 	std::shared_ptr<ROSChannels::ControlSignal::Sub> controlSignalSub;	//!< Pointer to subscriber to receive control signal messages with percentage
 
+	rclcpp::TimerBase::SharedPtr objectsConnectedTimer;	//!< Timer to periodically publish connected objects
+
 	ROSChannels::Failure::Pub failurePub;					//!< Publisher to scenario failure reports
 	ROSChannels::Abort::Pub scnAbortPub;					//!< Publisher to scenario abort reports
-	ROSChannels::ObjectsConnected::Pub objectsConnectedPub;	//!< Publisher to report connected objects
+	ROSChannels::ObjectsConnected::Pub objectsConnectedPub;	//!< Publisher to report that objects have been connected
+	ROSChannels::ConnectedObjectIds::Pub connectedObjectIdsPub;	//!< Publisher to periodically report connected object ids
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
 	//!			and can be terminated by calling ::abortConnectionAttempt or setting ::connStopReqFuture.
@@ -247,6 +250,7 @@ private:
 
 	void startListeners();
 	void notifyObjectsConnected();
+	void publishObjectIds();
 
 	void startSafetyThread();
 	void heartbeat();
