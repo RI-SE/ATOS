@@ -469,6 +469,22 @@ namespace Monitor {
 
 namespace ObjectsConnected {
     const std::string topicName = "objects_connected";
+    using message_type = std_msgs::msg::Empty;
+    const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
+
+    class Pub : public BasePub<message_type> {
+    public:
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
+    };
+
+    class Sub : public BaseSub<message_type> {
+    public:
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
+    };
+}
+
+namespace ConnectedObjectIds {
+    const std::string topicName = "connected_object_ids";
     using message_type = maestro_interfaces::msg::ObjectIdArray;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
