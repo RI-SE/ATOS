@@ -1,11 +1,13 @@
 #include <chrono>
 #include <boost/asio.hpp>
+#include <algorithm>
 
 #include "osi_handler.hpp"
 #include "osiadapter.hpp"
 
 using namespace ROSChannels;
 using namespace std::chrono_literals;
+using namespace std::chrono;
 using namespace boost::asio;
 using std::placeholders::_1;
 
@@ -77,10 +79,19 @@ OSIAdapter::initialize(const std::string& address, const uint16_t port, bool deb
 void
 OSIAdapter::sendOSIData() {
   boost::system::error_code ignored_error;
-  // TODO: Replace makeTestOSIData with extrapolation + creation of synchronized OSI message.
-  const OsiHandler::GlobalObjectGroundTruth_t osiData = OSIAdapter::makeTestOSIData();
-  std::vector<char> positionOSI = OSIAdapter::makeOSIMessage(osiData);
+  if (lastMonitorTimes.find(1)!= lastMonitorTimes.end()) {
+    RCLCPP_INFO(get_logger(), "Last monitor time: %ld", lastMonitorTimes[1]);
+
+  }
+  // Extrapolate monr data and create a sensorView containing the objects
+  std::for_each(lastMonitors.begin(),lastMonitors.end(),[&](auto pair){ OSIAdapter::extrapolateMonr(pair.second,lastMonitorTimes.at(pair.first));});
+  std::vector<OsiHandler::GlobalObjectGroundTruth_t> sensorView(lastMonitors.size());
+  std::transform(lastMonitors.begin(),lastMonitors.end(), sensorView.begin(), [&](auto pair) {return OSIAdapter::makeOSIData(pair.second);});
   
+  // Serialize the sensorView
+  std::vector<char> positionOSI = OSIAdapter::makeOSIMessage(sensorView);
+  
+  // Write the sensorView to the socket
   write(*socket, buffer(positionOSI), ignored_error);
   if (ignored_error.value() != 0){ // Error while sending to client
     if (ignored_error.value() == error::broken_pipe){
@@ -94,6 +105,9 @@ OSIAdapter::sendOSIData() {
   }
 }
 
+void OSIAdapter::extrapolateMonr(ROSChannels::Monitor::message_type& monr, const timeUnit& dt){
+}
+
 /**
  * @brief Encodes SvGt message and returns vector to use for sending message in socket. This is currently
  * used for making a test message. In the future timestamp and projStr should come from MONR-message?
@@ -102,11 +116,11 @@ OSIAdapter::sendOSIData() {
  * @return std::vector<char> Vector from SvGt encoding
  */
 std::vector<char>
-OSIAdapter::makeOSIMessage(const OsiHandler::GlobalObjectGroundTruth_t osiData) {
+OSIAdapter::makeOSIMessage(const std::vector<OsiHandler::GlobalObjectGroundTruth_t>& osiData) {
 
   OsiHandler osi;
   std::chrono::system_clock::time_point timestamp = std::chrono::system_clock::now();
-  auto projStr = "Test";
+  auto projStr = "";
   auto rawData = osi.encodeSvGtMessage(osiData, timestamp, projStr, false);
 
   std::vector<char> vec(rawData.length());
@@ -117,27 +131,28 @@ OSIAdapter::makeOSIMessage(const OsiHandler::GlobalObjectGroundTruth_t osiData) 
 
 
 /**
- * @brief This function creates test OSI-data for testing the module. Should be removed later,
+ * @brief This method creates test OSI-data for testing the module. Should be removed later,
  * since this data should come from MONR-messages.
  * 
  * @return const OsiHandler::LocalObjectGroundTruth_t OSI-data 
  */
 const OsiHandler::GlobalObjectGroundTruth_t
-OSIAdapter::makeTestOSIData() {
+OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
   
   OsiHandler::GlobalObjectGroundTruth_t osiData;
+  osiData.id = monr.maestro_header.object_id;
 
-  osiData.id = 1;
+  osiData.pos_m.x = monr.pose.pose.position.x;
+  osiData.pos_m.y = monr.pose.pose.position.y;
+  osiData.pos_m.z = monr.pose.pose.position.z;
 
-  osiData.pos_m.x = 1.0;
-  osiData.pos_m.y = 2.0;
-  osiData.pos_m.z = 3.0;
+  osiData.acc_m_s2.x = monr.acceleration.accel.linear.x;
+  osiData.acc_m_s2.y = monr.acceleration.accel.linear.y;
+  osiData.acc_m_s2.z = monr.acceleration.accel.linear.z;
 
-  osiData.orientation_rad.pitch = 4.0;
-  osiData.orientation_rad.roll = 5.0;
-  osiData.orientation_rad.yaw = 6.0;
-
-
+  osiData.vel_m_s.x = monr.velocity.twist.linear.x;
+  osiData.vel_m_s.y = monr.velocity.twist.linear.y;
+  osiData.vel_m_s.z = monr.velocity.twist.linear.z;
 
   return osiData;
 }
@@ -153,7 +168,17 @@ void OSIAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::message_t
 }
 
 void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, uint32_t id) {
-  this->lastMonitors[id] = *msg;
+  if (lastMonitors.find(id) == lastMonitors.end()){
+    // Do not extrapolate first message
+    lastMonitorTimes[id] = timeUnit(0);
+  }
+  else{
+    // Otherwise take diff between last two messages
+    auto newtime = seconds(msg->maestro_header.header.stamp.sec) + nanoseconds(msg->maestro_header.header.stamp.nanosec);
+    auto oldtime = seconds(lastMonitors[id].maestro_header.header.stamp.sec) + nanoseconds(lastMonitors[id].maestro_header.header.stamp.nanosec);
+    lastMonitorTimes[id] = duration_cast<timeUnit>(newtime-oldtime);
+  }
+  lastMonitors[id] = *msg;
 }
 
 
