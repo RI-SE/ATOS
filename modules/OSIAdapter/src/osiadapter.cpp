@@ -36,13 +36,13 @@ void OSIAdapter::destroyTCPServer() {
 void OSIAdapter::setupTCPServer(ip::tcp::endpoint endpoint){
   acceptor = std::make_shared<ip::tcp::acceptor>(*io_service, endpoint);
   socket = std::make_shared<ip::tcp::socket>(*io_service);
+  boost::system::error_code ignored_error;
   RCLCPP_DEBUG(get_logger(), "Waiting for connection on %s:%d", endpoint.address().to_string().c_str(), endpoint.port());
-  try{
-  acceptor->accept(*socket);
-  }
-  catch(boost::wrapexcept<boost::system::system_error>& e){
-    RCLCPP_ERROR(get_logger(), "Error while accepting connection: %s", e.what());
-    return;
+  acceptor->accept(*socket,ignored_error);
+  while (ignored_error) {
+    RCLCPP_DEBUG(get_logger(), "Failed to accept the connection from %s:%d, retrying..", endpoint.address().to_string().c_str(), endpoint.port());
+    std::this_thread::sleep_for(500ms);
+    acceptor->accept(*socket,ignored_error);
   }
   RCLCPP_INFO(get_logger(), "Connection established with %s:%d", socket->remote_endpoint().address().to_string().c_str(), socket->remote_endpoint().port());
 }
@@ -69,19 +69,15 @@ OSIAdapter::initialize(const std::string& address, const uint16_t port, bool deb
 
 
 /**
- * @brief Send OSI-data to the connection.
+ * @brief Send OSI-data to the receiver at other end of socket.
+ * writing to a socket that has been closed by the other end will result in error code 32 (broken pipe),
+ * therefore, the connection is reset and OSIAdapter waits until a client connects again.
  * 
  */
 void
 OSIAdapter::sendOSIData() {
   boost::system::error_code ignored_error;
-  RCLCPP_INFO(get_logger(), "sending data!");
-  if (lastMonitors.find(1) != lastMonitors.end() ){
-    RCLCPP_INFO(get_logger(), "Obj 1, last monitor xpos: %f", lastMonitors[1].pose.pose.position.x);
-  }
-  if (lastMonitors.find(2) != lastMonitors.end() ){
-    RCLCPP_INFO(get_logger(), "Obj 2, last monitor xpos: %f", lastMonitors[2].pose.pose.position.x);
-  }
+  // TODO: Replace makeTestOSIData with extrapolation + creation of synchronized OSI message.
   const OsiHandler::GlobalObjectGroundTruth_t osiData = OSIAdapter::makeTestOSIData();
   std::vector<char> positionOSI = OSIAdapter::makeOSIMessage(osiData);
   

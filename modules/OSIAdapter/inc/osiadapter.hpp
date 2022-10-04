@@ -6,12 +6,7 @@
 #include "roschannel.hpp"
 #include "osi_handler.hpp"
 #include "unordered_map"
-
-#define DEFAULT_ADDRESS "127.0.0.1"
-#define DEFAULT_PORT 55555
-#define DEFAULT_DEBUG_VALUE false
-#define QUALITY_OF_SERVICE 10
-#define SEND_INTERVAL 500ms
+#include <chrono>
 
 class OSIAdapter : public Module
 {
@@ -24,6 +19,12 @@ class OSIAdapter : public Module
 
 
   private:
+    static inline std::string const DEFAULT_ADDRESS = "127.0.0.1";
+    constexpr static uint16_t DEFAULT_PORT = 55555;
+    constexpr static bool DEFAULT_DEBUG_VALUE = false;
+    constexpr static uint8_t QUALITY_OF_SERVICE = 10;
+    constexpr static std::chrono::duration SEND_INTERVAL = std::chrono::milliseconds(500);
+
     static inline std::string const moduleName = "osi_adapter";
 
     void sendOSIData();

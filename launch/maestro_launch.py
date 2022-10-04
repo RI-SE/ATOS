@@ -61,5 +61,11 @@ def generate_launch_description():
             namespace='maestro',
             executable='rviz2',
             name='rviz2'
+        ),
+        Node(
+            package='maestro',
+            namespace='maestro',
+            executable='osi_adapter',
+            name='osi_adapter'
         )
     ])
