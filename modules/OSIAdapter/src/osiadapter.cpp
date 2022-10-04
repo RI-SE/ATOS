@@ -75,7 +75,7 @@ OSIAdapter::initialize(const std::string& address, const uint16_t port, bool deb
 void
 OSIAdapter::sendOSIData() {
   boost::system::error_code ignored_error;
-  // Replace makeTestOSIData with extrapolation + creation of synchronized OSI message.
+  // TODO: Replace makeTestOSIData with extrapolation + creation of synchronized OSI message.
   const OsiHandler::GlobalObjectGroundTruth_t osiData = OSIAdapter::makeTestOSIData();
   std::vector<char> positionOSI = OSIAdapter::makeOSIMessage(osiData);
   
