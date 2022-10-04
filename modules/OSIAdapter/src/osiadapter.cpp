@@ -147,6 +147,11 @@ OSIAdapter::makeTestOSIData() {
 }
 
 
+void
+OSIAdapter::extrapolateMONR(const ConnectedObjectIds::message_type::SharedPtr msg) {
+  
+}
+
 
 void OSIAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::message_type::SharedPtr msg) {
   for (uint32_t id : msg->ids) {
