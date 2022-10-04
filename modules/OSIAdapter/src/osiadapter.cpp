@@ -75,13 +75,7 @@ OSIAdapter::initialize(const std::string& address, const uint16_t port, bool deb
 void
 OSIAdapter::sendOSIData() {
   boost::system::error_code ignored_error;
-  RCLCPP_INFO(get_logger(), "sending data!");
-  if (lastMonitors.find(1) != lastMonitors.end() ){
-    RCLCPP_INFO(get_logger(), "Obj 1, last monitor xpos: %f", lastMonitors[1].pose.pose.position.x);
-  }
-  if (lastMonitors.find(2) != lastMonitors.end() ){
-    RCLCPP_INFO(get_logger(), "Obj 2, last monitor xpos: %f", lastMonitors[2].pose.pose.position.x);
-  }
+  // Replace makeTestOSIData with extrapolation + creation of synchronized OSI message.
   const OsiHandler::GlobalObjectGroundTruth_t osiData = OSIAdapter::makeTestOSIData();
   std::vector<char> positionOSI = OSIAdapter::makeOSIMessage(osiData);
   
