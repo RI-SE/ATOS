@@ -157,16 +157,24 @@ void
 OSIAdapter::extrapolateMONR(const uint32_t id,  const double deltaT) {
   auto monrMessage = lastMonitors[id];
 
-  auto poisitionX = monrMessage.pose.pose.position.x;
-  auto poisitionY = monrMessage.pose.pose.position.y;
-  auto poisitionZ = monrMessage.pose.pose.position.z;
+  auto positionX = monrMessage.pose.pose.position.x;
+  auto positionY = monrMessage.pose.pose.position.y;
+  auto positionZ = monrMessage.pose.pose.position.z;
 
   auto velocityX = monrMessage.velocity.twist.linear.x;
   auto velocityY = monrMessage.velocity.twist.linear.y;
   auto velocityZ = monrMessage.velocity.twist.linear.z;
 
+  auto newPositionX = calculatePosition(positionX, velocityX, deltaT);
+  auto newPositionY = calculatePosition(positionY, velocityY, deltaT);
+  auto newPositionZ = calculatePosition(positionZ, velocityZ, deltaT);
 
+  monrMessage.pose.pose.position.x = newPositionX;
+  monrMessage.pose.pose.position.y = newPositionY;
+  monrMessage.pose.pose.position.z = newPositionZ;
 
+  RCLCPP_INFO(get_logger(), "Old position x: %lf", positionX);
+  RCLCPP_INFO(get_logger(), "New position x: %lf", monrMessage.pose.pose.position.x);
 }
 
 
@@ -180,6 +188,7 @@ void OSIAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::message_t
 
 void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, uint32_t id) {
   this->lastMonitors[id] = *msg;
+  extrapolateMONR(id, 0.5);
 }
 
 
