@@ -147,9 +147,26 @@ OSIAdapter::makeTestOSIData() {
 }
 
 
+double
+OSIAdapter::calculatePosition(double position, double velocity, double deltaT) {
+  return position + velocity * deltaT;
+}
+
+
 void
-OSIAdapter::extrapolateMONR(const ConnectedObjectIds::message_type::SharedPtr msg) {
-  
+OSIAdapter::extrapolateMONR(const uint32_t id,  const double deltaT) {
+  auto monrMessage = lastMonitors[id];
+
+  auto poisitionX = monrMessage.pose.pose.position.x;
+  auto poisitionY = monrMessage.pose.pose.position.y;
+  auto poisitionZ = monrMessage.pose.pose.position.z;
+
+  auto velocityX = monrMessage.velocity.twist.linear.x;
+  auto velocityY = monrMessage.velocity.twist.linear.y;
+  auto velocityZ = monrMessage.velocity.twist.linear.z;
+
+
+
 }
 
 

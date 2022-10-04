@@ -50,5 +50,6 @@ class OSIAdapter : public Module
     void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
     void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr msg, uint32_t id);
 
-    void extrapolateMONR(const ConnectedObjectIds::message_type::SharedPtr msg);
+    double calculatePosition(double position, double velocity, double deltaT);
+    void extrapolateMONR(const uint32_t id, const double deltaT);
 };
