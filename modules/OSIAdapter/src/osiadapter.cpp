@@ -143,6 +143,35 @@ OSIAdapter::makeTestOSIData() {
 }
 
 
+double
+OSIAdapter::linPosPrediction(double position, double velocity, double deltaT) {
+  return position + velocity * deltaT;
+}
+
+
+void
+OSIAdapter::extrapolateMONR(const uint32_t id,  const double deltaT) {
+  auto monrMessage = lastMonitors[id];
+
+  auto positionX = monrMessage.pose.pose.position.x;
+  auto positionY = monrMessage.pose.pose.position.y;
+  auto positionZ = monrMessage.pose.pose.position.z;
+
+  auto velocityX = monrMessage.velocity.twist.linear.x;
+  auto velocityY = monrMessage.velocity.twist.linear.y;
+  auto velocityZ = monrMessage.velocity.twist.linear.z;
+
+  auto newPositionX = calculatePosition(positionX, velocityX, deltaT);
+  auto newPositionY = calculatePosition(positionY, velocityY, deltaT);
+  auto newPositionZ = calculatePosition(positionZ, velocityZ, deltaT);
+
+  monrMessage.pose.pose.position.x = newPositionX;
+  monrMessage.pose.pose.position.y = newPositionY;
+  monrMessage.pose.pose.position.z = newPositionZ;
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+}
+
 
 void OSIAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::message_type::SharedPtr msg) {
   for (uint32_t id : msg->ids) {
