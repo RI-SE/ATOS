@@ -144,7 +144,7 @@ OSIAdapter::makeTestOSIData() {
 
 
 double
-OSIAdapter::calculatePosition(double position, double velocity, double deltaT) {
+OSIAdapter::linPosPrediction(double position, double velocity, double deltaT) {
   return position + velocity * deltaT;
 }
 
@@ -169,8 +169,7 @@ OSIAdapter::extrapolateMONR(const uint32_t id,  const double deltaT) {
   monrMessage.pose.pose.position.y = newPositionY;
   monrMessage.pose.pose.position.z = newPositionZ;
 
-  RCLCPP_INFO(get_logger(), "Old position x: %lf", positionX);
-  RCLCPP_INFO(get_logger(), "New position x: %lf", monrMessage.pose.pose.position.x);
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
 }
 
 
@@ -184,7 +183,6 @@ void OSIAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::message_t
 
 void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, uint32_t id) {
   this->lastMonitors[id] = *msg;
-  extrapolateMONR(id, 0.5);
 }
 
 
