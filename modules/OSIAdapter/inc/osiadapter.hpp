@@ -19,7 +19,7 @@ class OSIAdapter : public Module
 
 
   private:
-    using timeUnit = std::chrono::milliseconds;
+    using TimeUnit = std::chrono::milliseconds;
     static inline std::string const DEFAULT_ADDRESS = "127.0.0.1";
     constexpr static uint16_t DEFAULT_PORT = 55555;
     constexpr static bool DEFAULT_DEBUG_VALUE = false;
@@ -31,7 +31,7 @@ class OSIAdapter : public Module
     void sendOSIData();
     std::vector<char> makeOSIMessage(const std::vector<OsiHandler::GlobalObjectGroundTruth_t>& osiData);
     const OsiHandler::GlobalObjectGroundTruth_t makeOSIData(ROSChannels::Monitor::message_type& monr);
-    void extrapolateMonr(ROSChannels::Monitor::message_type& monr, const timeUnit& dt);
+    void extrapolateMonr(ROSChannels::Monitor::message_type& monr, const TimeUnit& dt);
     
     void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
     
@@ -48,7 +48,7 @@ class OSIAdapter : public Module
     void resetTCPServer(boost::asio::ip::tcp::endpoint endpoint);
 
     std::unordered_map<uint32_t,ROSChannels::Monitor::message_type> lastMonitors;
-    std::unordered_map<uint32_t,timeUnit> lastMonitorTimes;
+    std::unordered_map<uint32_t,TimeUnit> lastMonitorTimes;
     std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
 
     void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);

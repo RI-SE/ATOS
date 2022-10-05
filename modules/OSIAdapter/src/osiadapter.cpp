@@ -105,7 +105,7 @@ OSIAdapter::sendOSIData() {
   }
 }
 
-void OSIAdapter::extrapolateMonr(ROSChannels::Monitor::message_type& monr, const timeUnit& dt){
+void OSIAdapter::extrapolateMonr(ROSChannels::Monitor::message_type& monr, const TimeUnit& dt){
 }
 
 /**
@@ -199,13 +199,13 @@ void OSIAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::message_t
 void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, uint32_t id) {
   if (lastMonitors.find(id) == lastMonitors.end()){
     // Do not extrapolate first message
-    lastMonitorTimes[id] = timeUnit(0);
+    lastMonitorTimes[id] = TimeUnit(0);
   }
   else{
     // Otherwise take diff between last two messages
     auto newTime = seconds(msg->maestro_header.header.stamp.sec) + nanoseconds(msg->maestro_header.header.stamp.nanosec);
     auto oldTime = seconds(lastMonitors[id].maestro_header.header.stamp.sec) + nanoseconds(lastMonitors[id].maestro_header.header.stamp.nanosec);
-    lastMonitorTimes[id] = duration_cast<timeUnit>(newtime-oldtime);
+    lastMonitorTimes[id] = duration_cast<TimeUnit>(newtime-oldtime);
   }
   lastMonitors[id] = *msg;
 }
