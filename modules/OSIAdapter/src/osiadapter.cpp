@@ -176,9 +176,9 @@ OSIAdapter::extrapolateMONR(const uint32_t id,  const double deltaT) {
   auto velocityY = monrMessage.velocity.twist.linear.y;
   auto velocityZ = monrMessage.velocity.twist.linear.z;
 
-  auto newPositionX = calculatePosition(positionX, velocityX, deltaT);
-  auto newPositionY = calculatePosition(positionY, velocityY, deltaT);
-  auto newPositionZ = calculatePosition(positionZ, velocityZ, deltaT);
+  auto newPositionX = linPosPrediction(positionX, velocityX, deltaT);
+  auto newPositionY = linPosPrediction(positionY, velocityY, deltaT);
+  auto newPositionZ = linPosPrediction(positionZ, velocityZ, deltaT);
 
   monrMessage.pose.pose.position.x = newPositionX;
   monrMessage.pose.pose.position.y = newPositionY;
