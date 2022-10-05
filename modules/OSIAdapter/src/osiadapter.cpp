@@ -80,7 +80,7 @@ OSIAdapter::sendOSIData() {
   boost::system::error_code ignored_error;
   
   // Extrapolate monr data and create a sensorView containing the objects
-  std::for_each(lastMonitors.begin(),lastMonitors.end(),[&](auto pair){ OSIAdapter::extrapolateMonr(pair.second,lastMonitorTimes.at(pair.first));});
+  std::for_each(lastMonitors.begin(),lastMonitors.end(),[&](auto pair){ OSIAdapter::extrapolateMONR(pair.second,lastMonitorTimes.at(pair.first));});
   std::vector<OsiHandler::GlobalObjectGroundTruth_t> sensorView(lastMonitors.size());
   std::transform(lastMonitors.begin(),lastMonitors.end(), sensorView.begin(), [&](auto pair) {return OSIAdapter::makeOSIData(pair.second);});
   
@@ -99,9 +99,6 @@ OSIAdapter::sendOSIData() {
     // Either way, reset the socket and go back to listening
     resetTCPServer(endpoint);
   }
-}
-
-void OSIAdapter::extrapolateMonr(ROSChannels::Monitor::message_type& monr, const TimeUnit& dt){
 }
 
 /**
@@ -156,7 +153,7 @@ OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
 
 double
 OSIAdapter::linPosPrediction(const double position, const double velocity, const TimeUnit dt) {
-  return position + velocity * dt.count();
+  return position + velocity * duration<double>(dt).count();
 }
 
 
