@@ -203,7 +203,7 @@ void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, ui
   }
   else{
     // Otherwise take diff between last two messages
-    auto newtime = seconds(msg->maestro_header.header.stamp.sec) + nanoseconds(msg->maestro_header.header.stamp.nanosec);
+    auto newTime = seconds(msg->maestro_header.header.stamp.sec) + nanoseconds(msg->maestro_header.header.stamp.nanosec);
     auto oldtime = seconds(lastMonitors[id].maestro_header.header.stamp.sec) + nanoseconds(lastMonitors[id].maestro_header.header.stamp.nanosec);
     lastMonitorTimes[id] = duration_cast<timeUnit>(newtime-oldtime);
   }
