@@ -155,32 +155,17 @@ OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
 
 
 double
-OSIAdapter::linPosPrediction(double position, double velocity, double deltaT) {
-  return position + velocity * deltaT;
+OSIAdapter::linPosPrediction(const double position, const double velocity, const TimeUnit dt) {
+  return position + velocity * dt.count();
 }
 
 
 void
-OSIAdapter::extrapolateMONR(const uint32_t id,  const double deltaT) {
-  auto monrMessage = lastMonitors[id];
+OSIAdapter::extrapolateMONR(Monitor::message_type& monr,  const TimeUnit dt) {
 
-  auto positionX = monrMessage.pose.pose.position.x;
-  auto positionY = monrMessage.pose.pose.position.y;
-  auto positionZ = monrMessage.pose.pose.position.z;
-
-  auto velocityX = monrMessage.velocity.twist.linear.x;
-  auto velocityY = monrMessage.velocity.twist.linear.y;
-  auto velocityZ = monrMessage.velocity.twist.linear.z;
-
-  auto newPositionX = calculatePosition(positionX, velocityX, deltaT);
-  auto newPositionY = calculatePosition(positionY, velocityY, deltaT);
-  auto newPositionZ = calculatePosition(positionZ, velocityZ, deltaT);
-
-  monrMessage.pose.pose.position.x = newPositionX;
-  monrMessage.pose.pose.position.y = newPositionY;
-  monrMessage.pose.pose.position.z = newPositionZ;
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  monr.pose.pose.position.x = linPosPrediction(monr.pose.pose.position.x, monr.velocity.twist.linear.x, dt);
+  monr.pose.pose.position.y = linPosPrediction(monr.pose.pose.position.y, monr.velocity.twist.linear.y, dt);
+  monr.pose.pose.position.z = linPosPrediction(monr.pose.pose.position.z, monr.velocity.twist.linear.z, dt);
 }
 
 
@@ -201,7 +186,7 @@ void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, ui
     // Otherwise take diff between last two messages
     auto newTime = seconds(msg->maestro_header.header.stamp.sec) + nanoseconds(msg->maestro_header.header.stamp.nanosec);
     auto oldTime = seconds(lastMonitors[id].maestro_header.header.stamp.sec) + nanoseconds(lastMonitors[id].maestro_header.header.stamp.nanosec);
-    lastMonitorTimes[id] = duration_cast<TimeUnit>(newtime-oldtime);
+    lastMonitorTimes[id] = duration_cast<TimeUnit>(newTime-oldTime);
   }
   lastMonitors[id] = *msg;
 }
