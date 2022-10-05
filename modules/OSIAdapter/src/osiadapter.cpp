@@ -78,10 +78,7 @@ OSIAdapter::initialize(const std::string& address, const uint16_t port) {
 void
 OSIAdapter::sendOSIData() {
   boost::system::error_code ignored_error;
-  if (lastMonitorTimes.find(1)!= lastMonitorTimes.end()) {
-    RCLCPP_INFO(get_logger(), "Last monitor time: %ld", lastMonitorTimes[1]);
-
-  }
+  
   // Extrapolate monr data and create a sensorView containing the objects
   std::for_each(lastMonitors.begin(),lastMonitors.end(),[&](auto pair){ OSIAdapter::extrapolateMonr(pair.second,lastMonitorTimes.at(pair.first));});
   std::vector<OsiHandler::GlobalObjectGroundTruth_t> sensorView(lastMonitors.size());
