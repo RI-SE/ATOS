@@ -62,7 +62,7 @@ void OSIAdapter::resetTCPServer(ip::tcp::endpoint endpoint) {
  * @param debug Debug or not. Default: false
  */
 void
-OSIAdapter::initialize(const std::string& address, const uint16_t port, bool debug) {
+OSIAdapter::initialize(const std::string& address, const uint16_t port) {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
   endpoint = ip::tcp::endpoint(ip::make_address_v4(address), port);
   io_service = std::make_shared<boost::asio::io_service>();

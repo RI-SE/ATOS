@@ -12,8 +12,7 @@ class OSIAdapter : public Module
 {
   public:
     void initialize(const std::string& address = DEFAULT_ADDRESS,
-                  const uint16_t port = DEFAULT_PORT,
-                  const bool debug = DEFAULT_DEBUG_VALUE);
+                  const uint16_t port = DEFAULT_PORT);
     OSIAdapter();
     ~OSIAdapter();
 
