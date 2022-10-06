@@ -192,12 +192,21 @@ OSIAdapter::loadObjectFiles() {
 
 
 void
+OSIAdapter::saveTrajectories() {
+
+  for (auto& config : objectConfigurations) {
+    auto traj = config->getTrajectory();
+    trajectories.emplace_back(std::make_unique<Trajectory>(traj));
+  }
+}
+
+
+void
 OSIAdapter::onInitMessage(const ROSChannels::Init::message_type::SharedPtr msg) {
   
   RCLCPP_INFO(get_logger(), "Loading object configuration...");
   loadObjectFiles();
-  Trajectory traj = objectConfigurations[0]->getTrajectory();
-  
+  saveTrajectories();
 }
 
 

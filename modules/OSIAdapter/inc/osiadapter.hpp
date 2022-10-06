@@ -62,7 +62,9 @@ class OSIAdapter : public Module
 
     // Trajectory
     void loadObjectFiles();
+    void saveTrajectories();
 
     // Variables
     std::vector<std::unique_ptr<ObjectConfig>> objectConfigurations;
+    std::vector<std::unique_ptr<const Trajectory>> trajectories;
 };
