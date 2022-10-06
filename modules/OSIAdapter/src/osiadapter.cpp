@@ -5,9 +5,9 @@
 
 #include "osi_handler.hpp"
 #include "osiadapter.hpp"
+#include "trajectory.hpp"
 
 
-using namespace ROSChannels;
 using namespace std::chrono_literals;
 using namespace std::chrono;
 using namespace boost::asio;
@@ -161,7 +161,7 @@ OSIAdapter::linPosPrediction(const double position, const double velocity, const
 
 
 void
-OSIAdapter::extrapolateMONR(Monitor::message_type& monr,  const TimeUnit dt) {
+OSIAdapter::extrapolateMONR(ROSChannels::Monitor::message_type& monr,  const TimeUnit dt) {
 
   monr.pose.pose.position.x = linPosPrediction(monr.pose.pose.position.x, monr.velocity.twist.linear.x, dt);
   monr.pose.pose.position.y = linPosPrediction(monr.pose.pose.position.y, monr.velocity.twist.linear.y, dt);
@@ -171,7 +171,6 @@ OSIAdapter::extrapolateMONR(Monitor::message_type& monr,  const TimeUnit dt) {
 
 void
 OSIAdapter::loadObjectFiles() {
-  objectConfigurations.clear();
   char path[MAX_FILE_PATH];
 	std::vector<std::invalid_argument> errors;
 
@@ -193,24 +192,25 @@ OSIAdapter::loadObjectFiles() {
 
 
 void
-OSIAdapter::onInitMessage(const Init::message_type::SharedPtr msg) {
-  RCLCPP_INFO(get_logger(), "Initializing...");
-
+OSIAdapter::onInitMessage(const ROSChannels::Init::message_type::SharedPtr msg) {
+  
+  RCLCPP_INFO(get_logger(), "Loading object configuration...");
   loadObjectFiles();
-
+  Trajectory traj = objectConfigurations[0]->getTrajectory();
+  
 }
 
 
 
-void OSIAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::message_type::SharedPtr msg) {
+void OSIAdapter::onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg) {
   for (uint32_t id : msg->ids) {
     if (monrSubscribers.find(id) == monrSubscribers.end()){
-      monrSubscribers[id] = std::make_shared<Monitor::Sub>(*this, id, std::bind(&OSIAdapter::onMonitorMessage, this, _1, id));
+      monrSubscribers[id] = std::make_shared<ROSChannels::Monitor::Sub>(*this, id, std::bind(&OSIAdapter::onMonitorMessage, this, _1, id));
     }
   }
 }
 
-void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, uint32_t id) {
+void OSIAdapter::onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr msg, uint32_t id) {
   if (lastMonitors.find(id) == lastMonitors.end()){
     // Do not extrapolate first message
     lastMonitorTimes[id] = TimeUnit(0);
@@ -225,6 +225,6 @@ void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, ui
 }
 
 
-void OSIAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {
+void OSIAdapter::onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) {
   RCLCPP_INFO(get_logger(), "Received abort message");
 }
