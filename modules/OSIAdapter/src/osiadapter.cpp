@@ -13,7 +13,8 @@ using std::placeholders::_1;
 
 OSIAdapter::OSIAdapter() :
   Module(OSIAdapter::moduleName),
-  connectedObjectIdsSub(*this,std::bind(&OSIAdapter::onConnectedObjectIdsMessage, this, _1))
+  initSub(*this, std::bind(&OSIAdapter::onInitMessage, this, _1)),
+  connectedObjectIdsSub(*this, std::bind(&OSIAdapter::onConnectedObjectIdsMessage, this, _1))
   {
     initialize();
     timer = this->create_wall_timer(SEND_INTERVAL, std::bind(&OSIAdapter::sendOSIData, this));
@@ -167,8 +168,8 @@ OSIAdapter::extrapolateMONR(Monitor::message_type& monr,  const TimeUnit dt) {
 
 
 void
-OSIAdapter::onInitMessage(const ROSChannels::Init::message_type::SharedPtr msg) {
-  
+OSIAdapter::onInitMessage(const Init::message_type::SharedPtr msg) {
+  RCLCPP_INFO(get_logger(), "CONNECTED!!!!!!!!!!!!!!!!");
 }
 
 
