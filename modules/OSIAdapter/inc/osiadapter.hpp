@@ -30,8 +30,6 @@ class OSIAdapter : public Module
     std::vector<char> makeOSIMessage(const std::vector<OsiHandler::GlobalObjectGroundTruth_t>& osiData);
     const OsiHandler::GlobalObjectGroundTruth_t makeOSIData(ROSChannels::Monitor::message_type& monr);
     
-    void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
-    
     ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;	//!< Publisher to report connected objects
     rclcpp::TimerBase::SharedPtr timer;
 
@@ -48,9 +46,13 @@ class OSIAdapter : public Module
     std::unordered_map<uint32_t,TimeUnit> lastMonitorTimes;
     std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
 
+    inline double linPosPrediction(const double position, const double velocity, const TimeUnit dt);
+    void extrapolateMONR(ROSChannels::Monitor::message_type& monr, const TimeUnit dt);
+
+    void onInitMessage(const ROSChannels::Init::message_type::SharedPtr msg) override;
+    void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
     void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
     void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr msg, uint32_t id) override;
 
-    inline double linPosPrediction(const double position, const double velocity, const TimeUnit dt);
-    void extrapolateMONR(ROSChannels::Monitor::message_type& monr, const TimeUnit dt);
+
 };

@@ -166,6 +166,13 @@ OSIAdapter::extrapolateMONR(Monitor::message_type& monr,  const TimeUnit dt) {
 }
 
 
+void
+OSIAdapter::onInitMessage(const ROSChannels::Init::message_type::SharedPtr msg) {
+  
+}
+
+
+
 void OSIAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::message_type::SharedPtr msg) {
   for (uint32_t id : msg->ids) {
     if (monrSubscribers.find(id) == monrSubscribers.end()){
