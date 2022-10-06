@@ -59,7 +59,6 @@ void OSIAdapter::resetTCPServer(ip::tcp::endpoint endpoint) {
  * 
  * @param address Address to connect. Default: 127.0.0.1
  * @param port Port to use. Default: 55555
- * @param debug Debug or not. Default: false
  */
 void
 OSIAdapter::initialize(const std::string& address, const uint16_t port) {
@@ -79,12 +78,9 @@ OSIAdapter::initialize(const std::string& address, const uint16_t port) {
 void
 OSIAdapter::sendOSIData() {
   boost::system::error_code ignored_error;
-  if (lastMonitorTimes.find(1)!= lastMonitorTimes.end()) {
-    RCLCPP_INFO(get_logger(), "Last monitor time: %ld", lastMonitorTimes[1]);
-
-  }
+  
   // Extrapolate monr data and create a sensorView containing the objects
-  std::for_each(lastMonitors.begin(),lastMonitors.end(),[&](auto pair){ OSIAdapter::extrapolateMonr(pair.second,lastMonitorTimes.at(pair.first));});
+  std::for_each(lastMonitors.begin(),lastMonitors.end(),[&](auto pair){ OSIAdapter::extrapolateMONR(pair.second,lastMonitorTimes.at(pair.first));});
   std::vector<OsiHandler::GlobalObjectGroundTruth_t> sensorView(lastMonitors.size());
   std::transform(lastMonitors.begin(),lastMonitors.end(), sensorView.begin(), [&](auto pair) {return OSIAdapter::makeOSIData(pair.second);});
   
@@ -103,9 +99,6 @@ OSIAdapter::sendOSIData() {
     // Either way, reset the socket and go back to listening
     resetTCPServer(endpoint);
   }
-}
-
-void OSIAdapter::extrapolateMonr(ROSChannels::Monitor::message_type& monr, const timeUnit& dt){
 }
 
 /**
@@ -134,7 +127,7 @@ OSIAdapter::makeOSIMessage(const std::vector<OsiHandler::GlobalObjectGroundTruth
  * @brief This method creates test OSI-data for testing the module. Should be removed later,
  * since this data should come from MONR-messages.
  * 
- * @return const OsiHandler::LocalObjectGroundTruth_t OSI-data 
+ * @return const OsiHandler::GlobalObjectGroundTruth_t OSI-data 
  */
 const OsiHandler::GlobalObjectGroundTruth_t
 OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
@@ -159,32 +152,17 @@ OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
 
 
 double
-OSIAdapter::linPosPrediction(double position, double velocity, double deltaT) {
-  return position + velocity * deltaT;
+OSIAdapter::linPosPrediction(const double position, const double velocity, const TimeUnit dt) {
+  return position + velocity * duration<double>(dt).count();
 }
 
 
 void
-OSIAdapter::extrapolateMONR(const uint32_t id,  const double deltaT) {
-  auto monrMessage = lastMonitors[id];
+OSIAdapter::extrapolateMONR(Monitor::message_type& monr,  const TimeUnit dt) {
 
-  auto positionX = monrMessage.pose.pose.position.x;
-  auto positionY = monrMessage.pose.pose.position.y;
-  auto positionZ = monrMessage.pose.pose.position.z;
-
-  auto velocityX = monrMessage.velocity.twist.linear.x;
-  auto velocityY = monrMessage.velocity.twist.linear.y;
-  auto velocityZ = monrMessage.velocity.twist.linear.z;
-
-  auto newPositionX = linPosPrediction(positionX, velocityX, deltaT);
-  auto newPositionY = linPosPrediction(positionY, velocityY, deltaT);
-  auto newPositionZ = linPosPrediction(positionZ, velocityZ, deltaT);
-
-  monrMessage.pose.pose.position.x = newPositionX;
-  monrMessage.pose.pose.position.y = newPositionY;
-  monrMessage.pose.pose.position.z = newPositionZ;
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  monr.pose.pose.position.x = linPosPrediction(monr.pose.pose.position.x, monr.velocity.twist.linear.x, dt);
+  monr.pose.pose.position.y = linPosPrediction(monr.pose.pose.position.y, monr.velocity.twist.linear.y, dt);
+  monr.pose.pose.position.z = linPosPrediction(monr.pose.pose.position.z, monr.velocity.twist.linear.z, dt);
 }
 
 
@@ -199,13 +177,13 @@ void OSIAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::message_t
 void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, uint32_t id) {
   if (lastMonitors.find(id) == lastMonitors.end()){
     // Do not extrapolate first message
-    lastMonitorTimes[id] = timeUnit(0);
+    lastMonitorTimes[id] = TimeUnit(0);
   }
   else{
     // Otherwise take diff between last two messages
-    auto newtime = seconds(msg->maestro_header.header.stamp.sec) + nanoseconds(msg->maestro_header.header.stamp.nanosec);
-    auto oldtime = seconds(lastMonitors[id].maestro_header.header.stamp.sec) + nanoseconds(lastMonitors[id].maestro_header.header.stamp.nanosec);
-    lastMonitorTimes[id] = duration_cast<timeUnit>(newtime-oldtime);
+    auto newTime = seconds(msg->maestro_header.header.stamp.sec) + nanoseconds(msg->maestro_header.header.stamp.nanosec);
+    auto oldTime = seconds(lastMonitors[id].maestro_header.header.stamp.sec) + nanoseconds(lastMonitors[id].maestro_header.header.stamp.nanosec);
+    lastMonitorTimes[id] = duration_cast<TimeUnit>(newTime-oldTime);
   }
   lastMonitors[id] = *msg;
 }
