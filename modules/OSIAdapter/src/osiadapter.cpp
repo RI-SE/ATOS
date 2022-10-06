@@ -1,9 +1,11 @@
 #include <chrono>
 #include <boost/asio.hpp>
 #include <algorithm>
+#include <filesystem>
 
 #include "osi_handler.hpp"
 #include "osiadapter.hpp"
+
 
 using namespace ROSChannels;
 using namespace std::chrono_literals;
@@ -168,8 +170,34 @@ OSIAdapter::extrapolateMONR(Monitor::message_type& monr,  const TimeUnit dt) {
 
 
 void
+OSIAdapter::loadObjectFiles() {
+  objectConfigurations.clear();
+  char path[MAX_FILE_PATH];
+	std::vector<std::invalid_argument> errors;
+
+	UtilGetObjectDirectoryPath(path, sizeof (path));
+	std::filesystem::path objectDir(path);
+	if (!std::filesystem::exists(objectDir)) {
+		throw std::ios_base::failure("Object directory does not exist");
+	}
+
+	for (const auto& entry : std::filesystem::directory_iterator(objectDir)) {
+		if (std::filesystem::is_regular_file(entry.status())) {
+			ObjectConfig conf;
+            conf.parseConfigurationFile(entry.path());
+            objectConfigurations.push_back(std::make_unique<ObjectConfig>(conf));
+		}
+	} 
+    RCLCPP_INFO(get_logger(), "Loaded %d object configurations", objectConfigurations.size());
+}
+
+
+void
 OSIAdapter::onInitMessage(const Init::message_type::SharedPtr msg) {
-  RCLCPP_INFO(get_logger(), "CONNECTED!!!!!!!!!!!!!!!!");
+  RCLCPP_INFO(get_logger(), "Initializing...");
+
+  loadObjectFiles();
+
 }
 
 

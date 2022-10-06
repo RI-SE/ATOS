@@ -1,12 +1,15 @@
 #pragma once
 
 #include <boost/asio.hpp>
+#include <chrono>
 
 #include "module.hpp"
 #include "roschannel.hpp"
 #include "osi_handler.hpp"
 #include "unordered_map"
-#include <chrono>
+#include "objectconfig.hpp"
+
+
 
 class OSIAdapter : public Module
 {
@@ -56,4 +59,10 @@ class OSIAdapter : public Module
     void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr msg, uint32_t id) override;
     void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
 
+
+    // Trajectory
+    void loadObjectFiles();
+
+    // Variables
+    std::vector<std::unique_ptr<ObjectConfig>> objectConfigurations;
 };
