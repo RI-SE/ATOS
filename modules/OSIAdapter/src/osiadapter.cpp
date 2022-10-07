@@ -241,6 +241,11 @@ OSIAdapter::findNearestTrajectory(const uint16_t id, const double xCar, const do
   return minIndex;
 }
 
+
+/**
+ * @brief Saves the x- and y-coordinates of all trajectories
+ * 
+ */
 void
 OSIAdapter::saveTrajPoints() {
 
@@ -256,6 +261,10 @@ OSIAdapter::saveTrajPoints() {
 }
 
 
+/**
+ * @brief Loads all object files in order to get the trajectories
+ * 
+ */
 void
 OSIAdapter::loadObjectFiles() {
   char path[MAX_FILE_PATH];
@@ -296,7 +305,6 @@ OSIAdapter::onInitMessage(const ROSChannels::Init::message_type::SharedPtr msg) 
   saveTrajectories(); 
   saveTrajPoints();
   calculateDistancesInTrajectory();
-  // // findNearestTrajectory(0, 0, 0);
 }
 
 
