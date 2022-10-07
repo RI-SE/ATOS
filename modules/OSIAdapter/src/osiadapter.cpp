@@ -241,6 +241,18 @@ OSIAdapter::findNearestTrajectory(const uint16_t id, const double xCar, const do
   return minIndex;
 }
 
+/**
+ * @brief Saves all trajectories in a vector
+ * 
+ */
+void
+OSIAdapter::saveTrajectories() {
+
+  for (auto& config : objectConfigurations) {
+    auto traj = config->getTrajectory();
+    trajectories.emplace_back(std::make_unique<Trajectory>(traj));
+  }
+}
 
 /**
  * @brief Saves the x- and y-coordinates of all trajectories
@@ -287,14 +299,7 @@ OSIAdapter::loadObjectFiles() {
 }
 
 
-void
-OSIAdapter::saveTrajectories() {
 
-  for (auto& config : objectConfigurations) {
-    auto traj = config->getTrajectory();
-    trajectories.emplace_back(std::make_unique<Trajectory>(traj));
-  }
-}
 
 
 void
