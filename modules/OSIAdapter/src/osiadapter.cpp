@@ -173,7 +173,7 @@ OSIAdapter::extrapolateMONR(ROSChannels::Monitor::message_type& monr,  const Tim
 std::vector<double>
 OSIAdapter::getDistances(const uint16_t id, const double xCar, const double yCar) {
 
-  std::vector<std::pair<double,double>> trajectoryPoints = trajPoints[0];
+  std::vector<std::pair<double,double>> trajectoryPoints = trajPoints[id];
   std::vector<double> distances;
 
   for (auto points : trajectoryPoints) {
@@ -186,11 +186,13 @@ OSIAdapter::getDistances(const uint16_t id, const double xCar, const double yCar
     auto distance = sqrt(pow(xDiff, 2) + pow(yDiff, 2));
     distances.emplace_back(distance);
   }
+
+  return distances;
 }
 
 void
 OSIAdapter::findNearestTrajectory(const uint16_t id, const double xCar, const double yCar) {
-  
+
 }
 
 void
