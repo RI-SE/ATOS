@@ -170,6 +170,34 @@ OSIAdapter::extrapolateMONR(ROSChannels::Monitor::message_type& monr,  const Tim
 }
 
 /**
+ * @brief Calculates the distances between following points in all trajectories. The function
+ * puts all distances in a std::vector<std::vector<double>> trajPointsDistances. For instance
+ * trajPointsDistances[0][0] would give the distance for the first trajectory between the two points
+ * at index 0 and index 1.
+ * 
+ */
+void
+OSIAdapter::calculateDistancesInTrajectory() {
+  
+  for (auto& traj : trajectories) {
+    std::vector<double> distances;
+    auto points = traj->points;
+    
+    for (int i = 0; i < points.size() - 1; ++i) {
+      auto currentX = points[i].getXCoord();
+      auto currentY = points[i].getYCoord();
+
+      auto nextX = points[i+1].getXCoord();
+      auto nextY = points[i+1].getYCoord();
+
+      auto distance = sqrt(pow(currentX - nextX, 2) + pow(currentY - nextY, 2));
+      distances.emplace_back(distance);
+    }
+    trajPointsDistances.emplace_back(distances);
+  }
+}
+
+/**
  * @brief Finds the distances from the car position (x,y) to all points in the trajectory
  * 
  * @param id Object ID
@@ -267,7 +295,8 @@ OSIAdapter::onInitMessage(const ROSChannels::Init::message_type::SharedPtr msg) 
   loadObjectFiles();
   saveTrajectories(); 
   saveTrajPoints();
-  findNearestTrajectory(0, 0, 0);
+  calculateDistancesInTrajectory();
+  // // findNearestTrajectory(0, 0, 0);
 }
 
 

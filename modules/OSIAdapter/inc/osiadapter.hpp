@@ -66,9 +66,11 @@ class OSIAdapter : public Module
     void saveTrajPoints();
     std::vector<double> getDistances(const uint16_t id, const double xCar, const double yCar);
     int findNearestTrajectory(const uint16_t id, const double xCar, const double yCar);
+    void calculateDistancesInTrajectory();
 
     // Variables
     std::vector<std::unique_ptr<ObjectConfig>> objectConfigurations;
     std::vector<std::unique_ptr<const Trajectory>> trajectories;
     std::vector<std::vector<std::pair<double, double>>> trajPoints;
+    std::vector<std::vector<double>> trajPointsDistances;
 };
