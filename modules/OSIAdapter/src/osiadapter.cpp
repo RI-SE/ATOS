@@ -2,6 +2,7 @@
 #include <boost/asio.hpp>
 #include <algorithm>
 #include <filesystem>
+#include <cmath>
 
 #include "osi_handler.hpp"
 #include "osiadapter.hpp"
@@ -169,23 +170,37 @@ OSIAdapter::extrapolateMONR(ROSChannels::Monitor::message_type& monr,  const Tim
 }
 
 
+std::vector<double>
+OSIAdapter::getDistances(const uint16_t id, const double xCar, const double yCar) {
+
+  std::vector<std::pair<double,double>> trajectoryPoints = trajPoints[0];
+  std::vector<double> distances;
+
+  for (auto points : trajectoryPoints) {
+    auto xPoints = points.first;
+    auto yPoints = points.second;
+
+    auto xDiff = xCar - xPoints;
+    auto yDiff = yCar - yPoints;
+
+    auto distance = sqrt(pow(xDiff, 2) + pow(yDiff, 2));
+    distances.emplace_back(distance);
+  }
+}
+
 void
-OSIAdapter::findNearestTrajectory(const uint16_t id, const double x, const double y) {
-
-
+OSIAdapter::findNearestTrajectory(const uint16_t id, const double xCar, const double yCar) {
+  
 }
 
 void
 OSIAdapter::saveTrajPoints() {
 
   for (auto& traj : trajectories) {
-    auto id = traj->id;
-    
     std::vector<std::pair<double,double>> trajPointsForId;
     for (auto& points : traj->points) {
       auto x = points.getXCoord();
       auto y = points.getYCoord();
-
       trajPointsForId.emplace_back(std::make_pair(x,y));
     }
     trajPoints.emplace_back(trajPointsForId);
@@ -232,6 +247,7 @@ OSIAdapter::onInitMessage(const ROSChannels::Init::message_type::SharedPtr msg) 
   loadObjectFiles();
   saveTrajectories(); 
   saveTrajPoints();
+  findNearestTrajectory(0, 0, 0);
 }
 
 
