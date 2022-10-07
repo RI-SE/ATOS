@@ -170,6 +170,30 @@ OSIAdapter::extrapolateMONR(ROSChannels::Monitor::message_type& monr,  const Tim
 
 
 void
+OSIAdapter::findNearestTrajectory(const uint16_t id, const double x, const double y) {
+
+
+}
+
+void
+OSIAdapter::saveTrajPoints() {
+
+  for (auto& traj : trajectories) {
+    auto id = traj->id;
+    
+    std::vector<std::pair<double,double>> trajPointsForId;
+    for (auto& points : traj->points) {
+      auto x = points.getXCoord();
+      auto y = points.getYCoord();
+
+      trajPointsForId.emplace_back(std::make_pair(x,y));
+    }
+    trajPoints.emplace_back(trajPointsForId);
+  }
+}
+
+
+void
 OSIAdapter::loadObjectFiles() {
   char path[MAX_FILE_PATH];
 	std::vector<std::invalid_argument> errors;
@@ -206,7 +230,8 @@ OSIAdapter::onInitMessage(const ROSChannels::Init::message_type::SharedPtr msg) 
   
   RCLCPP_INFO(get_logger(), "Loading object configuration...");
   loadObjectFiles();
-  saveTrajectories();
+  saveTrajectories(); 
+  saveTrajPoints();
 }
 
 
