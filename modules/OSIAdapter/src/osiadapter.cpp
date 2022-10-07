@@ -169,7 +169,14 @@ OSIAdapter::extrapolateMONR(ROSChannels::Monitor::message_type& monr,  const Tim
   monr.pose.pose.position.z = linPosPrediction(monr.pose.pose.position.z, monr.velocity.twist.linear.z, dt);
 }
 
-
+/**
+ * @brief Finds the distances from the car position (x,y) to all points in the trajectory
+ * 
+ * @param id Object ID
+ * @param xCar x-position of car
+ * @param yCar y-position of car
+ * @return std::vector<double> Vector of distances from (xCar, yCar) to all points in the trajectory
+ */
 std::vector<double>
 OSIAdapter::getDistances(const uint16_t id, const double xCar, const double yCar) {
 
@@ -190,9 +197,20 @@ OSIAdapter::getDistances(const uint16_t id, const double xCar, const double yCar
   return distances;
 }
 
-void
+/**
+ * @brief Finds the index of the trajectory that is the most close a point
+ * 
+ * @param id Object ID
+ * @param xCar x-position of car
+ * @param yCar y-position of car
+ * @return int Index of the trajectory point most close to (xCar, yCar)
+ */
+int
 OSIAdapter::findNearestTrajectory(const uint16_t id, const double xCar, const double yCar) {
 
+  auto distances = getDistances(id, xCar, yCar);
+  int minIndex = std::distance(distances.begin(), std::min_element(distances.begin(), distances.end()));
+  return minIndex;
 }
 
 void
