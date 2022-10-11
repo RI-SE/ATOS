@@ -27,7 +27,8 @@ OSIAdapter::OSIAdapter() :
     destroyTCPServer();
   }
 
-void OSIAdapter::destroyTCPServer() {
+void
+OSIAdapter::destroyTCPServer() {
   RCLCPP_DEBUG(this->get_logger(), "Destroying TCP Server");
   if (acceptor) {
     acceptor->close();
@@ -39,7 +40,8 @@ void OSIAdapter::destroyTCPServer() {
   }
 }
 
-void OSIAdapter::setupTCPServer(ip::tcp::endpoint endpoint){
+void
+OSIAdapter::setupTCPServer(ip::tcp::endpoint endpoint){
   acceptor = std::make_shared<ip::tcp::acceptor>(*io_service, endpoint);
   socket = std::make_shared<ip::tcp::socket>(*io_service);
   boost::system::error_code ignored_error;
@@ -53,7 +55,8 @@ void OSIAdapter::setupTCPServer(ip::tcp::endpoint endpoint){
   RCLCPP_INFO(get_logger(), "Connection established with %s:%d", socket->remote_endpoint().address().to_string().c_str(), socket->remote_endpoint().port());
 }
 
-void OSIAdapter::resetTCPServer(ip::tcp::endpoint endpoint) {
+void
+OSIAdapter::resetTCPServer(ip::tcp::endpoint endpoint) {
   destroyTCPServer();
   setupTCPServer(endpoint);
 }
@@ -72,7 +75,6 @@ OSIAdapter::initialize(const std::string& address, const uint16_t port) {
   setupTCPServer(endpoint);
 }
 
-
 /**
  * @brief Send OSI-data to the receiver at other end of socket.
  * writing to a socket that has been closed by the other end will result in error code 32 (broken pipe),
@@ -87,7 +89,6 @@ OSIAdapter::sendOSIData() {
   std::for_each(lastMonitors.begin(),lastMonitors.end(),[&](auto pair){OSIAdapter::extrapolateMONR(pair.second,lastMonitorTimes.at(pair.first));});
   std::vector<OsiHandler::GlobalObjectGroundTruth_t> sensorView(lastMonitors.size());
   std::transform(lastMonitors.begin(),lastMonitors.end(), sensorView.begin(), [&](auto pair) {return OSIAdapter::makeOSIData(pair.second);});
-  
 
   // Serialize the sensorView
   std::vector<char> positionOSI = OSIAdapter::makeOSIMessage(sensorView);
@@ -127,7 +128,6 @@ OSIAdapter::makeOSIMessage(const std::vector<OsiHandler::GlobalObjectGroundTruth
   return vec;
 }
 
-
 /**
  * @brief This method creates test OSI-data for testing the module. Should be removed later,
  * since this data should come from MONR-messages.
@@ -164,12 +164,10 @@ OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
   return osiData;
 }
 
-
 double
 OSIAdapter::linPosPrediction(const double position, const double velocity, const TimeUnit dt) {
   return position + velocity * duration<double>(dt).count();
 }
-
 
 void
 OSIAdapter::extrapolateMONR(ROSChannels::Monitor::message_type& monr,  const TimeUnit dt) {
@@ -317,7 +315,6 @@ OSIAdapter::saveTrajPoints() {
   }
 }
 
-
 /**
  * @brief Loads all object files in order to get the trajectories
  * 
@@ -343,10 +340,6 @@ OSIAdapter::loadObjectFiles() {
     RCLCPP_INFO(get_logger(), "Loaded %d object configurations", objectConfigurations.size());
 }
 
-
-
-
-
 void
 OSIAdapter::onInitMessage(const ROSChannels::Init::message_type::SharedPtr msg) {
   
@@ -357,9 +350,8 @@ OSIAdapter::onInitMessage(const ROSChannels::Init::message_type::SharedPtr msg) 
   calculateDistancesInTrajectory();
 }
 
-
-
-void OSIAdapter::onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg) {
+void
+OSIAdapter::onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg) {
   for (uint32_t id : msg->ids) {
     if (monrSubscribers.find(id) == monrSubscribers.end()){
       monrSubscribers[id] = std::make_shared<ROSChannels::Monitor::Sub>(*this, id, std::bind(&OSIAdapter::onMonitorMessage, this, _1, id));
@@ -367,7 +359,8 @@ void OSIAdapter::onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectI
   }
 }
 
-void OSIAdapter::onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr msg, uint32_t id) {
+void
+OSIAdapter::onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr msg, uint32_t id) {
   if (lastMonitors.find(id) == lastMonitors.end()){
     // Do not extrapolate first message
     lastMonitorTimes[id] = TimeUnit(0);
@@ -381,7 +374,7 @@ void OSIAdapter::onMonitorMessage(const ROSChannels::Monitor::message_type::Shar
   lastMonitors[id] = *msg;
 }
 
-
-void OSIAdapter::onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) {
+void
+OSIAdapter::onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) {
   RCLCPP_INFO(get_logger(), "Received abort message");
 }
