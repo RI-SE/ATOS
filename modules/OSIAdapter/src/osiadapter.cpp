@@ -159,32 +159,7 @@ OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
   osiData.vel_m_s.z = monr.velocity.twist.linear.z;
 
   auto trajChunk = extractTrajectoryChunk(id, xPosition, yPosition);
-  // for (auto pair : trajChunk) {
-  //   // double x = pair.first;
-  //   // double y = pair.second;
-  //   // osiData.trajectory.trajectory.emplace_back(x, y);
-  //   RCLCPP_INFO(get_logger(), "(X, Y) = (%lf, %lf)", pair.first, pair.second);
-  // }
-  // RCLCPP_INFO(get_logger(), "");
-
   osiData.trajectory.trajectory = trajChunk;
-
-  // osiData.trajectory.trajectory.emplace_back(1,1);
-  // osiData.trajectory.trajectory.emplace_back(1,-2);
-  // osiData.trajectory.trajectory.emplace_back(1.23,3);
-  // osiData.trajectory.trajectory.emplace_back(-1,4);
-  // osiData.trajectory.trajectory.emplace_back(-1,4);
-  // osiData.trajectory.trajectory.emplace_back(-1,4);
-  // osiData.trajectory.trajectory.emplace_back(-1,4);
-  // osiData.trajectory.trajectory.emplace_back(-1,4);
-  // osiData.trajectory.trajectory.emplace_back(-1,4);
-  // osiData.trajectory.trajectory.emplace_back(-1,4);
-  // osiData.trajectory.trajectory.emplace_back(-1,4);
-
-
-  // RCLCPP_INFO(get_logger(), "IDDDDDDDDDDDDD: %d", id);
-  // RCLCPP_INFO(get_logger(), "TRAJ SIZEEEE: %d", trajChunk.size());
-
 
   return osiData;
 }
