@@ -61,8 +61,6 @@ class OSIAdapter : public Module
     void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr msg, uint32_t id) override;
     void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
 
-
-    // Trajectory
     void loadObjectFiles();
     void saveTrajectories();
     void saveTrajPoints();
@@ -71,7 +69,6 @@ class OSIAdapter : public Module
     void calculateDistancesInTrajectory();
     std::vector<std::pair<double,double>> extractTrajectoryChunk(const uint16_t id, const double xCar, const double yCar);
 
-    // Variables
     std::vector<std::unique_ptr<ObjectConfig>> objectConfigurations;
     std::map<uint16_t, std::unique_ptr<const Trajectory>> trajectories;
     std::map<uint16_t, std::vector<std::pair<double, double>>> trajPoints;
