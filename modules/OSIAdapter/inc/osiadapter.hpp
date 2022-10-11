@@ -26,6 +26,8 @@ class OSIAdapter : public Module
     constexpr static uint16_t DEFAULT_PORT = 55555;
     constexpr static uint8_t QUALITY_OF_SERVICE = 10;
     constexpr static std::chrono::duration SEND_INTERVAL = std::chrono::milliseconds(500);
+    constexpr static int NEAR_POINT_DISTANCE = 2;
+    constexpr static int FAR_POINT_DISTANCE = 10;
 
     static inline std::string const moduleName = "osi_adapter";
 
@@ -67,10 +69,11 @@ class OSIAdapter : public Module
     std::vector<double> getDistances(const uint16_t id, const double xCar, const double yCar);
     int findNearestTrajectory(const uint16_t id, const double xCar, const double yCar);
     void calculateDistancesInTrajectory();
+    std::vector<std::pair<double,double>> extractTrajectoryChunk(const uint16_t id, const double xCar, const double yCar);
 
     // Variables
     std::vector<std::unique_ptr<ObjectConfig>> objectConfigurations;
-    std::vector<std::unique_ptr<const Trajectory>> trajectories;
-    std::vector<std::vector<std::pair<double, double>>> trajPoints;
-    std::vector<std::vector<double>> trajPointsDistances;
+    std::map<uint16_t, std::unique_ptr<const Trajectory>> trajectories;
+    std::map<uint16_t, std::vector<std::pair<double, double>>> trajPoints;
+    std::map<uint16_t, std::vector<double>> trajPointsDistances;
 };

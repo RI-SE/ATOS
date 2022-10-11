@@ -84,10 +84,11 @@ OSIAdapter::sendOSIData() {
   boost::system::error_code ignored_error;
   
   // Extrapolate monr data and create a sensorView containing the objects
-  std::for_each(lastMonitors.begin(),lastMonitors.end(),[&](auto pair){ OSIAdapter::extrapolateMONR(pair.second,lastMonitorTimes.at(pair.first));});
+  std::for_each(lastMonitors.begin(),lastMonitors.end(),[&](auto pair){OSIAdapter::extrapolateMONR(pair.second,lastMonitorTimes.at(pair.first));});
   std::vector<OsiHandler::GlobalObjectGroundTruth_t> sensorView(lastMonitors.size());
   std::transform(lastMonitors.begin(),lastMonitors.end(), sensorView.begin(), [&](auto pair) {return OSIAdapter::makeOSIData(pair.second);});
   
+
   // Serialize the sensorView
   std::vector<char> positionOSI = OSIAdapter::makeOSIMessage(sensorView);
   
@@ -137,11 +138,17 @@ const OsiHandler::GlobalObjectGroundTruth_t
 OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
   
   OsiHandler::GlobalObjectGroundTruth_t osiData;
-  osiData.id = monr.maestro_header.object_id;
 
-  osiData.pos_m.x = monr.pose.pose.position.x;
-  osiData.pos_m.y = monr.pose.pose.position.y;
-  osiData.pos_m.z = monr.pose.pose.position.z;
+  auto id = monr.maestro_header.object_id;
+  osiData.id = id;
+
+  auto xPosition = monr.pose.pose.position.x;
+  auto yPosition = monr.pose.pose.position.y;
+  auto zPosition = monr.pose.pose.position.z;
+
+  osiData.pos_m.x = xPosition;
+  osiData.pos_m.y = yPosition;
+  osiData.pos_m.z = zPosition;
 
   osiData.acc_m_s2.x = monr.acceleration.accel.linear.x;
   osiData.acc_m_s2.y = monr.acceleration.accel.linear.y;
@@ -150,6 +157,34 @@ OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
   osiData.vel_m_s.x = monr.velocity.twist.linear.x;
   osiData.vel_m_s.y = monr.velocity.twist.linear.y;
   osiData.vel_m_s.z = monr.velocity.twist.linear.z;
+
+  auto trajChunk = extractTrajectoryChunk(id, xPosition, yPosition);
+  // for (auto pair : trajChunk) {
+  //   // double x = pair.first;
+  //   // double y = pair.second;
+  //   // osiData.trajectory.trajectory.emplace_back(x, y);
+  //   RCLCPP_INFO(get_logger(), "(X, Y) = (%lf, %lf)", pair.first, pair.second);
+  // }
+  // RCLCPP_INFO(get_logger(), "");
+
+  osiData.trajectory.trajectory = trajChunk;
+
+  // osiData.trajectory.trajectory.emplace_back(1,1);
+  // osiData.trajectory.trajectory.emplace_back(1,-2);
+  // osiData.trajectory.trajectory.emplace_back(1.23,3);
+  // osiData.trajectory.trajectory.emplace_back(-1,4);
+  // osiData.trajectory.trajectory.emplace_back(-1,4);
+  // osiData.trajectory.trajectory.emplace_back(-1,4);
+  // osiData.trajectory.trajectory.emplace_back(-1,4);
+  // osiData.trajectory.trajectory.emplace_back(-1,4);
+  // osiData.trajectory.trajectory.emplace_back(-1,4);
+  // osiData.trajectory.trajectory.emplace_back(-1,4);
+  // osiData.trajectory.trajectory.emplace_back(-1,4);
+
+
+  // RCLCPP_INFO(get_logger(), "IDDDDDDDDDDDDD: %d", id);
+  // RCLCPP_INFO(get_logger(), "TRAJ SIZEEEE: %d", trajChunk.size());
+
 
   return osiData;
 }
@@ -180,8 +215,9 @@ void
 OSIAdapter::calculateDistancesInTrajectory() {
   
   for (auto& traj : trajectories) {
+    auto id = traj.first;
     std::vector<double> distances;
-    auto points = traj->points;
+    auto points = traj.second->points;
     
     for (int i = 0; i < points.size() - 1; ++i) {
       auto currentX = points[i].getXCoord();
@@ -193,7 +229,7 @@ OSIAdapter::calculateDistancesInTrajectory() {
       auto distance = sqrt(pow(currentX - nextX, 2) + pow(currentY - nextY, 2));
       distances.emplace_back(distance);
     }
-    trajPointsDistances.emplace_back(distances);
+    trajPointsDistances[id] = distances;
   }
 }
 
@@ -241,6 +277,37 @@ OSIAdapter::findNearestTrajectory(const uint16_t id, const double xCar, const do
   return minIndex;
 }
 
+std::vector<std::pair<double,double>>
+OSIAdapter::extractTrajectoryChunk(const uint16_t id, const double xCar, const double yCar) {
+
+  std::vector<std::pair<double,double>> retval;
+  auto indexNearestTrajPoint = findNearestTrajectory(id, xCar, yCar);
+  auto points = trajPoints[id];
+  retval.emplace_back(std::make_pair(points[indexNearestTrajPoint].first, points[indexNearestTrajPoint].second));
+  
+  auto trajDist = trajPointsDistances[id];
+  double trajLength = 0;
+  int nearPointIndex = points.size() - 1;
+  int farPointIndex = points.size() - 1;
+
+  for (int i = indexNearestTrajPoint; i < trajDist.size() - 1; ++i) {
+
+    trajLength += trajDist[i];
+    if (trajLength <= NEAR_POINT_DISTANCE) {nearPointIndex = i;}
+
+    if (trajLength >= FAR_POINT_DISTANCE) {farPointIndex = i; break;}
+
+  }
+
+  
+  auto nearPoint = std::make_pair(points[nearPointIndex].first, points[nearPointIndex].second);
+  auto farPoint = std::make_pair(points[farPointIndex].first, points[farPointIndex].second);
+  retval.emplace_back(nearPoint);
+  retval.emplace_back(farPoint);
+
+  return retval;
+}
+
 /**
  * @brief Saves all trajectories in a vector
  * 
@@ -250,7 +317,8 @@ OSIAdapter::saveTrajectories() {
 
   for (auto& config : objectConfigurations) {
     auto traj = config->getTrajectory();
-    trajectories.emplace_back(std::make_unique<Trajectory>(traj));
+    auto id = config->getTransmitterID();
+    trajectories[id] = std::make_unique<Trajectory>(traj);
   }
 }
 
@@ -262,13 +330,15 @@ void
 OSIAdapter::saveTrajPoints() {
 
   for (auto& traj : trajectories) {
+    auto id = traj.first;
     std::vector<std::pair<double,double>> trajPointsForId;
-    for (auto& points : traj->points) {
+
+    for (auto points : traj.second->points) {
       auto x = points.getXCoord();
       auto y = points.getYCoord();
       trajPointsForId.emplace_back(std::make_pair(x,y));
     }
-    trajPoints.emplace_back(trajPointsForId);
+    trajPoints[id] = trajPointsForId;
   }
 }
 
