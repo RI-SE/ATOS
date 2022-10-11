@@ -108,11 +108,11 @@ OSIAdapter::sendOSIData() {
 }
 
 /**
- * @brief Encodes SvGt message and returns vector to use for sending message in socket. This is currently
- * used for making a test message. In the future timestamp and projStr should come from MONR-message?
+ * @brief Receives a vector of OSI-data, encodes it and copies it into a char-vector to be able
+ * to send over TCP.
  * 
  * @param osiData OSI-data
- * @return std::vector<char> Vector from SvGt encoding
+ * @return std::vector<char> Vector to send over TCP
  */
 std::vector<char>
 OSIAdapter::makeOSIMessage(const std::vector<OsiHandler::GlobalObjectGroundTruth_t>& osiData) {
@@ -129,8 +129,7 @@ OSIAdapter::makeOSIMessage(const std::vector<OsiHandler::GlobalObjectGroundTruth
 }
 
 /**
- * @brief This method creates test OSI-data for testing the module. Should be removed later,
- * since this data should come from MONR-messages.
+ * @brief Make OSI-data from MONR-messages.
  * 
  * @return const OsiHandler::GlobalObjectGroundTruth_t OSI-data 
  */
@@ -164,6 +163,14 @@ OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
   return osiData;
 }
 
+/**
+ * @brief Linear extrapolition in order to predict the new position after a time step.
+ * 
+ * @param position x-, y-, or z-position of object
+ * @param velocity x-, y-, or z-velocity of object
+ * @param dt Time step
+ * @return double New x-, y-, or z-position of object
+ */
 double
 OSIAdapter::linPosPrediction(const double position, const double velocity, const TimeUnit dt) {
   return position + velocity * duration<double>(dt).count();
@@ -207,7 +214,7 @@ OSIAdapter::calculateDistancesInTrajectory() {
 }
 
 /**
- * @brief Finds the distances from the car position (x,y) to all points in the trajectory
+ * @brief Finds the distances from the car position (x,y) to all points in the trajectory.
  * 
  * @param id Object ID
  * @param xCar x-position of car
@@ -235,7 +242,7 @@ OSIAdapter::getDistances(const uint16_t id, const double xCar, const double yCar
 }
 
 /**
- * @brief Finds the index of the trajectory that is the most close a point
+ * @brief Finds the index of the trajectory that is the most close a point.
  * 
  * @param id Object ID
  * @param xCar x-position of car
@@ -250,6 +257,15 @@ OSIAdapter::findNearestTrajectory(const uint16_t id, const double xCar, const do
   return minIndex;
 }
 
+/**
+ * @brief Extracts three points of the trajectory and returns them in a vector. Point 1: The closest point on the
+ * trajectory from the object. Point 2: Point that is in a near distance. Point 3: A point that is in the far distance.
+ * 
+ * @param id ID of object
+ * @param xCar x-coordinate of object
+ * @param yCar y-coordinate of object
+ * @return std::vector<std::pair<double,double>> Vector with the three points
+ */
 std::vector<std::pair<double,double>>
 OSIAdapter::extractTrajectoryChunk(const uint16_t id, const double xCar, const double yCar) {
 
@@ -271,7 +287,6 @@ OSIAdapter::extractTrajectoryChunk(const uint16_t id, const double xCar, const d
     if (trajLength >= FAR_POINT_DISTANCE) {farPointIndex = i; break;}
 
   }
-
   
   auto nearPoint = std::make_pair(points[nearPointIndex].first, points[nearPointIndex].second);
   auto farPoint = std::make_pair(points[farPointIndex].first, points[farPointIndex].second);
@@ -282,7 +297,7 @@ OSIAdapter::extractTrajectoryChunk(const uint16_t id, const double xCar, const d
 }
 
 /**
- * @brief Saves all trajectories in a vector
+ * @brief Saves all trajectories in a map.
  * 
  */
 void
@@ -296,7 +311,7 @@ OSIAdapter::saveTrajectories() {
 }
 
 /**
- * @brief Saves the x- and y-coordinates of all trajectories
+ * @brief Saves the x- and y-coordinates of all trajectories in a map.
  * 
  */
 void
@@ -316,7 +331,7 @@ OSIAdapter::saveTrajPoints() {
 }
 
 /**
- * @brief Loads all object files in order to get the trajectories
+ * @brief Loads all object files in order to get the trajectories and saves the configuration files.
  * 
  */
 void
