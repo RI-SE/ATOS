@@ -157,6 +157,10 @@ OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
   osiData.vel_m_s.y = monr.velocity.twist.linear.y;
   osiData.vel_m_s.z = monr.velocity.twist.linear.z;
 
+  osiData.orientation_rad.pitch = 0;
+  osiData.orientation_rad.roll = 0;
+  osiData.orientation_rad.yaw = 0;
+
   auto trajChunk = extractTrajectoryChunk(id, xPosition, yPosition);
   osiData.trajectory.trajectory = trajChunk;
 
