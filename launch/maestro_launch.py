@@ -56,12 +56,12 @@ def generate_launch_description():
             executable='journal_control',
             name='journal_control'
         ),
-        Node(
-            package='rviz2',
-            namespace='maestro',
-            executable='rviz2',
-            name='rviz2'
-        ),
+        # Node(
+        #     package='rviz2',
+        #     namespace='maestro',
+        #     executable='rviz2',
+        #     name='rviz2'
+        # ),
         Node(
             package='maestro',
             namespace='maestro',
