@@ -162,7 +162,7 @@ OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
   osiData.orientation_rad.yaw = 0;
 
   auto trajChunk = extractTrajectoryChunk(id, xPosition, yPosition);
-  osiData.trajectory.trajectory = trajChunk;
+  osiData.trajectory.points = trajChunk;
 
   return osiData;
 }
