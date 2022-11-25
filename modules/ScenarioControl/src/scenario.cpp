@@ -6,6 +6,7 @@
 #include <regex>
 
 #include "scenario.h"
+#include "libOpenDrive/Road.h"
 
 #include "isotrigger.h"
 #include "externalaction.h"
@@ -43,10 +44,7 @@ namespace maestro {
 
 	void Scenario::loadOpenDrive(const std::string openDriveFilePath)
 	{
-		xodr openDriveParser;
-		openDriveParser.load(openDriveFilePath);
-		openDriveParser.parse();
-		openDriveObject = openDriveParser.m_OpenDRIVE;
+		openDriveObject = std::make_shared<odr::OpenDriveMap>(openDriveFilePath);
 	}
 	void Scenario::loadOpenScenario(const std::string openScenarioFilePath)
 	{
@@ -58,6 +56,7 @@ namespace maestro {
 
 	void Scenario::initialize(const std::string scenarioFilePath,std::string openDriveFilePath, std::string openScenarioFilePath)
 	{
+		using namespace std::chrono;
 		std::ifstream file;
 		std::string debugStr;
 		causalities = std::make_shared<std::set<Causality>>();
@@ -82,16 +81,20 @@ namespace maestro {
 		RCLCPP_INFO(get_logger(),"Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
 
 		try{
+			auto start = steady_clock::now();
 			loadOpenDrive(openDriveFilePath);
+			RCLCPP_INFO(get_logger(),"Successfully loaded OpenDRIVE: %s after %f seconds", openDriveFilePath.c_str(), duration<float>(steady_clock::now() - start).count());
 		}
 		catch(const std::exception &e){
-			RCLCPP_WARN(get_logger(),"Failed to parse OpenDrive: %s", e.what());
+			RCLCPP_WARN(get_logger(),"Failed to parse OpenDRIVE: %s", e.what());
 		}
 		catch(...){
-			RCLCPP_WARN(get_logger(),"Failed to parse OpenDrive");
+			RCLCPP_WARN(get_logger(),"Failed to parse OpenDRIVE");
 		}
 		try{
+			auto start = steady_clock::now();
 			loadOpenScenario(openScenarioFilePath);
+			RCLCPP_INFO(get_logger(),"Successfully loaded openSCENARIO: %s after %f seconds", openScenarioFilePath.c_str(), duration<float>(steady_clock::now() - start).count());
 		}
 		catch(const std::exception &e){
 			RCLCPP_WARN(get_logger(),"Failed to parse OpenSCENARIO: %s", e.what());

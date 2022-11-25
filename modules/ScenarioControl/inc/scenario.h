@@ -11,7 +11,7 @@
 #include "journal.h"
 #include "roschannel.hpp"
 
-#include "ad-xolib/xodr.h"
+#include "libOpenDrive/OpenDriveMap.h"
 #include "ad-xolib/xosc.h"
 
 #include "loggable.hpp"
@@ -72,7 +72,7 @@ namespace maestro {
         ScenarioReturnCode_t updateTrigger(const ObjectDataType&);
 
     private:
-        std::shared_ptr<OpenDRIVE> openDriveObject;
+        std::shared_ptr<odr::OpenDriveMap> openDriveObject;
         std::shared_ptr<OpenSCENARIO> openScenarioObject;
         std::shared_ptr<std::set<Causality>> causalities;
         std::set<Trigger*> allTriggers;
