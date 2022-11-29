@@ -2637,6 +2637,41 @@ void UtilGetTrajDirectoryPath(char *path, size_t pathLen) {
 }
 
 /*!
+ * \brief UtilGetOdrDirectoryPath Fetches the absolute path to where OpenDRIVE files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetOdrDirectoryPath(char *path, size_t pathLen) {
+	if (pathLen > MAX_FILE_PATH) {
+		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		path[0] = '\0';
+		return;
+	}
+	UtilGetTestDirectoryPath(path, pathLen);
+	strcat(path, OPENDRIVE_DIR_NAME);
+	strcat(path, "/");
+}
+
+/*!
+ * \brief UtilGetOscDirectoryPath Fetches the absolute path to where OpenSCENARIO files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetOscDirectoryPath(char *path, size_t pathLen) {
+	if (pathLen > MAX_FILE_PATH) {
+		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		path[0] = '\0';
+		return;
+	}
+	UtilGetTestDirectoryPath(path, pathLen);
+	strcat(path, OPENSCENARION_DIR_NAME);
+	strcat(path, "/");
+}
+
+
+/*!
  * \brief UtilGetGeofenceDirectoryPath Fetches the absolute path to where geofence files
  * are stored, ending with a forward slash.
  * \param path Char array to hold the path

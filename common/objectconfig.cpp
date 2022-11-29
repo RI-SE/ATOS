@@ -47,9 +47,14 @@ void ObjectConfig::parseConfigurationFile(
 
 	char setting[100];
 	int result;
-	char path[MAX_FILE_PATH];
+	char trajDirPath[MAX_FILE_PATH];
+	char odrDirPath[MAX_FILE_PATH];
+	char oscDirPath[MAX_FILE_PATH];
 
-	UtilGetTrajDirectoryPath(path, sizeof (path));
+	UtilGetTrajDirectoryPath(trajDirPath, sizeof (trajDirPath));
+	UtilGetOdrDirectoryPath(odrDirPath, sizeof (odrDirPath));
+	UtilGetOscDirectoryPath(oscDirPath, sizeof (oscDirPath));
+
 
 	// Get IP setting
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_IP, objectFile.c_str(),
@@ -100,7 +105,7 @@ void ObjectConfig::parseConfigurationFile(
 		throw std::invalid_argument("Cannot find trajectory setting in file " + objectFile.string());
 	}
 
-	fs::path trajFile(std::string(path) + std::string(setting));
+	fs::path trajFile(std::string(trajDirPath) + std::string(setting));
 	if (!fs::exists(trajFile.string())) {
 		throw std::invalid_argument("Configured trajectory file " + std::string(setting)
 									+ " in file " + objectFile.string() + " not found");
@@ -116,7 +121,7 @@ void ObjectConfig::parseConfigurationFile(
 		throw std::invalid_argument("Cannot find OpenDRIVE setting in file " + objectFile.string());
 	}
 
-	fs::path odrFile(std::string(path) + std::string(setting));
+	fs::path odrFile(std::string(odrDirPath) + std::string(setting));
 	if (!fs::exists(odrFile.string())) {
 		throw std::invalid_argument("Configured OpenDRIVE file " + std::string(setting)
 									+ " in file " + objectFile.string() + " not found");
@@ -131,7 +136,7 @@ void ObjectConfig::parseConfigurationFile(
 		throw std::invalid_argument("Cannot find OpenSCENARIO setting in file " + objectFile.string());
 	}
 
-	fs::path oscFile(std::string(path) + std::string(setting));
+	fs::path oscFile(std::string(oscDirPath) + std::string(setting));
 	if (!fs::exists(oscFile.string())) {
 		throw std::invalid_argument("Configured OpenSCENARIO file " + std::string(setting)
 									+ " in file " + objectFile.string() + " not found");
