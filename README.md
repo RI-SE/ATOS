@@ -1,34 +1,45 @@
 # Maestro 
 <img align="left" width="100" height="100" src="/doc/MaestroServer.svg">
 
-The Maestro server is a communication hub for all test objects. The server monitors and controls the test objects and is also responsible for creating logfiles.
+The Maestro server is a communication hub for all test objects. The server monitors and controls the test objects and is also responsible for creating logfiles. To build Maestro follow the guide below.
 
 <br />
 <br />
 
 
-To build Maestro follow the guide below.
+# Table of contents
+- [Maestro](#maestro)
+- [Table of contents](#table-of-contents)
+- [ Building Maestro with colcon](#-building-maestro-with-colcon)
+  - [ Dependencies \& external libraries](#-dependencies--external-libraries)
+    - [ Installing OpenSimulationInterface v3.4.0](#-installing-opensimulationinterface-v340)
+    - [ Installing maestro-interfaces](#-installing-maestro-interfaces)
+    - [ Installing ad-xolib](#-installing-ad-xolib)
+  - [ Installing ROS2 and building for the first time with colcon](#-installing-ros2-and-building-for-the-first-time-with-colcon)
+    - [ Ubuntu 20.04](#-ubuntu-2004)
+- [ Optional builds \& installations](#-optional-builds--installations)
+    - [ Installation via dpkg](#-installation-via-dpkg)
+  - [ Building the server with CITS module and mqtt](#-building-the-server-with-cits-module-and-mqtt)
+  - [ How to build with RelativeKinematics instead of ObjectControl](#-how-to-build-with-relativekinematics-instead-of-objectcontrol)
 
-
-## How to build and run the server
+# <a name="maestro"></a> Building Maestro with colcon
+Below are the steps for building Maestro for the first time with colcon.
 
 Prerequisites: C/C++ compiler, CMake (minimum version 3.10.2)
 
-**Ubuntu**
-
-Make sure to have an updated package index (apt update).
-
-##### Dependencies (required)
-
-Install necessary development packages:
-
-```sh
+## <a name="dependencies"></a> Dependencies & external libraries
+In order to build Maestro, dependencies and exernal libraries need to be installed. First install the necessary development packages:
+```
 sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev
 ```
 
-Install OpenSimulationInterface v3.4.0 (see [https://github.com/OpenSimulationInterface](https://github.com/OpenSimulationInterface/open-simulation-interface#installation)):
+Then, the following external libraries need to be installed:
+- [OpenSimulationInterface v3.4.0](https://github.com/OpenSimulationInterface/open-simulation-interface)
+- [maestro-interfaces](https://github.com/RI-SE/maestro-interfaces)
+- [ad-xolib](https://github.com/javedulu/ad-xolib)
 
-```sh
+### <a name="osi"></a> Installing OpenSimulationInterface v3.4.0
+```
 git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git -b v3.4.0
 cd open-simulation-interface
 mkdir build
@@ -37,99 +48,104 @@ cmake ..
 make
 sudo make install
 ```
+Make sure that the linker knows where OpenSimulationInterface is located:
+```
+echo /usr/local/lib/osi3 > /etc/ld.so.conf.d/osi3.conf
+sudo ldconfig
+```
 
-##### Dependencies (optional)
-Install SWIG:
+### <a name="maestro-interfaces"></a> Installing maestro-interfaces
+```
+git clone https://github.com/RI-SE/maestro-interfaces
+```
 
-See https://github.com/RI-SE/iso22133#readme
+
+### <a name="ad-xolib"></a> Installing ad-xolib
+```
+git clone https://github.com/javedulu/ad-xolib.git
+cd ad-xolib
+git submodule update --init --recursive
+mkdir build
+cd build
+cmake .. -DBUILD_EMBED_TARGETS=OFF
+make
+sudo make install
+sudo ldconfig
+```
 
 
-##### Build and run the server
-
-Clone the repo and make sure you run the following command to update all submodules:
-
-```sh
+## <a name="ros2"></a> Installing ROS2 and building for the first time with colcon
+### <a name="ubuntu-20.04"></a> Ubuntu 20.04
+clone Maestro in your git folder, and make sure that all submodules are present and up to date:
+```
+git clone https://github.com/RI-SE/Maestro.git
+cd Maestro
 git submodule update --init --recursive
 ```
 
-Navigate to the the repo and enter the build directory 
-
-```sh
-mkdir build && cd build
+Download prerequisites:
 ```
-create project
-```sh
-cmake ..
+sudo apt update && sudo apt install curl gnupg2 lsb-release
 ```
-
-make the project and install (requires superuser privileges). This will create required directories for logs, configuration files etc.:
-```sh
-make && sudo make install
+Authorize the ros2 gpg key with apt:
+```sudo apt update && sudo apt install curl gnupg2 lsb-release
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key  -o /usr/share/keyrings/ros-archive-keyring.gpg
 ```
-
-Start the server
-```sh
-bin/Core
+Add the ROS2 repo to sources list:
+```
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(source /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+```
+Install ros foxy for desktop and colcon
+```
+sudo apt update
+sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs
 ```
 
-To get debug printouts, add the verbose option when running:
+source the setup script:
 ```
-bin/Core -v
+source /opt/ros/foxy/setup.bash
+```
+Add the above line to ~/.bashrc or similar startup script to automate this process.
+
+Create a workspace:
+```
+mkdir -p ~/maestro_ws/src
 ```
 
-To run one or several of the modules along with Core, either run them in a separate terminal after starting Core (with the required number of additional message queue slots with `-m`):
+Create symlinks to maestro and maestro_interfaces
 ```
-# Core binary
-bin/Core -m 2
-# Module binaries in new terminals
-bin/RelativeKinematics
-bin/Visualization
+ln -s path/to/Maestro ~/maestro_ws/src/maestro
+ln -s path/to/maestro-interfaces ~/maestro_ws/src/maestro_interfaces
 ```
 
-or, modify the runServer.sh script by adding the modules you wish to execute in the variable near the top. Then run the script from the top level directory:
-```sh
-./runServer.sh
+Change directory into the workspace and build
 ```
-To see which modules are available, check the build output inside the ```build/bin``` directory
-
-### Installation
-To install the server (recommended) navigate to the build directory and configure the project:
-```sh
-cd build
-cmake ..
-```
-then build and install the server (be aware that this requires superuser privileges)
-```sh
-sudo make install
+cd ~/maestro_ws
+colcon build
 ```
 
-### Installation via dpkg
-First install dependencies
-```sh
-sudo apt install libsystemd-dev libprotobuf-dev libeigen3-dev
+Source the project setup file:
 ```
-then navigate to the .deb file and install it
+source ~/maestro_ws/install/setup.bash
+```
+Also add the above line to ~/.bashrc or similar.
+
+Launch Maestro
+```
+ros2 launch maestro maestro_launch.py
+```
+
+# <a name="optional-builds--installations"></a> Optional builds & installations
+Maestro can be installed in alternative ways, and built with support for various optional modules, described here.
+
+### <a name="installation-dpkg"></a> Installation via dpkg
+Navigate to the .deb file and install it
 ```sh
 sudo dpkg -i Maestro-x.x.x-Linux.deb
 ```
 on first install, it is necessary to reboot to reload groups
 
-## Troubleshooting
-The command
-```sh
-groups
-```
-should show the current user belonging to the maestro group, and
-```sh
-mount -l | grep -E "(shm|mqueue)"
-```
-should show two mount points on /dev/shm and /dev/mqueue. The directory
-```sh
-ls -lad /var/log/maestro
-```
-should be owned by the maestro group.
-
-## Building the server with CITS module and mqtt
+## <a name="build-cits-mqtt"></a> Building the server with CITS module and mqtt
 
 The CITS module uses PAHO MQTT, which can be found through the following link:
 https://www.eclipse.org/paho/
@@ -161,117 +177,25 @@ make
 sudo make install
 ```
 
-The server will not build the CITS module by default. This is to prevent the use of the CITS module when it is not necessary. To enable building of the module, run `cmake` from the `build/` directory
+The server will not build the CITS module by default. This is to prevent the use of the CITS module when it is not necessary. To enable building of the module issue the following command
 ```sh
-cmake "Unix Makefiles" -DUSE_CITS:BOOL=TRUE ..
+colcon build --cmake-args -DUSE_CITS:BOOL=TRUE ..
 ```
 then you can build and run the server as normal
+
+To disable the CITS module, rebuild as follows
 ```sh
-make && cd bin
-./Core
+colcon build --cmake-args -DUSE_CITS:BOOL=FALSE ..
 ```
 
-To disable the CITS module, remake the `cmake` procedure
+## <a name="relativekinematics"></a> How to build with RelativeKinematics instead of ObjectControl
+
+The server will build the ObjectControl with AbsolutKinematics by default. It's possible to build with RelativeKinematics support by rebuilding with the argument -DWITH_RELATIVE_KINEMATICS=ON, see following command
 ```sh
-cmake "Unix Makefiles" -DUSE_CITS:BOOL=FALSE ..
+colcon build --cmake-args -DWITH_RELATIVE_KINEMATICS=ON
 ```
-
-## How to build with RelativeKinematics instead of ObjectControl
-
-The server will build ObjectControl thread in Core by default. It's possible to replace ObjectControl with the RelativeKinematics module remaking the `cmake` procedure with the argument -DWITH_RELATIVE_KINEMATICS=ON, see following command
+To include ObjectControl in the build again run the same command with OFF, as follows
 ```sh
-cmake .. -DWITH_RELATIVE_KINEMATICS=ON
-```
-To include ObjectControl in the build again run the same command with OFF, see following command
-```sh
-cmake .. -DWITH_RELATIVE_KINEMATICS=OFF
-```
-
-## Installing ad-xolib
-Clone, build, and install the library
-```
-git clone https://github.com/javedulu/ad-xolib.git
-cd ad-xolib
-git submodule update --init --recursive
-mkdir build
-cd build
-cmake .. -DBUILD_EMBED_TARGETS=OFF
-make
-sudo make install
-sudo ldconfig
-```
-
-## Installing ROS2 and building for the first time with colcon
-### Ubuntu 20.04
-clone Maestro in your git folder, and make sure that all submodules are present and up to date:
-```
-git clone https://github.com/RI-SE/Maestro.git
-cd Maestro
-git submodule update --init --recursive
-```
-
-Download prerequisites:
-```
-sudo apt update && sudo apt install curl gnupg2 lsb-release
-```
-Authorize the ros2 gpg key with apt:
-```sudo apt update && sudo apt install curl gnupg2 lsb-release
-sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key  -o /usr/share/keyrings/ros-archive-keyring.gpg
-```
-Add the ROS2 repo to sources list:
-```
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(source /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
-```
-Install ros foxy for desktop and colcon
-```
-sudo apt update
-sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs
-```
-
-clone maestro-interfaces from github to your git folder:
-```
-git clone https://github.com/RI-SE/maestro-interfaces
-```
-
-Install opensimulation interface as above, and then make sure that the linker knows where it is located:
-```
-echo /usr/local/lib/osi3 > /etc/ld.so.conf.d/osi3.conf
-sudo ldconfig
-```
-
-Install ad-xolib as above. 
-
-source the setup script:
-```
-source /opt/ros/foxy/setup.bash
-```
-Add the above line to ~/.bashrc or similar startup script to automate this process.
-
-Create a workspace:
-```
-mkdir -p ~/dev_ws/src
-```
-Create symlinks to maestro and maestro_interfaces
-
-```
-ln -s path/to/Maestro ~/dev_ws/src/maestro
-ln -s path/to/maestro-interfaces ~/dev_ws/src/maestro_interfaces
-```
-
-Change directory into the workspace and build
-```
-cd ~/dev_ws
-colcon build
-```
-
-Source the project setup file:
-```
-source ~/dev_ws/install/setup.bash
-```
-Also add the above line to ~/.bashrc or similar.
-
-Launch Maestro
-```
-ros2 launch maestro maestro_launch.py
+colcon build --cmake-args -DWITH_RELATIVE_KINEMATICS=OFF
 ```
 
