@@ -31,12 +31,14 @@ std::string ObjectConfig::toString() const {
 		idsString += std::to_string(id) + " ";
 	}
 
-	retval += "Object ID: " + std::to_string(transmitterID)
-			+ ", IP: " + ipAddr + ", Trajectory: " + trajectory.name.c_str()
-			+ ", Turning diameter: " + std::to_string(turningDiameter) + ", Max speed: " + std::to_string(maximumSpeed)
-			+ ", Object file: " + objectFile.filename().string() + ", Anchor: " + (isAnchorObject? "Yes":"No")
-			+ ", OSI compatible: " + (isOSICompatible? "Yes":"No")
-			+ ", Injection IDs: " + idsString;
+	retval += "\n Object ID: " + std::to_string(transmitterID)
+			+ "\n IP: " + ipAddr + "\n Trajectory: " + trajectory.name.c_str()
+			+ "\n OpenDRIVE: " + "PLACEHOLDER"
+			+ "\n OpenSCENARIO: " + "PLACEHOLDER"
+			+ "\n Turning diameter: " + std::to_string(turningDiameter) + "\n Max speed: " + std::to_string(maximumSpeed)
+			+ "\n Object file: " + objectFile.filename().string() + "\n Anchor: " + (isAnchorObject? "Yes":"No")
+			+ "\n OSI compatible: " + (isOSICompatible? "Yes":"No")
+			+ "\n Injection IDs: " + idsString;
 	return retval;
 }
 
