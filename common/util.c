@@ -54,6 +54,8 @@
 #define TRAJECTORY_DIR_NAME "traj"
 #define GEOFENCE_DIR_NAME "geofence"
 #define OBJECT_DIR_NAME "objects"
+#define OPENDRIVE_DIR_NAME "opendrive"
+#define OPENSCENARION_DIR_NAME "openscenario"
 
 /* Message priorities on message queue */
 // Abort message
