@@ -54,8 +54,8 @@
 #define TRAJECTORY_DIR_NAME "traj"
 #define GEOFENCE_DIR_NAME "geofence"
 #define OBJECT_DIR_NAME "objects"
-#define OPENDRIVE_DIR_NAME "opendrive"
-#define OPENSCENARION_DIR_NAME "openscenario"
+#define OPENDRIVE_DIR_NAME "odr"
+#define OPENSCENARION_DIR_NAME "osc"
 
 /* Message priorities on message queue */
 // Abort message
@@ -133,8 +133,8 @@ static const char ParameterNameMiscData[] = "MiscData";
 static const char ObjectSettingNameID[] = "ID";
 static const char ObjectSettingNameIP[] = "IP";
 static const char ObjectSettingNameTraj[] = "traj";
-static const char ObjectSettingNameOpendrive[] = "opendrive";
-static const char ObjectSettingNameOpenscenario[] = "openscenario";
+static const char ObjectSettingNameOpendrive[] = "odr";
+static const char ObjectSettingNameOpenscenario[] = "osc";
 static const char ObjectSettingNameIsAnchor[] = "isAnchor";
 static const char ObjectSettingNameInjectorIDs[] = "injectorIDs";
 static const char ObjectSettingNameLatitude[] = "originLatitude";

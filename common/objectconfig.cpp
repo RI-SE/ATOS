@@ -110,10 +110,34 @@ void ObjectConfig::parseConfigurationFile(
 	LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectory.points.size());
 
 	// Get opendrive file setting
-	// TO DO
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_OPENDRIVE, objectFile.c_str(),
+								objectFile.string().length(),
+								setting, sizeof(setting)) == -1) {
+		throw std::invalid_argument("Cannot find OpenDRIVE setting in file " + objectFile.string());
+	}
+
+	fs::path odrFile(std::string(path) + std::string(setting));
+	if (!fs::exists(odrFile.string())) {
+		throw std::invalid_argument("Configured OpenDRIVE file " + std::string(setting)
+									+ " in file " + objectFile.string() + " not found");
+	}
+	this->opendriveFile = odrFile;
+	this->opendrivePlaceholder = std::string(setting);
 
 	// Get openscenario file setting
-	// TO DO
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_OPENSCENARIO, objectFile.c_str(),
+								objectFile.string().length(),
+								setting, sizeof(setting)) == -1) {
+		throw std::invalid_argument("Cannot find OpenSCENARIO setting in file " + objectFile.string());
+	}
+
+	fs::path oscFile(std::string(path) + std::string(setting));
+	if (!fs::exists(oscFile.string())) {
+		throw std::invalid_argument("Configured OpenSCENARIO file " + std::string(setting)
+									+ " in file " + objectFile.string() + " not found");
+	}
+	this->openscenarioFile = oscFile;
+	this->openscenarioPlaceholder = std::string(setting);
 
 
 	// Get origin settings
