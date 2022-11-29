@@ -8,23 +8,24 @@ The Maestro server is a communication hub for all test objects. The server monit
 
 
 # Table of contents
-- [Bulding Maestro with colcon](#maestro)
-  - [Dependencies & external libraries](#dependencies)
-    - [Installing OpenSimulationInterface v3.4.0](#osi)
-    - [Installing maestro-interfaces](#maestro-interfaces)
-    - [Installing ad-xolib](#ad-xolib)
-  - [Installing ROS2 and building for the first time with colcon](#ros2)
-    - [Ubuntu 20.04](#ubuntu-20.04)
-- [Other builds & installations](#other-installations)
-   - [How to build and run the server](#build-run-server)
-     - [Installation](#server-installation)
-     - [Installation via dpkg](#installation-dpkg)
-   - [Troubleshooting](#troubleshooting)
-   - [Building the server with CITS module and mqtt](#build-cits-mqtt)
-   - [How to build with RelativeKinematics instead of ObjectControl](#relativekinematics)
+- [Maestro](#maestro)
+- [Table of contents](#table-of-contents)
+- [ Building Maestro with colcon](#-building-maestro-with-colcon)
+  - [ Dependencies \& external libraries](#-dependencies--external-libraries)
+    - [ Installing OpenSimulationInterface v3.4.0](#-installing-opensimulationinterface-v340)
+    - [ Installing maestro-interfaces](#-installing-maestro-interfaces)
+    - [ Installing ad-xolib](#-installing-ad-xolib)
+  - [ Installing ROS2 and building for the first time with colcon](#-installing-ros2-and-building-for-the-first-time-with-colcon)
+    - [ Ubuntu 20.04](#-ubuntu-2004)
+- [ Optional builds \& installations](#-optional-builds--installations)
+    - [ Installation via dpkg](#-installation-via-dpkg)
+  - [ Building the server with CITS module and mqtt](#-building-the-server-with-cits-module-and-mqtt)
+  - [ How to build with RelativeKinematics instead of ObjectControl](#-how-to-build-with-relativekinematics-instead-of-objectcontrol)
 
 # <a name="maestro"></a> Building Maestro with colcon
 Below are the steps for building Maestro for the first time with colcon.
+
+Prerequisites: C/C++ compiler, CMake (minimum version 3.10.2)
 
 ## <a name="dependencies"></a> Dependencies & external libraries
 In order to build Maestro, dependencies and exernal libraries need to be installed. First install the necessary development packages:
@@ -46,6 +47,11 @@ cd build
 cmake ..
 make
 sudo make install
+```
+Make sure that the linker knows where OpenSimulationInterface is located:
+```
+echo /usr/local/lib/osi3 > /etc/ld.so.conf.d/osi3.conf
+sudo ldconfig
 ```
 
 ### <a name="maestro-interfaces"></a> Installing maestro-interfaces
@@ -95,12 +101,6 @@ sudo apt update
 sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs
 ```
 
-Make sure that the linker knows where OpenSimulationInterface is located:
-```
-echo /usr/local/lib/osi3 > /etc/ld.so.conf.d/osi3.conf
-sudo ldconfig
-```
-
 source the setup script:
 ```
 source /opt/ros/foxy/setup.bash
@@ -135,127 +135,14 @@ Launch Maestro
 ros2 launch maestro maestro_launch.py
 ```
 
-# <a name="other-installations"></a> Other builds & installations
-Listed below are other types of builds and installations.
-
-## <a name="build-run-server"></a> How to build and run the server
-
-Prerequisites: C/C++ compiler, CMake (minimum version 3.10.2)
-
-##### Ubuntu
-
-Make sure to have an updated package index (apt update).
-
-##### Dependencies (required)
-
-Install necessary development packages:
-
-```sh
-sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev
-```
-
-Install OpenSimulationInterface v3.4.0 (see [https://github.com/OpenSimulationInterface](https://github.com/OpenSimulationInterface/open-simulation-interface#installation)):
-
-```sh
-git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git -b v3.4.0
-cd open-simulation-interface
-mkdir build
-cd build
-cmake ..
-make
-sudo make install
-```
-
-##### Dependencies (optional)
-Install SWIG:
-
-See https://github.com/RI-SE/iso22133#readme
-
-
-##### Build and run the server
-
-Clone the repo and make sure you run the following command to update all submodules:
-
-```sh
-git submodule update --init --recursive
-```
-
-Navigate to the the repo and enter the build directory 
-
-```sh
-mkdir build && cd build
-```
-create project
-```sh
-cmake ..
-```
-
-make the project and install (requires superuser privileges). This will create required directories for logs, configuration files etc.:
-```sh
-make && sudo make install
-```
-
-Start the server
-```sh
-bin/Core
-```
-
-To get debug printouts, add the verbose option when running:
-```
-bin/Core -v
-```
-
-To run one or several of the modules along with Core, either run them in a separate terminal after starting Core (with the required number of additional message queue slots with `-m`):
-```
-# Core binary
-bin/Core -m 2
-# Module binaries in new terminals
-bin/RelativeKinematics
-bin/Visualization
-```
-
-or, modify the runServer.sh script by adding the modules you wish to execute in the variable near the top. Then run the script from the top level directory:
-```sh
-./runServer.sh
-```
-To see which modules are available, check the build output inside the ```build/bin``` directory
-
-### <a name="server-installation"></a> Installation
-To install the server (recommended) navigate to the build directory and configure the project:
-```sh
-cd build
-cmake ..
-```
-then build and install the server (be aware that this requires superuser privileges)
-```sh
-sudo make install
-```
+# <a name="optional-builds--installations"></a> Optional builds & installations
 
 ### <a name="installation-dpkg"></a> Installation via dpkg
-First install dependencies
-```sh
-sudo apt install libsystemd-dev libprotobuf-dev libeigen3-dev
-```
 then navigate to the .deb file and install it
 ```sh
 sudo dpkg -i Maestro-x.x.x-Linux.deb
 ```
 on first install, it is necessary to reboot to reload groups
-
-## <a name="troubleshooting"></a> Troubleshooting
-The command
-```sh
-groups
-```
-should show the current user belonging to the maestro group, and
-```sh
-mount -l | grep -E "(shm|mqueue)"
-```
-should show two mount points on /dev/shm and /dev/mqueue. The directory
-```sh
-ls -lad /var/log/maestro
-```
-should be owned by the maestro group.
 
 ## <a name="build-cits-mqtt"></a> Building the server with CITS module and mqtt
 
@@ -289,29 +176,25 @@ make
 sudo make install
 ```
 
-The server will not build the CITS module by default. This is to prevent the use of the CITS module when it is not necessary. To enable building of the module, run `cmake` from the `build/` directory
+The server will not build the CITS module by default. This is to prevent the use of the CITS module when it is not necessary. To enable building of the module issue the following command
 ```sh
-cmake "Unix Makefiles" -DUSE_CITS:BOOL=TRUE ..
+colcon build --cmake-args -DUSE_CITS:BOOL=TRUE ..
 ```
 then you can build and run the server as normal
-```sh
-make && cd bin
-./Core
-```
 
-To disable the CITS module, remake the `cmake` procedure
+To disable the CITS module, rebuild as follows
 ```sh
-cmake "Unix Makefiles" -DUSE_CITS:BOOL=FALSE ..
+colcon build --cmake-args -DUSE_CITS:BOOL=FALSE ..
 ```
 
 ## <a name="relativekinematics"></a> How to build with RelativeKinematics instead of ObjectControl
 
-The server will build ObjectControl thread in Core by default. It's possible to replace ObjectControl with the RelativeKinematics module remaking the `cmake` procedure with the argument -DWITH_RELATIVE_KINEMATICS=ON, see following command
+The server will build the ObjectControl with AbsolutKinematics by default. It's possible to build with RelativeKinematics support by rebuilding with the argument -DWITH_RELATIVE_KINEMATICS=ON, see following command
 ```sh
-cmake .. -DWITH_RELATIVE_KINEMATICS=ON
+colcon build --cmake-args -DWITH_RELATIVE_KINEMATICS=ON
 ```
-To include ObjectControl in the build again run the same command with OFF, see following command
+To include ObjectControl in the build again run the same command with OFF, as follows
 ```sh
-cmake .. -DWITH_RELATIVE_KINEMATICS=OFF
+colcon build --cmake-args -DWITH_RELATIVE_KINEMATICS=OFF
 ```
 
