@@ -49,7 +49,7 @@
 #define TEST_DIR_ENV_VARIABLE_NAME "MAESTRO_TEST_DIR"
 #define SYSCONF_DIR_NAME "/etc"
 #define JOURNAL_DIR_NAME "journal"
-#define MAESTRO_TEST_DIR_NAME ".maestro"
+#define MAESTRO_TEST_DIR_NAME ".astazero/maestro"
 #define CONFIGURATION_DIR_NAME "conf"
 #define TRAJECTORY_DIR_NAME "traj"
 #define GEOFENCE_DIR_NAME "geofence"
@@ -2435,7 +2435,9 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		GEOFENCE_DIR_NAME,
 		JOURNAL_DIR_NAME,
 		TRAJECTORY_DIR_NAME,
-		OBJECT_DIR_NAME
+		OBJECT_DIR_NAME,
+		OPENDRIVE_DIR_NAME,
+		OPENSCENARION_DIR_NAME
 	};
 	char *envVar;
 	int result;
