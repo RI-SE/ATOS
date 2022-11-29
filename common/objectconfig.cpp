@@ -107,6 +107,13 @@ void ObjectConfig::parseConfigurationFile(
 	this->trajectory.initializeFromFile(setting);
 	LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectory.points.size());
 
+	// Get opendrive file setting
+	// TO DO
+
+	// Get openscenario file setting
+	// TO DO
+
+
 	// Get origin settings
 	this->origin = {};
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_ORIGIN_LATITUDE, objectFile.c_str(),
