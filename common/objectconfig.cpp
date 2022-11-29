@@ -33,8 +33,8 @@ std::string ObjectConfig::toString() const {
 
 	retval += "\n Object ID: " + std::to_string(transmitterID)
 			+ "\n IP: " + ipAddr + "\n Trajectory: " + trajectory.name.c_str()
-			+ "\n OpenDRIVE: " + "PLACEHOLDER"
-			+ "\n OpenSCENARIO: " + "PLACEHOLDER"
+			+ "\n OpenDRIVE: " + opendrivePlaceholder
+			+ "\n OpenSCENARIO: " + openscenarioPlaceholder
 			+ "\n Turning diameter: " + std::to_string(turningDiameter) + "\n Max speed: " + std::to_string(maximumSpeed)
 			+ "\n Object file: " + objectFile.filename().string() + "\n Anchor: " + (isAnchorObject? "Yes":"No")
 			+ "\n OSI compatible: " + (isOSICompatible? "Yes":"No")
