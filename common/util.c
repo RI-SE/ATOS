@@ -133,6 +133,8 @@ static const char ParameterNameMiscData[] = "MiscData";
 static const char ObjectSettingNameID[] = "ID";
 static const char ObjectSettingNameIP[] = "IP";
 static const char ObjectSettingNameTraj[] = "traj";
+static const char ObjectSettingNameOpendrive[] = "opendrive";
+static const char ObjectSettingNameOpenscenario[] = "openscenario";
 static const char ObjectSettingNameIsAnchor[] = "isAnchor";
 static const char ObjectSettingNameInjectorIDs[] = "injectorIDs";
 static const char ObjectSettingNameLatitude[] = "originLatitude";
@@ -3993,6 +3995,12 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 	case OBJECT_SETTING_TRAJ:
 		outputString = ObjectSettingNameTraj;
 		break;
+	case OBJECT_SETTING_OPENDRIVE:
+		outputString = ObjectSettingNameOpendrive;
+		break;
+	case OBJECT_SETTING_OPENSCENARIO:
+		outputString = ObjectSettingNameOpenscenario;
+		break;	
 	case OBJECT_SETTING_IS_ANCHOR:
 		outputString = ObjectSettingNameIsAnchor;
 		break;
