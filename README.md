@@ -136,9 +136,10 @@ ros2 launch maestro maestro_launch.py
 ```
 
 # <a name="optional-builds--installations"></a> Optional builds & installations
+Maestro can be installed in alternative ways, and built with support for various optional modules, described here.
 
 ### <a name="installation-dpkg"></a> Installation via dpkg
-then navigate to the .deb file and install it
+Navigate to the .deb file and install it
 ```sh
 sudo dpkg -i Maestro-x.x.x-Linux.deb
 ```
