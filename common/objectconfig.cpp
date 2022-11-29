@@ -33,8 +33,8 @@ std::string ObjectConfig::toString() const {
 
 	retval += "\n Object ID: " + std::to_string(transmitterID)
 			+ "\n IP: " + ipAddr + "\n Trajectory: " + trajectory.name.c_str()
-			+ "\n OpenDRIVE: " + opendrivePlaceholder
-			+ "\n OpenSCENARIO: " + openscenarioPlaceholder
+			+ "\n OpenDRIVE: " + opendriveFile.filename().string().c_str()
+			+ "\n OpenSCENARIO: " + openscenarioFile.filename().string().c_str()
 			+ "\n Turning diameter: " + std::to_string(turningDiameter) + "\n Max speed: " + std::to_string(maximumSpeed)
 			+ "\n Object file: " + objectFile.filename().string() + "\n Anchor: " + (isAnchorObject? "Yes":"No")
 			+ "\n OSI compatible: " + (isOSICompatible? "Yes":"No")
@@ -101,49 +101,43 @@ void ObjectConfig::parseConfigurationFile(
 	// Get trajectory file setting
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_TRAJ, objectFile.c_str(),
 								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find trajectory setting in file " + objectFile.string());
-	}
+								 setting, sizeof (setting)) == 0) {
 
-	fs::path trajFile(std::string(trajDirPath) + std::string(setting));
-	if (!fs::exists(trajFile.string())) {
-		throw std::invalid_argument("Configured trajectory file " + std::string(setting)
-									+ " in file " + objectFile.string() + " not found");
+		fs::path trajFile(std::string(trajDirPath) + std::string(setting));
+		if (!fs::exists(trajFile.string())) {
+			throw std::invalid_argument("Configured trajectory file " + std::string(setting)
+										+ " in file " + objectFile.string() + " not found");
+		}
+		this->trajectoryFile = trajFile;
+		this->trajectory.initializeFromFile(setting);
+		LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectory.points.size());
 	}
-	this->trajectoryFile = trajFile;
-	this->trajectory.initializeFromFile(setting);
-	LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectory.points.size());
 
 	// Get opendrive file setting
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_OPENDRIVE, objectFile.c_str(),
 								objectFile.string().length(),
-								setting, sizeof(setting)) == -1) {
-		throw std::invalid_argument("Cannot find OpenDRIVE setting in file " + objectFile.string());
-	}
+								setting, sizeof(setting)) == 0) {
 
-	fs::path odrFile(std::string(odrDirPath) + std::string(setting));
-	if (!fs::exists(odrFile.string())) {
-		throw std::invalid_argument("Configured OpenDRIVE file " + std::string(setting)
-									+ " in file " + objectFile.string() + " not found");
+		fs::path odrFile(std::string(odrDirPath) + std::string(setting));
+		if (!fs::exists(odrFile.string())) {
+			throw std::invalid_argument("Configured OpenDRIVE file " + std::string(setting)
+										+ " in file " + objectFile.string() + " not found");
+		}
+		this->opendriveFile = odrFile;
 	}
-	this->opendriveFile = odrFile;
-	this->opendrivePlaceholder = std::string(setting);
-
+	
 	// Get openscenario file setting
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_OPENSCENARIO, objectFile.c_str(),
 								objectFile.string().length(),
-								setting, sizeof(setting)) == -1) {
-		throw std::invalid_argument("Cannot find OpenSCENARIO setting in file " + objectFile.string());
-	}
+								setting, sizeof(setting)) == 0) {
 
-	fs::path oscFile(std::string(oscDirPath) + std::string(setting));
-	if (!fs::exists(oscFile.string())) {
-		throw std::invalid_argument("Configured OpenSCENARIO file " + std::string(setting)
-									+ " in file " + objectFile.string() + " not found");
+		fs::path oscFile(std::string(oscDirPath) + std::string(setting));
+		if (!fs::exists(oscFile.string())) {
+			throw std::invalid_argument("Configured OpenSCENARIO file " + std::string(setting)
+										+ " in file " + objectFile.string() + " not found");
+		}
+		this->openscenarioFile = oscFile;
 	}
-	this->openscenarioFile = oscFile;
-	this->openscenarioPlaceholder = std::string(setting);
-
 
 	// Get origin settings
 	this->origin = {};

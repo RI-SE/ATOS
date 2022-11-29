@@ -56,8 +56,6 @@ private:
 	bool hasMaximumSpeed = false;
 	GeographicPositionType origin;
 	Trajectory trajectory;
-	std::string opendrivePlaceholder = "TO DO"; // this will be somthing else, depending on how we implement the parsing of opendrive
-	std::string openscenarioPlaceholder = "TO DO"; // this will be somthing else, depending on how we implement the parsing of openscenario
 	uint32_t transmitterID = 0;
 	bool turningDiameterKnown = false;
 	double turningDiameter = 0;
