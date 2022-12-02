@@ -30,6 +30,6 @@ private:
 	static void InitializeEsmini(std::string& oscFilePath);
 	
 	static std::shared_ptr<EsminiAdapter> me;
-	static std::map<int, int> objectIdToIndex;
+	static std::unordered_map<int, int> objectIdToIndex;
 
 };

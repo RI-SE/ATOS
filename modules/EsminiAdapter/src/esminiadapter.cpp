@@ -9,7 +9,7 @@
 using namespace ROSChannels;
 
 std::shared_ptr<EsminiAdapter> EsminiAdapter::me = NULL;
-std::map<int,int> EsminiAdapter::objectIdToIndex = std::map<int, int>();
+std::unordered_map<int,int> EsminiAdapter::objectIdToIndex = std::unordered_map<int, int>();
 
 /*!
  * \brief Creates an instance and initialize esmini if none exists, otherwise returns the existing instance.
