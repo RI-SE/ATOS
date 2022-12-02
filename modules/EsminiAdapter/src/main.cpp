@@ -1,6 +1,5 @@
 #include "esminiadapter.hpp"
 
-using namespace std::chrono;
 
 static std::shared_ptr<EsminiAdapter> esminiAdapter;
 
