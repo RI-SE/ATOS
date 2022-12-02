@@ -1,10 +1,8 @@
-#include <vector>
 #include "esminiadapter.hpp"
 #include "esmini/esminiLib.hpp"
 #include "esmini/esminiRMLib.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
-#include <functional>
 
 #include "datadictionary.h"
 
@@ -20,10 +18,23 @@ std::map<int,int> EsminiAdapter::objectIdToIndex = std::map<int, int>();
 std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 	if (me == nullptr) {
 		me = std::shared_ptr<EsminiAdapter>(new EsminiAdapter());
-		me->InitializeEsmini(oscFileName);
+		me->InitializeEsmini(oscFilePath);
 	}
 	return me;
 }
+
+EsminiAdapter::EsminiAdapter() : Module(moduleName) {
+	// Get the file path of xosc file
+	try{
+		char path[MAX_FILE_PATH];
+		UtilGetOscDirectoryPath(path, MAX_FILE_PATH);
+		oscFilePath = std::string(path) + oscFileName;
+	}
+	catch (std::exception& e) {
+		throw std::runtime_error("EsminiAdapter: Could not read xosc file path");
+	}
+}
+
 //! Message queue callbacks
 
 void EsminiAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {}
@@ -66,10 +77,11 @@ void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr 
 	double roll, pitch, yaw;
 	m.getRPY(roll, pitch, yaw);
 
-	auto pose = monr->pose.pose.position;
+	auto pos = monr->pose.pose.position;
 
 	// Reporting to Esmini
-	SE_ReportObjectPos(id, 0, pose.x, pose.y, pose.z, yaw, pitch, roll);
+	int timestamp = 0; // Not really used according to esmini documentation
+	SE_ReportObjectPos(id, timestamp, pos.x, pos.y, pos.z, yaw, pitch, roll);
 }
 
 
@@ -104,7 +116,8 @@ void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
 		me->objectIdToIndex[SE_GetId(j)] = j;
 	}
 
-	// 
+	// Extract trajectory data for each object
+	// TODO
 }
 
 /*!
