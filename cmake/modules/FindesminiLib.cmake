@@ -2,42 +2,42 @@
 # file Copyright.txt or https://cmake.org/licensing for details.
 
 #[=======================================================================[.rst:
-Findad-xolib
+FindesminiLib
 -------
 
-Finds the ad-xolib library.
+Finds the esminiLib library.
 
 Imported Targets
 ^^^^^^^^^^^^^^^^
 
 This module provides the following imported targets, if found:
 
-``ad-xolib::ad-xolib``
-  The ad-xolib library
+``esminiLib::esminiLib``
+  The esminiLib library
 
 Result Variables
 ^^^^^^^^^^^^^^^^
 
 This will define the following variables:
 
-``ad-xolib_FOUND``
-  True if the system has the ad-xolib library.
-``ad-xolib_VERSION``
-  The version of the ad-xolib library which was found.
-``ad-xolib_INCLUDE_DIRS``
-  Include directories needed to use ad-xolib.
-``ad-xolib_LIBRARIES``
-  Libraries needed to link to ad-xolib.
+``esminiLib_FOUND``
+  True if the system has the esminiLib library.
+``esminiLib_VERSION``
+  The version of the esminiLib library which was found.
+``esminiLib_INCLUDE_DIRS``
+  Include directories needed to use esminiLib.
+``esminiLib_LIBRARIES``
+  Libraries needed to link to esminiLib.
 
 Cache Variables
 ^^^^^^^^^^^^^^^
 
 The following cache variables may also be set:
 
-``ad-xolib_INCLUDE_DIR``
-  The directory containing ``xodr.h``, ``xosc.h`` etc..
-``ad-xolib_LIBRARY``
-  The path to the ad-xolib library.
+``esminiLib_INCLUDE_DIR``
+  The directory containing ``esminiLib.hpp``, ``esminiRMLib.hpp`` etc..
+``esminiLib_LIBRARY``
+  The path to the esminiLib library.
 
 #]=======================================================================]
 
