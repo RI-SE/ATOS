@@ -161,6 +161,8 @@ enum ObjectFileParameter {
 	OBJECT_SETTING_ID,
 	OBJECT_SETTING_IP,
 	OBJECT_SETTING_TRAJ,
+  OBJECT_SETTING_OPENDRIVE,
+  OBJECT_SETTING_OPENSCENARIO,
 	OBJECT_SETTING_IS_ANCHOR,
 	OBJECT_SETTING_INJECTOR_IDS,
 	OBJECT_SETTING_ORIGIN_LATITUDE,
@@ -651,6 +653,8 @@ void UtilGetTestDirectoryPath(char* path, size_t pathLen);
 void UtilGetJournalDirectoryPath(char* path, size_t pathLen);
 void UtilGetConfDirectoryPath(char* path, size_t pathLen);
 void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
+void UtilGetOdrDirectoryPath(char* path, size_t pathLen);
+void UtilGetOscDirectoryPath(char* path, size_t pathLen);
 void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
 void UtilGetObjectDirectoryPath(char* path, size_t pathLen);
 

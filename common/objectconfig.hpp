@@ -47,6 +47,8 @@ public:
 private:
 	fs::path objectFile;
 	fs::path trajectoryFile;
+	fs::path opendriveFile;
+	fs::path openscenarioFile;
 	bool isAnchorObject = false;
 	bool isOSICompatible = false;
 	in_addr_t remoteIP = 0;

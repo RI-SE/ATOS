@@ -49,11 +49,13 @@
 #define TEST_DIR_ENV_VARIABLE_NAME "MAESTRO_TEST_DIR"
 #define SYSCONF_DIR_NAME "/etc"
 #define JOURNAL_DIR_NAME "journal"
-#define MAESTRO_TEST_DIR_NAME ".maestro"
+#define MAESTRO_TEST_DIR_NAME ".astazero/maestro"
 #define CONFIGURATION_DIR_NAME "conf"
 #define TRAJECTORY_DIR_NAME "traj"
 #define GEOFENCE_DIR_NAME "geofence"
 #define OBJECT_DIR_NAME "objects"
+#define OPENDRIVE_DIR_NAME "odr"
+#define OPENSCENARION_DIR_NAME "osc"
 
 /* Message priorities on message queue */
 // Abort message
@@ -131,6 +133,8 @@ static const char ParameterNameMiscData[] = "MiscData";
 static const char ObjectSettingNameID[] = "ID";
 static const char ObjectSettingNameIP[] = "IP";
 static const char ObjectSettingNameTraj[] = "traj";
+static const char ObjectSettingNameOpendrive[] = "odr";
+static const char ObjectSettingNameOpenscenario[] = "osc";
 static const char ObjectSettingNameIsAnchor[] = "isAnchor";
 static const char ObjectSettingNameInjectorIDs[] = "injectorIDs";
 static const char ObjectSettingNameLatitude[] = "originLatitude";
@@ -2433,7 +2437,9 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		GEOFENCE_DIR_NAME,
 		JOURNAL_DIR_NAME,
 		TRAJECTORY_DIR_NAME,
-		OBJECT_DIR_NAME
+		OBJECT_DIR_NAME,
+		OPENDRIVE_DIR_NAME,
+		OPENSCENARION_DIR_NAME
 	};
 	char *envVar;
 	int result;
@@ -2629,6 +2635,41 @@ void UtilGetTrajDirectoryPath(char *path, size_t pathLen) {
 	strcat(path, TRAJECTORY_DIR_NAME);
 	strcat(path, "/");
 }
+
+/*!
+ * \brief UtilGetOdrDirectoryPath Fetches the absolute path to where OpenDRIVE files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetOdrDirectoryPath(char *path, size_t pathLen) {
+	if (pathLen > MAX_FILE_PATH) {
+		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		path[0] = '\0';
+		return;
+	}
+	UtilGetTestDirectoryPath(path, pathLen);
+	strcat(path, OPENDRIVE_DIR_NAME);
+	strcat(path, "/");
+}
+
+/*!
+ * \brief UtilGetOscDirectoryPath Fetches the absolute path to where OpenSCENARIO files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetOscDirectoryPath(char *path, size_t pathLen) {
+	if (pathLen > MAX_FILE_PATH) {
+		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		path[0] = '\0';
+		return;
+	}
+	UtilGetTestDirectoryPath(path, pathLen);
+	strcat(path, OPENSCENARION_DIR_NAME);
+	strcat(path, "/");
+}
+
 
 /*!
  * \brief UtilGetGeofenceDirectoryPath Fetches the absolute path to where geofence files
@@ -3989,6 +4030,12 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 	case OBJECT_SETTING_TRAJ:
 		outputString = ObjectSettingNameTraj;
 		break;
+	case OBJECT_SETTING_OPENDRIVE:
+		outputString = ObjectSettingNameOpendrive;
+		break;
+	case OBJECT_SETTING_OPENSCENARIO:
+		outputString = ObjectSettingNameOpenscenario;
+		break;	
 	case OBJECT_SETTING_IS_ANCHOR:
 		outputString = ObjectSettingNameIsAnchor;
 		break;
