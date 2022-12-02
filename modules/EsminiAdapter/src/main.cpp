@@ -1,5 +1,4 @@
 #include "esminiadapter.hpp"
-#include "util.h"
 
 using namespace std::chrono;
 
