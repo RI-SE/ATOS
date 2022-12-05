@@ -2458,33 +2458,43 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		LogMessage(LOG_LEVEL_INFO, "Using specified test directory %s", testDir);
 	}
 
-	// Check top level dir
-	dir = opendir(testDir);
-	if (dir) {
-		closedir(dir);
-	}
-	else if (errno == ENOENT) {
-		result = mkdir(testDir, 0755);
-		if (result < 0) {
-			LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", testDir);
+	char astazeroDir[MAX_FILE_PATH];
+	strcpy(astazeroDir, testDir);
+	astazeroDir[strlen(astazeroDir) - 8] = '\0';
+
+	char tryDirs[2][MAX_FILE_PATH];
+	strcpy(tryDirs[0], astazeroDir);
+	strcpy(tryDirs[1], testDir);
+
+	for (int i = 0; i < 2; ++i) {
+		// Check top level dir
+		dir = opendir(tryDirs[i]);
+		if (dir) {
+			closedir(dir);
+		}
+		else if (errno == ENOENT) {
+			result = mkdir(tryDirs[i], 0755);
+			if (result < 0) {
+				LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", tryDirs[i]);
+				return -1;
+			}
+		}
+		else if (errno == EACCES) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Permission to access top level test directory %s denied (please do not run me as root)",
+					   tryDirs[i]);
+			return -1;
+		}
+		else if (errno == ENOTDIR) {
+			LogMessage(LOG_LEVEL_ERROR, "Top level test directory %s is not a directory", tryDirs[i]);
+			return -1;
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR, "Error opening top level directory %s", tryDirs[i]);
 			return -1;
 		}
 	}
-	else if (errno == EACCES) {
-		LogMessage(LOG_LEVEL_ERROR,
-				   "Permission to access top level test directory %s denied (please do not run me as root)",
-				   testDir);
-		return -1;
-	}
-	else if (errno == ENOTDIR) {
-		LogMessage(LOG_LEVEL_ERROR, "Top level test directory %s is not a directory", testDir);
-		return -1;
-	}
-	else {
-		LogMessage(LOG_LEVEL_ERROR, "Error opening top level directory %s", testDir);
-		return -1;
-	}
-
+	
 	// Check so that all expected directories exist
 	strcat(testDir, "/");
 	for (unsigned int i = 0; i < sizeof (expectedDirs) / sizeof (expectedDirs[0]); ++i) {
