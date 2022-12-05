@@ -45,6 +45,8 @@
 #define SMALL_BUFFER_SIZE_128 128
 #define SMALL_BUFFER_SIZE_64 64
 
+#define MAESTRO_DIR_NAME_LEN 8
+
 // File paths
 #define TEST_DIR_ENV_VARIABLE_NAME "MAESTRO_TEST_DIR"
 #define SYSCONF_DIR_NAME "/etc"
@@ -2458,39 +2460,39 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		LogMessage(LOG_LEVEL_INFO, "Using specified test directory %s", testDir);
 	}
 
+	// Check top level dir and subdirectory
 	char astazeroDir[MAX_FILE_PATH];
 	strcpy(astazeroDir, testDir);
-	astazeroDir[strlen(astazeroDir) - 8] = '\0';
+	astazeroDir[strlen(astazeroDir) - MAESTRO_DIR_NAME_LEN] = '\0';
 
-	char tryDirs[2][MAX_FILE_PATH];
-	strcpy(tryDirs[0], astazeroDir);
-	strcpy(tryDirs[1], testDir);
+	char testEnvDirs[2][MAX_FILE_PATH];
+	strcpy(testEnvDirs[0], astazeroDir);
+	strcpy(testEnvDirs[1], testDir);
 
-	for (int i = 0; i < 2; ++i) {
-		// Check top level dir
-		dir = opendir(tryDirs[i]);
+	for (unsigned int i = 0; i < sizeof(testEnvDirs) / sizeof(testEnvDirs[0]); ++i) {
+		dir = opendir(testEnvDirs[i]);
 		if (dir) {
 			closedir(dir);
 		}
 		else if (errno == ENOENT) {
-			result = mkdir(tryDirs[i], 0755);
+			result = mkdir(testEnvDirs[i], 0755);
 			if (result < 0) {
-				LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", tryDirs[i]);
+				LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", testEnvDirs[i]);
 				return -1;
 			}
 		}
 		else if (errno == EACCES) {
 			LogMessage(LOG_LEVEL_ERROR,
 					   "Permission to access top level test directory %s denied (please do not run me as root)",
-					   tryDirs[i]);
+					   testEnvDirs[i]);
 			return -1;
 		}
 		else if (errno == ENOTDIR) {
-			LogMessage(LOG_LEVEL_ERROR, "Top level test directory %s is not a directory", tryDirs[i]);
+			LogMessage(LOG_LEVEL_ERROR, "Top level test directory %s is not a directory", testEnvDirs[i]);
 			return -1;
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Error opening top level directory %s", tryDirs[i]);
+			LogMessage(LOG_LEVEL_ERROR, "Error opening top level directory %s", testEnvDirs[i]);
 			return -1;
 		}
 	}
