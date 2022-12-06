@@ -2678,7 +2678,7 @@ void UtilGetOscDirectoryPath(char *path, size_t pathLen) {
 		return;
 	}
 	UtilGetTestDirectoryPath(path, pathLen);
-	strcat(path, OPENSCENARION_DIR_NAME);
+	strcat(path, OPENSCENARIO_DIR_NAME);
 	strcat(path, "/");
 }
 
