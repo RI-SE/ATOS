@@ -45,15 +45,19 @@
 #define SMALL_BUFFER_SIZE_128 128
 #define SMALL_BUFFER_SIZE_64 64
 
+#define MAESTRO_DIR_NAME_LEN 8
+
 // File paths
 #define TEST_DIR_ENV_VARIABLE_NAME "MAESTRO_TEST_DIR"
 #define SYSCONF_DIR_NAME "/etc"
 #define JOURNAL_DIR_NAME "journal"
-#define MAESTRO_TEST_DIR_NAME ".maestro"
+#define MAESTRO_TEST_DIR_NAME ".astazero/maestro"
 #define CONFIGURATION_DIR_NAME "conf"
 #define TRAJECTORY_DIR_NAME "traj"
 #define GEOFENCE_DIR_NAME "geofence"
 #define OBJECT_DIR_NAME "objects"
+#define OPENDRIVE_DIR_NAME "odr"
+#define OPENSCENARIO_DIR_NAME "osc"
 
 /* Message priorities on message queue */
 // Abort message
@@ -131,6 +135,8 @@ static const char ParameterNameMiscData[] = "MiscData";
 static const char ObjectSettingNameID[] = "ID";
 static const char ObjectSettingNameIP[] = "IP";
 static const char ObjectSettingNameTraj[] = "traj";
+static const char ObjectSettingNameOpendrive[] = "odr";
+static const char ObjectSettingNameOpenscenario[] = "osc";
 static const char ObjectSettingNameIsAnchor[] = "isAnchor";
 static const char ObjectSettingNameInjectorIDs[] = "injectorIDs";
 static const char ObjectSettingNameLatitude[] = "originLatitude";
@@ -2433,7 +2439,9 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		GEOFENCE_DIR_NAME,
 		JOURNAL_DIR_NAME,
 		TRAJECTORY_DIR_NAME,
-		OBJECT_DIR_NAME
+		OBJECT_DIR_NAME,
+		OPENDRIVE_DIR_NAME,
+		OPENSCENARIO_DIR_NAME
 	};
 	char *envVar;
 	int result;
@@ -2452,33 +2460,43 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		LogMessage(LOG_LEVEL_INFO, "Using specified test directory %s", testDir);
 	}
 
-	// Check top level dir
-	dir = opendir(testDir);
-	if (dir) {
-		closedir(dir);
-	}
-	else if (errno == ENOENT) {
-		result = mkdir(testDir, 0755);
-		if (result < 0) {
-			LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", testDir);
+	// Check top level dir and subdirectory
+	char astazeroDir[MAX_FILE_PATH];
+	strcpy(astazeroDir, testDir);
+	astazeroDir[strlen(astazeroDir) - MAESTRO_DIR_NAME_LEN] = '\0';
+
+	char testEnvDirs[2][MAX_FILE_PATH];
+	strcpy(testEnvDirs[0], astazeroDir);
+	strcpy(testEnvDirs[1], testDir);
+
+	for (unsigned int i = 0; i < sizeof(testEnvDirs) / sizeof(testEnvDirs[0]); ++i) {
+		dir = opendir(testEnvDirs[i]);
+		if (dir) {
+			closedir(dir);
+		}
+		else if (errno == ENOENT) {
+			result = mkdir(testEnvDirs[i], 0755);
+			if (result < 0) {
+				LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", testEnvDirs[i]);
+				return -1;
+			}
+		}
+		else if (errno == EACCES) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Permission to access top level test directory %s denied (please do not run me as root)",
+					   testEnvDirs[i]);
+			return -1;
+		}
+		else if (errno == ENOTDIR) {
+			LogMessage(LOG_LEVEL_ERROR, "Top level test directory %s is not a directory", testEnvDirs[i]);
+			return -1;
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR, "Error opening top level directory %s", testEnvDirs[i]);
 			return -1;
 		}
 	}
-	else if (errno == EACCES) {
-		LogMessage(LOG_LEVEL_ERROR,
-				   "Permission to access top level test directory %s denied (please do not run me as root)",
-				   testDir);
-		return -1;
-	}
-	else if (errno == ENOTDIR) {
-		LogMessage(LOG_LEVEL_ERROR, "Top level test directory %s is not a directory", testDir);
-		return -1;
-	}
-	else {
-		LogMessage(LOG_LEVEL_ERROR, "Error opening top level directory %s", testDir);
-		return -1;
-	}
-
+	
 	// Check so that all expected directories exist
 	strcat(testDir, "/");
 	for (unsigned int i = 0; i < sizeof (expectedDirs) / sizeof (expectedDirs[0]); ++i) {
@@ -2629,6 +2647,41 @@ void UtilGetTrajDirectoryPath(char *path, size_t pathLen) {
 	strcat(path, TRAJECTORY_DIR_NAME);
 	strcat(path, "/");
 }
+
+/*!
+ * \brief UtilGetOdrDirectoryPath Fetches the absolute path to where OpenDRIVE files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetOdrDirectoryPath(char *path, size_t pathLen) {
+	if (pathLen > MAX_FILE_PATH) {
+		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		path[0] = '\0';
+		return;
+	}
+	UtilGetTestDirectoryPath(path, pathLen);
+	strcat(path, OPENDRIVE_DIR_NAME);
+	strcat(path, "/");
+}
+
+/*!
+ * \brief UtilGetOscDirectoryPath Fetches the absolute path to where OpenSCENARIO files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetOscDirectoryPath(char *path, size_t pathLen) {
+	if (pathLen > MAX_FILE_PATH) {
+		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		path[0] = '\0';
+		return;
+	}
+	UtilGetTestDirectoryPath(path, pathLen);
+	strcat(path, OPENSCENARIO_DIR_NAME);
+	strcat(path, "/");
+}
+
 
 /*!
  * \brief UtilGetGeofenceDirectoryPath Fetches the absolute path to where geofence files
@@ -3989,6 +4042,12 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 	case OBJECT_SETTING_TRAJ:
 		outputString = ObjectSettingNameTraj;
 		break;
+	case OBJECT_SETTING_OPENDRIVE:
+		outputString = ObjectSettingNameOpendrive;
+		break;
+	case OBJECT_SETTING_OPENSCENARIO:
+		outputString = ObjectSettingNameOpenscenario;
+		break;	
 	case OBJECT_SETTING_IS_ANCHOR:
 		outputString = ObjectSettingNameIsAnchor;
 		break;
