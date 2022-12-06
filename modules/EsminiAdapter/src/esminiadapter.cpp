@@ -4,6 +4,7 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 
+#include "trajectory.hpp"
 #include "datadictionary.h"
 
 using namespace ROSChannels;
@@ -37,7 +38,9 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName) {
 
 //! Message queue callbacks
 
-void EsminiAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {}
+void EsminiAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {
+	SE_Close();
+}
 
 void EsminiAdapter::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 
@@ -96,9 +99,56 @@ void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr
 }
 
 /*!
+ * \brief Given a vector of object states, creates a trajectory for each vector
+ * \return A vector of trajectories, one for each object in the scenario
+ */
+
+void EsminiAdapter::getTrajectories(std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states) {
+}
+
+/*!
+ * \brief Dump object positions for each timestep.
+ *	Inspired by ScenarioGateway::WriteStatesToFile from esmini lib.
+ * \param oscFilePath Path to the xosc file
+ * \param timeStep Time step to use for generating the trajectories
+ * \param endTime End time of the simulation
+ * \return A map of 
+ */
+
+void EsminiAdapter::getObjectStates(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states) {
+	SE_Init(oscFilePath.c_str(), 0, 0, 0, 0); // Run the ScenarioEngine
+	double accumTime = 0;
+	while (accumTime < endTime) {
+		SE_StepDT(timeStep);
+		accumTime += timeStep;
+		states[timeStep] = std::vector<SE_ScenarioObjectState>();
+		for (int j = 0; j < SE_GetNumberOfObjects(); j++){
+			SE_ScenarioObjectState* state;
+			SE_GetObjectState(SE_GetId(j), state);
+			states.at(SE_GetId(j)).push_back(*state); // Copy state into vector
+		}
+	}
+	SE_Close(); // Stop ScenarioEngine
+}
+
+void EsminiAdapter::extractTrajectories(const std::string& oscFilePath, double timeStep, double endTime){
+	// Get object states
+	std::map<uint32_t,std::vector<SE_ScenarioObjectState>> states;
+	getObjectStates(oscFilePath, timeStep, endTime, states);
+
+	// Extract trajectories
+	getTrajectories(states);
+
+}
+
+/*!
  * \brief Initialize the esmini simulator and perform subsequent setup tasks
  */
 void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
+	// Extract trajectory data for each object
+	// TODO
+	me->extractTrajectories(oscFilePath, 0.1, 40.0);
+	
 	std::string openScenarioFilePath = "/home/victor/.maestro/conf/ALKS_Scenario_4.2_3_CrossingPedestrian_TEMPLATE.xosc"; //placeholder
 	SE_Init(oscFilePath.c_str(),0,0,0,0);
 	SE_Step(); // Make sure that the scenario is started
@@ -116,8 +166,6 @@ void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
 		me->objectIdToIndex[SE_GetId(j)] = j;
 	}
 
-	// Extract trajectory data for each object
-	// TODO
 }
 
 /*!

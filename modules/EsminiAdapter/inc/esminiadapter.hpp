@@ -4,6 +4,7 @@
 #include "roschannel.hpp"
 #include <unordered_map>
 #include "util.h"
+#include "esmini/esminiLib.hpp"
 
 /*!
  * \brief The EsminiAdapter class is a singleton class that 
@@ -28,6 +29,9 @@ private:
 	static void onEsminiStoryBoardStateChange(const char* name, int type, int state);
 	static void onEsminiConditionTriggered(const char* name, double timestamp);
 	static void InitializeEsmini(std::string& oscFilePath);
+	static void getObjectStates(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
+	static void getTrajectories(std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
+	static void extractTrajectories(const std::string& oscFilePath, double timeStep, double endTime);
 	
 	static std::shared_ptr<EsminiAdapter> me;
 	static std::unordered_map<int, int> objectIdToIndex;
