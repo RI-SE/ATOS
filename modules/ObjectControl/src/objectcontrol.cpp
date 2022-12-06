@@ -19,6 +19,7 @@
 using std::placeholders::_1;
 using namespace ROSChannels;
 using namespace std::chrono_literals;
+using namespace maestro;
 
 ObjectControl::ObjectControl()
 	: Module(ObjectControl::moduleName),

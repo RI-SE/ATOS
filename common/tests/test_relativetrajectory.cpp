@@ -8,7 +8,7 @@
 #define VEL_TOL_M_S 0.001
 #define ACC_TOL_M_S2 0.001
 #define HDG_TOL_DEG 0.1
-
+using namespace maestro;
 using traj_pt = Trajectory::TrajectoryPoint;
 static void time_test();
 static void position_test();

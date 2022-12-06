@@ -33,8 +33,8 @@ public:
 	double getMaximumSpeed() const { return maximumSpeed; }
 	GeographicPositionType getOrigin() const { return origin; }
 	std::string getProjString() const;
-	Trajectory getTrajectory() const { return trajectory; }
-	void setTrajectory(const Trajectory& newTraj) { trajectory = newTraj; } // TODO danger danger - don't do this
+	maestro::Trajectory getTrajectory() const { return trajectory; }
+	void setTrajectory(const maestro::Trajectory& newTraj) { trajectory = newTraj; } // TODO danger danger - don't do this
 	uint32_t getTransmitterID() const { return transmitterID; }
 	double getTurningDiameter() const { return turningDiameter; }
 	std::string getObjectFileName() const { return objectFile.filename().string(); }
@@ -55,7 +55,7 @@ private:
 	double maximumSpeed = 0;
 	bool hasMaximumSpeed = false;
 	GeographicPositionType origin;
-	Trajectory trajectory;
+	maestro::Trajectory trajectory;
 	uint32_t transmitterID = 0;
 	bool turningDiameterKnown = false;
 	double turningDiameter = 0;

@@ -3,6 +3,7 @@
 #include "maestroTime.h"
 #include "datadictionary.h"
 #include "osi_handler.hpp"
+using namespace maestro;
 
 TestObject::TestObject(rclcpp::Logger log,
 		std::shared_ptr<ROSChannels::Trajectory::Sub> trajSub,
