@@ -57,7 +57,7 @@
 #define GEOFENCE_DIR_NAME "geofence"
 #define OBJECT_DIR_NAME "objects"
 #define OPENDRIVE_DIR_NAME "odr"
-#define OPENSCENARION_DIR_NAME "osc"
+#define OPENSCENARIO_DIR_NAME "osc"
 
 /* Message priorities on message queue */
 // Abort message
