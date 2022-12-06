@@ -45,6 +45,8 @@
 #define SMALL_BUFFER_SIZE_128 128
 #define SMALL_BUFFER_SIZE_64 64
 
+#define MAESTRO_DIR_NAME_LEN 8
+
 // File paths
 #define TEST_DIR_ENV_VARIABLE_NAME "MAESTRO_TEST_DIR"
 #define SYSCONF_DIR_NAME "/etc"
@@ -55,7 +57,7 @@
 #define GEOFENCE_DIR_NAME "geofence"
 #define OBJECT_DIR_NAME "objects"
 #define OPENDRIVE_DIR_NAME "odr"
-#define OPENSCENARION_DIR_NAME "osc"
+#define OPENSCENARIO_DIR_NAME "osc"
 
 /* Message priorities on message queue */
 // Abort message
@@ -2439,7 +2441,7 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		TRAJECTORY_DIR_NAME,
 		OBJECT_DIR_NAME,
 		OPENDRIVE_DIR_NAME,
-		OPENSCENARION_DIR_NAME
+		OPENSCENARIO_DIR_NAME
 	};
 	char *envVar;
 	int result;
@@ -2458,33 +2460,43 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		LogMessage(LOG_LEVEL_INFO, "Using specified test directory %s", testDir);
 	}
 
-	// Check top level dir
-	dir = opendir(testDir);
-	if (dir) {
-		closedir(dir);
-	}
-	else if (errno == ENOENT) {
-		result = mkdir(testDir, 0755);
-		if (result < 0) {
-			LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", testDir);
+	// Check top level dir and subdirectory
+	char astazeroDir[MAX_FILE_PATH];
+	strcpy(astazeroDir, testDir);
+	astazeroDir[strlen(astazeroDir) - MAESTRO_DIR_NAME_LEN] = '\0';
+
+	char testEnvDirs[2][MAX_FILE_PATH];
+	strcpy(testEnvDirs[0], astazeroDir);
+	strcpy(testEnvDirs[1], testDir);
+
+	for (unsigned int i = 0; i < sizeof(testEnvDirs) / sizeof(testEnvDirs[0]); ++i) {
+		dir = opendir(testEnvDirs[i]);
+		if (dir) {
+			closedir(dir);
+		}
+		else if (errno == ENOENT) {
+			result = mkdir(testEnvDirs[i], 0755);
+			if (result < 0) {
+				LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", testEnvDirs[i]);
+				return -1;
+			}
+		}
+		else if (errno == EACCES) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Permission to access top level test directory %s denied (please do not run me as root)",
+					   testEnvDirs[i]);
+			return -1;
+		}
+		else if (errno == ENOTDIR) {
+			LogMessage(LOG_LEVEL_ERROR, "Top level test directory %s is not a directory", testEnvDirs[i]);
+			return -1;
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR, "Error opening top level directory %s", testEnvDirs[i]);
 			return -1;
 		}
 	}
-	else if (errno == EACCES) {
-		LogMessage(LOG_LEVEL_ERROR,
-				   "Permission to access top level test directory %s denied (please do not run me as root)",
-				   testDir);
-		return -1;
-	}
-	else if (errno == ENOTDIR) {
-		LogMessage(LOG_LEVEL_ERROR, "Top level test directory %s is not a directory", testDir);
-		return -1;
-	}
-	else {
-		LogMessage(LOG_LEVEL_ERROR, "Error opening top level directory %s", testDir);
-		return -1;
-	}
-
+	
 	// Check so that all expected directories exist
 	strcat(testDir, "/");
 	for (unsigned int i = 0; i < sizeof (expectedDirs) / sizeof (expectedDirs[0]); ++i) {
@@ -2666,7 +2678,7 @@ void UtilGetOscDirectoryPath(char *path, size_t pathLen) {
 		return;
 	}
 	UtilGetTestDirectoryPath(path, pathLen);
-	strcat(path, OPENSCENARION_DIR_NAME);
+	strcat(path, OPENSCENARIO_DIR_NAME);
 	strcat(path, "/");
 }
 
