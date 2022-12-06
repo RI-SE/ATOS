@@ -2441,7 +2441,7 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		TRAJECTORY_DIR_NAME,
 		OBJECT_DIR_NAME,
 		OPENDRIVE_DIR_NAME,
-		OPENSCENARION_DIR_NAME
+		OPENSCENARIO_DIR_NAME
 	};
 	char *envVar;
 	int result;
