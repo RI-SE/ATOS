@@ -10,7 +10,6 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
-
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
 static maestro_interfaces::msg::Monitor createROSMessage(const MonitorMessage& data); // TODO move to somewhere central
 

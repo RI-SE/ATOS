@@ -12,7 +12,7 @@
 #include <chrono>
 
 #include "util.h"
-
+namespace maestro {
 class Trajectory {
 public:
 	class TrajectoryPoint {
@@ -160,6 +160,6 @@ private:
 
 	bool areTimestampsIncreasing() const;
 };
-
+} // namespace maestro
 
 #endif
