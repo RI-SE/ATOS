@@ -302,17 +302,31 @@ void TestObject::sendHeartbeat(
 void TestObject::sendSettings() {
 
 	ObjectSettingsType objSettings;
-	objSettings.desiredTransmitterID = conf.getTransmitterID();
-	objSettings.isTransmitterIDValid = true;
+	objSettings.desiredID.transmitter = conf.getTransmitterID();
+	objSettings.desiredID.controlCentre = ::getTransmitterID();
+	objSettings.desiredID.subTransmitter = 0;
 
 	objSettings.coordinateSystemOrigin = conf.getOrigin();
+	objSettings.coordinateSystemType = COORDINATE_SYSTEM_WGS84;
+	objSettings.coordinateSystemRotation_rad = 0.0;
 
 	TimeSetToCurrentSystemTime(&objSettings.currentTime);
-	objSettings.isTimestampValid = true;
+	
+	objSettings.heabTimeout.tv_usec = 20000;
+	objSettings.heabTimeout.tv_sec = 0;
 
-	objSettings.isLateralDeviationLimited = false;
-	objSettings.isPositionDeviationLimited = false;
-	objSettings.isPositioningAccuracyRequired = false;
+	objSettings.rate.heab = 100;
+	objSettings.rate.monr = 100;
+	objSettings.rate.monr2 = 1;
+
+	objSettings.maxDeviation.lateral_m = 5.0;
+	objSettings.maxDeviation.position_m = 5.0;
+	objSettings.maxDeviation.yaw_rad = 15.0 * M_PI/180.0;
+
+	objSettings.minRequiredPositioningAccuracy_m = 1.0;
+
+	objSettings.timeServer.ip = 0;
+	objSettings.timeServer.port = 0;
 
 	this->comms.cmd << objSettings;
 	this->comms.cmd << conf.getTrajectory();
@@ -444,7 +458,7 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 
 	// TRAJ header
 	nBytes = encodeTRAJMessageHeader(
-				traj.id, traj.version, traj.name.c_str(),traj.name.length(),
+				traj.id, TRAJECTORY_INFO_RELATIVE_TO_ORIGIN, traj.name.c_str(),traj.name.length(),
 				static_cast<uint32_t>(traj.points.size()), chnl.transmitBuffer.data(),
 				chnl.transmitBuffer.size(), false);
 	if (nBytes < 0) {
