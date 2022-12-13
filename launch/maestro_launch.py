@@ -67,5 +67,11 @@ def generate_launch_description():
             namespace='maestro',
             executable='osi_adapter',
             name='osi_adapter'
+        ),
+        Node(
+            package='maestro',
+            namespace='maestro',
+            executable='esmini_adapter',
+            name='esmini_adapter'
         )
     ])
