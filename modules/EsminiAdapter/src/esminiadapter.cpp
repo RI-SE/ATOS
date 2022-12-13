@@ -99,7 +99,6 @@ void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr
  * \brief Initialize the esmini simulator and perform subsequent setup tasks
  */
 void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
-	std::string openScenarioFilePath = "/home/victor/.maestro/conf/ALKS_Scenario_4.2_3_CrossingPedestrian_TEMPLATE.xosc"; //placeholder
 	SE_Init(oscFilePath.c_str(),0,0,0,0);
 	SE_Step(); // Make sure that the scenario is started
 	RCLCPP_DEBUG(me->get_logger(), "Esmini initialized");
