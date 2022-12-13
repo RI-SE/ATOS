@@ -15,6 +15,7 @@ The Maestro server is a communication hub for all test objects. The server monit
     - [ Installing OpenSimulationInterface v3.4.0](#-installing-opensimulationinterface-v340)
     - [ Installing maestro-interfaces](#-installing-maestro-interfaces)
     - [ Installing ad-xolib](#-installing-ad-xolib)
+    - [ Installing esmini](#-installing-esmini)
   - [ Installing ROS2 and building for the first time with colcon](#-installing-ros2-and-building-for-the-first-time-with-colcon)
     - [ Ubuntu 20.04](#-ubuntu-2004)
 - [ Optional builds \& installations](#-optional-builds--installations)
@@ -37,15 +38,14 @@ Then, the following external libraries need to be installed:
 - [OpenSimulationInterface v3.4.0](https://github.com/OpenSimulationInterface/open-simulation-interface)
 - [maestro-interfaces](https://github.com/RI-SE/maestro-interfaces)
 - [ad-xolib](https://github.com/javedulu/ad-xolib)
+- [esmini](https://github.com/esmini/esmini)
 
 ### <a name="osi"></a> Installing OpenSimulationInterface v3.4.0
 ```
 git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git -b v3.4.0
 cd open-simulation-interface
-mkdir build
-cd build
-cmake ..
-make
+mkdir build && cd build
+cmake .. && make
 sudo make install
 ```
 Make sure that the linker knows where OpenSimulationInterface is located:
@@ -65,11 +65,24 @@ git clone https://github.com/RI-SE/maestro-interfaces
 git clone https://github.com/javedulu/ad-xolib.git
 cd ad-xolib
 git submodule update --init --recursive
-mkdir build
-cd build
-cmake .. -DBUILD_EMBED_TARGETS=OFF
-make
+mkdir build && cd build
+cmake .. -DBUILD_EMBED_TARGETS=OFF && make
 sudo make install
+sudo ldconfig
+```
+
+### <a name="esmini"></a> Installing esmini
+```
+git clone https://github.com/esmini/esmini
+cd esmini
+mkdir build && cd build
+cmake .. && make
+sudo make install
+cp ../bin/libesminiLib.so /usr/local/lib
+cp ../bin/libesminiRMLib.so /usr/local/lib
+sudo mkdir -p /usr/local/include/esmini/
+cp ../EnvironmentSimulator/Libraries/esminiLib/esminiLib.hpp /usr/local/include/esmini/
+cp ../EnvironmentSimulator/Libraries/esminiRMLib/esminiRMLib.hpp /usr/local/include/esmini/
 sudo ldconfig
 ```
 

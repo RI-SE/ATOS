@@ -14,7 +14,7 @@
 class EsminiAdapter : public Module {
 public:
 	static inline std::string const moduleName = "esmini_adapter";
-	static inline std::string const oscFileName = "atos_scenario.xosc";
+	static inline std::string const oscFileName = "openscenario.xosc";
 	static inline std::string oscFilePath;
 	static int initializeModule(const LOG_LEVEL logLevel);
 	EsminiAdapter(EsminiAdapter const&) = delete;
