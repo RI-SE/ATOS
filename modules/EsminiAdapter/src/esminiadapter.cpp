@@ -122,6 +122,7 @@ void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr
 /*!
  * \brief Given a vector of object states at different timesteps,
  *	creates a trajectory consisting of trajectory points, one for each timestep.
+ * Note: If there is no difference between consecutive states, the trajectory point is not added.
  * \param id The object ID to which the trajectory belongs
  * \param states A vector of object states
  * \return A trajectory consisting of trajectory points, one for each state.
@@ -129,7 +130,6 @@ void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr
 maestro::Trajectory EsminiAdapter::getTrajectory(uint32_t id,std::vector<SE_ScenarioObjectState>& states) {
 	maestro::Trajectory trajectory;
 	trajectory.name = "Esmini Trajectory for object " + std::to_string(id);
-	float xPrev=states.at(0).x, yPrev=states.at(0).y, zPrev=states.at(0).z, hPrev=states.at(0).h;
 	auto saveTp = [&](auto& state){
 		maestro::Trajectory::TrajectoryPoint tp;
 		tp.setXCoord(state.x);
@@ -141,15 +141,13 @@ maestro::Trajectory EsminiAdapter::getTrajectory(uint32_t id,std::vector<SE_Scen
 		tp.setLongitudinalVelocity(state.speed * cos(state.wheel_angle));
 		tp.setLateralAcceleration(state.speed * sin(state.wheel_angle));
 		trajectory.points.push_back(tp);
-		xPrev = state.x; yPrev = state.y;
-		zPrev = state.z; hPrev = state.h;
 	};
-	for (auto& state : states) {
-		if (state.x == xPrev && state.y == yPrev && // Nothing interesting has happened since the last timestep
-			state.z == zPrev && state.h == hPrev) {
+	for (auto it = states.begin()+1; it != states.end(); ++it) {
+		if (it->x == (it-1)->x && it->y == (it-1)->y && // Nothing interesting happens within 1 timestep, skip
+			it->z == (it-1)->z && it->h == (it-1)->h) {
 			continue;
 		}
-		saveTp(state);
+		saveTp(*(it-1)); // Next timestep is different, save current one.
 	}
 	return trajectory;
 }
@@ -192,7 +190,7 @@ void EsminiAdapter::getObjectStates(const std::string& oscFilePath, double timeS
  * \brief Runs the esmini simulator with the xosc file and returns the trajectories for each object
  * \param oscFilePath Path to the xosc file
  * \param timeStep Time step to use for generating the trajectories
- * \param endTime End time of the simulation
+ * \param endTime End time of the simulation TODO: not nessescary if xosc has a stop trigger at the end of the scenario
  * \param idToTraj The return map of ids mapping to the respective trajectories
  * \return A map of ids mapping to the respective trajectories
  */
@@ -216,12 +214,16 @@ std::map<uint32_t,maestro::Trajectory> EsminiAdapter::extractTrajectories(const 
  */
 void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
 	std::map<uint32_t,maestro::Trajectory> idToTraj;
-	me->extractTrajectories(oscFilePath, 0.1, 40.0, idToTraj);
+	me->extractTrajectories(oscFilePath, 0.1, 14.0, idToTraj);
 	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", idToTraj.size());
 	for (auto& it : idToTraj){
 		auto id = it.first;
 		auto traj = it.second;
 		RCLCPP_DEBUG(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
+		// below is for dumping the trajectory points to the console
+		/*for (auto& tp : traj.points){
+			RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
+		}*/
 	}
 
 	// Inject Meastro as controller for the DefaultControlled entities
