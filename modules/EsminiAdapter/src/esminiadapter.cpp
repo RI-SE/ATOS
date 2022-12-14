@@ -149,6 +149,12 @@ maestro::Trajectory EsminiAdapter::getTrajectory(uint32_t id,std::vector<SE_Scen
 		}
 		saveTp(*(it-1)); // Next timestep is different, save current one.
 	}
+	auto startTime = trajectory.points.front().getTime();
+
+	// Subtract start time from all timesteps
+	for (auto& tp : trajectory.points){
+		tp.setTime(tp.getTime() - startTime);
+	}
 	return trajectory;
 }
 
