@@ -4,6 +4,7 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 
+#include "trajectory.hpp"
 #include "datadictionary.h"
 
 using namespace ROSChannels;
@@ -37,9 +38,29 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName) {
 
 //! Message queue callbacks
 
-void EsminiAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {}
+void EsminiAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {
+	SE_Close();
+}
 
 void EsminiAdapter::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
+
+void EsminiAdapter::onInitMessage(const Init::message_type::SharedPtr) {
+	InitializeEsmini(oscFilePath);
+}
+
+void EsminiAdapter::onExitMessage(const Exit::message_type::SharedPtr){
+	RCLCPP_DEBUG(me->get_logger(),"Received exit command");
+	rclcpp::shutdown();
+}
+
+void EsminiAdapter::onStartMessage(const Start::message_type::SharedPtr) {
+	if (SE_Init(oscFilePath.c_str(),0,0,0,0) == -1){
+		RCLCPP_ERROR(me->get_logger(), "Failed to initialize esmini, aborting");
+		exit(1);
+	}
+	SE_Step(); // Make sure that the scenario is started
+	RCLCPP_INFO(me->get_logger(), "Esmini started");
+}
 
 /*!
  * \brief Callback to be executed by esmini when story board state changes.
@@ -49,7 +70,7 @@ void EsminiAdapter::onAllClearMessage(const AllClear::message_type::SharedPtr) {
  */
 void EsminiAdapter::onEsminiStoryBoardStateChange(const char* name, int type, int state){
 	//Placeholder, TODO: Implement
-	RCLCPP_INFO(me->get_logger(), "Esmini Storyboard State Change Name: %s, Type: %d, State: %d", name, type, state);
+	RCLCPP_DEBUG(me->get_logger(), "Esmini Storyboard State Change Name: %s, Type: %d, State: %d", name, type, state);
 }
 
 /*!
@@ -59,7 +80,7 @@ void EsminiAdapter::onEsminiStoryBoardStateChange(const char* name, int type, in
  */
 void EsminiAdapter::onEsminiConditionTriggered(const char* name, double timestamp){
 	//Placeholder, TODO: Implement
-	RCLCPP_INFO(me->get_logger(), "Esmini Condition Trigger Name %s", name);
+	RCLCPP_DEBUG(me->get_logger(), "Esmini Condition Trigger Name %s", name);
 }
 
 /*!
@@ -68,7 +89,6 @@ void EsminiAdapter::onEsminiConditionTriggered(const char* name, double timestam
  * \param monr ROS Monitor message of an object
  * \param id The object ID to which the monr belongs
  */
-
 void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr monr, uint32_t id){
 	// Conversions from ROS to Esmini
 	auto ori = monr->pose.pose.orientation;
@@ -84,7 +104,11 @@ void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr 
 	SE_ReportObjectPos(id, timestamp, pos.x, pos.y, pos.z, yaw, pitch, roll);
 }
 
-
+/*!
+ * \brief Callback for MONR messages, reports the object position to esmini and advances the simulation time
+ * \param monr ROS Monitor message of an object
+ * \param id The object ID to which the monr belongs
+*/
 void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr, uint32_t id) {
 	if (me->objectIdToIndex.find(id) != me->objectIdToIndex.end()){
 		reportObjectPosition(monr, id); // Report object position to esmini
@@ -96,12 +120,117 @@ void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr
 }
 
 /*!
+ * \brief Given a vector of object states at different timesteps,
+ *	creates a trajectory consisting of trajectory points, one for each timestep.
+ * Note: If there is no difference between consecutive states, the trajectory point is not added.
+ * \param id The object ID to which the trajectory belongs
+ * \param states A vector of object states
+ * \return A trajectory consisting of trajectory points, one for each state.
+ */
+maestro::Trajectory EsminiAdapter::getTrajectory(uint32_t id,std::vector<SE_ScenarioObjectState>& states) {
+	maestro::Trajectory trajectory;
+	trajectory.name = "Esmini Trajectory for object " + std::to_string(id);
+	auto saveTp = [&](auto& state){
+		maestro::Trajectory::TrajectoryPoint tp;
+		tp.setXCoord(state.x);
+		tp.setYCoord(state.y);
+		tp.setZCoord(state.z);
+		tp.setHeading(state.h);
+		tp.setTime(state.timestamp);
+		tp.setCurvature(0); // TODO: implement support for different curvature, now only support straight lines
+		tp.setLongitudinalVelocity(state.speed * cos(state.wheel_angle));
+		tp.setLateralAcceleration(state.speed * sin(state.wheel_angle));
+		trajectory.points.push_back(tp);
+	};
+	for (auto it = states.begin()+1; it != states.end(); ++it) {
+		if (it->x == (it-1)->x && it->y == (it-1)->y && // Nothing interesting happens within 1 timestep, skip
+			it->z == (it-1)->z && it->h == (it-1)->h) {
+			continue;
+		}
+		saveTp(*(it-1)); // Next timestep is different, save current one.
+	}
+	auto startTime = trajectory.points.front().getTime();
+
+	// Subtract start time from all timesteps
+	for (auto& tp : trajectory.points){
+		tp.setTime(tp.getTime() - startTime);
+	}
+	return trajectory;
+}
+
+/*!
+ * \brief Returns object states for each timestep.
+ *	Inspired by ScenarioGateway::WriteStatesToFile from esmini lib.
+ * \param oscFilePath Path to the xosc file
+ * \param timeStep Time step to use for generating the trajectories
+ * \param endTime End time of the simulation
+ * \param states The return map of ids mapping to the respective object states at different timesteps
+ * \return A map of object states, where the key is the object ID and the value is a vector of states
+ */
+void EsminiAdapter::getObjectStates(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states) {
+	if (!SE_Init(oscFilePath.c_str(),0,0,0,0) == -1){
+		RCLCPP_ERROR(me->get_logger(), "Failed to initialize esmini");
+		exit(1);
+	}
+	// Populate States map with empty vector for each object
+	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
+		states[SE_GetId(j)] = std::vector<SE_ScenarioObjectState>();
+	}
+	double accumTime = 0;
+	while (accumTime < endTime) {
+		SE_StepDT(timeStep);
+		accumTime += timeStep;
+		for (int j = 0; j < SE_GetNumberOfObjects(); j++){
+			SE_ScenarioObjectState state;
+			SE_GetObjectState(SE_GetId(j), &state);
+			state.timestamp = accumTime; // Inject time since esmini does not do this
+			states.at(SE_GetId(j)).push_back(state); // Copy state into vector
+		}
+	}
+	RCLCPP_INFO(me->get_logger(), "Finished esmini simulation");
+	SE_Close(); // Stop ScenarioEngine
+}
+
+
+/*!
+ * \brief Runs the esmini simulator with the xosc file and returns the trajectories for each object
+ * \param oscFilePath Path to the xosc file
+ * \param timeStep Time step to use for generating the trajectories
+ * \param endTime End time of the simulation TODO: not nessescary if xosc has a stop trigger at the end of the scenario
+ * \param idToTraj The return map of ids mapping to the respective trajectories
+ * \return A map of ids mapping to the respective trajectories
+ */
+std::map<uint32_t,maestro::Trajectory> EsminiAdapter::extractTrajectories(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,maestro::Trajectory>& idToTraj){
+	// Get object states
+	std::map<uint32_t,std::vector<SE_ScenarioObjectState>> idToStates;
+	getObjectStates(oscFilePath, timeStep, endTime, idToStates);
+
+	// Extract trajectories
+	for (auto& os : idToStates){
+		auto id = os.first;
+		auto objectStates = os.second;
+		idToTraj[id] = getTrajectory(id, objectStates);
+	}
+	return idToTraj;
+}
+
+/*!
  * \brief Initialize the esmini simulator and perform subsequent setup tasks
+ * \param oscFilePath Path to the xosc file
  */
 void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
-	SE_Init(oscFilePath.c_str(),0,0,0,0);
-	SE_Step(); // Make sure that the scenario is started
-	RCLCPP_DEBUG(me->get_logger(), "Esmini initialized");
+	std::map<uint32_t,maestro::Trajectory> idToTraj;
+	me->extractTrajectories(oscFilePath, 0.1, 14.0, idToTraj);
+	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", idToTraj.size());
+	for (auto& it : idToTraj){
+		auto id = it.first;
+		auto traj = it.second;
+		RCLCPP_DEBUG(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
+		// below is for dumping the trajectory points to the console
+		/*for (auto& tp : traj.points){
+			RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
+		}*/
+	}
 
 	// Inject Meastro as controller for the DefaultControlled entities
 	// TODO
@@ -110,13 +239,10 @@ void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
 	SE_RegisterConditionCallback(&onEsminiConditionTriggered);
 	SE_RegisterStoryBoardElementStateChangeCallback(&onEsminiStoryBoardStateChange);
 
-	// Update the map tracking Object ID -> esmini index
+	// Populate the map tracking Object ID -> esmini index
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
 		me->objectIdToIndex[SE_GetId(j)] = j;
 	}
-
-	// Extract trajectory data for each object
-	// TODO
 }
 
 /*!
@@ -125,7 +251,6 @@ void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
  * \param logLevel Level of the module log to be used.
  * \return 0 on success, -1 otherwise
  */
-
 int EsminiAdapter::initializeModule(const LOG_LEVEL logLevel) {
 	int retval = 0;
 
