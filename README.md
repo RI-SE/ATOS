@@ -72,6 +72,7 @@ sudo ldconfig
 ```
 
 ### <a name="esmini"></a> Installing esmini
+Begin by installing esmini dependencies listed under section 2.3 on the page https://esmini.github.io/
 ```
 git clone https://github.com/esmini/esmini
 cd esmini
