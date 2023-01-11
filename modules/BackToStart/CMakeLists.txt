@@ -46,6 +46,3 @@ install(TARGETS ${BACK_TO_START}
 )
 
 
-# Ensure linkage is reloaded after install
-install(CODE "execute_process(COMMAND ldconfig)")
-

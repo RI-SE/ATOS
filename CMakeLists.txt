@@ -22,7 +22,6 @@ list(APPEND CMAKE_MODULE_PATH "${UTIL_CMAKE_ROOT}")
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(Systemd REQUIRED)
 
 # Enable or disable modules
 set(WITH_SCENARIO_CONTROL ON CACHE BOOL "Enable ScenarioControl module")
