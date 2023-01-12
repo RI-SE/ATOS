@@ -18,6 +18,8 @@ set(MESSAGE_BUS_LIBRARY MaestroMQ)
 set(TCP_UDP_Socket_LIBRARY TCPUDPSocket)
 include(GNUInstallDirs)
 
+find_package(Systemd REQUIRED)
+
 # Create project main executable target
 add_executable(${VISUALIZATION_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp

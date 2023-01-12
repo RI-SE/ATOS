@@ -5,6 +5,8 @@ SET(CMAKE_CXX_STANDARD 17)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(Core LANGUAGES C CXX)
 
+find_package(Systemd REQUIRED)
+
 # Specify locations for logs and shared memory
 # WARNING: These are used for installation and could hose
 # 	your system if e.g. specified to "/"

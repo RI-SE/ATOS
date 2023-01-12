@@ -17,6 +17,7 @@ set(MESSAGE_BUS_LIBRARY MaestroMQ)
 
 include(GNUInstallDirs)
 
+find_package(Systemd REQUIRED)
 find_package(Threads REQUIRED)
 find_library(paho-mqtt3a NAMES libpaho-mqtt3a.so REQUIRED)
 find_library(paho-mqtt3c NAMES libpaho-mqtt3c.so REQUIRED)

@@ -41,6 +41,4 @@ install(TARGETS ${DUMMY_TARGET}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# Ensure linkage is reloaded after install
-install(CODE "execute_process(COMMAND ldconfig)")
 

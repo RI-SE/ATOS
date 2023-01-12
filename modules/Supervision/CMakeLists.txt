@@ -17,6 +17,7 @@ set(MESSAGE_BUS_LIBRARY MaestroMQ)
 set(MAESTRO_COMMON_LIBRARY MaestroCommon)
 
 include(GNUInstallDirs)
+find_package(Systemd REQUIRED)
 
 # Create project main executable target
 add_executable(${SUPERVISION_TARGET}
