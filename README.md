@@ -50,7 +50,7 @@ sudo make install
 ```
 Make sure that the linker knows where OpenSimulationInterface is located:
 ```
-echo /usr/local/lib/osi3 > /etc/ld.so.conf.d/osi3.conf
+sudo sh -c "echo '/usr/local/lib/osi3' > /etc/ld.so.conf.d/osi3.conf"
 sudo ldconfig
 ```
 
