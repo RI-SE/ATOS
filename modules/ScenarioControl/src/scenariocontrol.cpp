@@ -115,7 +115,7 @@ void ScenarioControl::sendConfiguration(){
 	RCLCPP_INFO(get_logger(),"Sent config!");
 }
 
-void ScenarioControl::onTriggerEventMessage(const ROSChannels::TriggerEvent::message_type::SharedPtr treo){
+void ScenarioControl::onTriggerEventMessage(const ROSChannels::TriggerEventOccurred::message_type::SharedPtr treo){
 	if (state == RUNNING) {
 		// Trigger corresponding trigger
 		scenario->updateTrigger(treo->trigger_id, treo);

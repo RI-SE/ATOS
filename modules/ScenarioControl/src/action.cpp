@@ -7,8 +7,8 @@
 #include "logging.h"
 #include "maestroTime.h"
 
-using maestro_interfaces::msg::Exac;
-using maestro_interfaces::msg::Accm;
+using maestro_interfaces::msg::ExecuteAction;
+using maestro_interfaces::msg::ActionConfiguration;
 
 namespace maestro {
 	/*!
@@ -288,9 +288,9 @@ namespace maestro {
 	* \brief Action::getConfigurationMessageData Constructs a ACCMData struct from object members
 	* \return A struct which can be sent on message bus
 	*/
-	Accm Action::getConfigurationMessageData(void) const
+	ActionConfiguration Action::getConfigurationMessageData(void) const
 	{
-		Accm message = Accm();
+		ActionConfiguration message = ActionConfiguration();
 		message.action_id = actionID;
 		message.action_type = actionTypeCode;
 

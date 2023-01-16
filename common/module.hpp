@@ -6,13 +6,13 @@
 #include "util.h"
 #include "roschannel.hpp"
 
-#include "maestro_interfaces/msg/accm.hpp"
-#include "maestro_interfaces/msg/exac.hpp"
+#include "maestro_interfaces/msg/action_configuration.hpp"
+#include "maestro_interfaces/msg/execute_action.hpp"
+#include "maestro_interfaces/msg/trigger_event_occurred.hpp"
+#include "maestro_interfaces/msg/monitor.hpp"
 #include "maestro_interfaces/msg/manoeuvre_command.hpp"
 #include "maestro_interfaces/msg/object_enabled.hpp"
-#include "maestro_interfaces/msg/monitor.hpp"
 #include "maestro_interfaces/msg/control_signal_percentage.hpp"
-#include "maestro_interfaces/msg/trigger_event.hpp"
 #include "maestro_interfaces/msg/object_id_array.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_msgs/msg/int8.hpp"
@@ -131,7 +131,7 @@ class Module : public rclcpp::Node {
 	virtual void onBackToStartResponse(const ROSChannels::BackToStartResponse::message_type::SharedPtr){};
 	virtual void onDataDictResponse(const std_msgs::msg::Empty::SharedPtr){}; // TODO remove
 	virtual void onControlSignalMessage(const ROSChannels::ControlSignal::message_type::SharedPtr){};
-	virtual void onTriggerEventMessage(const ROSChannels::TriggerEvent::message_type::SharedPtr){};
+	virtual void onTriggerEventMessage(const ROSChannels::TriggerEventOccurred::message_type::SharedPtr){};
 
 	virtual void onExitMessage(const ROSChannels::Exit::message_type::SharedPtr);
 
