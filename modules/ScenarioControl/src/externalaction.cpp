@@ -11,7 +11,7 @@
 #include "maestroTime.h"
 #include "roschannel.hpp"
 
-using maestro_interfaces::msg::Exac;
+using maestro_interfaces::msg::ExecuteAction;
 
 namespace maestro {
 	Action::ActionReturnCode_t ExternalAction::execute(ROSChannels::ExecuteAction::Pub& exacPub)
@@ -19,7 +19,7 @@ namespace maestro {
 		if (remainingAllowedRuns == 0)
 			return NO_REMAINING_RUNS;
 		else {
-			Exac msg = Exac();
+			ExecuteAction msg = ExecuteAction();
 
 			struct timeval systemTime;
 			TimeSetToCurrentSystemTime(&systemTime);

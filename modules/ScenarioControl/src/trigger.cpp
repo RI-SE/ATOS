@@ -3,7 +3,7 @@
 
 #include "logging.h"
 
-using maestro_interfaces::msg::Trcm;
+using maestro_interfaces::msg::TriggerConfiguration;
 
 namespace maestro {
 
@@ -370,9 +370,9 @@ namespace maestro {
 	* \brief Trigger::getConfigurationMessageData Constructs a TRCMData struct from object members
 	* \return A struct which can be sent on message bus
 	*/
-	Trcm Trigger::getConfigurationMessageData(void) const
+	TriggerConfiguration Trigger::getConfigurationMessageData(void) const
 	{
-		Trcm message = Trcm();
+		TriggerConfiguration message = TriggerConfiguration();
 		message.trigger_id = triggerID;
 		message.trigger_type = triggerTypeCode;
 

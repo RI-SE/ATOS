@@ -27,7 +27,7 @@ private:
 	ROSChannels::Exit::Sub exitSub;
 	ROSChannels::ObjectsConnected::Sub objectsConnectedSub;
 	ROSChannels::Disconnect::Sub disconnectSub;
-	ROSChannels::TriggerEvent::Sub triggerEventSub;
+	ROSChannels::TriggerEventOccurred::Sub triggerEventSub;
 	ROSChannels::GetStatus::Sub getStatusSub;
 
 	ROSChannels::ActionConfiguration::Pub accmPub;
@@ -67,7 +67,7 @@ private:
 	void onExitMessage(const ROSChannels::Exit::message_type::SharedPtr) override;
 	void onObjectsConnectedMessage(const ROSChannels::ObjectsConnected::message_type::SharedPtr) override;
 	void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr) override;
-	void onTriggerEventMessage(const ROSChannels::TriggerEvent::message_type::SharedPtr) override;
+	void onTriggerEventMessage(const ROSChannels::TriggerEventOccurred::message_type::SharedPtr) override;
 
 	void manageTriggers();
 	int updateTriggers();

@@ -97,7 +97,7 @@ namespace maestro {
         virtual TriggerReturnCode_t update(float, struct timeval)   { throw std::invalid_argument("Invalid signal type float"); }
         virtual TriggerReturnCode_t update(double, struct timeval)  { throw std::invalid_argument("Invalid signal type double"); }
         virtual TriggerReturnCode_t update(CartesianPosition, struct timeval) { throw std::invalid_argument("Invalid signal type cartesian position"); }
-        virtual TriggerReturnCode_t update(maestro_interfaces::msg::TriggerEvent::SharedPtr) { throw std::invalid_argument("Invalid signal type TREO data"); }
+        virtual TriggerReturnCode_t update(maestro_interfaces::msg::TriggerEventOccurred::SharedPtr) { throw std::invalid_argument("Invalid signal type TREO data"); }
         virtual TriggerReturnCode_t update(ObjectDataType) { throw std::invalid_argument("Invalid signal type monitor data"); }
 
 

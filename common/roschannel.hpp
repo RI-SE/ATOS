@@ -9,14 +9,14 @@
 #include <string>
 #include <functional>
 
-#include "maestro_interfaces/msg/accm.hpp"
-#include "maestro_interfaces/msg/trcm.hpp"
-#include "maestro_interfaces/msg/exac.hpp"
-#include "maestro_interfaces/msg/object_enabled.hpp"
+#include "maestro_interfaces/msg/action_configuration.hpp"
+#include "maestro_interfaces/msg/execute_action.hpp"
+#include "maestro_interfaces/msg/trigger_event_occurred.hpp"
+#include "maestro_interfaces/msg/trigger_configuration.hpp"
 #include "maestro_interfaces/msg/monitor.hpp"
+#include "maestro_interfaces/msg/object_enabled.hpp"
 #include "maestro_interfaces/msg/manoeuvre_command.hpp"
 #include "maestro_interfaces/msg/control_signal_percentage.hpp"
-#include "maestro_interfaces/msg/trigger_event.hpp"
 #include "maestro_interfaces/msg/object_id_array.hpp"
 
 namespace ROSChannels {
@@ -191,7 +191,7 @@ namespace AllClear {
 
 namespace ActionConfiguration {
     const std::string topicName = "action_configuration";
-    using message_type = maestro_interfaces::msg::Accm;
+    using message_type = maestro_interfaces::msg::ActionConfiguration;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
@@ -207,7 +207,7 @@ namespace ActionConfiguration {
 
 namespace TriggerConfiguration {
     const std::string topicName = "trigger_configuration";
-    using message_type = maestro_interfaces::msg::Trcm;
+    using message_type = maestro_interfaces::msg::TriggerConfiguration;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
@@ -223,7 +223,7 @@ namespace TriggerConfiguration {
 
 namespace ExecuteAction {
     const std::string topicName = "execute_action";
-    using message_type = maestro_interfaces::msg::Exac;
+    using message_type = maestro_interfaces::msg::ExecuteAction;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
@@ -499,9 +499,9 @@ namespace ConnectedObjectIds {
     };
 }
 
-namespace TriggerEvent {
-    const std::string topicName = "trigger_event";
-    using message_type = maestro_interfaces::msg::TriggerEvent;
+namespace TriggerEventOccurred {
+    const std::string topicName = "trigger_event_occurred";
+    using message_type = maestro_interfaces::msg::TriggerEventOccurred;
 
     class Pub : public BasePub<message_type> {
     public:
