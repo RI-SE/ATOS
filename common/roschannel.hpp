@@ -18,6 +18,7 @@
 #include "maestro_interfaces/msg/manoeuvre_command.hpp"
 #include "maestro_interfaces/msg/control_signal_percentage.hpp"
 #include "maestro_interfaces/msg/object_id_array.hpp"
+#include "maestro_interfaces/msg/v2x.hpp"
 
 namespace ROSChannels {
 
@@ -534,4 +535,23 @@ namespace Trajectory {
             BaseSub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, callback) {}
     };
 }
+
+namespace V2X {
+    const std::string topicName = "v2x_message";
+    using message_type = maestro_interfaces::msg::V2x;
+
+    class Pub : public BasePub<message_type> {
+    public:
+        const uint32_t objectId;
+        Pub(rclcpp::Node& node, const uint32_t id) :
+            objectId(id),
+            BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName) {}
+    };
+
+    class Sub : public BaseSub<message_type> {
+    public:
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
+    };
+}
+
 } // namespace ROSChannels
