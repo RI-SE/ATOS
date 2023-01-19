@@ -458,6 +458,15 @@ void util_error(const char *message) {
 	exit(EXIT_FAILURE);
 }
 
+void llhOffsetMeters(const int *llh, const double *xyzOffset) {
+	const int lat = llh[0];
+	const int lon = llh[1];
+	const int hgt = llh[2];
+
+	
+}
+
+
 void xyzToLlh(double x, double y, double z, double *lat, double *lon, double *height) {
 	double e2 = EARTH_FLATTENING * (2.0 - EARTH_FLATTENING);
 	double r2 = x * x + y * y;
