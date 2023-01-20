@@ -6,7 +6,7 @@
 
 #include "trigger.h"
 #include "action.h"
-namespace maestro {
+namespace ATOS {
     class Causality
     {
     public:

@@ -4,19 +4,19 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(MaestroCommon LANGUAGES C CXX)
+project(ATOSCommon LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 
-set(MAESTRO_COMMON_TARGET ${TARGET_NAMESPACE}${PROJECT_NAME})
-set(MAESTRO_UTIL_TARGET ${TARGET_NAMESPACE}MaestroCoreUtil)
+set(ATOS_COMMON_TARGET ${TARGET_NAMESPACE}${PROJECT_NAME})
+set(ATOS_UTIL_TARGET ${TARGET_NAMESPACE}ATOSCoreUtil)
 
 find_package(Eigen3 REQUIRED IMPORTED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(nav_msgs REQUIRED)
-find_package(maestro_interfaces REQUIRED)
+find_package(atos_interfaces REQUIRED)
 
 set(LOGGING_LIBRARY MaestroLogging)
 set(TIME_LIBRARY MaestroTime)
@@ -87,7 +87,7 @@ ament_target_dependencies(${MAESTRO_COMMON_TARGET}
   std_msgs
   std_srvs
   nav_msgs
-  maestro_interfaces
+  atos_interfaces
 )
 
 # Exported headers

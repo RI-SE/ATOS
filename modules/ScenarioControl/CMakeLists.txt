@@ -7,16 +7,16 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 project(scenario_control LANGUAGES C CXX)
 
 find_package(rclcpp REQUIRED)
-find_package(maestro_interfaces REQUIRED)
+find_package(atos_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(ad-xolib REQUIRED)
 
 # Define target names
 set(SCENARIO_CONTROL_TARGET ${PROJECT_NAME})
 
-set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(COREUTILS_LIBRARY ATOSCoreUtil)
 set(ISO_22133_LIBRARY ISO22133)
-set(COMMON_LIBRARY MaestroCommon)
+set(COMMON_LIBRARY ATOSCommon)
 
 get_target_property(COMMON_HEADERS ${COMMON_LIBRARY} INCLUDE_DIRECTORIES)
 
@@ -57,13 +57,13 @@ target_include_directories(${SCENARIO_CONTROL_TARGET} PUBLIC
 ament_target_dependencies(${SCENARIO_CONTROL_TARGET}
   rclcpp
   std_msgs
-  maestro_interfaces
+  atos_interfaces
 )
 
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${SCENARIO_CONTROL_TARGET}\")")
 install(TARGETS ${SCENARIO_CONTROL_TARGET} 
-	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
+	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/ATOS"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

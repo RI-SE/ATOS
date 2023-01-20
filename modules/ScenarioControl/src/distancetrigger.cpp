@@ -5,7 +5,7 @@
 #include "distancetrigger.h"
 #include "util.h"
 
-namespace maestro {
+namespace ATOS {
 	constexpr CartesianPosition DistanceTrigger::defaultReferencePoint;
 
 	DistanceTrigger::DistanceTrigger(Trigger::TriggerID_t triggerID) : BooleanTrigger(triggerID, Trigger::TriggerTypeCode_t::TRIGGER_DISTANCE) {

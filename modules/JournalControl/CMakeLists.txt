@@ -7,15 +7,15 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 project(journal_control)
 
 find_package(rclcpp REQUIRED)
-find_package(maestro_interfaces REQUIRED)
+find_package(atos_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
 
 # Define target names
 set(JOURNAL_CONTROL_TARGET ${PROJECT_NAME})
 
-set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(COREUTILS_LIBRARY ATOSCoreUtil)
 set(FILESYSTEM_LIBRARY stdc++fs)
-set(COMMON_LIBRARY MaestroCommon)
+set(COMMON_LIBRARY ATOSCommon)
 
 get_target_property(COMMON_HEADERS ${COMMON_LIBRARY} INCLUDE_DIRECTORIES)
 
@@ -45,13 +45,13 @@ target_include_directories(${JOURNAL_CONTROL_TARGET} PUBLIC
 ament_target_dependencies(${JOURNAL_CONTROL_TARGET}
   rclcpp
   std_msgs
-  maestro_interfaces
+  atos_interfaces
 )
 
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${JOURNAL_CONTROL_TARGET}\")")
 install(TARGETS ${JOURNAL_CONTROL_TARGET} 
-	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
+	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/ATOS"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

@@ -1,4 +1,4 @@
-#include "maestrobase.hpp"
+#include "ATOSbase.hpp"
 #include "datadictionary.h"
 #include "objectconfig.hpp"
 #include <functional>
@@ -9,12 +9,12 @@ using namespace ROSChannels;
 using namespace std_srvs::srv;
 using std::placeholders::_1, std::placeholders::_2;
 
-MaestroBase::MaestroBase()
-    : Module(MaestroBase::moduleName),
-	exitSub(*this, std::bind(&MaestroBase::onExitMessage, this, _1))
+ATOSBase::ATOSBase()
+    : Module(ATOSBase::moduleName),
+	exitSub(*this, std::bind(&ATOSBase::onExitMessage, this, _1))
 {
 
-	std::string installationPath = ament_index_cpp::get_package_prefix("maestro");
+	std::string installationPath = ament_index_cpp::get_package_prefix("ATOS");
 	if (UtilVerifyTestDirectory(installationPath.c_str()) == -1) {
         throw std::runtime_error("Failed to verify test directory");
   }
@@ -22,12 +22,12 @@ MaestroBase::MaestroBase()
 
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d", get_name(), getpid());
 	initDataDictionaryService = create_service<SetBool>(ServiceNames::initDataDict,
-		std::bind(&MaestroBase::onInitDataDictionary, this, _1, _2));
-	getObjectIdsService = create_service<maestro_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds,
-		std::bind(&MaestroBase::onRequestObjectIDs, this, _1, _2));
+		std::bind(&ATOSBase::onInitDataDictionary, this, _1, _2));
+	getObjectIdsService = create_service<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds,
+		std::bind(&ATOSBase::onRequestObjectIDs, this, _1, _2));
 }
 
-MaestroBase::~MaestroBase()
+ATOSBase::~ATOSBase()
 {
 	auto result = DataDictionaryDestructor();
 	if (result != WRITE_OK && result != READ_WRITE_OK) {
@@ -35,7 +35,7 @@ MaestroBase::~MaestroBase()
 	}
 }
 
-void MaestroBase::onInitDataDictionary(
+void ATOSBase::onInitDataDictionary(
 	const SetBool::Request::SharedPtr req,
 	SetBool::Response::SharedPtr res)
 {
@@ -62,7 +62,7 @@ void MaestroBase::onInitDataDictionary(
 	res->message = message;
 }
 
-void MaestroBase::onExitMessage(const Exit::message_type::SharedPtr)
+void ATOSBase::onExitMessage(const Exit::message_type::SharedPtr)
 {
     RCLCPP_INFO(get_logger(), "Received exit message");
     auto result = DataDictionaryDestructor();
@@ -72,9 +72,9 @@ void MaestroBase::onExitMessage(const Exit::message_type::SharedPtr)
     rclcpp::shutdown();
 }
 
-void MaestroBase::onRequestObjectIDs(
-	const std::shared_ptr<maestro_interfaces::srv::GetObjectIds::Request> req,
-	std::shared_ptr<maestro_interfaces::srv::GetObjectIds::Response> res)
+void ATOSBase::onRequestObjectIDs(
+	const std::shared_ptr<atos_interfaces::srv::GetObjectIds::Request> req,
+	std::shared_ptr<atos_interfaces::srv::GetObjectIds::Response> res)
 {
 	char path[PATH_MAX];
 	std::vector<std::invalid_argument> errors;

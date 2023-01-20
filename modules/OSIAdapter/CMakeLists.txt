@@ -8,14 +8,14 @@ project(osi_adapter)
 
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(maestro_interfaces REQUIRED)
+find_package(atos_interfaces REQUIRED)
 find_package(Boost REQUIRED)
 
 # Define target names
 set(OSI_ADAPTER_TARGET ${PROJECT_NAME})
 
 set(OSI_LIBRARY OSIHandler)
-set(MAESTRO_COMMON_LIBRARY MaestroCommon)
+set(ATOS_COMMON_LIBRARY ATOSCommon)
 
 get_target_property(OSI_HEADERS ${OSI_LIBRARY} INCLUDE_DIRECTORIES)
 
@@ -28,7 +28,7 @@ add_executable(${OSI_ADAPTER_TARGET}
 )
 # Link project executable to util libraries
 target_link_libraries(${OSI_ADAPTER_TARGET} 
-	${MAESTRO_COMMON_LIBRARY}
+	${ATOS_COMMON_LIBRARY}
 	${OSI_LIBRARY}
 )
 
@@ -36,7 +36,7 @@ target_link_libraries(${OSI_ADAPTER_TARGET}
 ament_target_dependencies(${OSI_ADAPTER_TARGET}
   rclcpp
   std_msgs
-  maestro_interfaces
+  atos_interfaces
 )
 
 target_include_directories(${OSI_ADAPTER_TARGET} PUBLIC
@@ -48,7 +48,7 @@ target_include_directories(${OSI_ADAPTER_TARGET} PUBLIC
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${OSI_ADAPTER_TARGET}\")")
 install(TARGETS ${OSI_ADAPTER_TARGET}
-	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
+	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/ATOS"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

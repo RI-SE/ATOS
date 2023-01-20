@@ -91,7 +91,7 @@ add_subdirectory(util/C/mathutils)
 add_subdirectory(util/C/osihandler)
 add_subdirectory(util/C/sockets)
 add_subdirectory(common)
-add_subdirectory(modules/MaestroBase)
+add_subdirectory(modules/ATOSBase)
 
 foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})

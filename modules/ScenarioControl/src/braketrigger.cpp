@@ -5,7 +5,7 @@
 #include "logging.h"
 #include "braketrigger.h"
 
-namespace maestro {
+namespace ATOS {
 
 	#define ACCELERATION_OF_GRAVITY_M_S2 9.81
 	#define DEFAULT_RETARDATION_THRESHOLD_G 0.1

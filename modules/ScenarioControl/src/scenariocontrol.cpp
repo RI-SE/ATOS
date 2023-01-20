@@ -7,7 +7,7 @@
 #include "xosc.h"
 
 using namespace std::chrono;
-using namespace maestro;
+using namespace ATOS;
 using namespace ROSChannels;
 using std::placeholders::_1;
 	

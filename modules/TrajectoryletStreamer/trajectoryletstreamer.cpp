@@ -1,8 +1,8 @@
 #include "trajectoryletstreamer.hpp"
-#include "maestro_interfaces/srv/get_object_ids.hpp"
+#include "atos_interfaces/srv/get_object_ids.hpp"
 #include <algorithm>
 
-using namespace maestro;
+using namespace ATOS;
 using namespace ROSChannels;
 using std::placeholders::_1;
 

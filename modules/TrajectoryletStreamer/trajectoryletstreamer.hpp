@@ -6,7 +6,7 @@
 #include <vector>
 #include <map>
 
-namespace maestro {
+namespace ATOS {
 
 class TrajectoryletStreamer : public Module {
 public:
@@ -35,4 +35,4 @@ private:
     std::vector<std::unique_ptr<ObjectConfig>> objectConfigurations;
 };
 
-}  // namespace maestro
+}  // namespace ATOS

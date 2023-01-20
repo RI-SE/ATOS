@@ -45,13 +45,13 @@
 #define SMALL_BUFFER_SIZE_128 128
 #define SMALL_BUFFER_SIZE_64 64
 
-#define MAESTRO_DIR_NAME_LEN 8
+#define ATOS_DIR_NAME_LEN 8
 
 // File paths
-#define TEST_DIR_ENV_VARIABLE_NAME "MAESTRO_TEST_DIR"
+#define TEST_DIR_ENV_VARIABLE_NAME "ATOS_TEST_DIR"
 #define SYSCONF_DIR_NAME "/etc"
 #define JOURNAL_DIR_NAME "journal"
-#define MAESTRO_TEST_DIR_NAME ".astazero/maestro"
+#define ATOS_TEST_DIR_NAME ".astazero/ATOS"
 #define CONFIGURATION_DIR_NAME "conf"
 #define TRAJECTORY_DIR_NAME "traj"
 #define GEOFENCE_DIR_NAME "geofence"
@@ -2425,7 +2425,7 @@ int UtilCopyFile(
 /*!
  * \brief UtilVerifyTestDirectory Checks so that all the required directories exist
  * (i.e. traj, conf etc.) and that a configuration file exists.
- * \param installationPath Installation path where Maestro is installed
+ * \param installationPath Installation path where ATOS is installed
  * \return 0 if successfully verified, -1 otherwise
  */
 int UtilVerifyTestDirectory(const char* installationPath) {
@@ -2450,7 +2450,7 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 	if (envVar == NULL) {
 		strcpy(testDir, getenv("HOME"));
 		strcat(testDir, "/");
-		strcat(testDir, MAESTRO_TEST_DIR_NAME);
+		strcat(testDir, ATOS_TEST_DIR_NAME);
 
 		LogMessage(LOG_LEVEL_INFO, "Environment variable %s unset: defaulting to directory %s",
 				   TEST_DIR_ENV_VARIABLE_NAME, testDir);
@@ -2463,7 +2463,7 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 	// Check top level dir and subdirectory
 	char astazeroDir[MAX_FILE_PATH];
 	strcpy(astazeroDir, testDir);
-	astazeroDir[strlen(astazeroDir) - MAESTRO_DIR_NAME_LEN] = '\0';
+	astazeroDir[strlen(astazeroDir) - ATOS_DIR_NAME_LEN] = '\0';
 
 	char testEnvDirs[2][MAX_FILE_PATH];
 	strcpy(testEnvDirs[0], astazeroDir);
@@ -2571,7 +2571,7 @@ int UtilVerifyTestDirectory(const char* installationPath) {
  * \brief getTestDirectoryPath Gets the absolute path to the directory where subdirectories for
  * trajectories, geofences, configuration etc. are stored, ending with a forward slash. The
  * function defaults to a subdirectory of the user's home directory if the environment variable
- * MAESTRO_TEST_DIR is not set.
+ * ATOS_TEST_DIR is not set.
  * \param path Char array to hold path name
  * \param pathLen Length of char array
  */
@@ -2588,7 +2588,7 @@ void UtilGetTestDirectoryPath(char *path, size_t pathLen) {
 	if (envVar == NULL) {
 		strcpy(path, getenv("HOME"));
 		strcat(path, "/");
-		strcat(path, MAESTRO_TEST_DIR_NAME);
+		strcat(path, ATOS_TEST_DIR_NAME);
 		strcat(path, "/");
 	}
 	else {
@@ -3368,7 +3368,7 @@ I32 UtilConnectTCPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 
 	iResult = fcntl(*Sockfd, F_SETFL, fcntl(*Sockfd, F_GETFL, 0) | O_NONBLOCK);
 
-	LogMessage(LOG_LEVEL_INFO, "Maestro connected to %s:%d", IP, Port);
+	LogMessage(LOG_LEVEL_INFO, "ATOS connected to %s:%d", IP, Port);
 	return iResult;
 
 }

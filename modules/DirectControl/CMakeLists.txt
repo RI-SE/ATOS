@@ -5,16 +5,16 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(direct_control)
-find_package(maestro_interfaces REQUIRED)
+find_package(atos_interfaces REQUIRED)
 
 # Define target names
 set(DIRECT_CONTROL_TARGET ${PROJECT_NAME})
 
-set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(COREUTILS_LIBRARY ATOSCoreUtil)
 set(ISO_22133_LIBRARY MaestroISO22133)
 set(POSITIONING_LIBRARY MaestroPositioning)
 set(TIME_LIBRARY MaestroTime)
-set(COMMON_LIBRARY MaestroCommon)
+set(COMMON_LIBRARY ATOSCommon)
 set(SOCKET_LIBRARY TCPUDPSocket)
 set(THREAD_LIBRARY pthread)
 
@@ -46,13 +46,13 @@ target_include_directories(${DIRECT_CONTROL_TARGET} PUBLIC
 ament_target_dependencies(${DIRECT_CONTROL_TARGET}
   rclcpp
   std_msgs
-  maestro_interfaces
+  atos_interfaces
 )
 
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${DIRECT_CONTROL_TARGET}\")")
 install(TARGETS ${DIRECT_CONTROL_TARGET} 
-	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
+	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/ATOS"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

@@ -7,10 +7,10 @@
 #include "logging.h"
 #include "maestroTime.h"
 
-using maestro_interfaces::msg::ExecuteAction;
-using maestro_interfaces::msg::ActionConfiguration;
+using atos_interfaces::msg::ExecuteAction;
+using atos_interfaces::msg::ActionConfiguration;
 
-namespace maestro {
+namespace ATOS {
 	/*!
 	* \brief Action::Action Constructor for Action objects.
 	* \param actionID ISO ID of the action

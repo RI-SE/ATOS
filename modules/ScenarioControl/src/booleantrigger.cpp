@@ -1,6 +1,6 @@
 #include "booleantrigger.h"
 
-namespace maestro {
+namespace ATOS {
 	/*!
 	* \brief BooleanTrigger::update Updates the tracked signal (i.e. which causes the trigger) to the value specified
 	* \param isBrakeCurrentlyPressed Boolean describing if the boolean

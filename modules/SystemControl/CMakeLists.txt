@@ -7,16 +7,16 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(system_control)
 find_package(rclcpp REQUIRED)
-find_package(maestro_interfaces REQUIRED)
+find_package(atos_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
 
 # Define target names
 set(SYSTEM_CONTROL_TARGET ${PROJECT_NAME})
 
-set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(COREUTILS_LIBRARY ATOSCoreUtil)
 set(TIME_LIBRARY MaestroTime)
 set(LOGGING_LIBRARY MaestroLogging)
-set(MAESTRO_COMMON_LIBRARY MaestroCommon)
+set(ATOS_COMMON_LIBRARY ATOSCommon)
 
 include(GNUInstallDirs)
 
@@ -29,14 +29,14 @@ add_executable(${SYSTEM_CONTROL_TARGET}
 ament_target_dependencies(${SYSTEM_CONTROL_TARGET}
   rclcpp
   std_msgs
-  maestro_interfaces
+  atos_interfaces
 )
   
 target_link_libraries(${SYSTEM_CONTROL_TARGET}
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${LOGGING_LIBRARY}
-	${MAESTRO_COMMON_LIBRARY}
+	${ATOS_COMMON_LIBRARY}
 )
 
 target_include_directories(${SYSTEM_CONTROL_TARGET} PUBLIC
@@ -48,7 +48,7 @@ target_include_directories(${SYSTEM_CONTROL_TARGET} PUBLIC
 install(CODE "MESSAGE(STATUS \"Installing target ${SYSTEM_CONTROL_TARGET}\")")
 
 install(TARGETS ${SYSTEM_CONTROL_TARGET}
-	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
+	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/ATOS"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

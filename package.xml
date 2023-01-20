@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>maestro</name>
-  <version>0.5.0</version>
-  <description>The maestro package</description>
-  <license>TODO</license>
+  <name>atos</name>
+  <version>1.0.0</version>
+  <description>The ATOS package</description>
+  <license>MPL 2.0</license>
   <maintainer email="lukas.wikander@astazero.com">lukas</maintainer> 
 
   <author email="lukas.wikander@astazero.com">Lukas Wikander</author>
@@ -22,7 +22,7 @@
   <depend>std_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>std_srvs</depend>
-  <depend>maestro_interfaces</depend>
+  <depend>atos_interfaces</depend>
   <doc_depend>doxygen</doc_depend>
 
   <test_depend>ament_lint_auto</test_depend>

@@ -5,16 +5,16 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(esmini_adapter)
-find_package(maestro_interfaces REQUIRED)
+find_package(atos_interfaces REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(esminiLib REQUIRED)
 
 # Define target names
 set(ESMINI_ADAPTER_TARGET ${PROJECT_NAME})
 
-set(MAESTRO_COMMON_LIBRARY MaestroCommon)
-set(COREUTILS_LIBRARY MaestroCoreUtil)
-get_target_property(COMMON_HEADERS ${MAESTRO_COMMON_LIBRARY} INCLUDE_DIRECTORIES)
+set(ATOS_COMMON_LIBRARY ATOSCommon)
+set(COREUTILS_LIBRARY ATOSCoreUtil)
+get_target_property(COMMON_HEADERS ${ATOS_COMMON_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
@@ -26,7 +26,7 @@ add_executable(${ESMINI_ADAPTER_TARGET}
 # Link project executable to util libraries
 target_link_libraries(${ESMINI_ADAPTER_TARGET}
 	${COREUTILS_LIBRARY}
-	${MAESTRO_COMMON_LIBRARY}
+	${ATOS_COMMON_LIBRARY}
 	${esminiLib_LIBRARIES}
 )
 
@@ -40,14 +40,14 @@ target_include_directories(${ESMINI_ADAPTER_TARGET} PUBLIC
 ament_target_dependencies(${ESMINI_ADAPTER_TARGET}
   rclcpp
   std_msgs
-  maestro_interfaces
+  atos_interfaces
   tf2
 )
 
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${ESMINI_ADAPTER_TARGET}\")")
 install(TARGETS ${ESMINI_ADAPTER_TARGET}
-	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
+	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/ATOS"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

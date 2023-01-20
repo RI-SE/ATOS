@@ -19,7 +19,7 @@
 using std::placeholders::_1;
 using namespace ROSChannels;
 using namespace std::chrono_literals;
-using namespace maestro;
+using namespace ATOS;
 
 ObjectControl::ObjectControl()
 	: Module(ObjectControl::moduleName),
@@ -224,7 +224,7 @@ void ObjectControl::onRemoteControlDisableMessage(const RemoteControlDisable::me
 
 void ObjectControl::onControlSignalMessage(const ControlSignal::message_type::SharedPtr csp){
 	try{
-		objects.at(csp->maestro_header.object_id)->sendControlSignal(csp);
+		objects.at(csp->ATOS_header.object_id)->sendControlSignal(csp);
 	}
 	catch(const std::exception& e){
 		RCLCPP_ERROR(get_logger(), "Failed to translate/send Control Signal Percentage: %s", e.what());
@@ -490,7 +490,7 @@ void ObjectControl::startListeners() {
 }
 
 void ObjectControl::publishObjectIds() {
-	maestro_interfaces::msg::ObjectIdArray msg;
+	atos_interfaces::msg::ObjectIdArray msg;
 	msg.ids = getVehicleIDs();
 	connectedObjectIdsPub.publish(msg);
 }

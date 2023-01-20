@@ -1,19 +1,19 @@
-# Maestro 
-<img align="left" width="100" height="100" src="/doc/MaestroServer.svg">
+# ATOS 
+<img align="left" width="100" height="100" src="/doc/ATOS_icon.svg">
 
-The Maestro server is a communication hub for all test objects. The server monitors and controls the test objects and is also responsible for creating logfiles. To build Maestro follow the guide below.
+The ATOS server is a communication hub for all test objects. The server monitors and controls the test objects and is also responsible for creating logfiles. To build ATOS follow the guide below.
 
 <br />
 <br />
 
 
 # Table of contents
-- [Maestro](#maestro)
+- [ATOS](#ATOS)
 - [Table of contents](#table-of-contents)
-- [ Building Maestro with colcon](#-building-maestro-with-colcon)
+- [ Building ATOS with colcon](#-building-ATOS-with-colcon)
   - [ Dependencies \& external libraries](#-dependencies--external-libraries)
     - [ Installing OpenSimulationInterface v3.4.0](#-installing-opensimulationinterface-v340)
-    - [ Installing maestro-interfaces](#-installing-maestro-interfaces)
+    - [ Installing atos-interfaces](#-installing-atos-interfaces)
     - [ Installing ad-xolib](#-installing-ad-xolib)
     - [ Installing esmini](#-installing-esmini)
   - [ Installing ROS2 and building for the first time with colcon](#-installing-ros2-and-building-for-the-first-time-with-colcon)
@@ -23,20 +23,20 @@ The Maestro server is a communication hub for all test objects. The server monit
   - [ Building the server with CITS module and mqtt](#-building-the-server-with-cits-module-and-mqtt)
   - [ How to build with RelativeKinematics instead of ObjectControl](#-how-to-build-with-relativekinematics-instead-of-objectcontrol)
 
-# <a name="maestro"></a> Building Maestro with colcon
-Below are the steps for building Maestro for the first time with colcon.
+# <a name="ATOS"></a> Building ATOS with colcon
+Below are the steps for building ATOS for the first time with colcon.
 
 Prerequisites: C/C++ compiler, CMake (minimum version 3.10.2)
 
 ## <a name="dependencies"></a> Dependencies & external libraries
-In order to build Maestro, dependencies and exernal libraries need to be installed. First install the necessary development packages:
+In order to build ATOS, dependencies and exernal libraries need to be installed. First install the necessary development packages:
 ```
 sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev
 ```
 
 Then, the following external libraries need to be installed:
 - [OpenSimulationInterface v3.4.0](https://github.com/OpenSimulationInterface/open-simulation-interface)
-- [maestro-interfaces](https://github.com/RI-SE/maestro-interfaces)
+- [atos-interfaces](https://github.com/RI-SE/atos-interfaces)
 - [ad-xolib](https://github.com/javedulu/ad-xolib)
 - [esmini](https://github.com/esmini/esmini)
 
@@ -54,9 +54,9 @@ sudo sh -c "echo '/usr/local/lib/osi3' > /etc/ld.so.conf.d/osi3.conf"
 sudo ldconfig
 ```
 
-### <a name="maestro-interfaces"></a> Installing maestro-interfaces
+### <a name="atos-interfaces"></a> Installing atos-interfaces
 ```
-git clone https://github.com/RI-SE/maestro-interfaces
+git clone https://github.com/RI-SE/atos-interfaces
 ```
 
 
@@ -90,10 +90,10 @@ sudo ldconfig
 
 ## <a name="ros2"></a> Installing ROS2 and building for the first time with colcon
 ### <a name="ubuntu-20.04"></a> Ubuntu 20.04
-clone Maestro in your git folder, and make sure that all submodules are present and up to date:
+clone ATOS in your git folder, and make sure that all submodules are present and up to date:
 ```
-git clone https://github.com/RI-SE/Maestro.git
-cd Maestro
+git clone https://github.com/RI-SE/ATOS.git
+cd ATOS
 git submodule update --init --recursive
 ```
 
@@ -123,39 +123,39 @@ Add the above line to ~/.bashrc or similar startup script to automate this proce
 
 Create a workspace:
 ```
-mkdir -p ~/maestro_ws/src
+mkdir -p ~/atos_ws/src
 ```
 
-Create symlinks to maestro and maestro_interfaces
+Create symlinks to atos and atos_interfaces
 ```
-ln -s path/to/Maestro ~/maestro_ws/src/maestro
-ln -s path/to/maestro-interfaces ~/maestro_ws/src/maestro_interfaces
+ln -s path/to/ATOS ~/atos_ws/src/atos
+ln -s path/to/atos-interfaces ~/atos_ws/src/atos_interfaces
 ```
 
 Change directory into the workspace and build
 ```
-cd ~/maestro_ws
+cd ~/atos_ws
 colcon build
 ```
 
 Source the project setup file:
 ```
-source ~/maestro_ws/install/setup.bash
+source ~/atos_ws/install/setup.bash
 ```
 Also add the above line to ~/.bashrc or similar.
 
-Launch Maestro
+Launch ATOS
 ```
-ros2 launch maestro maestro_launch.py
+ros2 launch atos atos_launch.py
 ```
 
 # <a name="optional-builds--installations"></a> Optional builds & installations
-Maestro can be installed in alternative ways, and built with support for various optional modules, described here.
+ATOS can be installed in alternative ways, and built with support for various optional modules, described here.
 
 ### <a name="installation-dpkg"></a> Installation via dpkg
 Navigate to the .deb file and install it
 ```sh
-sudo dpkg -i Maestro-x.x.x-Linux.deb
+sudo dpkg -i ATOS-x.x.x-Linux.deb
 ```
 on first install, it is necessary to reboot to reload groups
 

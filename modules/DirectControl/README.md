@@ -12,6 +12,6 @@ TODO description
 ### Run the module
 1) Ensure you have built the module
 2) Navigate to the build directory
-3) Run Maestro
+3) Run ATOS
 4) Run the module: ```./DirectControl```
 

@@ -5,9 +5,9 @@
 #include "logging.h"
 #include "maestroTime.h"
 #include "datadictionary.h"
-#include "maestro_interfaces/msg/control_signal_percentage.hpp"
+#include "atos_interfaces/msg/control_signal_percentage.hpp"
 
-using maestro_interfaces::msg::ControlSignalPercentage;
+using atos_interfaces::msg::ControlSignalPercentage;
 using namespace ROSChannels;
 
 #define TCP_BUFFER_SIZE 2048
@@ -20,9 +20,9 @@ class DmMsg{
 public:
 	DmMsg(){};
 
-	ControlSignalPercentage toMaestroMsg(){
+	ControlSignalPercentage toATOSMsg(){
 		ControlSignalPercentage cspmsg = ControlSignalPercentage();
-		cspmsg.maestro_header.object_id = this->objectId;
+		cspmsg.ATOS_header.object_id = this->objectId;
 		// Convert throttle brake and steering angle to integers between 0,100 and -100,100 respectively.  
 		cspmsg.throttle = round(this->throttle * 100);
 		cspmsg.brake = round(this->brake * 100);
@@ -132,7 +132,7 @@ void DirectControl::readUDPSocketData() {
 			// Have to think abt if/what kind of re-ordering makes sense for 
 			// the application (driver model).
 			if (bytesParsed != -1){
-				ControlSignalPercentage cspmsg = dmMsg.toMaestroMsg();
+				ControlSignalPercentage cspmsg = dmMsg.toATOSMsg();
 				controlSignalPub.publish(cspmsg);
 			}
 		}

@@ -4,14 +4,14 @@
 #include "maestroTime.h"
 #include "iso22133.h"
 #include "journal.h"
-#include "maestro_interfaces/msg/monitor.hpp"
+#include "atos_interfaces/msg/monitor.hpp"
 #include <eigen3/Eigen/Dense>
 #include <csignal>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
-static maestro_interfaces::msg::Monitor createROSMessage(const MonitorMessage& data); // TODO move to somewhere central
+static atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& data); // TODO move to somewhere central
 
 ObjectListener::ObjectListener(
 		ObjectControl* sh,
@@ -193,25 +193,25 @@ ObjectMonitorType transformCoordinate(
 }
 
 
-maestro_interfaces::msg::Monitor createROSMessage(const MonitorMessage& monrMessage) {
-	maestro_interfaces::msg::Monitor msg;
+atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& monrMessage) {
+	atos_interfaces::msg::Monitor msg;
 	auto txid = monrMessage.first;
 	auto indata = monrMessage.second;
 	auto stamp = rclcpp::Time(indata.timestamp.tv_sec, indata.timestamp.tv_usec*1000);
 	
 	// Set stamp for all subtypes
-	msg.maestro_header.header.stamp = stamp;
+	msg.ATOS_header.header.stamp = stamp;
 	msg.pose.header.stamp = stamp;
 	msg.velocity.header.stamp = stamp;
 	msg.acceleration.header.stamp = stamp;
 
 	// Set frame ids
-	msg.maestro_header.header.frame_id = "map"; // TODO
+	msg.ATOS_header.header.frame_id = "map"; // TODO
 	msg.pose.header.frame_id = "map"; // TODO
 	msg.velocity.header.frame_id = "map"; // TODO vehicle local
 	msg.acceleration.header.frame_id = "map"; // TODO vehicle local
 
-	msg.maestro_header.object_id = txid;
+	msg.ATOS_header.object_id = txid;
 	msg.object_state.state = indata.state;
 	if (indata.position.isPositionValid) {
 		msg.pose.pose.position.x = indata.position.xCoord_m;

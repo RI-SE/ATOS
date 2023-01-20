@@ -4,7 +4,7 @@
 #include "util.h"
 #include "trigger.h"
 
-namespace maestro {
+namespace ATOS {
     class ISOTrigger : public Trigger
     {
     public:

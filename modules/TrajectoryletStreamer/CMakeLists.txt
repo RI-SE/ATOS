@@ -7,14 +7,14 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 project(trajectorylet_streamer)
 
 find_package(rclcpp REQUIRED)
-find_package(maestro_interfaces REQUIRED)
+find_package(atos_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 
-set(MAESTRO_COMMON_LIBRARY MaestroCommon)
-get_target_property(COMMON_HEADERS ${MAESTRO_COMMON_LIBRARY} INCLUDE_DIRECTORIES)
+set(ATOS_COMMON_LIBRARY ATOSCommon)
+get_target_property(COMMON_HEADERS ${ATOS_COMMON_LIBRARY} INCLUDE_DIRECTORIES)
 
 # Define target names
 set(TRAJECTORYLET_STREAMER_TARGET ${PROJECT_NAME})
@@ -29,7 +29,7 @@ add_executable(${TRAJECTORYLET_STREAMER_TARGET}
 )
 # Link project executable to util libraries
 target_link_libraries(${TRAJECTORYLET_STREAMER_TARGET}
-	${MAESTRO_COMMON_LIBRARY}
+	${ATOS_COMMON_LIBRARY}
 )
 
 # ROS specific settings
@@ -38,7 +38,7 @@ ament_target_dependencies(${TRAJECTORYLET_STREAMER_TARGET}
   std_msgs
   nav_msgs
   tf2_geometry_msgs
-  maestro_interfaces
+  atos_interfaces
   tf2
 )
 
@@ -49,7 +49,7 @@ target_include_directories(${TRAJECTORYLET_STREAMER_TARGET} PUBLIC
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${TRAJECTORYLET_STREAMER_TARGET}\")")
 install(TARGETS ${TRAJECTORYLET_STREAMER_TARGET}
-	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
+	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/ATOS"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
