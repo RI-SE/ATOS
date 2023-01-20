@@ -23,19 +23,19 @@ MqttBridge::MqttBridge() : Module(MqttBridge::moduleName),
 						   v2xMsgSub(*this, std::bind(&MqttBridge::onV2xMsg, this, _1)),
 						   mqttAbortSub(*this, std::bind(&MqttBridge::onAbortMessage, this, _1))
 {
-	declare_parameter("brokerIP");
-	declare_parameter("pubClientId");
+	declare_parameter("broker_ip");
+	declare_parameter("pub_client_id");
 	declare_parameter("username");
 	declare_parameter("password");
 	declare_parameter("topic");
-	declare_parameter("QoS");
+	declare_parameter("quality_of_service");
 
-	get_parameter("brokerIP", brokerIP);
-	get_parameter("pubClientId", pubClientId);
+	get_parameter("broker_ip", brokerIP);
+	get_parameter("pub_client_id", pubClientId);
 	get_parameter("username", username);
 	get_parameter("password", password);
 	get_parameter("topic", topic);
-	get_parameter("QoS", QoS);
+	get_parameter("quality_of_service", QoS);
 
 	timer = this->create_wall_timer(SEND_INTERVAL, std::bind(&MqttBridge::yieldMqttClient, this));
 }

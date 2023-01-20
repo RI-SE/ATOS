@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stdexcept>
-#include <iostream>
 #include <vector>
 #include <json/json.h>
 #include "MQTTClient.h"

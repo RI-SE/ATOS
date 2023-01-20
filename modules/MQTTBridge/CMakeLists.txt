@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(mqtt_bridge)
 find_package(rclcpp REQUIRED)
-find_package(maestro_interfaces REQUIRED)
+find_package(atos_interfaces REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 
 find_library(paho-mqtt3a NAMES libpaho-mqtt3a.so REQUIRED)
@@ -46,7 +46,7 @@ target_include_directories(${MQTT_BRIDGE_TARGET} PUBLIC
 # ROS specific rules
 ament_target_dependencies(${MQTT_BRIDGE_TARGET}
   rclcpp
-  maestro_interfaces
+  atos_interfaces
 )
 
 # Installation rules
