@@ -542,10 +542,8 @@ namespace V2X {
 
     class Pub : public BasePub<message_type> {
     public:
-        const uint32_t objectId;
-        Pub(rclcpp::Node& node, const uint32_t id) :
-            objectId(id),
-            BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName) {}
+        Pub(rclcpp::Node& node) :
+            BasePub<message_type>(node, topicName) {}
     };
 
     class Sub : public BaseSub<message_type> {
