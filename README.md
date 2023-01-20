@@ -152,55 +152,20 @@ ros2 launch atos atos_launch.py
 # <a name="optional-builds--installations"></a> Optional builds & installations
 ATOS can be installed in alternative ways, and built with support for various optional modules, described here.
 
-### <a name="installation-dpkg"></a> Installation via dpkg
+## <a name="build-MQTT-Bridge"></a> Building the server with MQTT bridge module
+Module for relaying v2x ROS msg to a MQTT broker. 
+Configuration can done in the conf/params.yaml file.  
+
+```sh
+sudo apt install ros-foxy-paho-mqtt-c nlohmann-json3-dev
+```
+
+## <a name="installation-dpkg"></a> Installation via dpkg
 Navigate to the .deb file and install it
 ```sh
-sudo dpkg -i ATOS-x.x.x-Linux.deb
+sudo dpkg -i Maestro-x.x.x-Linux.deb
 ```
 on first install, it is necessary to reboot to reload groups
-
-## <a name="build-cits-mqtt"></a> Building the server with CITS module and mqtt
-
-The CITS module uses PAHO MQTT, which can be found through the following link:
-https://www.eclipse.org/paho/
-
-To be able to run the server with the CITS module you must first build and install paho mqtt. 
-
-Paho mqtt requires OpenSSL to be able to run. To install OpenSSL do
-```sh
-apt-get install libssl-dev
-```
-In order to get and build the documentation for paho mqtt, do the following
-```sh
-apt-get install doxygen graphviz
-```
-
-Now get the latest source code for paho mqtt
-```sh
-git clone https://github.com/eclipse/paho.mqtt.c.git
-```
-
-Go to the root of the cloned git repo and build the documentation by doing
-```sh
-cd paho.mqtt.c.git
-make html
-```
-This will build the documentation for all the code. Then proceede to build and install paho
-```sh
-make
-sudo make install
-```
-
-The server will not build the CITS module by default. This is to prevent the use of the CITS module when it is not necessary. To enable building of the module issue the following command
-```sh
-colcon build --cmake-args -DUSE_CITS:BOOL=TRUE ..
-```
-then you can build and run the server as normal
-
-To disable the CITS module, rebuild as follows
-```sh
-colcon build --cmake-args -DUSE_CITS:BOOL=FALSE ..
-```
 
 ## <a name="relativekinematics"></a> How to build with RelativeKinematics instead of ObjectControl
 

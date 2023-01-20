@@ -1,11 +1,18 @@
 import os
 
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import get_package_prefix
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
+
 def generate_launch_description():
+    atosConfig = os.path.join(
+        get_package_prefix('maestro'),
+        'etc',
+        'params.yaml'
+    )
+
     return LaunchDescription([
         Node(
             package='atos',
@@ -73,5 +80,13 @@ def generate_launch_description():
             namespace='atos',
             executable='esmini_adapter',
             name='esmini_adapter'
+        ),
+        Node(
+            package='maestro',
+            namespace='maestro',
+            executable='mqtt_bridge',
+            name='mqtt_bridge',
+            # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
+            parameters=[atosConfig]
         )
     ])

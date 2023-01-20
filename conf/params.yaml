@@ -1,0 +1,9 @@
+maestro:
+  mqtt_bridge:
+    ros__parameters:
+      brokerIP: "tcp://192.71.100.198:1883"
+      pubClientId: "ATOS"
+      username: "astauser"
+      password: "resuatsa"
+      topic: "azapos/cmd"
+      QoS: "1"

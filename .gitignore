@@ -44,7 +44,11 @@ build*/
 .vscode*/
 PlaygroundPlatform*/
 .cache*/
+CMakeFiles*/
 
 # Autosave files
 *.save
 *.autosave
+
+# CMake
+CMakeCache.txt
