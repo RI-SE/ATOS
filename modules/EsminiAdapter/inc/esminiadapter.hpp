@@ -47,7 +47,13 @@ private:
 	static maestro::Trajectory getTrajectory(uint32_t,std::vector<SE_ScenarioObjectState>& states);
 	static std::map<uint32_t,maestro::Trajectory> extractTrajectories(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,maestro::Trajectory>& idToTraj);
 	
+	static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor::message_type monr);
 	static std::shared_ptr<EsminiAdapter> me;
 	static std::unordered_map<int, int> objectIdToIndex;
+	const std::vector<std::string> supportedActions {"start", 
+													 "send_denm"
+													};
+	static int actionId;
+	static void testingFun();
 
 };

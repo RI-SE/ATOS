@@ -8,6 +8,7 @@
 
 #include "trajectory.hpp"
 #include "datadictionary.h"
+#include "string_utility.hpp"
 
 using namespace ROSChannels;
 using std::placeholders::_1;
@@ -16,6 +17,8 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::me = NULL;
 std::unordered_map<int,int> EsminiAdapter::objectIdToIndex = std::unordered_map<int, int>();
 std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAdapter::monrSubscribers = std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>>();
 std::unordered_map<uint32_t,ROSChannels::Monitor::message_type> EsminiAdapter::lastMonitors = std::unordered_map<uint32_t,ROSChannels::Monitor::message_type>();
+
+int EsminiAdapter::actionId = 0;
 
 
 /*!
@@ -100,14 +103,87 @@ void EsminiAdapter::onEsminiStoryBoardStateChange(const char* name, int type, in
 	RCLCPP_DEBUG(me->get_logger(), "Esmini Storyboard State Change Name: %s, Type: %d, State: %d", name, type, state);
 }
 
+ROSChannels::V2X::message_type EsminiAdapter::denmFromMonitor(const ROSChannels::Monitor::message_type monr){
+	//lat,lon,alt = localPosToLatLong(monr);
+	ROSChannels::V2X::message_type denm;
+	denm.cause_code = 3;
+	denm.altitude = 3;
+	denm.latitude = 3;
+	denm.longitude = 3;
+	denm.detection_time = 33;
+	denm.message_type = 3;
+	return denm;
+}
+
 /*!
  * \brief Callback to be executed by esmini when a condition is triggered.
  * \param name Name of the condition that was triggered.
  * \param timestamp Timestamp when the condition triggered.
  */
 void EsminiAdapter::onEsminiConditionTriggered(const char* name, double timestamp){
-	//Placeholder, TODO: Implement
-	RCLCPP_DEBUG(me->get_logger(), "Esmini Condition Trigger Name %s", name);
+	// TODO: investigate possibility of expanding esmini API to include more info, such as: Actor Object ID,
+	// 
+	RCLCPP_DEBUG(me->get_logger(), "Esmini Condition Trigger Name %s at simulation timestamp %lf", name, timestamp);
+	std::vector<std::string> res;
+	split(name, ',', res);
+	if (res.size() != 2){
+		RCLCPP_WARN(me->get_logger(), "Esmini Condition Trigger Name %s is not of the form ActorObjectId,Action", name);
+		return;
+	}
+	uint32_t objectId = std::stoul(res[0].c_str());
+	int esminiId = SE_GetIdByName(res[0].c_str());
+	RCLCPP_INFO(me->get_logger(), "Esmini Object ID %d Maestro Object ID: %lu", esminiId,objectId);
+	std::string action = res[1];
+	if(std::find(me->supportedActions.begin(), me->supportedActions.end(), action) == me->supportedActions.end()) {
+		RCLCPP_WARN(me->get_logger(), "Esmini Condition Action Name %s is not a supported action", action);
+		return;
+	}
+	if (action == "start"){
+		// First send a configuration message (accm) to ObjectControl, then trigger it (exac)
+		// TODO: Might be better to simply *only* send a trigger to ObjectControl, but the way 
+		// the messages accm, exac etc are set up currently, this was the quickest method.
+
+
+		// Send a action-configuration message to ObjectControl
+		ROSChannels::ActionConfiguration::message_type accmData;
+		accmData.action_id = me->actionId;
+		accmData.action_type = ACTION_TEST_SCENARIO_COMMAND;
+		accmData.action_type_parameter1 = ACTION_PARAMETER_VS_SEND_START;
+		accmData.ip = 2130706433; // 127.0.0.1 TODO: figure out how to get the IP of the object, maybe through OpenSCENARIO parameters. 
+		me->accmPub.publish(accmData); // publish the action configuration message
+		std::this_thread::sleep_for(std::chrono::milliseconds(100)); // sleep for 100 ms to make sure the message is sent before the next one
+	
+		// Send a executeAction-message to ObjectControl, refering to the prev message
+		ROSChannels::ExecuteAction::message_type exacData;
+		exacData.action_id = me->actionId;
+		exacData.executiontime_qmsow = 10; // fix
+		exacData.ip = 2130706433; // 127.0.0.1
+		me->exacPub.publish(exacData); // publish the execute action message
+
+		me->actionId++;
+	}
+	else if (action == "send_denm"){
+		// Get the latest Monitor message
+		ROSChannels::Monitor::message_type monr;
+		try{
+			monr = me->lastMonitors[objectId];
+		}
+		catch (const std::out_of_range& oor) {
+			RCLCPP_WARN(me->get_logger(), "Esmini Condition Action Name %s could not be executed, no Monitor message received for object %lu", action, objectId);
+			return;
+		}
+		try{
+			auto denm = ROSChannels::V2X::message_type();
+			me->v2xPub.publish(me->denmFromMonitor(monr));
+		}
+		catch (...) {
+			RCLCPP_WARN(me->get_logger(), "Esmini Condition Action Name %s could not be executed, no Monitor message received for object %lu", action, objectId);
+			return;
+		}
+		
+	}
+	
+
 }
 
 /*!
@@ -196,7 +272,7 @@ maestro::Trajectory EsminiAdapter::getTrajectory(uint32_t id,std::vector<SE_Scen
  * \return A map of object states, where the key is the object ID and the value is a vector of states
  */
 void EsminiAdapter::getObjectStates(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states) {
-	if (!SE_Init(oscFilePath.c_str(),0,0,0,0) == -1){
+	if (!SE_Init(oscFilePath.c_str(),1,0,0,0) == -1){ // Disable controllers, let DefaultController be used
 		RCLCPP_ERROR(me->get_logger(), "Failed to initialize esmini");
 		exit(1);
 	}
@@ -260,17 +336,18 @@ void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
 		}*/
 	}
 
-	// Inject Meastro as controller for the DefaultControlled entities
-	// TODO
-
 	// Handle triggers and story board element changes
 	SE_RegisterConditionCallback(&onEsminiConditionTriggered);
 	SE_RegisterStoryBoardElementStateChangeCallback(&onEsminiStoryBoardStateChange);
 
+	SE_Init(oscFilePath.c_str(),1,0,0,0); // Disable controllers, let DefaultController be used
 	// Populate the map tracking Object ID -> esmini index
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
 		me->objectIdToIndex[SE_GetId(j)] = j;
 	}
+	SE_Close(); // Stop ScenarioEngine
+
+	RCLCPP_DEBUG(me->get_logger(), "Extracted trajectories");
 }
 
 /*!
