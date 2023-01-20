@@ -3,14 +3,20 @@
 #include "esmini/esminiRMLib.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
+#include <algorithm>
+#include <functional>
 
 #include "trajectory.hpp"
 #include "datadictionary.h"
 
 using namespace ROSChannels;
+using std::placeholders::_1;
 
 std::shared_ptr<EsminiAdapter> EsminiAdapter::me = NULL;
 std::unordered_map<int,int> EsminiAdapter::objectIdToIndex = std::unordered_map<int, int>();
+std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAdapter::monrSubscribers = std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>>();
+std::unordered_map<uint32_t,ROSChannels::Monitor::message_type> EsminiAdapter::lastMonitors = std::unordered_map<uint32_t,ROSChannels::Monitor::message_type>();
+
 
 /*!
  * \brief Creates an instance and initialize esmini if none exists, otherwise returns the existing instance.
@@ -20,11 +26,33 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 	if (me == nullptr) {
 		me = std::shared_ptr<EsminiAdapter>(new EsminiAdapter());
 		me->InitializeEsmini(oscFilePath);
+		// Start listening to connected object ids
+		me->connectedObjectIdsSub = ROSChannels::ConnectedObjectIds::Sub(*me,&EsminiAdapter::onConnectedObjectIdsMessage);
+		// Start V2X publisher
+		me->v2xPub = ROSChannels::V2X::Pub(*me);
+		
 	}
 	return me;
 }
 
-EsminiAdapter::EsminiAdapter() : Module(moduleName) {
+/*!
+ * \brief This callback is executed when objects are connected, and creates Monitor subscribers for all connected objects.
+ * \param msg Array of object IDs
+ */
+void EsminiAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::message_type::SharedPtr msg) {
+	for (uint32_t id : msg->ids) {
+		if (me->monrSubscribers.find(id) == me->monrSubscribers.end()){
+			me->monrSubscribers[id] = std::make_shared<Monitor::Sub>(*me, id, std::bind(&EsminiAdapter::onMonitorMessage, me, _1, id));	
+		}
+	}
+}
+
+EsminiAdapter::EsminiAdapter() : Module(moduleName),
+	accmPub(*this),
+	exacPub(*this),
+	v2xPub(*this),
+	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage)
+ {
 	// Get the file path of xosc file
 	try{
 		char path[MAX_FILE_PATH];
@@ -69,7 +97,6 @@ void EsminiAdapter::onStartMessage(const Start::message_type::SharedPtr) {
  * \param state new state, possible values: STANDBY = 1, RUNNING = 2, COMPLETE = 3, UNDEFINED_ELEMENT_STATE = 0.
  */
 void EsminiAdapter::onEsminiStoryBoardStateChange(const char* name, int type, int state){
-	//Placeholder, TODO: Implement
 	RCLCPP_DEBUG(me->get_logger(), "Esmini Storyboard State Change Name: %s, Type: %d, State: %d", name, type, state);
 }
 
@@ -113,6 +140,7 @@ void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr
 	if (me->objectIdToIndex.find(id) != me->objectIdToIndex.end()){
 		reportObjectPosition(monr, id); // Report object position to esmini
 		SE_Step(); // Advance the "simulation world"-time
+		me->lastMonitors[id] = *monr; // Save the message for later use
 	}
 	else{
 		RCLCPP_WARN(me->get_logger(), "Received MONR message for object with ID %d, but no such object exists in the scenario", id);

@@ -23,12 +23,22 @@ public:
 
 private:
 	EsminiAdapter();
+
+	ROSChannels::ActionConfiguration::Pub accmPub;
+	ROSChannels::ExecuteAction::Pub exacPub;
+	ROSChannels::V2X::Pub v2xPub;
+	ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;
+
+	static std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
+	static std::unordered_map<uint32_t,ROSChannels::Monitor::message_type> lastMonitors;
+
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
 	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id) override;
 	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
 	void onStartMessage(const ROSChannels::Start::message_type::SharedPtr) override;
 	void onExitMessage(const ROSChannels::Start::message_type::SharedPtr) override;
+	static void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
 	static void reportObjectPosition(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
 	static void onEsminiStoryBoardStateChange(const char* name, int type, int state);
 	static void onEsminiConditionTriggered(const char* name, double timestamp);
