@@ -461,7 +461,7 @@ void util_error(const char *message) {
 /**
  * @brief Returns a new latitude, longitude, height after offsetting x, y, z meters
  * 
- * @param llh The latitude, longitude, height [degrees * 10^6, degrees * 10^6, meters]
+ * @param llh The latitude, longitude, height [degrees, degrees, meters]
  * @param xyzOffset Meters offset from llh [meters, meters, meters]
  */
 void llhOffsetMeters(double *llh, const double *xyzOffset) {
@@ -473,10 +473,8 @@ void llhOffsetMeters(double *llh, const double *xyzOffset) {
 	const double dy = xyzOffset[1];
 	const double dz = xyzOffset[2];
 
-	const int microDegrees180 = 180000000;
-
-	llh[0] = lat + (dy / EARTH_EQUATOR_RADIUS_M) * (microDegrees180 / M_PI);
-	llh[1] = lon + (dx / EARTH_EQUATOR_RADIUS_M) * (microDegrees180 / M_PI) / cos(lat * M_PI / microDegrees180);
+	llh[0] = lat + (dy / EARTH_EQUATOR_RADIUS_M) * (180 / M_PI);
+	llh[1] = lon + (dx / EARTH_EQUATOR_RADIUS_M) * (180 / M_PI) / cos(lat * M_PI / 180);
 	llh[2] = hgt + dz;
 }
 
