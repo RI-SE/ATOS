@@ -465,9 +465,9 @@ void util_error(const char *message) {
  * @param xyzOffset Meters offset from llh [meters, meters, meters]
  */
 void llhOffsetMeters(double *llh, const double *xyzOffset) {
-	const int lat = llh[0];
-	const int lon = llh[1];
-	const int hgt = llh[2];
+	const double lat = llh[0];
+	const double lon = llh[1];
+	const double hgt = llh[2];
 
 	const double dx = xyzOffset[0];
 	const double dy = xyzOffset[1];
