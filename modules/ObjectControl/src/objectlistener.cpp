@@ -200,18 +200,18 @@ atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& monrMessage
 	auto stamp = rclcpp::Time(indata.timestamp.tv_sec, indata.timestamp.tv_usec*1000);
 	
 	// Set stamp for all subtypes
-	msg.ATOS_header.header.stamp = stamp;
+	msg.atos_header.header.stamp = stamp;
 	msg.pose.header.stamp = stamp;
 	msg.velocity.header.stamp = stamp;
 	msg.acceleration.header.stamp = stamp;
 
 	// Set frame ids
-	msg.ATOS_header.header.frame_id = "map"; // TODO
+	msg.atos_header.header.frame_id = "map"; // TODO
 	msg.pose.header.frame_id = "map"; // TODO
 	msg.velocity.header.frame_id = "map"; // TODO vehicle local
 	msg.acceleration.header.frame_id = "map"; // TODO vehicle local
 
-	msg.ATOS_header.object_id = txid;
+	msg.atos_header.object_id = txid;
 	msg.object_state.state = indata.state;
 	if (indata.position.isPositionValid) {
 		msg.pose.pose.position.x = indata.position.xCoord_m;

@@ -14,7 +14,7 @@ ATOSBase::ATOSBase()
 	exitSub(*this, std::bind(&ATOSBase::onExitMessage, this, _1))
 {
 
-	std::string installationPath = ament_index_cpp::get_package_prefix("ATOS");
+	std::string installationPath = ament_index_cpp::get_package_prefix("atos");
 	if (UtilVerifyTestDirectory(installationPath.c_str()) == -1) {
         throw std::runtime_error("Failed to verify test directory");
   }

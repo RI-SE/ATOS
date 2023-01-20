@@ -22,7 +22,7 @@ public:
 
 	ControlSignalPercentage toATOSMsg(){
 		ControlSignalPercentage cspmsg = ControlSignalPercentage();
-		cspmsg.ATOS_header.object_id = this->objectId;
+		cspmsg.atos_header.object_id = this->objectId;
 		// Convert throttle brake and steering angle to integers between 0,100 and -100,100 respectively.  
 		cspmsg.throttle = round(this->throttle * 100);
 		cspmsg.brake = round(this->brake * 100);

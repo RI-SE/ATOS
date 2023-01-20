@@ -224,7 +224,7 @@ void ObjectControl::onRemoteControlDisableMessage(const RemoteControlDisable::me
 
 void ObjectControl::onControlSignalMessage(const ControlSignal::message_type::SharedPtr csp){
 	try{
-		objects.at(csp->ATOS_header.object_id)->sendControlSignal(csp);
+		objects.at(csp->atos_header.object_id)->sendControlSignal(csp);
 	}
 	catch(const std::exception& e){
 		RCLCPP_ERROR(get_logger(), "Failed to translate/send Control Signal Percentage: %s", e.what());
