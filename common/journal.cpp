@@ -8,6 +8,7 @@
 #include <chrono>
 #include <ctime>
 #include <cerrno>
+#include <cstring>
 
 #define JOURNAL_LABEL_MAX_LENGTH 100
 #define FILENAME_DATESTR_MAX_LENGTH 100

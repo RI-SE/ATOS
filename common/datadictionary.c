@@ -18,6 +18,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <string.h>
+#include <errno.h>
 #include "datadictionary.h"
 #include "logging.h"
 #include "shmem.h"

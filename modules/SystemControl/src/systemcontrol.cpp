@@ -1,4 +1,6 @@
 #include "systemcontrol.hpp"
+#include <cstdio>
+#include <fcntl.h>
 
 #define SYSTEM_CONTROL_SERVICE_POLL_TIME_MS 5000
 #define SYSTEM_CONTROL_TASK_PERIOD_MS 1
@@ -1176,27 +1178,6 @@ void SystemControl::processUserCommand()
 			SystemControlState = SERVER_STATE_ERROR;
 
 		}
-		/*
-		if (iCommSend(COMM_EXIT, NULL, 0) < 0) {
-			RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending EXIT command");
-			SystemControlState = SERVER_STATE_ERROR;
-		}
-		else {
-			iExit = 1;
-			GSD->ExitU8 = 1;
-			usleep(1000000);
-			SystemControlCommand = Idle_0;
-			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "Exit:",
-												ControlResponseBuffer, 0, &ClientSocket, 0);
-			close(ClientSocket);
-			ClientSocket = -1;
-			if (USE_LOCAL_USER_CONTROL == 0) {
-				close(ServerHandle);
-				ServerHandle = -1;
-			}
-			RCLCPP_INFO(get_logger(), "Server closing");
-		}*/
 		break;
 
 	default:
@@ -1575,8 +1556,6 @@ I32 SystemControl::SystemControlInitServer(int *ClientSocket, int *ServerHandle,
 		*ClientSocket = accept(*ServerHandle, (struct sockaddr *)&cli_addr, &cli_length);
 		if ((*ClientSocket == -1 && errno != EAGAIN && errno != EWOULDBLOCK) || iExit)
 			util_error("Failed to establish connection");
-		// Varför läser man bus-meddelanden här? Tömmer den bara sin queue?
-		//bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 	} while (*ClientSocket == -1);
 
 	RCLCPP_INFO(get_logger(), "Connection established: %s:%i", inet_ntoa(cli_addr.sin_addr),

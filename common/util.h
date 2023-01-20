@@ -27,7 +27,6 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
-#include "mqbus.h"
 #include "iso22133.h"
 #include "logging.h"
 #include "positioning.h"
@@ -634,17 +633,6 @@ void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int 
 void util_error(const char *message);
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
-
-// Message bus functions
-int iCommInit(void);
-int iCommClose(void);
-ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, struct timeval *timeRecv);
-int iCommSend(const enum COMMAND iCommand, const char* data, size_t dataLength);
-
-int iCommSendTREO(TREOData data);
-int iCommSendTRCM(TRCMData data);
-int iCommSendEXAC(EXACData data);
-int iCommSendACCM(ACCMData data);
 
 // File system functions
 int UtilVerifyTestDirectory(const char* installationPath);

@@ -1,4 +1,5 @@
 #include "timecontrol.hpp"
+#include <fcntl.h>
 using namespace ROSChannels;
 using std::placeholders::_1;
 TimeControl::TimeControl()

@@ -109,7 +109,6 @@ private:
 		(uint8_t) PROTO2_SETUP_TIME_FEED_INTERVAL
 	};
 	struct timespec sleep_time, ref_time;
-	C8 MqRecvBuffer[MBUS_MAX_DATALEN];
 	struct timeval tv, ExecTime;
 	struct tm *tm;
 
@@ -117,9 +116,6 @@ private:
 	U8 PrevSecondU8;
 	U16 CurrentMilliSecondU16, PrevMilliSecondU16;
 	U8 CycleCount = 0;
-
-	enum COMMAND command;
-	char busReceiveBuffer[MBUS_MAX_DATALEN];
 
 	/*functions*/
 	void TimeControlDecodeTimeBuffer(TimeType * GPSTime, C8 * TimeBuffer, C8 debug);
