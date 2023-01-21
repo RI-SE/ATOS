@@ -1,7 +1,7 @@
 /**
  * @file filehandler.cpp
  * @author Adam Eriksson (adam.eriksson@astazero.com)
- * @brief atm Reads trajectory files in .maestro (maestro home folder)
+ * @brief atm Reads trajectory files in .ATOS (ATOS home folder)
  * @version 0.1
  * @date 2020-10-16
  * 

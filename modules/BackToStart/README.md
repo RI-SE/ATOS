@@ -1,5 +1,5 @@
 ## Back To Start module
-This module is an intended to handle the back to start functionality in Maestro. 
+This module is an intended to handle the back to start functionality in ATOS. 
 
 ### Build process
 1) Ensure your util repo is up to date
@@ -13,6 +13,6 @@ This module is an intended to handle the back to start functionality in Maestro.
 1) Ensure you have built the module
 2) Navigate to the build directory
 3) Run the module: ```./BackToStart```
-4) Run Maestro
+4) Run ATOS
 
 Note: steps 3 and 4 can be replaced with running the runServer.sh script in the top directory of this repository

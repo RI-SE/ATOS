@@ -11,7 +11,7 @@
 #include "iso22133.h"
 #include "roschannel.hpp"
 
-namespace maestro {
+namespace ATOS {
 
     #define ACTION_NUMBER_PARAMETER_FIELDS 3
 

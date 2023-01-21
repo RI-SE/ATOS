@@ -1,5 +1,5 @@
 ## Dummy module
-This module is an example for how to build a Maestro-external module and connect it via message bus. It is also written in C++ so can serve as an example for how to import Maestro C code and connect to message bus using another code language.
+This module is an example for how to build a ATOS-external module and connect it via message bus. It is also written in C++ so can serve as an example for how to import ATOS C code and connect to message bus using another code language.
 
 ### Build process
 1) Ensure your util repo is up to date
@@ -13,6 +13,6 @@ This module is an example for how to build a Maestro-external module and connect
 1) Ensure you have built the module
 2) Navigate to the build directory
 3) Run the module: ```./dummy```
-4) Run Maestro
+4) Run ATOS
 
 Note: steps 3 and 4 can be replaced with running the runServer.sh script in the top directory of this repository

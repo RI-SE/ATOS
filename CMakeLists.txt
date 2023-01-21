@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "Enable verbose make")
 set(CMAKE_COLOR_MAKEFILE   ON)
 
-project(maestro VERSION 0.5.0)
+project(atos VERSION 1.0.0)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	#add_compile_options(-Wall -Wextra -Wpedantic)
@@ -91,7 +91,7 @@ add_subdirectory(util/C/mathutils)
 add_subdirectory(util/C/osihandler)
 add_subdirectory(util/C/sockets)
 add_subdirectory(common)
-add_subdirectory(modules/MaestroBase)
+add_subdirectory(modules/ATOSBase)
 
 foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})
@@ -110,7 +110,7 @@ ament_package()
 
 # Install configuration
 include(GNUInstallDirs)
-file(GLOB CONF_FILES ${CMAKE_CURRENT_SOURCE_DIR}/conf/*)
+file(GLOB CONF_FILES ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.conf)
 install(FILES ${CONF_FILES} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
 install(DIRECTORY launch DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/)
 

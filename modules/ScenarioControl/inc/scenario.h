@@ -16,7 +16,7 @@
 
 #include "loggable.hpp"
 
-namespace maestro {
+namespace ATOS {
     class Scenario : public Loggable
     {
     public:

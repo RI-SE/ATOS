@@ -1,6 +1,6 @@
 #pragma once
 
-#include <maestro_interfaces/msg/monitor.hpp>
+#include <atos_interfaces/msg/monitor.hpp>
 #include <rviz_common/ros_topic_display.hpp>
 #include "rviz_common/interaction/forwards.hpp"
 #include "rviz_common/properties/color_property.hpp"
@@ -11,9 +11,9 @@
 #include "rviz_rendering/objects/axes.hpp"
 #include "rviz_rendering/objects/shape.hpp"
 
-namespace maestro_rviz_plugins {
+namespace ATOS_rviz_plugins {
 
-class MonitorDisplay : public rviz_common::RosTopicDisplay<maestro_interfaces::msg::Monitor> {
+class MonitorDisplay : public rviz_common::RosTopicDisplay<atos_interfaces::msg::Monitor> {
 	Q_OBJECT
    public:
 	enum Shape {
@@ -23,7 +23,7 @@ class MonitorDisplay : public rviz_common::RosTopicDisplay<maestro_interfaces::m
 	MonitorDisplay();
 
    private:
-	void processMessage(maestro_interfaces::msg::Monitor::ConstSharedPtr msg);
+	void processMessage(atos_interfaces::msg::Monitor::ConstSharedPtr msg);
 	void onInitialize() override;
 	void reset() override;
 
@@ -60,4 +60,4 @@ class MonitorDisplay : public rviz_common::RosTopicDisplay<maestro_interfaces::m
 	bool pose_valid_;
 };
 
-}  // namespace maestro_rviz_plugins
+}  // namespace ATOS_rviz_plugins

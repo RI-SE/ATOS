@@ -166,7 +166,7 @@ private:
 	I32 SystemControlCreateDirectory(const char * Path, char * ReturnValue, U8 Debug);
 	I32 SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32,
 												U8 Debug);
-	I32 SystemControlBuildRVSSMaestroChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32,
+	I32 SystemControlBuildRVSSATOSChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32,
 													U8 SysCtrlState, U8 Debug);
 	I32 SystemControlBuildRVSSAspChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
 	int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr);

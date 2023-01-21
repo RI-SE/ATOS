@@ -9,7 +9,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 project(object_control)
 
 find_package(rclcpp REQUIRED)
-find_package(maestro_interfaces REQUIRED)
+find_package(atos_interfaces REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -19,11 +19,11 @@ find_package(tf2 REQUIRED)
 # Define target names
 set(OBJECT_CONTROL_TARGET ${PROJECT_NAME})
 
-set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(COREUTILS_LIBRARY ATOSCoreUtil)
 set(ISO_22133_LIBRARY ISO22133)
 set(TIME_LIBRARY MaestroTime)
 set(LOGGING_LIBRARY MaestroLogging)
-set(MAESTRO_COMMON_LIBRARY MaestroCommon)
+set(ATOS_COMMON_LIBRARY ATOSCommon)
 set(FILESYSTEM_LIBRARY stdc++fs)
 set(THREAD_LIBRARY pthread)
 set(OSI_LIBRARY OSIHandler)
@@ -58,7 +58,7 @@ target_link_libraries(${OBJECT_CONTROL_TARGET}
 	${LOGGING_LIBRARY}
 	${FILESYSTEM_LIBRARY}
 	${THREAD_LIBRARY}
-	${MAESTRO_COMMON_LIBRARY}
+	${ATOS_COMMON_LIBRARY}
 	${ISO_22133_LIBRARY}
 	${OSI_LIBRARY}
 )
@@ -69,7 +69,7 @@ ament_target_dependencies(${OBJECT_CONTROL_TARGET}
   std_msgs
   nav_msgs
   tf2_geometry_msgs
-  maestro_interfaces
+  atos_interfaces
   tf2
 )
 
@@ -82,7 +82,7 @@ target_include_directories(${OBJECT_CONTROL_TARGET} PUBLIC
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${OBJECT_CONTROL_TARGET}\")")
 install(TARGETS ${OBJECT_CONTROL_TARGET}
-	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
+	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/atos"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

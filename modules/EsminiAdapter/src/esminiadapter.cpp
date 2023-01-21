@@ -127,11 +127,11 @@ void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr
  * \param states A vector of object states
  * \return A trajectory consisting of trajectory points, one for each state.
  */
-maestro::Trajectory EsminiAdapter::getTrajectory(uint32_t id,std::vector<SE_ScenarioObjectState>& states) {
-	maestro::Trajectory trajectory;
+ATOS::Trajectory EsminiAdapter::getTrajectory(uint32_t id,std::vector<SE_ScenarioObjectState>& states) {
+	ATOS::Trajectory trajectory;
 	trajectory.name = "Esmini Trajectory for object " + std::to_string(id);
 	auto saveTp = [&](auto& state){
-		maestro::Trajectory::TrajectoryPoint tp;
+		ATOS::Trajectory::TrajectoryPoint tp;
 		tp.setXCoord(state.x);
 		tp.setYCoord(state.y);
 		tp.setZCoord(state.z);
@@ -200,7 +200,7 @@ void EsminiAdapter::getObjectStates(const std::string& oscFilePath, double timeS
  * \param idToTraj The return map of ids mapping to the respective trajectories
  * \return A map of ids mapping to the respective trajectories
  */
-std::map<uint32_t,maestro::Trajectory> EsminiAdapter::extractTrajectories(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,maestro::Trajectory>& idToTraj){
+std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,ATOS::Trajectory>& idToTraj){
 	// Get object states
 	std::map<uint32_t,std::vector<SE_ScenarioObjectState>> idToStates;
 	getObjectStates(oscFilePath, timeStep, endTime, idToStates);
@@ -219,7 +219,7 @@ std::map<uint32_t,maestro::Trajectory> EsminiAdapter::extractTrajectories(const 
  * \param oscFilePath Path to the xosc file
  */
 void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
-	std::map<uint32_t,maestro::Trajectory> idToTraj;
+	std::map<uint32_t,ATOS::Trajectory> idToTraj;
 	me->extractTrajectories(oscFilePath, 0.1, 14.0, idToTraj);
 	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", idToTraj.size());
 	for (auto& it : idToTraj){

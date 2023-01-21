@@ -9,7 +9,7 @@
 #include "roschannel.hpp"
 #include "loggable.hpp"
 
-using maestro_interfaces::msg::ControlSignalPercentage;
+using atos_interfaces::msg::ControlSignalPercentage;
 
 // GCC version 8.1 brings non-experimental support for std::filesystem
 #if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
@@ -53,7 +53,7 @@ public:
 
 	friend Channel& operator<<(Channel&,const HeabMessageDataType&);
 	friend Channel& operator<<(Channel&,const ObjectSettingsType&);
-	friend Channel& operator<<(Channel&,const maestro::Trajectory&);
+	friend Channel& operator<<(Channel&,const ATOS::Trajectory&);
 	friend Channel& operator<<(Channel&,const ObjectCommandType&);
 	friend Channel& operator<<(Channel&,const StartMessageType&);
 	friend Channel& operator<<(Channel&,const std::vector<char>&);
@@ -104,14 +104,14 @@ public:
 
 	uint32_t getTransmitterID() const { return conf.getTransmitterID(); }
 	std::string getTrajectoryFileName() const { return conf.getTrajectoryFileName(); }
-	maestro::Trajectory getTrajectory() const { return conf.getTrajectory(); }
+	ATOS::Trajectory getTrajectory() const { return conf.getTrajectory(); }
 	GeographicPositionType getOrigin() const { return conf.getOrigin(); }
 	ObjectStateType getState(const bool awaitUpdate);
 	ObjectStateType getState(const bool awaitUpdate, const std::chrono::milliseconds timeout);
 	ObjectStateType getState() const { return isConnected() ? state : OBJECT_STATE_UNKNOWN; }
 	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
 	ObjectConfig getObjectConfig() const { return conf; }
-	void setTrajectory(const maestro::Trajectory& newTrajectory) { conf.setTrajectory(newTrajectory); }
+	void setTrajectory(const ATOS::Trajectory& newTrajectory) { conf.setTrajectory(newTrajectory); }
 	void setLastReceivedTrajectory(ROSChannels::Trajectory::message_type::SharedPtr);
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);

@@ -13,6 +13,6 @@ TODO
 1) Ensure you have built the module
 2) Navigate to the build directory
 3) Run the module: ```./Supervision```
-4) Run Maestro
+4) Run ATOS
 
 Note: steps 3 and 4 can be replaced with running the runServer.sh script in the top directory of this repository, ensuring that the module is added to the list of modules to be run

@@ -6,7 +6,7 @@
 #include <set>
 #include <vector>
 #include <string>
-namespace maestro {
+namespace ATOS {
 	class DistanceTrigger : public BooleanTrigger
 	{
 	public:

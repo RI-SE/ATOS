@@ -17,21 +17,21 @@
 
 #define RVSS_TIME_CHANNEL 1
 #define RVSS_MONITOR_CHANNEL 2
-#define RVSS_MAESTRO_CHANNEL 4
+#define RVSS_ATOS_CHANNEL 4
 #define RVSS_ASP_CHANNEL 8
 
 #define ENABLE_COMMAND_STRING "ENABLE"
 #define DISABLE_COMMAND_STRING "DISABLE"
 
-#define MAESTRO_GENERIC_FILE_TYPE     1
-#define MAESTRO_TRAJ_FILE_TYPE        2
-#define MAESTRO_CONF_FILE_TYPE        3
-#define MAESTRO_GEOFENCE_FILE_TYPE    4
-#define MAESTRO_OBJECT_FILE_TYPE	  5
+#define ATOS_GENERIC_FILE_TYPE     1
+#define ATOS_TRAJ_FILE_TYPE        2
+#define ATOS_CONF_FILE_TYPE        3
+#define ATOS_GEOFENCE_FILE_TYPE    4
+#define ATOS_OBJECT_FILE_TYPE	  5
 #define MSCP_RESPONSE_DATALENGTH_BYTES 4
 #define MSCP_RESPONSE_STATUS_CODE_BYTES 2
 
-#define MAESTRO_TRAJ_DIRECTORY_STRING "traj/"
+#define ATOS_TRAJ_DIRECTORY_STRING "traj/"
 
 using namespace ROSChannels;
 using std::placeholders::_1;
@@ -415,8 +415,8 @@ void SystemControl::sendUnsolicitedData(){
 								RVSSMessageLengthU32, 0);
 			}
 
-			if (RVSSConfigU32 & RVSS_MAESTRO_CHANNEL) {
-				SystemControlBuildRVSSMaestroChannelMessage(RVSSData, &RVSSMessageLengthU32,
+			if (RVSSConfigU32 & RVSS_ATOS_CHANNEL) {
+				SystemControlBuildRVSSATOSChannelMessage(RVSSData, &RVSSMessageLengthU32,
 															SystemControlState, 0);
 				UtilSendUDPData((uint8_t*) module_name.c_str(), &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
 								RVSSMessageLengthU32, 0);
@@ -711,7 +711,7 @@ void SystemControl::processUserCommand()
 			}
 			if(ControlResponseBuffer[0] == FOLDER_EXIST){
 				if(SystemControlCommand == DownloadTrajFiles_0){
-					UtilCreateDirContent((uint8_t*) MAESTRO_TRAJ_DIRECTORY_STRING,(uint8_t*) "dir.info");
+					UtilCreateDirContent((uint8_t*) ATOS_TRAJ_DIRECTORY_STRING,(uint8_t*) "dir.info");
 				} else if(SystemControlCommand == DownloadDirectoryContent_1){
 					UtilCreateDirContent((uint8_t*) SystemControlArgument[0], (uint8_t*) "dir.info");
 				}
@@ -737,7 +737,7 @@ void SystemControl::processUserCommand()
 					UtilGetRowInFile(CompletePath, strlen(CompletePath), i, RowBuffer, SMALL_BUFFER_SIZE_128);
 					if(*RowBuffer == 'F'){
 						memset(InPath, 0, MAX_PATH_LENGTH);
-						if(SystemControlCommand == DownloadTrajFiles_0) strcat(InPath, MAESTRO_TRAJ_DIRECTORY_STRING);
+						if(SystemControlCommand == DownloadTrajFiles_0) strcat(InPath, ATOS_TRAJ_DIRECTORY_STRING);
 						else if(SystemControlCommand == DownloadDirectoryContent_1) strcat(InPath, SystemControlArgument[0]);
 						strcat(InPath, strstr(RowBuffer, "-")+1);
 						memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -1637,7 +1637,7 @@ I32 SystemControl::SystemControlConnectServer(int *sockfd, const char *name, con
 
 	iResult = fcntl(*sockfd, F_SETFL, fcntl(*sockfd, F_GETFL, 0) | O_NONBLOCK);
 
-	RCLCPP_DEBUG(get_logger(), "Maestro connected to UserControl: %s:%i", name, port);
+	RCLCPP_DEBUG(get_logger(), "ATOS connected to UserControl: %s:%i", name, port);
 	return iResult;
 
 }
@@ -2322,19 +2322,19 @@ I32 SystemControl::SystemControlUploadFile(const char * Filename, const char * F
 	}
 
 	switch (atoi(FileType)) {
-	case MAESTRO_GENERIC_FILE_TYPE:
+	case ATOS_GENERIC_FILE_TYPE:
 		UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 		break;
-	case MAESTRO_TRAJ_FILE_TYPE:
+	case ATOS_TRAJ_FILE_TYPE:
 		UtilGetTrajDirectoryPath(CompletePath, sizeof (CompletePath));
 		break;
-	case MAESTRO_CONF_FILE_TYPE:
+	case ATOS_CONF_FILE_TYPE:
 		UtilGetConfDirectoryPath(CompletePath, sizeof (CompletePath));
 		break;
-	case MAESTRO_GEOFENCE_FILE_TYPE:
+	case ATOS_GEOFENCE_FILE_TYPE:
 		UtilGetGeofenceDirectoryPath(CompletePath, sizeof (CompletePath));
 		break;
-	case MAESTRO_OBJECT_FILE_TYPE:
+	case ATOS_OBJECT_FILE_TYPE:
 		UtilGetObjectDirectoryPath(CompletePath, sizeof (CompletePath));
 		break;
 	default:
@@ -2612,7 +2612,7 @@ I32 SystemControl::SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32
 
 
 /*
-SystemControlBuildRVSSMaestroChannelMessage builds a message from OBCState in DataDictionary and SysCtrlState. The message is stored in *RVSSData.
+SystemControlBuildRVSSATOSChannelMessage builds a message from OBCState in DataDictionary and SysCtrlState. The message is stored in *RVSSData.
 See the architecture document for the protocol of RVSS.
 
 - *RVSSData the buffer the message
@@ -2620,23 +2620,23 @@ See the architecture document for the protocol of RVSS.
 - U8 SysCtrlState the SystemControl state (SystemControlState)
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
-I32 SystemControl::SystemControlBuildRVSSMaestroChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32,
+I32 SystemControl::SystemControlBuildRVSSATOSChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32,
 												U8 SysCtrlState, U8 Debug) {
 	I32 MessageIndex = 0, i;
 	char *p;
 
 
-	RVSSMaestroType RVSSMaestroData;
+	RVSSATOSType RVSSATOSData;
 	OBCState_t obcState;
 
-	RVSSMaestroData.MessageLengthU32 = SwapU32((U32) sizeof (RVSSMaestroType) - 4);
-	RVSSMaestroData.ChannelCodeU32 = SwapU32((U32) RVSS_MAESTRO_CHANNEL);
+	RVSSATOSData.MessageLengthU32 = SwapU32((U32) sizeof (RVSSATOSType) - 4);
+	RVSSATOSData.ChannelCodeU32 = SwapU32((U32) RVSS_ATOS_CHANNEL);
 	DataDictionaryGetOBCState(&obcState);
-	RVSSMaestroData.OBCStateU8 = (uint8_t) (obcState);
-	RVSSMaestroData.SysCtrlStateU8 = SysCtrlState;
+	RVSSATOSData.OBCStateU8 = (uint8_t) (obcState);
+	RVSSATOSData.SysCtrlStateU8 = SysCtrlState;
 
-	p = (char *) & RVSSMaestroData;
-	for (i = 0; i < sizeof (RVSSMaestroType); i++)
+	p = (char *) & RVSSATOSData;
+	for (i = 0; i < sizeof (RVSSATOSType); i++)
 		*(RVSSData + i) = *p++;
 	*RVSSDataLengthU32 = i;
 
@@ -2795,6 +2795,6 @@ void SystemControl::appendSysInfoString(char *ControlResponseBuffer, const size_
 	strncat(ControlResponseBuffer, stringBuffer, remainingBufferSpace - 1);
 	remainingBufferSpace -= strlen(stringBuffer);
 	//Make it clear that this is placeholder data
-	strncat(ControlResponseBuffer, "Maestro powerlevel: 90001\n", remainingBufferSpace - 1);
+	strncat(ControlResponseBuffer, "ATOS powerlevel: 90001\n", remainingBufferSpace - 1);
 }
 

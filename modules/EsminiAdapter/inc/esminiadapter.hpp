@@ -9,7 +9,7 @@
 
 /*!
  * \brief The EsminiAdapter class is a singleton class that 
- * 	handles the communication between the esmini simulator and Maestro
+ * 	handles the communication between the esmini simulator and ATOS
  */
 class EsminiAdapter : public Module {
 public:
@@ -34,8 +34,8 @@ private:
 	static void onEsminiConditionTriggered(const char* name, double timestamp);
 	static void InitializeEsmini(std::string& oscFilePath);
 	static void getObjectStates(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
-	static maestro::Trajectory getTrajectory(uint32_t,std::vector<SE_ScenarioObjectState>& states);
-	static std::map<uint32_t,maestro::Trajectory> extractTrajectories(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,maestro::Trajectory>& idToTraj);
+	static ATOS::Trajectory getTrajectory(uint32_t,std::vector<SE_ScenarioObjectState>& states);
+	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,ATOS::Trajectory>& idToTraj);
 	
 	static std::shared_ptr<EsminiAdapter> me;
 	static std::unordered_map<int, int> objectIdToIndex;

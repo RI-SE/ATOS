@@ -9,16 +9,16 @@
 #include <string>
 #include <functional>
 
-#include "maestro_interfaces/msg/action_configuration.hpp"
-#include "maestro_interfaces/msg/execute_action.hpp"
-#include "maestro_interfaces/msg/trigger_event_occurred.hpp"
-#include "maestro_interfaces/msg/trigger_configuration.hpp"
-#include "maestro_interfaces/msg/monitor.hpp"
-#include "maestro_interfaces/msg/object_enabled.hpp"
-#include "maestro_interfaces/msg/manoeuvre_command.hpp"
-#include "maestro_interfaces/msg/control_signal_percentage.hpp"
-#include "maestro_interfaces/msg/object_id_array.hpp"
-#include "maestro_interfaces/msg/v2x.hpp"
+#include "atos_interfaces/msg/action_configuration.hpp"
+#include "atos_interfaces/msg/execute_action.hpp"
+#include "atos_interfaces/msg/trigger_event_occurred.hpp"
+#include "atos_interfaces/msg/trigger_configuration.hpp"
+#include "atos_interfaces/msg/monitor.hpp"
+#include "atos_interfaces/msg/object_enabled.hpp"
+#include "atos_interfaces/msg/manoeuvre_command.hpp"
+#include "atos_interfaces/msg/control_signal_percentage.hpp"
+#include "atos_interfaces/msg/object_id_array.hpp"
+#include "atos_interfaces/msg/v2x.hpp"
 
 namespace ROSChannels {
 
@@ -192,7 +192,7 @@ namespace AllClear {
 
 namespace ActionConfiguration {
     const std::string topicName = "action_configuration";
-    using message_type = maestro_interfaces::msg::ActionConfiguration;
+    using message_type = atos_interfaces::msg::ActionConfiguration;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
@@ -208,7 +208,7 @@ namespace ActionConfiguration {
 
 namespace TriggerConfiguration {
     const std::string topicName = "trigger_configuration";
-    using message_type = maestro_interfaces::msg::TriggerConfiguration;
+    using message_type = atos_interfaces::msg::TriggerConfiguration;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
@@ -224,7 +224,7 @@ namespace TriggerConfiguration {
 
 namespace ExecuteAction {
     const std::string topicName = "execute_action";
-    using message_type = maestro_interfaces::msg::ExecuteAction;
+    using message_type = atos_interfaces::msg::ExecuteAction;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
@@ -288,7 +288,7 @@ namespace GetStatusResponse {
 
 namespace BackToStart {
     const std::string topicName = "back_to_start";
-    using message_type = maestro_interfaces::msg::ManoeuvreCommand;
+    using message_type = atos_interfaces::msg::ManoeuvreCommand;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
@@ -368,7 +368,7 @@ namespace RemoteControlDisable {
 
 namespace RemoteControlManoeuvre {
     const std::string topicName = "remote_control_manoeuvre";
-    using message_type = maestro_interfaces::msg::ManoeuvreCommand;
+    using message_type = atos_interfaces::msg::ManoeuvreCommand;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
@@ -384,7 +384,7 @@ namespace RemoteControlManoeuvre {
 
 namespace EnableObject {
     const std::string topicName = "enable_object";
-    using message_type = maestro_interfaces::msg::ObjectEnabled;
+    using message_type = atos_interfaces::msg::ObjectEnabled;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
@@ -432,7 +432,7 @@ namespace Replay {
 
 namespace ControlSignal {
     const std::string topicName = "control_signal";
-    using message_type = maestro_interfaces::msg::ControlSignalPercentage;
+    using message_type = atos_interfaces::msg::ControlSignalPercentage;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepLast(1));
 
     class Pub : public BasePub<message_type> {
@@ -448,7 +448,7 @@ namespace ControlSignal {
 
 namespace Monitor {
     const std::string topicName = "object_monitor";
-    using message_type = maestro_interfaces::msg::Monitor;
+    using message_type = atos_interfaces::msg::Monitor;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepLast(1));
 
     class Pub : public BasePub<message_type> {
@@ -486,7 +486,7 @@ namespace ObjectsConnected {
 
 namespace ConnectedObjectIds {
     const std::string topicName = "connected_object_ids";
-    using message_type = maestro_interfaces::msg::ObjectIdArray;
+    using message_type = atos_interfaces::msg::ObjectIdArray;
     const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
     class Pub : public BasePub<message_type> {
@@ -502,7 +502,7 @@ namespace ConnectedObjectIds {
 
 namespace TriggerEventOccurred {
     const std::string topicName = "trigger_event_occurred";
-    using message_type = maestro_interfaces::msg::TriggerEventOccurred;
+    using message_type = atos_interfaces::msg::TriggerEventOccurred;
 
     class Pub : public BasePub<message_type> {
     public:
@@ -538,7 +538,7 @@ namespace Trajectory {
 
 namespace V2X {
     const std::string topicName = "v2x_message";
-    using message_type = maestro_interfaces::msg::V2x;
+    using message_type = atos_interfaces::msg::V2x;
 
     class Pub : public BasePub<message_type> {
     public:

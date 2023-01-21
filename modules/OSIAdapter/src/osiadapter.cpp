@@ -133,7 +133,7 @@ const OsiHandler::GlobalObjectGroundTruth_t
 OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
   
   OsiHandler::GlobalObjectGroundTruth_t osiData;
-  osiData.id = monr.maestro_header.object_id;
+  osiData.id = monr.atos_header.object_id;
 
   osiData.pos_m.x = monr.pose.pose.position.x;
   osiData.pos_m.y = monr.pose.pose.position.y;
@@ -181,8 +181,8 @@ void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, ui
   }
   else{
     // Otherwise take diff between last two messages
-    auto newTime = seconds(msg->maestro_header.header.stamp.sec) + nanoseconds(msg->maestro_header.header.stamp.nanosec);
-    auto oldTime = seconds(lastMonitors[id].maestro_header.header.stamp.sec) + nanoseconds(lastMonitors[id].maestro_header.header.stamp.nanosec);
+    auto newTime = seconds(msg->atos_header.header.stamp.sec) + nanoseconds(msg->atos_header.header.stamp.nanosec);
+    auto oldTime = seconds(lastMonitors[id].atos_header.header.stamp.sec) + nanoseconds(lastMonitors[id].atos_header.header.stamp.nanosec);
     lastMonitorTimes[id] = duration_cast<TimeUnit>(newTime-oldTime);
   }
   lastMonitors[id] = *msg;

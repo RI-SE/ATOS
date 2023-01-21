@@ -9,7 +9,7 @@ project(dummy)
 # Define target names
 set(DUMMY_TARGET ${PROJECT_NAME})
 
-set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(COREUTILS_LIBRARY ATOSCoreUtil)
 set(ISO_22133_LIBRARY MaestroISO22133)
 set(POSITIONING_LIBRARY MaestroPositioning)
 set(TIME_LIBRARY MaestroTime)

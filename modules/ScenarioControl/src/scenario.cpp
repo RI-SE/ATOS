@@ -12,7 +12,7 @@
 #include "braketrigger.h"
 #include "distancetrigger.h"
 
-namespace maestro {
+namespace ATOS {
 
 	Scenario::Scenario(const std::string scenarioFilePath, 
 						const std::string openDriveFilePath, 
@@ -275,16 +275,16 @@ namespace maestro {
 
 			triggerType = Trigger::asTypeCode(match[1]);
 			switch (triggerType) {
-			// If the trigger type has Maestro monitoring implemented, use that
+			// If the trigger type has ATOS monitoring implemented, use that
 			case TRIGGER_BRAKE:
 				trigger = new BrakeTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()));
-				// TODO: possibly the OR between the Maestro trigger and possible TREO messages
+				// TODO: possibly the OR between the ATOS trigger and possible TREO messages
 				break;
 			case TRIGGER_DISTANCE:
 				trigger = new DistanceTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()));
 				break;
 			default:
-				// Trigger with unimplemented Maestro monitoring: let object handle trigger reporting
+				// Trigger with unimplemented ATOS monitoring: let object handle trigger reporting
 				trigger = new ISOTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()), triggerType);
 				break;
 			}
