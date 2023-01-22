@@ -41,34 +41,18 @@ void Module::tryHandleMessage(
  * \return true if the initialization was successful, false otherwise
  */
 bool Module::requestDataDictInitialization(int maxRetries) {
-    int retries = 0;
-    bool success = false;
-    auto client = create_client<SetBool>(ServiceNames::initDataDict);
-    auto request = std::make_shared<SetBool::Request>();
-
-    do {
-        while (client->wait_for_service(std::chrono::seconds(1)) != true) {
-            if (!rclcpp::ok()) {
-                throw std::runtime_error("Interrupted while waiting for service " + ServiceNames::initDataDict);
-            }
-            RCLCPP_INFO(get_logger(), "Waiting for service %s ...", ServiceNames::initDataDict.c_str());
-        }
-        RCLCPP_DEBUG(get_logger(), "Service %s found", ServiceNames::initDataDict.c_str());
-        
-        auto response = client->async_send_request(request);
-        if (rclcpp::spin_until_future_complete(get_node_base_interface(), response, std::chrono::seconds(1)) ==
-            rclcpp::FutureReturnCode::SUCCESS) {
-            success = response.get()->success;
-            if (success) {
-                RCLCPP_INFO(get_logger(), "Data dictionary successfully initialized");
-                break;
-            } else {
-                RCLCPP_ERROR(get_logger(), "Data dictionary initialization failed: %s", response.get()->message.c_str());
-            }
+    SetBool::Response::SharedPtr response;
+    auto sucessful = nShotServiceRequest<SetBool>(maxRetries, ServiceNames::initDataDict, response);
+    if (sucessful) {
+        if (response->success){
+            RCLCPP_INFO(get_logger(), "Data dictionary successfully initialized");
         } else {
-            RCLCPP_ERROR(get_logger(), "Failed to call service %s", client->get_service_name());
+        RCLCPP_ERROR(get_logger(), "Failed to initialize data dictionary, with message: %s", response->message.c_str());
         }
-    } while (++retries < maxRetries);
-    
-    return success;
+    }
+    else{
+        RCLCPP_ERROR(get_logger(), "Failed to initialize data dictionary");
+    }
+    return response->success && sucessful;
 }
+
