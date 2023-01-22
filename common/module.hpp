@@ -60,6 +60,7 @@ static std::map<COMMAND, std::string> topicNames = {
 namespace ServiceNames {
 const std::string initDataDict = "init_data_dictionary";
 const std::string getObjectIds = "get_object_ids";
+const std::string getTestOrigin = "get_test_origin";
 }
 
 // TODO move somewhere else? also make generic to allow more args (variadic template)?
@@ -141,6 +142,41 @@ class Module : public rclcpp::Node {
 								 const std::string& topic,
 								 const rclcpp::Logger& logger);
 	bool requestDataDictInitialization(int maxRetries = 3);
+	
+	/*! \brief This helper function is used by clients (rosnodes) to request a service.
+	*  \tparam Srv The name of the service to request.
+	*  \param n Number of times to retry until accepting the service is not available.
+	*  \param timeout Time to wait for the service to be available each try.
+	* 	\return The response of the service.
+	*/
+	template <typename Srv>
+	bool nShotServiceRequest(int n, 
+							const std::string &serviceName,
+							std::shared_ptr<typename Srv::Response> &response) {
+		int retries = 0;
+		auto client = create_client<Srv>(serviceName);
+		auto request = std::make_shared<typename Srv::Request>();
+
+		do {
+			while (client->wait_for_service(std::chrono::seconds(1)) != true) {
+				if (!rclcpp::ok()) {
+					throw std::runtime_error("Interrupted while waiting for service " + serviceName);
+				}
+				RCLCPP_INFO(get_logger(), "Waiting for service %s ...", serviceName.c_str());
+			}
+			RCLCPP_DEBUG(get_logger(), "Service %s found", serviceName.c_str());
+			
+			auto promise = client->async_send_request(request);
+			if (rclcpp::spin_until_future_complete(get_node_base_interface(), promise, std::chrono::seconds(1)) ==
+				rclcpp::FutureReturnCode::SUCCESS) {
+				response = promise.get();
+				return true;
+			} else {
+				RCLCPP_ERROR(get_logger(), "Failed to call service %s", client->get_service_name());
+			}
+		} while (++retries < n);
+		return false;
+	}
 
    private:
 	static void printUnhandledMessage(const std::string& topic, const std::string& message) {

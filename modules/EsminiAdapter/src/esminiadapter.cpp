@@ -5,6 +5,7 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <algorithm>
 #include <functional>
+#include "atos_interfaces/srv/get_test_origin.hpp"
 
 #include "trajectory.hpp"
 #include "datadictionary.h"
@@ -370,5 +371,15 @@ int EsminiAdapter::initializeModule(const LOG_LEVEL logLevel) {
 		retval = -1;
 		RCLCPP_ERROR(me->get_logger(), "Unable to initialize data dictionary");
 	}
+
+	// Receive the test origin from the GetTestOrigin service
+	using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
+	TestOriginSrv::Response::SharedPtr response;
+	auto sucessful = me->nShotServiceRequest<TestOriginSrv>(3,ServiceNames::getTestOrigin,response);
+	me->testOriginAltitude = response->alt;
+	me->testOriginLatitude = response->lat;
+	me->testOriginLongitude = response->lon;
+
+	RCLCPP_DEBUG(me->get_logger(), "Test origin: %lf, %lf, %lf", me->testOriginLatitude, me->testOriginLongitude, me->testOriginAltitude);
 	return retval;
 }
