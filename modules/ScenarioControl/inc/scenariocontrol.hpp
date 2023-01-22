@@ -9,7 +9,7 @@
 #include "util.h"
 #include "journal.h"
 
-namespace maestro {
+namespace ATOS {
 
 class ScenarioControl : public Module
 {
@@ -74,4 +74,4 @@ private:
 	std::chrono::time_point<std::chrono::steady_clock> getNextReadTime(std::chrono::time_point<std::chrono::steady_clock> now);
 };
 
-} // namespace maestro
+} // namespace ATOS

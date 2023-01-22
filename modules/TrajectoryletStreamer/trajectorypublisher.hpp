@@ -6,7 +6,7 @@
 #include <chrono>
 #include <utility>
 
-namespace maestro {
+namespace ATOS {
 
 class TrajectoryPublisher {
 private:
@@ -32,4 +32,4 @@ private:
 
 };
 
-}  // namespace maestro
+}  // namespace ATOS

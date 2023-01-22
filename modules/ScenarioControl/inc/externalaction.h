@@ -3,7 +3,7 @@
 
 #include "action.h"
 
-namespace maestro {
+namespace ATOS {
 	class ExternalAction : public Action
 	{
 	public:

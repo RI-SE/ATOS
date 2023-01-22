@@ -1,7 +1,7 @@
-<library path="maestro_rviz_plugins">
+<library path="atos_rviz_plugins">
   <class
-    name="maestro_rviz_plugins/MonitorDisplay"
-    type="maestro_rviz_plugins::MonitorDisplay"
+    name="atos_rviz_plugins/MonitorDisplay"
+    type="atos_rviz_plugins::MonitorDisplay"
     base_class_type="rviz_common::Display">
     <description>
       Insert description

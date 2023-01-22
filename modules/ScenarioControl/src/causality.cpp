@@ -1,7 +1,7 @@
 #include "causality.h"
 #include "logging.h"
 
-namespace maestro {
+namespace ATOS {
 	Causality::Causality(Causality::TriggerOperator_t op)
 	{
 		oper = op;

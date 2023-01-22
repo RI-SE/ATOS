@@ -11,9 +11,9 @@
 #include "maestroTime.h"
 #include "roschannel.hpp"
 
-using maestro_interfaces::msg::ExecuteAction;
+using atos_interfaces::msg::ExecuteAction;
 
-namespace maestro {
+namespace ATOS {
 	Action::ActionReturnCode_t ExternalAction::execute(ROSChannels::ExecuteAction::Pub& exacPub)
 	{
 		if (remainingAllowedRuns == 0)

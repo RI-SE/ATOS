@@ -10,7 +10,7 @@
 #ifndef __DATADICTIONARY_H_INCLUDED__
 #define __DATADICTIONARY_H_INCLUDED__
 
-#define SHARED_MEMORY_PATH "/dev/shm/maestro/"
+#define SHARED_MEMORY_PATH "/dev/shm/ATOS/"
 #define MISC_DATA_MAX_SIZE 1024
 
 #include "util.h"

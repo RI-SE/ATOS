@@ -3,7 +3,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <nav_msgs/msg/path.hpp>
 
-using namespace maestro;
+using namespace ATOS;
 
 TrajectoryPublisher::TrajectoryPublisher(
     rclcpp::Node& node,

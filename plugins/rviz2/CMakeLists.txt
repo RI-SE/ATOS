@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(maestro_rviz_plugins)
+project(atos_rviz_plugins)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -22,7 +22,7 @@ find_package(rviz_ogre_vendor REQUIRED)
 
 find_package(Qt5 REQUIRED COMPONENTS Widgets Test)
 
-find_package(maestro_interfaces REQUIRED)
+find_package(atos_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -30,20 +30,20 @@ find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 
-set(maestro_rviz_plugins_headers_to_moc
+set(atos_rviz_plugins_headers_to_moc
   include/object_monitor_display.hpp
 )
-foreach(header "${maestro_rviz_plugins_headers_to_moc}")
-  qt5_wrap_cpp(maestro_rviz_plugins_moc_files "${header}")
+foreach(header "${atos_rviz_plugins_headers_to_moc}")
+  qt5_wrap_cpp(atos_rviz_plugins_moc_files "${header}")
 endforeach()
 
-set(maestro_rviz_plugins_source_files
+set(atos_rviz_plugins_source_files
   src/object_monitor_display.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED
-  ${maestro_rviz_plugins_source_files}
-  ${maestro_rviz_plugins_moc_files}
+  ${atos_rviz_plugins_source_files}
+  ${atos_rviz_plugins_moc_files}
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -60,7 +60,7 @@ pluginlib_export_plugin_description_file(rviz_common plugin_description.xml)
 
 ament_target_dependencies(${PROJECT_NAME} PUBLIC
 	rclcpp
-	maestro_interfaces
+	atos_interfaces
 	rviz_common
 	rviz_default_plugins
 	geometry_msgs

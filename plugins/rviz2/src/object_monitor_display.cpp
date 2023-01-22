@@ -4,7 +4,7 @@
 #include <OgreSceneNode.h>
 #include "rclcpp/logging.hpp"
 
-namespace maestro_rviz_plugins {
+namespace ATOS_rviz_plugins {
 
 MonitorDisplay::MonitorDisplay()
 : arrow_(nullptr), axes_(nullptr), pose_valid_(false) {
@@ -47,7 +47,7 @@ MonitorDisplay::MonitorDisplay()
 }
 MonitorDisplay::~MonitorDisplay() = default;
 
-void MonitorDisplay::processMessage(maestro_interfaces::msg::Monitor::ConstSharedPtr msg) {
+void MonitorDisplay::processMessage(atos_interfaces::msg::Monitor::ConstSharedPtr msg) {
   
   using rviz_common::validateFloats;
   if (!validateFloats(msg->pose) || !validateFloats(msg->velocity.twist)) {
@@ -174,10 +174,10 @@ void MonitorDisplay::reset()
 }
 
 
-}  // namespace maestro_rviz_plugins
+}  // namespace ATOS_rviz_plugins
 
 #include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(maestro_rviz_plugins::MonitorDisplay, rviz_common::Display)
+PLUGINLIB_EXPORT_CLASS(ATOS_rviz_plugins::MonitorDisplay, rviz_common::Display)
 
 
 

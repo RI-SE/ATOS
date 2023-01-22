@@ -5,7 +5,7 @@
 
 #include <set>
 #include <vector>
-namespace maestro {
+namespace ATOS {
     class BrakeTrigger : public BooleanTrigger
     {
     public:

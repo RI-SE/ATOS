@@ -39,7 +39,7 @@ extern "C"{
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-#define MaestroVersion  "0.5.0"
+#define ATOSVersion  "1.0.0"
 
 #define DEFAULT_ORIGIN_LAT 57.777073115
 #define DEFAULT_ORIGIN_LOG 12.781295498333
@@ -594,7 +594,7 @@ typedef struct
   U32 ChannelCodeU32;
   U8 OBCStateU8;
   U8 SysCtrlStateU8;
-} RVSSMaestroType;
+} RVSSATOSType;
 
 #pragma pack(pop)
 

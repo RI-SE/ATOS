@@ -7,7 +7,7 @@
 #include "logging.h"
 #include "trajectory.hpp"
 
-namespace maestro{
+namespace ATOS{
 const std::regex Trajectory::fileHeaderPattern("TRAJECTORY;(" + RegexPatterns::intPattern + ");("
 											   + RegexPatterns::namePattern + ");" + RegexPatterns::versionPattern + ";("
 											   + RegexPatterns::intPattern + ");");
@@ -609,4 +609,4 @@ bool Trajectory::areTimestampsIncreasing() const {
 		return p1.getTime() < p2.getTime();
 	});
 }
-} // namespace maestro
+} // namespace ATOS

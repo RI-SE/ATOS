@@ -9,15 +9,15 @@ project(time_control)
 
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(maestro_interfaces REQUIRED)
+find_package(atos_interfaces REQUIRED)
 
 # Define target names
 set(TIME_CONTROL_TARGET ${PROJECT_NAME})
 
-set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(COREUTILS_LIBRARY ATOSCoreUtil)
 set(TIME_LIBRARY MaestroTime)
 set(LOGGING_LIBRARY MaestroLogging)
-set(MAESTRO_COMMON_LIBRARY MaestroCommon)
+set(ATOS_COMMON_LIBRARY ATOSCommon)
 set(FILESYSTEM_LIBRARY stdc++fs)
 set(THREAD_LIBRARY pthread)
 
@@ -36,13 +36,13 @@ target_link_libraries(${TIME_CONTROL_TARGET}
 	${LOGGING_LIBRARY}
 	${FILESYSTEM_LIBRARY}
 	${THREAD_LIBRARY}
-	${MAESTRO_COMMON_LIBRARY}
+	${ATOS_COMMON_LIBRARY}
 )
 
 ament_target_dependencies(${TIME_CONTROL_TARGET}
   rclcpp
   std_msgs
-  maestro_interfaces
+  atos_interfaces
 )
   
 target_include_directories(${TIME_CONTROL_TARGET} PUBLIC
@@ -53,7 +53,7 @@ target_include_directories(${TIME_CONTROL_TARGET} PUBLIC
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${TIME_CONTROL_TARGET}\")")
 install(TARGETS ${TIME_CONTROL_TARGET}
-	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
+	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/atos"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

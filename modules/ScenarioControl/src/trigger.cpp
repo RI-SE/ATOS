@@ -3,9 +3,9 @@
 
 #include "logging.h"
 
-using maestro_interfaces::msg::TriggerConfiguration;
+using atos_interfaces::msg::TriggerConfiguration;
 
-namespace maestro {
+namespace ATOS {
 
 	Trigger::Trigger(TriggerID_t triggerID, TriggerTypeCode_t triggerType)
 	{

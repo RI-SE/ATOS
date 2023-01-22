@@ -13,6 +13,6 @@ This is a visualization module used pipe information from the server to a third 
 1) Ensure you have built the module
 2) Navigate to the build directory
 3) Run the module: ```./Visualization```
-4) Run Maestro
+4) Run ATOS
 
 Note: steps 3 and 4 can be replaced with running the runServer.sh script in the top directory of this repository
