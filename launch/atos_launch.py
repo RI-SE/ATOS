@@ -12,13 +12,13 @@ def generate_launch_description():
         'etc',
         'params.yaml'
     )
-
     return LaunchDescription([
         Node(
             package='atos',
             namespace='atos',
             executable='atos_base',
-            name='atos_base'
+            name='atos_base',
+            parameters=[atosConfig]
         ),
         Node(
             package='atos',

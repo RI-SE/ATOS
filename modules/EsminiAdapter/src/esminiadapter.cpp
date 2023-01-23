@@ -3,6 +3,7 @@
 #include "esmini/esminiRMLib.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
+#include <chrono>
 
 #include "trajectory.hpp"
 #include "datadictionary.h"
@@ -11,6 +12,7 @@ using namespace ROSChannels;
 
 std::shared_ptr<EsminiAdapter> EsminiAdapter::me = NULL;
 std::unordered_map<int,int> EsminiAdapter::objectIdToIndex = std::unordered_map<int, int>();
+std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> EsminiAdapter::testOriginClient = nullptr;
 
 /*!
  * \brief Creates an instance and initialize esmini if none exists, otherwise returns the existing instance.
@@ -265,5 +267,16 @@ int EsminiAdapter::initializeModule(const LOG_LEVEL logLevel) {
 		retval = -1;
 		RCLCPP_ERROR(me->get_logger(), "Unable to initialize data dictionary");
 	}
+
+	// Set up services
+	using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
+	using namespace std::chrono;
+	me->testOriginClient = me->nTimesWaitForService<TestOriginSrv>(3, 1s, ServiceNames::getTestOrigin);
+	TestOriginSrv::Response::SharedPtr response;
+
+	// Call services TODO: Call only when needed
+	me->callService(1s ,me->testOriginClient, response);
+
+	RCLCPP_DEBUG(me->get_logger(), "Test origin: %lf, %lf, %lf", response->origin.position.latitude, response->origin.position.longitude, response->origin.position.altitude);
 	return retval;
 }
