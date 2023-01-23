@@ -8,11 +8,11 @@ exitSub(*this,std::bind(&TimeControl::onExitMessage,this,_1)) {}
 
 void TimeControl::signalHandler(int signo) {
 	if (signo == SIGINT) {
-		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+		RCLCPP_WARN(get_logger(), "Caught keyboard interrupt");
 		this->iExit = 1;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+		RCLCPP_ERROR(get_logger(), "Caught unhandled signal");
 	}
 }
 
@@ -29,9 +29,9 @@ const int64_t TimeControl::getQueueEmptyPollPeriod() const {
 	return QUEUE_EMPTY_POLL_PERIOD_NS;
 }
 
-void TimeControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
-	LogInit(module_name.c_str(), logLevel);
-	LogMessage(LOG_LEVEL_INFO, "Time control task running with PID: %i", getpid());
+void TimeControl::initialize(TimeType * GPSTime, GSDType * GSD)
+{
+	RCLCPP_INFO(get_logger(), "Time control task running with PID: %i", getpid());
 
 	if (JournalInit(module_name.c_str())) {
 		util_error("Unable to open journal");
@@ -51,22 +51,22 @@ void TimeControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLev
 
 	// If time server is specified, connect to it
 	if (IpU32 != 0) {
-		LogMessage(LOG_LEVEL_INFO, "Connecting to time server...");
+		RCLCPP_INFO(get_logger(), "Connecting to time server...");
 
 		if (TimeControlCreateTimeChannel((const char*)ServerIPC8, ServerPortU16, &SocketfdI32, &time_addr)) {
-			LogMessage(LOG_LEVEL_INFO, "Using time server reference");
+			RCLCPP_INFO(get_logger(), "Using time server reference");
 			TimeControlSendUDPData(&SocketfdI32, &time_addr, PitipoSetupMessage, TIME_CONTROL_TX_BUFFER_SIZE,
 								   0);
 			GPSTime->isGPSenabled = 1;
 		}
 		else {
-			LogMessage(LOG_LEVEL_INFO, "Defaulting to system time");
+			RCLCPP_INFO(get_logger(), "Defaulting to system time");
 			JournalRecordData(JOURNAL_RECORD_STRING, "Unable to connect to time server at IP %s", ServerIPC8);
 		}
 	}
 
 	if (!GPSTime->isGPSenabled) {
-		LogMessage(LOG_LEVEL_INFO, "Initializing with system time");
+		RCLCPP_INFO(get_logger(), "Initializing with system time");
 
 		gettimeofday(&tv, NULL);
 
@@ -83,7 +83,8 @@ void TimeControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLev
 }
 
 
-void TimeControl::calibrateTime(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+void TimeControl::calibrateTime(TimeType * GPSTime, GSDType * GSD)
+{
 	gettimeofday(&ExecTime, NULL);
 	CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
 	if (CurrentMilliSecondU16 < PrevMilliSecondU16) {
@@ -117,10 +118,10 @@ void TimeControl::calibrateTime(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL log
 						GPSTime->isGPSenabled = 0;
 						break;
 					case EINVAL:
-						LogMessage(LOG_LEVEL_ERROR, "Clock type not supported on this system");
+						RCLCPP_ERROR(get_logger(), "Clock type not supported on this system");
 						break;
 					default:
-						LogMessage(LOG_LEVEL_ERROR, "Error setting system time");
+						RCLCPP_ERROR(get_logger(), "Error setting system time");
 						break;
 					}
 				}
@@ -183,7 +184,7 @@ void TimeControl::calibrateTime(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL log
 		iExit = 1;
 	}
 	if (iExit==1){
-		LogMessage(LOG_LEVEL_INFO, "Time control exiting");
+		RCLCPP_INFO(get_logger(), "Time control exiting");
 	}
 }
 
@@ -223,7 +224,7 @@ int TimeControl::TimeControlCreateTimeChannel(const char *name, const uint32_t p
 	struct timeval tEnd, tCurr;
 	TimeType tempGPSTime;
 
-	LogMessage(LOG_LEVEL_INFO, "Specified time server address: %s:%d", name, port);
+	RCLCPP_INFO(get_logger(), "Specified time server address: %s:%d", name, port);
 	/* Connect to object safety socket */
 
 	*sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -253,10 +254,10 @@ int TimeControl::TimeControlCreateTimeChannel(const char *name, const uint32_t p
 	if (result < 0) {
 		util_error("Error calling fcntl");
 	}
-	LogMessage(LOG_LEVEL_INFO, "Created socket and time address: %s:%d", name, port);
+	RCLCPP_INFO(get_logger(), "Created socket and time address: %s:%d", name, port);
 
 	// Check for existence of remote server
-	LogMessage(LOG_LEVEL_INFO, "Awaiting reply from time server...");
+	RCLCPP_INFO(get_logger(), "Awaiting reply from time server...");
 	// Set send interval to be as short as possible to minimise wait for reply
 	TimeControlSendUDPData(sockfd, addr, packetIntervalMs, TIME_CONTROL_TX_BUFFER_SIZE, 0);
 
@@ -271,7 +272,7 @@ int TimeControl::TimeControlCreateTimeChannel(const char *name, const uint32_t p
 			TimeControlDecodeTimeBuffer(&tempGPSTime, timeBuffer, 0);
 			switch (tempGPSTime.FixQualityU8) {
 			case FIX_QUALITY_NONE:
-				LogMessage(LOG_LEVEL_WARNING, "Received reply from time server: no satellite fix");
+				RCLCPP_WARN(get_logger(), "Received reply from time server: no satellite fix");
 				return 0;
 			case FIX_QUALITY_BASIC:
 				LogMessage(LOG_LEVEL_INFO,
@@ -291,7 +292,7 @@ int TimeControl::TimeControlCreateTimeChannel(const char *name, const uint32_t p
 		}
 	} while (timercmp(&tCurr, &tEnd, <));
 
-	LogMessage(LOG_LEVEL_WARNING, "Unable to connect to specified time server: %s:%d", name, port);
+	RCLCPP_WARN(get_logger(), "Unable to connect to specified time server: %s:%d", name, port);
 	return 0;
 }
 
@@ -373,7 +374,7 @@ void TimeControl::TimeControlRecvTime(int *sockfd, C8 * buffer, int length, int 
 		}
 		else if (result == 0) {
 			// EOF received
-			LogMessage(LOG_LEVEL_ERROR, "Time server disconnected");
+			RCLCPP_ERROR(get_logger(), "Time server disconnected");
 			*receivedNewData = 0;
 			return;
 		}
@@ -381,11 +382,11 @@ void TimeControl::TimeControlRecvTime(int *sockfd, C8 * buffer, int length, int 
 			// If message size is equal to what is expected according to the format, keep reading until the newest has been read
 			if (result == length) {
 				*receivedNewData = 1;
-				LogMessage(LOG_LEVEL_DEBUG, "Received data: <%s>, result=%d", buffer, result);
+				RCLCPP_DEBUG(get_logger(), "Received data: <%s>, result=%d", buffer, result);
 			}
 			else {
 				*receivedNewData = 0;
-				LogMessage(LOG_LEVEL_ERROR, "Received badly formatted message from time server");
+				RCLCPP_ERROR(get_logger(), "Received badly formatted message from time server");
 			}
 
 		}

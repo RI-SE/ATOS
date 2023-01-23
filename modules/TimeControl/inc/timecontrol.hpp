@@ -19,7 +19,6 @@
 #include "journal.h"
 #include "maestroTime.h"
 #include "datadictionary.h"
-#include "logging.h"
 
 class TimeControl : public Module
 {
@@ -28,9 +27,9 @@ public:
 	TimeControl();
 	bool shouldExit() const;
 	const int64_t getQueueEmptyPollPeriod() const;
-	void calibrateTime(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	void calibrateTime(TimeType * GPSTime, GSDType * GSD);
 	void signalHandler(int signo);
-	void initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	void initialize(TimeType * GPSTime, GSDType * GSD);
 private:
 	ROSChannels::Exit::Sub exitSub;
 	/* definitions */
@@ -39,10 +38,6 @@ private:
 	static const int TIME_CONTROL_TASK_PERIOD_MS = 1;
 	static const int TIME_CONTROL_TX_BUFFER_SIZE = 14;
 	static const int REPLY_TIMEOUT_S = 3;
-
-	static inline const std::string LOG_PATH = "./timelog/";
-	static inline const std::string LOG_FILE = "time.log";
-	static const int LOG_BUFFER_LENGTH = 128;
 
 	static const int FIX_QUALITY_NONE = 0;
 	static const int FIX_QUALITY_BASIC = 1;
@@ -99,7 +94,6 @@ private:
 
 	I32 result;
 	C8 TimeBuffer[TIME_CONTROL_RECEIVE_BUFFER_SIZE];
-	C8 LogBuffer[LOG_BUFFER_LENGTH];
 	I32 ReceivedNewData, i;
 
 	C8 PitipoSetupMessage[TIME_CONTROL_TX_BUFFER_SIZE] = { 0, 0, 0, PROTO2_SETUP_MESSAGE_LENGTH,
