@@ -16,6 +16,7 @@ ATOSBase::ATOSBase()
 	declare_parameter("test_origin_latitude");
 	declare_parameter("test_origin_longitude");
 	declare_parameter("test_origin_altitude");
+	declare_parameter("test_origin_rotation");
 
 	std::string installationPath = ament_index_cpp::get_package_prefix("atos");
 	if (UtilVerifyTestDirectory(installationPath.c_str()) == -1) {
@@ -120,12 +121,11 @@ void ATOSBase::onRequestTestOrigin(
 	const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request> req,
 	std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response> res)
 {
-	double testOriginLatitude, testOriginLongitude, testOriginAltitude;
-	
-	get_parameter("test_origin_latitude", testOriginLatitude);
-	get_parameter("test_origin_longitude", testOriginLongitude);
-	get_parameter("test_origin_altitude", testOriginAltitude);
-	res->lat = testOriginLatitude;
-	res->lon = testOriginLongitude;
-	res->alt = testOriginAltitude;
+	get_parameter("test_origin_latitude", res->origin.position.latitude);
+	get_parameter("test_origin_longitude", res->origin.position.longitude);
+	get_parameter("test_origin_altitude", res->origin.position.altitude);
+	get_parameter("test_origin_rot_x", res->origin.orientation.x);
+	get_parameter("test_origin_rot_y", res->origin.orientation.y);
+	get_parameter("test_origin_rot_z", res->origin.orientation.z);
+	get_parameter("test_origin_rot_w", res->origin.orientation.w);
 }

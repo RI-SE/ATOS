@@ -143,39 +143,81 @@ class Module : public rclcpp::Node {
 								 const rclcpp::Logger& logger);
 	bool requestDataDictInitialization(int maxRetries = 3);
 	
-	/*! \brief This helper function is used by clients (rosnodes) to request a service.
+	/*! \brief This helper function is performs a service call given a client and yields a response.
 	*  \tparam Srv The name of the service to request.
-	*  \param n Number of times to retry until accepting the service is not available.
-	*  \param timeout Time to wait for the service to be available each try.
+	*  \param timeout The timeout for the service call.
+	*  \param client The client to use to request the service.
+	*  \param response The response of the service.
 	* 	\return The response of the service.
 	*/
 	template <typename Srv>
-	bool nShotServiceRequest(int n, 
-							const std::string &serviceName,
-							std::shared_ptr<typename Srv::Response> &response) {
+	bool callService( const std::chrono::duration< double > &timeout,
+						std::shared_ptr<rclcpp::Client<Srv>> &client,
+						std::shared_ptr<typename Srv::Response> &response)
+{
+		auto request = std::make_shared<typename Srv::Request>();
+		auto promise = client->async_send_request(request);
+		if (rclcpp::spin_until_future_complete(get_node_base_interface(), promise, timeout) ==
+			rclcpp::FutureReturnCode::SUCCESS) {
+			response = promise.get();
+			return true;
+		} else {
+			RCLCPP_ERROR(get_logger(), "Failed to call service %s", client->get_service_name());
+			return false;
+		}
+	}
+
+	/*! \brief This helper function waits for a service to become available and returns a client.
+	*  \tparam Srv The name of the service to request.
+	*  \param n The number of times to retry.
+	*  \param timeout The timeout to wait for the service.
+	*  \param serviceName The name of the service to request.
+	* 	\return The response of the service.
+	*/
+	template <typename Srv>
+	typename std::shared_ptr<rclcpp::Client<Srv>> nTimesWaitForService(int n,
+							const std::chrono::duration< double > &timeout,
+							const std::string &serviceName)
+{
 		int retries = 0;
 		auto client = create_client<Srv>(serviceName);
-		auto request = std::make_shared<typename Srv::Request>();
 
 		do {
-			while (client->wait_for_service(std::chrono::seconds(1)) != true) {
+			while (client->wait_for_service(timeout) != true) {
 				if (!rclcpp::ok()) {
 					throw std::runtime_error("Interrupted while waiting for service " + serviceName);
 				}
 				RCLCPP_INFO(get_logger(), "Waiting for service %s ...", serviceName.c_str());
 			}
 			RCLCPP_DEBUG(get_logger(), "Service %s found", serviceName.c_str());
-			
-			auto promise = client->async_send_request(request);
-			if (rclcpp::spin_until_future_complete(get_node_base_interface(), promise, std::chrono::seconds(1)) ==
-				rclcpp::FutureReturnCode::SUCCESS) {
-				response = promise.get();
-				return true;
-			} else {
-				RCLCPP_ERROR(get_logger(), "Failed to call service %s", client->get_service_name());
-			}
+			return client;
 		} while (++retries < n);
-		return false;
+		throw std::runtime_error("Failed to initialize service " + serviceName);
+	}
+
+
+	/*! \brief This helper function is used by rosnodes to request a service.
+	*  \tparam Srv The name of the service to request.
+	*  \param n Number of times to retry until accepting the service is not available.
+	*  \param timeout The timeout to wait for the service.
+	*  \param serviceName The name of the service to request.
+	*  \param response Response of the service, to be returned.
+	* 	\return The response of the service.
+	*/
+	template <typename Srv>
+	bool nShotServiceRequest(int n, 
+							const std::chrono::duration< double > &timeout,
+							const std::string &serviceName,
+							std::shared_ptr<typename Srv::Response> &response) {
+		std::shared_ptr<rclcpp::Client<Srv>> client;
+		try{
+			client = nTimesWaitForService<Srv>(n, timeout, serviceName);
+		}
+		catch (std::runtime_error &e){
+			RCLCPP_ERROR(get_logger(), "Failed to initialize service %s", serviceName.c_str());
+			return false;
+		}
+		return callService<Srv>(timeout, client, response);
 	}
 
    private:

@@ -42,8 +42,9 @@ void Module::tryHandleMessage(
  */
 bool Module::requestDataDictInitialization(int maxRetries) {
     SetBool::Response::SharedPtr response;
-    auto sucessful = nShotServiceRequest<SetBool>(maxRetries, ServiceNames::initDataDict, response);
-    if (sucessful) {
+    using namespace std::chrono_literals;
+    auto successful = nShotServiceRequest<SetBool>(maxRetries, 1s, ServiceNames::initDataDict, response);
+    if (successful) {
         if (response->success){
             RCLCPP_INFO(get_logger(), "Data dictionary successfully initialized");
         } else {
@@ -53,6 +54,6 @@ bool Module::requestDataDictInitialization(int maxRetries) {
     else{
         RCLCPP_ERROR(get_logger(), "Failed to initialize data dictionary");
     }
-    return response->success && sucessful;
+    return response->success && successful;
 }
 

@@ -5,21 +5,25 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <algorithm>
 #include <functional>
-#include "atos_interfaces/srv/get_test_origin.hpp"
+#include <chrono>
 
+#include "atos_interfaces/srv/get_test_origin.hpp"
 #include "trajectory.hpp"
 #include "datadictionary.h"
 #include "string_utility.hpp"
 
 using namespace ROSChannels;
+using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
 using std::placeholders::_1;
+using namespace std::chrono_literals;
 
 std::shared_ptr<EsminiAdapter> EsminiAdapter::me = NULL;
 std::unordered_map<int,int> EsminiAdapter::objectIdToIndex = std::unordered_map<int, int>();
+
 std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAdapter::monrSubscribers = std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>>();
 std::unordered_map<uint32_t,ROSChannels::Monitor::message_type> EsminiAdapter::lastMonitors = std::unordered_map<uint32_t,ROSChannels::Monitor::message_type>();
-
 int EsminiAdapter::actionId = 0;
+std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> EsminiAdapter::testOriginClient = nullptr;
 
 
 /*!
@@ -106,6 +110,9 @@ void EsminiAdapter::onEsminiStoryBoardStateChange(const char* name, int type, in
 
 ROSChannels::V2X::message_type EsminiAdapter::denmFromMonitor(const ROSChannels::Monitor::message_type monr){
 	//lat,lon,alt = localPosToLatLong(monr);
+	TestOriginSrv::Response::SharedPtr response;
+	me->callService(1s ,me->testOriginClient, response);
+	
 	ROSChannels::V2X::message_type denm;
 	denm.cause_code = 3;
 	denm.altitude = 3;
@@ -372,14 +379,13 @@ int EsminiAdapter::initializeModule(const LOG_LEVEL logLevel) {
 		RCLCPP_ERROR(me->get_logger(), "Unable to initialize data dictionary");
 	}
 
-	// Receive the test origin from the GetTestOrigin service
-	using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
+	// Set up services
+	me->testOriginClient = me->nTimesWaitForService<TestOriginSrv>(3, 1s, ServiceNames::getTestOrigin);
 	TestOriginSrv::Response::SharedPtr response;
-	auto sucessful = me->nShotServiceRequest<TestOriginSrv>(3,ServiceNames::getTestOrigin,response);
-	me->testOriginAltitude = response->alt;
-	me->testOriginLatitude = response->lat;
-	me->testOriginLongitude = response->lon;
 
-	RCLCPP_DEBUG(me->get_logger(), "Test origin: %lf, %lf, %lf", me->testOriginLatitude, me->testOriginLongitude, me->testOriginAltitude);
+	// Call services TODO: Call only when needed
+	me->callService(1s ,me->testOriginClient, response);
+
+	RCLCPP_DEBUG(me->get_logger(), "Test origin: %lf, %lf, %lf", response->origin.position.latitude, response->origin.position.longitude, response->origin.position.altitude);
 	return retval;
 }
