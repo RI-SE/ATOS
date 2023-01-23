@@ -1,0 +1,10 @@
+atos:
+  atos_base:
+    ros__parameters:
+      test_origin_latitude: 57.777073115
+      test_origin_longitude: 12.781295498333
+      test_origin_altitude: 193.114
+      test_origin_rot_x: 0.0
+      test_origin_rot_y: 0.0
+      test_origin_rot_z: 0.0
+      test_origin_rot_w: 1.0
