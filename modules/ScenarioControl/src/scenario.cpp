@@ -1,4 +1,3 @@
-#include "logging.h"
 #include "maestroTime.h"
 
 #include <fstream>
@@ -277,15 +276,15 @@ namespace ATOS {
 			switch (triggerType) {
 			// If the trigger type has ATOS monitoring implemented, use that
 			case TRIGGER_BRAKE:
-				trigger = new BrakeTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()));
+				trigger = new BrakeTrigger(get_logger(), baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()));
 				// TODO: possibly the OR between the ATOS trigger and possible TREO messages
 				break;
 			case TRIGGER_DISTANCE:
-				trigger = new DistanceTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()));
+				trigger = new DistanceTrigger(get_logger(), baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()));
 				break;
 			default:
 				// Trigger with unimplemented ATOS monitoring: let object handle trigger reporting
-				trigger = new ISOTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()), triggerType);
+				trigger = new ISOTrigger(get_logger(), baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()), triggerType);
 				break;
 			}
 
@@ -325,7 +324,7 @@ namespace ATOS {
 		Action::ActionTypeCode_t actionType;
 		set<Action*> returnActions;
 		Action* action;
-		Action::ActionID_t baseActionID = static_cast<Action::ActionID_t>(allActions.size());
+		Action::ActionID_t baseActionID = static_cast<Action::ActionID_t>(get_logger(), allActions.size());
 
 		// Split the configuration to allow for several in a row
 		splitLine(inputConfig, ']', configs);
@@ -346,14 +345,14 @@ namespace ATOS {
 			switch (actionType) {
 			// Handle any specialised action types
 			case ACTION_INFRASTRUCTURE:
-				action = new InfrastructureAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()));
+				action = new InfrastructureAction(get_logger(), baseActionID + static_cast<Action::ActionID_t>(returnActions.size()));
 				break;
 			case ACTION_TEST_SCENARIO_COMMAND:
-				action = new TestScenarioCommandAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()));
+				action = new TestScenarioCommandAction(get_logger(), baseActionID + static_cast<Action::ActionID_t>(returnActions.size()));
 				break;
 			default:
 				// Regular action (only ACCM and EXAC)
-				action = new ExternalAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()), actionType);
+				action = new ExternalAction(get_logger(), baseActionID + static_cast<Action::ActionID_t>(returnActions.size()), actionType);
 				break;
 			}
 

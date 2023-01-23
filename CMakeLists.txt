@@ -84,7 +84,6 @@ endif()
 # Add corresponding subprojects
 add_subdirectory(util/C/time)
 add_subdirectory(util/C/logging)
-add_subdirectory(util/C/mqbus)
 add_subdirectory(util/C/shmem)
 add_subdirectory(util/C/iso22133)
 add_subdirectory(util/C/mathutils)

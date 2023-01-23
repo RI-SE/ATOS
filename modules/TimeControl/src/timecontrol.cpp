@@ -33,7 +33,7 @@ void TimeControl::initialize(TimeType * GPSTime, GSDType * GSD)
 {
 	RCLCPP_INFO(get_logger(), "Time control task running with PID: %i", getpid());
 
-	if (JournalInit(module_name.c_str())) {
+	if (JournalInit(module_name.c_str(), get_logger())) {
 		util_error("Unable to open journal");
 	}
 
@@ -113,7 +113,7 @@ void TimeControl::calibrateTime(TimeType * GPSTime, GSDType * GSD)
 				if (clock_settime(CLOCK_REALTIME, &newSystemTime) == -1) {
 					switch (errno) {
 					case EPERM:
-						LogMessage(LOG_LEVEL_ERROR,
+						RCLCPP_ERROR(get_logger(),
 									"Unable to set system time - ensure this program has the correct capabilities");
 						GPSTime->isGPSenabled = 0;
 						break;
@@ -127,7 +127,7 @@ void TimeControl::calibrateTime(TimeType * GPSTime, GSDType * GSD)
 				}
 			}
 			else {
-				LogMessage(LOG_LEVEL_ERROR,
+				RCLCPP_ERROR(get_logger(),
 							"Current GPS time exceeds limit and would be interpreted as negative");
 			}
 		}
@@ -275,17 +275,17 @@ int TimeControl::TimeControlCreateTimeChannel(const char *name, const uint32_t p
 				RCLCPP_WARN(get_logger(), "Received reply from time server: no satellite fix");
 				return 0;
 			case FIX_QUALITY_BASIC:
-				LogMessage(LOG_LEVEL_INFO,
+				RCLCPP_INFO(get_logger(),
 						   "Received reply from time server: non-differential fix on %d satellite(s)",
 						   tempGPSTime.NSatellitesU8);
 				return 1;
 			case FIX_QUALITY_DIFFERENTIAL:
-				LogMessage(LOG_LEVEL_INFO,
+				RCLCPP_INFO(get_logger(),
 						   "Received reply from time server: differential fix on %d satellite(s)",
 						   tempGPSTime.NSatellitesU8);
 				return 1;
 			default:
-				LogMessage(LOG_LEVEL_ERROR,
+				RCLCPP_ERROR(get_logger(),
 						   "Received reply from time server: unexpected fix quality parameter");
 				return 0;
 			}
@@ -481,24 +481,24 @@ void TimeControl::TimeControlDecodeTimeBuffer(TimeType * GPSTime, C8 * TimeBuffe
 		//TimeControlGetMillisecond(GPSTime);
 		//LogPrintBytes(TimeBuffer,0,TIME_CONTROL_RECEIVE_BUFFER_SIZE);
 		//LogPrint("ProtocolVersionU8: %d", GPSTime->ProtocolVersionU8);
-		LogPrint("YearU16: %d", GPSTime->YearU16);
-		LogPrint("MonthU8: %d", GPSTime->MonthU8);
-		LogPrint("DayU8: %d", GPSTime->DayU8);
-		LogPrint("Time: %d:%d:%d", GPSTime->HourU8, GPSTime->MinuteU8, GPSTime->SecondU8);
+		RCLCPP_WARN(get_logger(), "YearU16: %d", GPSTime->YearU16);
+		RCLCPP_WARN(get_logger(), "MonthU8: %d", GPSTime->MonthU8);
+		RCLCPP_WARN(get_logger(), "DayU8: %d", GPSTime->DayU8);
+		RCLCPP_WARN(get_logger(), "Time: %d:%d:%d", GPSTime->HourU8, GPSTime->MinuteU8, GPSTime->SecondU8);
 		//LogPrint("MinuteU8: %d", GPSTime->MinuteU8);
 		//LogPrint("SecondU8: %d", GPSTime->SecondU8);
 		//LogPrint("MillisecondU16: %d", GPSTime->MillisecondU16);
-		LogPrint("SecondCounterU32: %d", GPSTime->SecondCounterU32);
-		LogPrint("GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);
+		RCLCPP_WARN(get_logger(), "SecondCounterU32: %d", GPSTime->SecondCounterU32);
+		RCLCPP_WARN(get_logger(), "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);
 		//LogPrint("GPSMinutesU32: %d", GPSTime->GPSMinutesU32);
 		//LogPrint("GPSWeekU16: %d", GPSTime->GPSWeekU16);
-		LogPrint("GPSSecondsOfWeekU32: %d", GPSTime->GPSSecondsOfWeekU32);
+		RCLCPP_WARN(get_logger(), "GPSSecondsOfWeekU32: %d", GPSTime->GPSSecondsOfWeekU32);
 		//LogPrint("GPSSecondsOfDayU32: %d", GPSTime->GPSSecondsOfDayU32);
 		//LogPrint("ETSIMillisecondsU64: %ld", GPSTime->ETSIMillisecondsU64);
 		//LogPrint("LatitudeU32: %d", GPSTime->LatitudeU32);
 		//LogPrint("LongitudeU32: %d", GPSTime->LongitudeU32);
 		//LogPrint("LocalMillisecondU16: %d", GPSTime->LocalMillisecondU16);
-		LogPrint("FixQualityU8: %d", GPSTime->FixQualityU8);
-		LogPrint("NSatellitesU8: %d", GPSTime->NSatellitesU8);
+		RCLCPP_WARN(get_logger(), "FixQualityU8: %d", GPSTime->FixQualityU8);
+		RCLCPP_WARN(get_logger(), "NSatellitesU8: %d", GPSTime->NSatellitesU8);
 	}
 }

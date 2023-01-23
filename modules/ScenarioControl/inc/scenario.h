@@ -7,8 +7,7 @@
 #include "trigger.h"
 #include "action.h"
 #include "causality.h"
-#include "logging.h"
-#include "journal.h"
+#include "journal.hpp"
 #include "roschannel.hpp"
 
 #include "ad-xolib/xodr.h"
@@ -55,7 +54,7 @@ namespace ATOS {
                     retval = tp->update(value);
                     if (retval == Trigger::TRIGGER_OCCURRED) {
                         std::string type = Trigger::getTypeAsString(tp->getTypeCode());
-                        LogMessage(LOG_LEVEL_DEBUG, "Triggered ID %u", id);
+                        RCLCPP_DEBUG(get_logger(), "Triggered ID %u", id);
                         JournalRecordData(JOURNAL_RECORD_EVENT, "Trigger %s (ID %u) occurred", type.c_str(), id);
                     }
                     return (retval == Trigger::NOT_OK) ? INVALID_ARGUMENT : OK;

@@ -2,7 +2,6 @@
 #include "directcontrol.hpp"
 #include "util.h"
 #include "tcphandler.hpp"
-#include "logging.h"
 #include "maestroTime.h"
 #include "datadictionary.h"
 #include "atos_interfaces/msg/control_signal_percentage.hpp"
@@ -229,10 +228,9 @@ size_t DirectControl::handleUnknownMessage(
 /*!
  * \brief initializeModule Initializes this module by creating log,
  *			connecting to the message queue bus, setting up signal handers etc.
- * \param logLevel Level of the module log to be used.
  * \return 0 on success, -1 otherwise
  */
-int DirectControl::initializeModule(const LOG_LEVEL logLevel) {
+int DirectControl::initializeModule() {
 	int retval = 0;
 
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",moduleName.c_str(), getpid());

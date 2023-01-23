@@ -1,5 +1,4 @@
 #include "causality.h"
-#include "logging.h"
 
 namespace ATOS {
 	Causality::Causality(Causality::TriggerOperator_t op)

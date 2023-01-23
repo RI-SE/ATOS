@@ -28,7 +28,6 @@
 #include <poll.h>
 #include <netdb.h>
 #include "iso22133.h"
-#include "logging.h"
 #include "positioning.h"
 
 #ifdef __cplusplus
@@ -64,8 +63,6 @@ extern "C"{
 #define DEFAULT_RVSS_RATE 1
 #define DEFAULT_MAX_PACKETS_LOST 0
 #define DEFAULT_TRANSMITTER_ID 0
-
-#define MBUS_MAX_DATALEN (MQ_MSG_SIZE-9) // Message queue data minus one byte for the command and 8 for the data length
 
 #define MAX_OBJECTS 10
 #define MAX_FILE_PATH PATH_MAX

@@ -9,7 +9,7 @@ namespace ATOS {
     class BrakeTrigger : public BooleanTrigger
     {
     public:
-        BrakeTrigger(TriggerID_t triggerID);
+        BrakeTrigger(rclcpp::Logger log, TriggerID_t triggerID);
         TriggerReturnCode_t parseParameters() override;
 
         using BooleanTrigger::update;

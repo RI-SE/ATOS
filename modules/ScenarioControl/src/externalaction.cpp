@@ -5,8 +5,7 @@
 #include <sstream>
 #include <algorithm>
 
-#include "logging.h"
-#include "journal.h"
+#include "journal.hpp"
 #include "util.h"
 #include "maestroTime.h"
 #include "roschannel.hpp"
@@ -32,7 +31,7 @@ namespace ATOS {
 			JournalRecordData(JOURNAL_RECORD_EVENT, "Executing action %s (ID %d) - to occur at time %u [seconds of week]",
 							type.c_str(), actionID, msg.executiontime_qmsow);
 
-			LogMessage(LOG_LEVEL_INFO, "Sending execute action message over message bus (action ID %u)", actionID);
+			RCLCPP_INFO(get_logger(), "Sending execute action message over message bus (action ID %u)", actionID);
 			exacPub.publish(msg);
 			remainingAllowedRuns--;
 			return OK;
@@ -41,8 +40,8 @@ namespace ATOS {
 
 
 	// ******* Test scenario command action
-	TestScenarioCommandAction::TestScenarioCommandAction(ActionID_t actionID, uint32_t allowedNumberOfRuns)
-		: ExternalAction(actionID, Action::ActionTypeCode_t::ACTION_TEST_SCENARIO_COMMAND, allowedNumberOfRuns)
+	TestScenarioCommandAction::TestScenarioCommandAction(rclcpp::Logger log, ActionID_t actionID, uint32_t allowedNumberOfRuns)
+		: ExternalAction(log, actionID, Action::ActionTypeCode_t::ACTION_TEST_SCENARIO_COMMAND, allowedNumberOfRuns)
 	{
 	}
 
@@ -96,8 +95,8 @@ namespace ATOS {
 
 
 	// ******* Infrastructure action
-	InfrastructureAction::InfrastructureAction(ActionID_t actionID, uint32_t allowedNumberOfRuns)
-		: ExternalAction(actionID, Action::ActionTypeCode_t::ACTION_INFRASTRUCTURE, allowedNumberOfRuns)
+	InfrastructureAction::InfrastructureAction(rclcpp::Logger log, ActionID_t actionID, uint32_t allowedNumberOfRuns)
+		: ExternalAction(log, actionID, Action::ActionTypeCode_t::ACTION_INFRASTRUCTURE, allowedNumberOfRuns)
 	{
 	}
 

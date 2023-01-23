@@ -35,7 +35,7 @@ public:
 	const int64_t getQueueEmptyPollPeriod();
 	bool isWorking();
 	bool shouldExit();
-	void initialize(LOG_LEVEL logLevel);
+	void initialize();
 	void signalHandler(int signo);
 	void receiveUserCommand();
 	void processUserCommand();

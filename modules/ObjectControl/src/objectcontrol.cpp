@@ -11,7 +11,7 @@
 
 #include "state.hpp"
 #include "util.h"
-#include "journal.h"
+#include "journal.hpp"
 #include "datadictionary.h"
 
 #include "objectcontrol.hpp"
@@ -60,7 +60,7 @@ int ObjectControl::initialize() {
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",get_name(), getpid());
 
 	// Create test journal
-	if (JournalInit(get_name()) == -1) {
+	if (JournalInit(get_name(), get_logger()) == -1) {
 		retval = -1;
 		RCLCPP_ERROR(get_logger(), "Unable to create test journal");
 	}
@@ -257,7 +257,7 @@ void ObjectControl::loadObjectFiles() {
 	for (const auto& entry : fs::directory_iterator(objectDir)) {
 		if (fs::is_regular_file(entry.status())) {
 			const auto inputFile = entry.path();
-			ObjectConfig conf;
+			ObjectConfig conf(get_logger());
 			try {
 				conf.parseConfigurationFile(inputFile);
 				uint32_t id = conf.getTransmitterID();

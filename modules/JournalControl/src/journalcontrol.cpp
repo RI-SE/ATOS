@@ -8,7 +8,6 @@
   -- Reference   :
   ------------------------------------------------------------------------------*/
 
-#include "logging.h"
 #include <signal.h>
 #include <vector>
 #include <unordered_set>
@@ -26,7 +25,7 @@
 #endif
 
 #include "journalcontrol.hpp"
-#include "journal.h"
+#include "journal.hpp"
 #include "datadictionary.h"
 
 #if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
@@ -89,7 +88,7 @@ void JournalControl::onAbortMessage(const Abort::message_type::SharedPtr msg)
 
 void JournalControl::onReplayMessage(const Replay::message_type::SharedPtr msg)
 {
-	LogMessage(LOG_LEVEL_WARNING, "Replay function out of date");
+	RCLCPP_WARN(get_logger(), "Replay function out of date");
 }
 
 void Module::onExitMessage(const Exit::message_type::SharedPtr){
@@ -97,11 +96,5 @@ void Module::onExitMessage(const Exit::message_type::SharedPtr){
 }
 
 void signalHandler(int signo) {
-	if (signo == SIGINT) {
-		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
-		rclcpp::shutdown();
-	}
-	else {
-		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
-	}
+	rclcpp::shutdown();
 }

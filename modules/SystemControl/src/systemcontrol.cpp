@@ -129,8 +129,7 @@ bool SystemControl::shouldExit(){
 	return iExit;
 }
 
-void SystemControl::initialize(LOG_LEVEL logLevel){
-	LogInit(get_name(), logLevel);
+void SystemControl::initialize(){
 	RCLCPP_INFO(get_logger(), "System control task running with PID: %i", getpid());
 
 	if (requestDataDictInitialization()) {
@@ -1819,7 +1818,7 @@ I32 SystemControl::SystemControlSetServerParameter(char * parameterName, char * 
 	}
 
 	if (debug) {
-		LogPrint("SetServerParameter: %s = %s", parameterName, newValue);
+		RCLCPP_WARN(get_logger(),"SetServerParameter: %s = %s", parameterName, newValue);
 	}
 
 	enum ConfigurationFileParameter parameter =
@@ -2054,7 +2053,7 @@ I32 SystemControl::SystemControlReadServerParameterList(char * ParameterList, U8
 	}
 
 	if (Debug) {
-		LogPrint("ParameterList = %s\n", ParameterList);
+		RCLCPP_WARN(get_logger(),"ParameterList = %s\n", ParameterList);
 	}
 
 	return strlen(ParameterList);
@@ -2126,7 +2125,7 @@ I32 SystemControl::SystemControlCheckFileDirectoryExist(char * ParameterName, ch
 
 
 	if (Debug)
-		LogPrint("%d %s", *ReturnValue, CompletePath);
+		RCLCPP_WARN(get_logger(),"%d %s", *ReturnValue, CompletePath);
 
 
 	return 0;
@@ -2277,7 +2276,7 @@ I32 SystemControl::SystemControlCreateDirectory(const char * Path, char * Return
 	}
 
 	if (Debug)
-		LogPrint("%d %s", *(ReturnValue), CompletePath);
+		RCLCPP_WARN(get_logger(),"%d %s", *(ReturnValue), CompletePath);
 
 	if (*ReturnValue == SUCCEDED_CREATE_FOLDER)
 		RCLCPP_INFO(get_logger(), "Directory created: %s", CompletePath);
@@ -2335,12 +2334,12 @@ I32 SystemControl::SystemControlUploadFile(const char * Filename, const char * F
 	strcpy(CompleteFilePath, CompletePath);
 
 	if (Debug) {
-		LogPrint("Filename: %s", Filename);
-		LogPrint("FileSize: %s", FileSize);
-		LogPrint("PacketSize: %s", PacketSize);
-		LogPrint("FileType: %s", FileType);
-		LogPrint("CompletePath: %s", CompletePath);
-		LogPrint("CompleteFilePath: %s", CompleteFilePath);
+		RCLCPP_WARN(get_logger(),"Filename: %s", Filename);
+		RCLCPP_WARN(get_logger(),"FileSize: %s", FileSize);
+		RCLCPP_WARN(get_logger(),"PacketSize: %s", PacketSize);
+		RCLCPP_WARN(get_logger(),"FileType: %s", FileType);
+		RCLCPP_WARN(get_logger(),"CompletePath: %s", CompletePath);
+		RCLCPP_WARN(get_logger(),"CompleteFilePath: %s", CompleteFilePath);
 	}
 
 	if (atoi(PacketSize) > SYSTEM_CONTROL_RX_PACKET_SIZE) {	//Check packet size
@@ -2400,11 +2399,11 @@ I32 SystemControl::SystemControlReceiveRxData(I32 * sockfd, const char * Path, c
 
 
 	if (Debug) {
-		LogPrint("Receive Rx data:");
-		LogPrint("Path: %s", Path);
-		LogPrint("FileSize: %s", FileSize);
-		LogPrint("PacketSize: %s", PacketSize);
-		LogPrint("CompletePath: %s", CompletePath);
+		RCLCPP_WARN(get_logger(),"Receive Rx data:");
+		RCLCPP_WARN(get_logger(),"Path: %s", Path);
+		RCLCPP_WARN(get_logger(),"FileSize: %s", FileSize);
+		RCLCPP_WARN(get_logger(),"PacketSize: %s", PacketSize);
+		RCLCPP_WARN(get_logger(),"CompletePath: %s", CompletePath);
 	}
 
 
@@ -2492,10 +2491,10 @@ I32 SystemControl::SystemControlSendFileContent(I32 * sockfd, const char * Path,
 	RestCount = (U32) (st.st_size) % PacketSizeU16;
 
 	if (Debug) {
-		LogPrint("Send file content:");
-		LogPrint("%s", Path);
-		LogPrint("%s", PacketSize);
-		LogPrint("%s", CompletePath);
+		RCLCPP_WARN(get_logger(),"Send file content:");
+		RCLCPP_WARN(get_logger(),"%s", Path);
+		RCLCPP_WARN(get_logger(),"%s", PacketSize);
+		RCLCPP_WARN(get_logger(),"%s", CompletePath);
 	}
 
 	fd = fopen(CompletePath, "r");
@@ -2582,7 +2581,7 @@ I32 SystemControl::SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32
 	snprintf(RVSSData, SYSTEM_CONTROL_RVSS_DATA_BUFFER, "%s.%06ld", tmpbuf, systemTime.tv_usec);
 
 	if (Debug) {
-		LogPrint(RVSSData);
+		RCLCPP_WARN(get_logger(),RVSSData);
 	}
 	*RVSSDataLengthU32 = strlen(RVSSData);
 

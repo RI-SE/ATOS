@@ -16,7 +16,7 @@ public:
 	static inline std::string const moduleName = "esmini_adapter";
 	static inline std::string const oscFileName = "openscenario.xosc";
 	static inline std::string oscFilePath;
-	static int initializeModule(const LOG_LEVEL logLevel);
+	static int initializeModule();
 	EsminiAdapter(EsminiAdapter const&) = delete;
     EsminiAdapter& operator=(EsminiAdapter const&) = delete;
 	static std::shared_ptr<EsminiAdapter> instance();
