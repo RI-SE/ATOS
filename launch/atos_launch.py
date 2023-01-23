@@ -80,13 +80,13 @@ def generate_launch_description():
             namespace='atos',
             executable='esmini_adapter',
             name='esmini_adapter'
-        ),
-        Node(
-            package='atos',
-            namespace='atos',
-            executable='mqtt_bridge',
-            name='mqtt_bridge',
-            # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
-            parameters=[atosConfig]
         )
+        #Node(
+        #    package='atos',
+        #    namespace='atos',
+        #    executable='mqtt_bridge',
+        #    name='mqtt_bridge',
+        #    # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
+        #    parameters=[atosConfig]
+        #)
     ])
