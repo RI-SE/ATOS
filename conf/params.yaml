@@ -1,4 +1,4 @@
-maestro:
+atos:
   mqtt_bridge:
     ros__parameters:
       broker_ip: ""

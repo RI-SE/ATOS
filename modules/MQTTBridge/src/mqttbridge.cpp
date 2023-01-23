@@ -42,11 +42,21 @@ MqttBridge::MqttBridge() : Module(MqttBridge::moduleName),
 
 /*!
  * \brief initializeModule Initializes this module by starting the mqtt client with conf setting.
+ *		  return 0 if successfully initalized. None 0 otherwise. 
  */
-void MqttBridge::initializeModule()
+int MqttBridge::initializeModule()
 {
 	RCLCPP_INFO(me->get_logger(), "%s task running with PID: %d", moduleName.c_str(), getpid());
-	me->setupConnection();
+	if (me->brokerIP.empty())
+	{
+		RCLCPP_INFO(me->get_logger(), "No Broker IP provided in configuration. Shuting down...");
+		return 1;
+	}
+	else
+	{
+		me->setupConnection();
+		return 0;
+	}
 }
 
 /*!
@@ -72,7 +82,7 @@ void MqttBridge::setupConnection()
 	if (mqttClient == nullptr)
 	{
 		RCLCPP_ERROR(me->get_logger(), "Failed to initialize MQTT connection to broker, exiting...");
-		exit(1);
+		rclcpp::shutdown();
 	}
 	else
 	{

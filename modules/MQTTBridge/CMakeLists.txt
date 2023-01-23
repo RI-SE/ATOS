@@ -18,8 +18,8 @@ set_property(TARGET pahomqtt3c PROPERTY IMPORTED_LOCATION ${paho-mqtt3c})
 
 # Define target names
 set(MQTT_BRIDGE_TARGET ${PROJECT_NAME})
-set(MAESTRO_COMMON_LIBRARY MaestroCommon)
-get_target_property(COMMON_HEADERS ${MAESTRO_COMMON_LIBRARY} INCLUDE_DIRECTORIES)
+set(ATOS_COMMON_LIBRARY ATOSCommon)
+get_target_property(COMMON_HEADERS ${ATOS_COMMON_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
@@ -31,7 +31,7 @@ add_executable(${MQTT_BRIDGE_TARGET}
 )
 # Link project executable to util libraries
 target_link_libraries(${MQTT_BRIDGE_TARGET}
-	${MAESTRO_COMMON_LIBRARY}
+	${ATOS_COMMON_LIBRARY}
 	${nlohmann_json}
 	pahomqtt3a
 	pahomqtt3c
@@ -52,7 +52,7 @@ ament_target_dependencies(${MQTT_BRIDGE_TARGET}
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${MQTT_BRIDGE_TARGET}\")")
 install(TARGETS ${MQTT_BRIDGE_TARGET}
-	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
+	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/atos"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

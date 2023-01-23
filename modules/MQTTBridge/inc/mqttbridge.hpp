@@ -9,14 +9,14 @@ using json = nlohmann::json;
 
 /*!
  * \brief The MQTTBridge class is a singleton class that
- * 	handles the forwards Maestro V2X ROS msgs to a MQTT publisher client
+ *  forwards ATOS V2X ROS msgs to a MQTT publisher client
  */
 
 class MqttBridge : public Module
 {
 public:
     static inline std::string const moduleName = "mqtt_bridge";
-    static void initializeModule();
+    static int initializeModule();
     MqttBridge(MqttBridge const &) = delete;
     MqttBridge &operator=(MqttBridge const &) = delete;
     static std::shared_ptr<MqttBridge> instance();

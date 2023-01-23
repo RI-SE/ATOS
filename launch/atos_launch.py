@@ -8,7 +8,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     atosConfig = os.path.join(
-        get_package_prefix('maestro'),
+        get_package_prefix('atos'),
         'etc',
         'params.yaml'
     )
@@ -82,8 +82,8 @@ def generate_launch_description():
             name='esmini_adapter'
         ),
         Node(
-            package='maestro',
-            namespace='maestro',
+            package='atos',
+            namespace='atos',
             executable='mqtt_bridge',
             name='mqtt_bridge',
             # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
