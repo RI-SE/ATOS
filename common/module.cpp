@@ -48,7 +48,7 @@ bool Module::requestDataDictInitialization(int maxRetries) {
         if (response->success){
             RCLCPP_INFO(get_logger(), "Data dictionary successfully initialized");
         } else {
-            RCLCPP_ERROR(get_logger(), "Failed to call service %s", client->get_service_name());
+            RCLCPP_ERROR(get_logger(), "Failed to initialize data dictionary, with message: %s", response->message.c_str());
         }
     }
     else{
