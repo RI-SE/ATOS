@@ -6,6 +6,7 @@
 #include "util.h"
 #include "esmini/esminiLib.hpp"
 #include "trajectory.hpp"
+#include "atos_interfaces/srv/get_test_origin.hpp"
 
 /*!
  * \brief The EsminiAdapter class is a singleton class that 
@@ -37,6 +38,7 @@ private:
 	static ATOS::Trajectory getTrajectory(uint32_t,std::vector<SE_ScenarioObjectState>& states);
 	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,ATOS::Trajectory>& idToTraj);
 	
+	static std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> testOriginClient;
 	static std::shared_ptr<EsminiAdapter> me;
 	static std::unordered_map<int, int> objectIdToIndex;
 
