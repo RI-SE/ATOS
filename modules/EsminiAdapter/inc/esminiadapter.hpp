@@ -15,7 +15,6 @@
 class EsminiAdapter : public Module {
 public:
 	static inline std::string const moduleName = "esmini_adapter";
-	static inline std::string const oscFileName = "openscenario.xosc";
 	static inline std::string oscFilePath;
 	static int initializeModule(const LOG_LEVEL logLevel);
 	EsminiAdapter(EsminiAdapter const&) = delete;
@@ -31,7 +30,6 @@ private:
 	ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;
 
 	static std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
-	static std::unordered_map<uint32_t,ROSChannels::Monitor::message_type> lastMonitors;
 
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
@@ -44,9 +42,9 @@ private:
 	static void onEsminiStoryBoardStateChange(const char* name, int type, int state);
 	static void onEsminiConditionTriggered(const char* name, double timestamp);
 	static void InitializeEsmini(std::string& oscFilePath);
-	static void getObjectStates(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
+	static void getObjectStates(double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
 	static ATOS::Trajectory getTrajectory(uint32_t,std::vector<SE_ScenarioObjectState>& states);
-	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,ATOS::Trajectory>& idToTraj);
+	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(double timeStep, double endTime, std::map<uint32_t,ATOS::Trajectory>& idToTraj);
 	
 	static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor::message_type monr);
 	static std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> testOriginClient;

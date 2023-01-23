@@ -18,11 +18,9 @@ using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
 using std::placeholders::_1;
 using namespace std::chrono_literals;
 
-std::shared_ptr<EsminiAdapter> EsminiAdapter::me = NULL;
+std::shared_ptr<EsminiAdapter> EsminiAdapter::me = nullptr;
 std::unordered_map<int,int> EsminiAdapter::objectIdToIndex = std::unordered_map<int, int>();
-
 std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAdapter::monrSubscribers = std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>>();
-std::unordered_map<uint32_t,ROSChannels::Monitor::message_type> EsminiAdapter::lastMonitors = std::unordered_map<uint32_t,ROSChannels::Monitor::message_type>();
 int EsminiAdapter::actionId = 0;
 std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> EsminiAdapter::testOriginClient = NULL;
 
@@ -74,11 +72,10 @@ void EsminiAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {
 
 void EsminiAdapter::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 
-void EsminiAdapter::onInitMessage(const Init::message_type::SharedPtr) {
-	InitializeEsmini(oscFilePath);
-}
+void EsminiAdapter::onInitMessage(const Init::message_type::SharedPtr) {}
 
 void EsminiAdapter::onExitMessage(const Exit::message_type::SharedPtr){
+	SE_Close();
 	RCLCPP_DEBUG(me->get_logger(),"Received exit command");
 	rclcpp::shutdown();
 }
@@ -88,8 +85,12 @@ void EsminiAdapter::onStartMessage(const Start::message_type::SharedPtr) {
 		RCLCPP_ERROR(me->get_logger(), "Failed to initialize esmini, aborting");
 		exit(1);
 	}
+	// Handle triggers and story board element changes
+	SE_RegisterConditionCallback(&onEsminiConditionTriggered);
+	SE_RegisterStoryBoardElementStateChangeCallback(&onEsminiStoryBoardStateChange);
+
 	SE_Step(); // Make sure that the scenario is started
-	RCLCPP_INFO(me->get_logger(), "Esmini started");
+	RCLCPP_INFO(me->get_logger(), "Esmini ScenarioEngine started");
 }
 
 /*!
@@ -209,7 +210,6 @@ void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr
 	if (me->objectIdToIndex.find(id) != me->objectIdToIndex.end()){
 		reportObjectPosition(monr, id); // Report object position to esmini
 		SE_Step(); // Advance the "simulation world"-time
-		me->lastMonitors[id] = *monr; // Save the message for later use
 	}
 	else{
 		RCLCPP_WARN(me->get_logger(), "Received MONR message for object with ID %d, but no such object exists in the scenario", id);
@@ -258,17 +258,12 @@ ATOS::Trajectory EsminiAdapter::getTrajectory(uint32_t id,std::vector<SE_Scenari
 /*!
  * \brief Returns object states for each timestep.
  *	Inspired by ScenarioGateway::WriteStatesToFile from esmini lib.
- * \param oscFilePath Path to the xosc file
  * \param timeStep Time step to use for generating the trajectories
  * \param endTime End time of the simulation
  * \param states The return map of ids mapping to the respective object states at different timesteps
  * \return A map of object states, where the key is the object ID and the value is a vector of states
  */
-void EsminiAdapter::getObjectStates(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states) {
-	if (!SE_Init(oscFilePath.c_str(),1,0,0,0) == -1){ // Disable controllers, let DefaultController be used
-		RCLCPP_ERROR(me->get_logger(), "Failed to initialize esmini");
-		exit(1);
-	}
+void EsminiAdapter::getObjectStates(double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states) {
 	// Populate States map with empty vector for each object
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
 		states[SE_GetId(j)] = std::vector<SE_ScenarioObjectState>();
@@ -285,22 +280,20 @@ void EsminiAdapter::getObjectStates(const std::string& oscFilePath, double timeS
 		}
 	}
 	RCLCPP_INFO(me->get_logger(), "Finished esmini simulation");
-	SE_Close(); // Stop ScenarioEngine
 }
 
 
 /*!
  * \brief Runs the esmini simulator with the xosc file and returns the trajectories for each object
- * \param oscFilePath Path to the xosc file
  * \param timeStep Time step to use for generating the trajectories
  * \param endTime End time of the simulation TODO: not nessescary if xosc has a stop trigger at the end of the scenario
  * \param idToTraj The return map of ids mapping to the respective trajectories
  * \return A map of ids mapping to the respective trajectories
  */
-std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,ATOS::Trajectory>& idToTraj){
+std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(double timeStep, double endTime, std::map<uint32_t,ATOS::Trajectory>& idToTraj){
 	// Get object states
 	std::map<uint32_t,std::vector<SE_ScenarioObjectState>> idToStates;
-	getObjectStates(oscFilePath, timeStep, endTime, idToStates);
+	getObjectStates(timeStep, endTime, idToStates);
 
 	// Extract trajectories
 	for (auto& os : idToStates){
@@ -316,24 +309,20 @@ std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(const std
  * \param oscFilePath Path to the xosc file
  */
 void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
+	SE_Init(oscFilePath.c_str(),1,0,0,0); // Disable controllers, let DefaultController be used
 	std::map<uint32_t,ATOS::Trajectory> idToTraj;
-	me->extractTrajectories(oscFilePath, 0.1, 14.0, idToTraj);
+	me->extractTrajectories(0.1, 14.0, idToTraj);
 	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", idToTraj.size());
 	for (auto& it : idToTraj){
 		auto id = it.first;
 		auto traj = it.second;
-		RCLCPP_DEBUG(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
+		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
 		// below is for dumping the trajectory points to the console
 		/*for (auto& tp : traj.points){
 			RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
 		}*/
 	}
 
-	// Handle triggers and story board element changes
-	SE_RegisterConditionCallback(&onEsminiConditionTriggered);
-	SE_RegisterStoryBoardElementStateChangeCallback(&onEsminiStoryBoardStateChange);
-
-	SE_Init(oscFilePath.c_str(),1,0,0,0); // Disable controllers, let DefaultController be used
 	// Populate the map tracking Object ID -> esmini index
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
 		me->objectIdToIndex[SE_GetId(j)] = j;
@@ -367,16 +356,5 @@ int EsminiAdapter::initializeModule(const LOG_LEVEL logLevel) {
 	// Set up services
 	me->testOriginClient = me->nTimesWaitForService<TestOriginSrv>(3, 1s, ServiceNames::getTestOrigin);
 
-
-	TestOriginSrv::Response::SharedPtr response;
-	auto succ = me->callService(5ms, me->testOriginClient, response);
-
-	if (succ) {
-		RCLCPP_INFO(me->get_logger(), "Test origin set to %lf, %lf, %lf", response->origin.position.latitude, response->origin.position.longitude, response->origin.position.altitude);
-	}
-	else {
-		RCLCPP_ERROR(me->get_logger(), "Failed to get test origin");
-		retval = -1;
-	}
 	return retval;
 }
