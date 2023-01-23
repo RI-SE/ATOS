@@ -16,6 +16,7 @@ ATOSBase::ATOSBase()
 	declare_parameter("test_origin_latitude");
 	declare_parameter("test_origin_longitude");
 	declare_parameter("test_origin_altitude");
+	declare_parameter("test_origin_rotation");
 
 	std::string installationPath = ament_index_cpp::get_package_prefix("atos");
 	if (UtilVerifyTestDirectory(installationPath.c_str()) == -1) {
@@ -125,6 +126,7 @@ void ATOSBase::onRequestTestOrigin(
 	get_parameter("test_origin_latitude", testOriginLatitude);
 	get_parameter("test_origin_longitude", testOriginLongitude);
 	get_parameter("test_origin_altitude", testOriginAltitude);
+	get_parameter("test_origin_rotation", testOriginRotation);
 	res->lat = testOriginLatitude;
 	res->lon = testOriginLongitude;
 	res->alt = testOriginAltitude;

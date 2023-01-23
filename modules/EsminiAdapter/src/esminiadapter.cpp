@@ -270,7 +270,7 @@ int EsminiAdapter::initializeModule(const LOG_LEVEL logLevel) {
 	// Receive the test origin from the GetTestOrigin service
 	using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
 	TestOriginSrv::Response::SharedPtr response;
-	auto sucessful = me->nShotServiceRequest<TestOriginSrv>(3,ServiceNames::getTestOrigin,response);
+	auto successful = me->nShotServiceRequest<TestOriginSrv>(3,ServiceNames::getTestOrigin,response);
 	me->testOriginAltitude = response->alt;
 	me->testOriginLatitude = response->lat;
 	me->testOriginLongitude = response->lon;
