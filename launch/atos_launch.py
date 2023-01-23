@@ -80,7 +80,8 @@ def generate_launch_description():
             package='atos',
             namespace='atos',
             executable='esmini_adapter',
-            name='esmini_adapter'
+            name='esmini_adapter',
+            parameters=[atosConfig]
         ),
         #Node(
         #    package='atos',

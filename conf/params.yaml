@@ -16,3 +16,6 @@ atos:
       test_origin_rot_y: 0.0
       test_origin_rot_z: 0.0
       test_origin_rot_w: 1.0
+  esmini_adapter:
+    ros__parameters:
+      open_scenario_path: "/home/victor/.astazero/maestro/osc/twocars.xosc"

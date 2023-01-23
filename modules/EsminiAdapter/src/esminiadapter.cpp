@@ -8,6 +8,7 @@
 #include <chrono>
 
 #include "atos_interfaces/srv/get_test_origin.hpp"
+#include "rclcpp/wait_for_message.hpp"
 #include "trajectory.hpp"
 #include "datadictionary.h"
 #include "string_utility.hpp"
@@ -23,7 +24,7 @@ std::unordered_map<int,int> EsminiAdapter::objectIdToIndex = std::unordered_map<
 std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAdapter::monrSubscribers = std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>>();
 std::unordered_map<uint32_t,ROSChannels::Monitor::message_type> EsminiAdapter::lastMonitors = std::unordered_map<uint32_t,ROSChannels::Monitor::message_type>();
 int EsminiAdapter::actionId = 0;
-std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> EsminiAdapter::testOriginClient = nullptr;
+std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> EsminiAdapter::testOriginClient = NULL;
 
 /*!
  * \brief Creates an instance and initialize esmini if none exists, otherwise returns the existing instance.
@@ -61,14 +62,8 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage)
  {
 	// Get the file path of xosc file
-	try{
-		char path[MAX_FILE_PATH];
-		UtilGetOscDirectoryPath(path, MAX_FILE_PATH);
-		oscFilePath = std::string(path) + oscFileName;
-	}
-	catch (std::exception& e) {
-		throw std::runtime_error("EsminiAdapter: Could not read xosc file path");
-	}
+	declare_parameter("open_scenario_path");
+	get_parameter("open_scenario_path", oscFilePath);
 }
 
 //! Message queue callbacks
@@ -108,20 +103,19 @@ void EsminiAdapter::onEsminiStoryBoardStateChange(const char* name, int type, in
 }
 
 ROSChannels::V2X::message_type EsminiAdapter::denmFromMonitor(const ROSChannels::Monitor::message_type monr){
-	//lat,lon,alt = localPosToLatLong(monr);
 	TestOriginSrv::Response::SharedPtr response;
-	me->callService(1s ,me->testOriginClient, response);
-	double llh[3] = {response->origin.position.x, response->origin.position.y, response->origin.position.z};
-	double offset[3] = {monr->pose.pose.position.x, monr->pose.pose.position.y, monr->pose.pose.position.z};
+	me->callService(5ms ,me->testOriginClient, response);
+	double llh[3] = {response->origin.position.latitude, response->origin.position.longitude, response->origin.position.altitude};
+	double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
 	llhOffsetMeters(llh,offset);
 	
 	ROSChannels::V2X::message_type denm;
 	denm.message_type = "DENM";
 	denm.event_id = "ATOSEvent1";
 	denm.cause_code = 12;
-	denm.latitude = std::static_cast<uint32_t>(llh[0]*1000000); // Microdegrees
-	denm.longitude = std::static_cast<uint32_t>(llh[1]*1000000);
-	denm.altitude = std::static_cast<uint32_t>(llh[2]);
+	denm.latitude = static_cast<uint32_t>(llh[0]*1000000); // Microdegrees
+	denm.longitude = static_cast<uint32_t>(llh[1]*1000000);
+	denm.altitude = static_cast<uint32_t>(llh[2]);			// Meters
 	denm.detection_time = std::chrono::duration_cast<std::chrono::seconds>( // Time since epoch in seconds
 		std::chrono::system_clock::now().time_since_epoch()
 	).count();
@@ -178,22 +172,8 @@ void EsminiAdapter::onEsminiConditionTriggered(const char* name, double timestam
 	else if (action == "send_denm"){
 		// Get the latest Monitor message
 		ROSChannels::Monitor::message_type monr;
-		try{
-			monr = me->lastMonitors[objectId];
-		}
-		catch (const std::out_of_range& oor) {
-			RCLCPP_WARN(me->get_logger(), "Esmini Condition Action Name %s could not be executed, no Monitor message received for object %lu", action, objectId);
-			return;
-		}
-		try{
-			auto denm = ROSChannels::V2X::message_type();
-			me->v2xPub.publish(me->denmFromMonitor(monr));
-		}
-		catch (...) {
-			RCLCPP_WARN(me->get_logger(), "Esmini Condition Action Name %s could not be executed, no Monitor message received for object %lu", action, objectId);
-			return;
-		}
-		
+		rclcpp::wait_for_message(monr, me, "/atos/object_" + std::to_string(objectId) + "/object_monitor", 10ms);
+		me->v2xPub.publish(me->denmFromMonitor(monr));
 	}
 	
 
@@ -386,11 +366,17 @@ int EsminiAdapter::initializeModule(const LOG_LEVEL logLevel) {
 
 	// Set up services
 	me->testOriginClient = me->nTimesWaitForService<TestOriginSrv>(3, 1s, ServiceNames::getTestOrigin);
+
+
 	TestOriginSrv::Response::SharedPtr response;
+	auto succ = me->callService(5ms, me->testOriginClient, response);
 
-	// Call services TODO: Call only when needed
-	me->callService(1s ,me->testOriginClient, response);
-
-	RCLCPP_DEBUG(me->get_logger(), "Test origin: %lf, %lf, %lf", response->origin.position.latitude, response->origin.position.longitude, response->origin.position.altitude);
+	if (succ) {
+		RCLCPP_INFO(me->get_logger(), "Test origin set to %lf, %lf, %lf", response->origin.position.latitude, response->origin.position.longitude, response->origin.position.altitude);
+	}
+	else {
+		RCLCPP_ERROR(me->get_logger(), "Failed to get test origin");
+		retval = -1;
+	}
 	return retval;
 }
