@@ -32,6 +32,8 @@ ATOSBase::ATOSBase()
 		std::bind(&ATOSBase::onInitDataDictionary, this, _1, _2));
 	getObjectIdsService = create_service<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds,
 		std::bind(&ATOSBase::onRequestObjectIDs, this, _1, _2));
+	getTestOriginService = create_service<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin,
+		std::bind(&ATOSBase::onRequestTestOrigin, this, _1, _2));
 }
 
 ATOSBase::~ATOSBase()
