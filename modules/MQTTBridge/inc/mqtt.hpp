@@ -41,7 +41,6 @@ int publishMessages(const std::vector<MQTT::Message>& messagesAndTopics,
 MQTTClient setupConnection(const std::string& brokerAddress,
 		const std::string& clientID, const std::string& username,
 		const std::string& password, clientType clientType, const std::string& subTopic);
-std::string getTopicStem(const Json::Value &mqttConfig);
 int messageGetStrBetween(const std::string full, const std::string begin,
 							const std::string end, std::string &middle);
 void connLost(void *context, char *cause);
