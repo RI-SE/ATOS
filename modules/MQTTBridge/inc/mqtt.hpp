@@ -2,7 +2,6 @@
 
 #include <stdexcept>
 #include <vector>
-#include <json/json.h>
 #include "MQTTClient.h"
 
 #define MQTT_DELIVERY_TIMEOUT_MS 	1
