@@ -12,13 +12,13 @@ def generate_launch_description():
         'etc',
         'params.yaml'
     )
+
     return LaunchDescription([
         Node(
             package='atos',
             namespace='atos',
             executable='atos_base',
-            name='atos_base',
-            parameters=[atosConfig]
+            name='atos_base'
         ),
         Node(
             package='atos',
@@ -39,12 +39,18 @@ def generate_launch_description():
             executable='trajectorylet_streamer',
             name='trajectorylet_streamer'
         ),
+<<<<<<< HEAD:launch/maestro_launch.py
+        # Node(
+        #    package='maestro',
+        #    namespace='maestro',
+=======
         #Node(
         #    package='atos',
         #    namespace='atos',
+>>>>>>> 5abeb48dbeefebf3814b3c64d105ecde7e75c4ed:launch/atos_launch.py
         #    executable='time_control',
         #    name='time_control'
-        #),
+        # ),
         Node(
             package='atos',
             namespace='atos',
@@ -63,12 +69,21 @@ def generate_launch_description():
             executable='journal_control',
             name='journal_control'
         ),
+<<<<<<< HEAD:launch/maestro_launch.py
+        # Node(
+        #     package='rviz2',
+        #     namespace='maestro',
+        #     executable='rviz2',
+        #     name='rviz2'
+        # ),
+=======
         Node(
             package='rviz2',
             namespace='atos',
             executable='rviz2',
             name='rviz2'
         ),
+>>>>>>> 5abeb48dbeefebf3814b3c64d105ecde7e75c4ed:launch/atos_launch.py
         Node(
             package='atos',
             namespace='atos',
@@ -80,6 +95,21 @@ def generate_launch_description():
             namespace='atos',
             executable='esmini_adapter',
             name='esmini_adapter'
+        ),
+        Node(
+<<<<<<< HEAD:launch/maestro_launch.py
+            package='maestro',
+            namespace='maestro',
+            executable='mqtt_bridge',
+            name='mqtt_bridge'
+=======
+            package='atos',
+            namespace='atos',
+            executable='mqtt_bridge',
+            name='mqtt_bridge',
+            # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
+            parameters=[atosConfig]
+>>>>>>> 5abeb48dbeefebf3814b3c64d105ecde7e75c4ed:launch/atos_launch.py
         )
         #Node(
         #    package='atos',

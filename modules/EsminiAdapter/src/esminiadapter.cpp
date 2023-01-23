@@ -25,7 +25,6 @@ std::unordered_map<uint32_t,ROSChannels::Monitor::message_type> EsminiAdapter::l
 int EsminiAdapter::actionId = 0;
 std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> EsminiAdapter::testOriginClient = nullptr;
 
-
 /*!
  * \brief Creates an instance and initialize esmini if none exists, otherwise returns the existing instance.
  * \return the sole EsminiAdapter instance.
@@ -112,14 +111,20 @@ ROSChannels::V2X::message_type EsminiAdapter::denmFromMonitor(const ROSChannels:
 	//lat,lon,alt = localPosToLatLong(monr);
 	TestOriginSrv::Response::SharedPtr response;
 	me->callService(1s ,me->testOriginClient, response);
+	double llh[3] = {response->origin.position.x, response->origin.position.y, response->origin.position.z};
+	double offset[3] = {monr->pose.pose.position.x, monr->pose.pose.position.y, monr->pose.pose.position.z};
+	llhOffsetMeters(llh,offset);
 	
 	ROSChannels::V2X::message_type denm;
-	denm.cause_code = 3;
-	denm.altitude = 3;
-	denm.latitude = 3;
-	denm.longitude = 3;
-	denm.detection_time = 33;
-	denm.message_type = 3;
+	denm.message_type = "DENM";
+	denm.event_id = "ATOSEvent1";
+	denm.cause_code = 12;
+	denm.latitude = std::static_cast<uint32_t>(llh[0]*1000000); // Microdegrees
+	denm.longitude = std::static_cast<uint32_t>(llh[1]*1000000);
+	denm.altitude = std::static_cast<uint32_t>(llh[2]);
+	denm.detection_time = std::chrono::duration_cast<std::chrono::seconds>( // Time since epoch in seconds
+		std::chrono::system_clock::now().time_since_epoch()
+	).count();
 	return denm;
 }
 
