@@ -310,7 +310,7 @@ ATOS::Trajectory EsminiAdapter::getTrajectory(uint32_t id,std::vector<SE_Scenari
 void EsminiAdapter::getObjectStates(double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states) {
 	// Populate States map with empty vector for each object
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
-		states[SE_GetId(j)] = std::vector<SE_ScenarioObjectState>();
+		states[std::stoi(SE_GetObjectName(SE_GetId(j)))] = std::vector<SE_ScenarioObjectState>();
 	}
 	double accumTime = 0;
 	while (accumTime < endTime) {
@@ -320,7 +320,7 @@ void EsminiAdapter::getObjectStates(double timeStep, double endTime, std::map<ui
 			SE_ScenarioObjectState state;
 			SE_GetObjectState(SE_GetId(j), &state);
 			state.timestamp = accumTime; // Inject time since esmini does not do this
-			states.at(SE_GetId(j)).push_back(state); // Copy state into vector
+			states.at(std::stoi(SE_GetObjectName(SE_GetId(j)))).push_back(state); // Copy state into vector
 		}
 	}
 	RCLCPP_INFO(me->get_logger(), "Finished esmini simulation");
