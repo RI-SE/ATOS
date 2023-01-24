@@ -475,6 +475,8 @@ int EsminiAdapter::initializeModule(const LOG_LEVEL logLevel) {
 	me->testOriginClient = me->nTimesWaitForService<TestOriginSrv>(3, 1s, ServiceNames::getTestOrigin);
 	me->startOnTriggerService = me->create_service<ObjectTriggerSrv>(ServiceNames::getObjectTriggerStart,
 		std::bind(&EsminiAdapter::onRequestObjectStartOnTrigger, _1, _2));
+	me->objectIpService = me->create_service<ObjectIpSrv>(ServiceNames::getObjectIp,
+		std::bind(&EsminiAdapter::onRequestObjectIP, _1, _2));
 
 	return retval;
 }
