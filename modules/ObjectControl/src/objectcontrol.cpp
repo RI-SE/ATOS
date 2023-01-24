@@ -261,7 +261,7 @@ void ObjectControl::loadObjectFiles() {
 			const auto inputFile = entry.path();
 			ObjectConfig conf;
 			try {
-				conf.parseConfigurationFile(inputFile);
+				conf.parseConfigurationFile(inputFile,false);
 				uint32_t id = conf.getTransmitterID();
 				RCLCPP_INFO(get_logger(), "Loaded configuration: %s", conf.toString().c_str());
 				// Check preexisting
@@ -273,9 +273,9 @@ void ObjectControl::loadObjectFiles() {
 					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(get_logger(),trajletSub,monrPub);
 					auto getTrajFromRos = get_parameter("use_ros_trajectory").as_bool();
 					if (getTrajFromRos){ // TODO: This is a temp solution.. using ros/openscenario we can probably skip having to parse .conf and .opro files
-						auto response = std::shared_ptr<GetTrajectory::Response>;
-						nShotServiceRequest(3,1s,"get_trajectory",response);
-						object->getTrajectory().initializeFromCartesianTrajectory(response->trajectory);
+						//auto response = std::shared_ptr<GetTrajectory::Response>;
+						//nShotServiceRequest(3,1s,"get_trajectory",response);
+						//object->getTrajectory().initializeFromCartesianTrajectory(response->trajectory);
 
 					}
 					object->parseConfigurationFile(inputFile, getTrajFromRos);
