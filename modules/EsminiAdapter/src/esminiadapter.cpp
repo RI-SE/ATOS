@@ -395,7 +395,7 @@ void EsminiAdapter::InitializeEsmini(){
 
 	// Populate the map tracking Object ID -> esmini index
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
-		me->objectIdToIndex[SE_GetId(j)] = j;
+		me->objectIdToIndex[std::stoi(SE_GetObjectName(SE_GetId(j)))] = j;
 	}
 	SE_Close(); // Stop ScenarioEngine
 
