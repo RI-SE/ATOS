@@ -31,7 +31,7 @@ private:
 	ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;
 
 	static std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
-	static std::unordered_map<uint32_t,std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>>> objectTrajectorySrvs;
+	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> objectTrajectoryService;
 
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;

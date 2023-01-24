@@ -29,7 +29,7 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::me = nullptr;
 std::unordered_map<int,int> EsminiAdapter::objectIdToIndex = std::unordered_map<int, int>();
 std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::idToTraj = std::map<uint32_t,ATOS::Trajectory>();
 std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAdapter::monrSubscribers = std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>>();
-std::unordered_map<uint32_t,std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>>> objectTrajectorySrvs = std::unordered_map<uint32_t,std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>>>();
+std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> EsminiAdapter::objectTrajectoryService = std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>>();
 int EsminiAdapter::actionId = 0;
 std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> EsminiAdapter::testOriginClient = nullptr;
 
@@ -329,14 +329,15 @@ void EsminiAdapter::InitializeEsmini(){
 	std::map<uint32_t,ATOS::Trajectory> idToTraj;
 	me->extractTrajectories(0.1, 50.0, idToTraj);
 
+	// Start the object-trajectory service
+	me->objectTrajectoryService = me->create_service<ObjectTrajectorySrv>(ServiceNames::getObjectTrajectory,
+	std::bind(&EsminiAdapter::onRequestObjectTrajectory, _1, _2));
+
 	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", idToTraj.size());
 	for (auto& it : idToTraj){
 		auto id = it.first;
 		auto traj = it.second;
-		
-		// Create trajectory-services
-		/*objectTrajectorySrvs[id] = me->create_service<ObjectTrajectorySrv>(ServiceNames::getObjectTrajectory,
-			std::bind(&EsminiAdapter::onRequestObjectTrajectory, me, _1, _2));*/
+
 		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
 		// below is for dumping the trajectory points to the console
 		/*for (auto& tp : traj.points){
