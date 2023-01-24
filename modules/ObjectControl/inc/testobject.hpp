@@ -112,7 +112,9 @@ public:
 	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
 	ObjectConfig getObjectConfig() const { return conf; }
 	void setTrajectory(const ATOS::Trajectory& newTrajectory) { conf.setTrajectory(newTrajectory); }
+	void setTransmitterID(const uint32_t newID) { conf.setTransmitterID(newID); }
 	void setLastReceivedPath(ROSChannels::Path::message_type::SharedPtr);
+	void setObjectIP(const in_addr_t newIP);
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
 	void setOsiAddress(const sockaddr_in& newAddr);

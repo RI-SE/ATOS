@@ -13,7 +13,7 @@
 #include "util.h"
 #include "journal.h"
 #include "datadictionary.h"
-#include "atos_interfaces/srv/get_object_trajectory.hpp"
+#include "atos_interfaces/srv/get_start_on_trigger.hpp"
 
 #include "objectcontrol.hpp"
 
@@ -45,7 +45,9 @@ ObjectControl::ObjectControl()
 	declare_parameter("load_ros_cartesian_trajectory",false);
 	int queueSize=0;
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
-
+    idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
+	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory);
+	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp);
 	if (this->initialize() == -1) {
 		throw std::runtime_error(std::string("Failed to initialize ") + get_name());
 	}
@@ -238,6 +240,51 @@ void ObjectControl::onPathMessage(const Path::message_type::SharedPtr trajlet,ui
 }
 
 void ObjectControl::loadScenario() {
+	this->clearScenario();
+
+	auto idsCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFuture future) {
+		auto idResponse = future.get();
+		RCLCPP_ERROR(get_logger(), "Got %d object ids", idResponse->ids.size());
+
+		for (auto id : idResponse->ids) {
+			auto trajletSub = std::make_shared<Path::Sub>(*this, id, std::bind(&ObjectControl::onPathMessage, this, _1, id));
+			auto monrPub = std::make_shared<Monitor::Pub>(*this, id);
+			objects[id] = std::make_shared<TestObject>(this->get_logger(), trajletSub, monrPub);
+			objects.at(id)->setTransmitterID(id);
+
+			auto trajectoryCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
+				auto trajResponse = future.get();
+				//trajResponse->
+				RCLCPP_ERROR(get_logger(), "Got trajectory for object %d", id);
+				ATOS::Trajectory traj;
+				traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
+				objects.at(id)->setTrajectory(traj);
+			};
+			auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
+			trajRequest->id = id;
+			trajectoryClient->async_send_request(trajRequest, trajectoryCallback);
+
+			auto ipCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedFuture future) {
+				auto ipResponse = future.get();
+				// convert from string to in_addr
+				in_addr_t ip;
+				inet_pton(AF_INET, ipResponse->ip.c_str(), &ip);
+				objects.at(id)->setObjectIP(ip);
+			};
+
+			auto ipRequest = std::make_shared<atos_interfaces::srv::GetObjectIp::Request>();
+			ipRequest->id = id;
+			ipClient->async_send_request(ipRequest, ipCallback);
+		}
+	};
+
+	// TODO query scenario participants from scenario manager
+	auto request = std::make_shared<atos_interfaces::srv::GetObjectIds::Request>();
+	auto promise = idClient->async_send_request(request, idsCallback);
+	return;
+	// TODO load trajectories for each participant
+	// TODO configure delayed start
+
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, std::shared_ptr<TestObject>> &o) {
 		auto data = o.second->getAsObjectData();
@@ -246,7 +293,6 @@ void ObjectControl::loadScenario() {
 }
 
 void ObjectControl::loadObjectFiles() {
-	this->clearScenario();
 	char path[MAX_FILE_PATH];
 	std::vector<std::invalid_argument> errors;
 
@@ -268,8 +314,9 @@ void ObjectControl::loadObjectFiles() {
 				auto foundObject = objects.find(id);
 				if (foundObject == objects.end()) {
 					// Create sub and pub as unique ptrs, when TestObject is destroyed, these get destroyed too.
-					auto trajletSub = std::make_shared<Path::Sub>(*this,id,std::bind(&ObjectControl::onPathMessage,this,_1,id));
-					auto monrPub = std::make_shared<Monitor::Pub>(*this,id);
+					
+					auto trajletSub = std::make_shared<Path::Sub>(*this, id, std::bind(&ObjectControl::onPathMessage, this, _1, id));
+					auto monrPub = std::make_shared<Monitor::Pub>(*this, id);
 					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(get_logger(),trajletSub,monrPub);
 					auto getTrajFromRos = get_parameter("use_ros_trajectory").as_bool();
 					if (getTrajFromRos){ // TODO: This is a temp solution.. using ros/openscenario we can probably skip having to parse .conf and .opro files

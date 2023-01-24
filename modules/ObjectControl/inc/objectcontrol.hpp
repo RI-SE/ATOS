@@ -9,6 +9,9 @@
 #include "state.hpp"
 #include "testobject.hpp"
 #include "objectlistener.hpp"
+#include "atos_interfaces/srv/get_object_ids.hpp"
+#include "atos_interfaces/srv/get_object_trajectory.hpp"
+#include "atos_interfaces/srv/get_object_ip.hpp"
 
 // Forward declarations
 class ObjectControlState;
@@ -232,6 +235,10 @@ private:
 	ROSChannels::Abort::Pub scnAbortPub;					//!< Publisher to scenario abort reports
 	ROSChannels::ObjectsConnected::Pub objectsConnectedPub;	//!< Publisher to report that objects have been connected
 	ROSChannels::ConnectedObjectIds::Pub connectedObjectIdsPub;	//!< Publisher to periodically report connected object ids
+	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr idClient;	//!< Client to request object ids
+	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr trajectoryClient;	//!< Client to request object trajectories
+	rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedPtr ipClient;	//!< Client to request object IPs
+
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
 	//!			and can be terminated by calling ::abortConnectionAttempt or setting ::connStopReqFuture.

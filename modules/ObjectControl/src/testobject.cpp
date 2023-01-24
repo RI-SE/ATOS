@@ -34,6 +34,19 @@ TestObject::TestObject(TestObject&& other) :
 	this->nextMonitor = std::move(other.nextMonitor);
 }
 
+void TestObject::setObjectIP(
+	const in_addr_t newIP) {
+	struct sockaddr_in addr;
+	addr.sin_addr.s_addr = newIP;
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(ISO_22133_DEFAULT_OBJECT_TCP_PORT);
+	this->setCommandAddress(addr);
+	addr.sin_port = htons(ISO_22133_OBJECT_UDP_PORT);
+	this->setMonitorAddress(addr);
+	addr.sin_port = htons(OSI_DEFAULT_OBJECT_TCP_PORT);
+	this->setOsiAddress(addr);
+}
+
 void TestObject::setCommandAddress(
 		const sockaddr_in &newAddr) {
 	if (!this->comms.isConnected()) {
