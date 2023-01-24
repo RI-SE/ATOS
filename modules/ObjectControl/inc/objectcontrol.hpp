@@ -12,6 +12,7 @@
 #include "atos_interfaces/srv/get_object_ids.hpp"
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "atos_interfaces/srv/get_object_ip.hpp"
+#include "atos_interfaces/srv/get_object_trigger_start.hpp"
 
 // Forward declarations
 class ObjectControlState;
@@ -238,6 +239,7 @@ private:
 	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr idClient;	//!< Client to request object ids
 	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr trajectoryClient;	//!< Client to request object trajectories
 	rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedPtr ipClient;	//!< Client to request object IPs
+	rclcpp::Client<atos_interfaces::srv::GetObjectTriggerStart>::SharedPtr triggerClient;	//!< Client to request object trigger start
 
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
