@@ -41,7 +41,7 @@ private:
 	static void reportObjectPosition(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
 	static void onEsminiStoryBoardStateChange(const char* name, int type, int state);
 	static void onEsminiConditionTriggered(const char* name, double timestamp);
-	static void InitializeEsmini(std::string& oscFilePath);
+	static void InitializeEsmini();
 	static void getObjectStates(double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
 	static ATOS::Trajectory getTrajectory(uint32_t,std::vector<SE_ScenarioObjectState>& states);
 	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(double timeStep, double endTime, std::map<uint32_t,ATOS::Trajectory>& idToTraj);

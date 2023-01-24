@@ -9,7 +9,9 @@
 #include <chrono>
 #include <cmath>
 
+#include "atos_interfaces/msg/cartesian_trajectory.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
+#include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "rclcpp/wait_for_message.hpp"
 #include "trajectory.hpp"
 #include "datadictionary.h"
@@ -33,7 +35,7 @@ std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> EsminiAdapt
 std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 	if (me == nullptr) {
 		me = std::shared_ptr<EsminiAdapter>(new EsminiAdapter());
-		me->InitializeEsmini(oscFilePath);
+		me->InitializeEsmini();
 		// Start listening to connected object ids
 		me->connectedObjectIdsSub = ROSChannels::ConnectedObjectIds::Sub(*me,&EsminiAdapter::onConnectedObjectIdsMessage);
 		// Start V2X publisher
@@ -74,7 +76,9 @@ void EsminiAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {
 
 void EsminiAdapter::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 
-void EsminiAdapter::onInitMessage(const Init::message_type::SharedPtr) {}
+void EsminiAdapter::onInitMessage(const Init::message_type::SharedPtr) {
+	me->InitializeEsmini();
+}
 
 void EsminiAdapter::onExitMessage(const Exit::message_type::SharedPtr){
 	SE_Close();
@@ -83,7 +87,7 @@ void EsminiAdapter::onExitMessage(const Exit::message_type::SharedPtr){
 }
 
 void EsminiAdapter::onStartMessage(const Start::message_type::SharedPtr) {
-	if (SE_Init(oscFilePath.c_str(),0,0,0,0) == -1){
+	if (SE_Init(me->oscFilePath.c_str(),0,0,0,0) == -1){
 		RCLCPP_ERROR(me->get_logger(), "Failed to initialize esmini, aborting");
 		exit(1);
 	}
@@ -348,10 +352,9 @@ std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(double ti
 
 /*!
  * \brief Initialize the esmini simulator and perform subsequent setup tasks
- * \param oscFilePath Path to the xosc file
  */
-void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
-	SE_Init(oscFilePath.c_str(),1,0,0,0); // Disable controllers, let DefaultController be used
+void EsminiAdapter::InitializeEsmini(){
+	SE_Init(me->oscFilePath.c_str(),1,0,0,0); // Disable controllers, let DefaultController be used
 	std::map<uint32_t,ATOS::Trajectory> idToTraj;
 	me->extractTrajectories(0.1, 50.0, idToTraj);
 
