@@ -48,7 +48,7 @@ ObjectControl::ObjectControl()
     idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
 	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory);
 	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp);
-	triggerClient = create_client<atos_interfaces::srv::GetObjectTriggerStart>(ServiceNames::getStartOnTrigger);
+	triggerClient = create_client<atos_interfaces::srv::GetObjectTriggerStart>(ServiceNames::getObjectTriggerStart);
 	if (this->initialize() == -1) {
 		throw std::runtime_error(std::string("Failed to initialize ") + get_name());
 	}
