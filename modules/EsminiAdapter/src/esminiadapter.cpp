@@ -20,12 +20,16 @@
 
 using namespace ROSChannels;
 using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
+using ObjectTrajectorySrv = atos_interfaces::srv::GetObjectTrajectory;
 using std::placeholders::_1;
+using std::placeholders::_2;
 using namespace std::chrono_literals;
 
 std::shared_ptr<EsminiAdapter> EsminiAdapter::me = nullptr;
 std::unordered_map<int,int> EsminiAdapter::objectIdToIndex = std::unordered_map<int, int>();
+std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::idToTraj = std::map<uint32_t,ATOS::Trajectory>();
 std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAdapter::monrSubscribers = std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>>();
+std::unordered_map<uint32_t,std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>>> objectTrajectorySrvs = std::unordered_map<uint32_t,std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>>>();
 int EsminiAdapter::actionId = 0;
 std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> EsminiAdapter::testOriginClient = nullptr;
 
@@ -122,40 +126,6 @@ static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor
 		std::chrono::system_clock::now().time_since_epoch()
 	).count();
 	return denm;
-}
-
-static ROSChannels::CartesianTrajectory::message_type ROSTrajfromTrajectory(const ATOS::Trajectory& traj){
-	ROSChannels::CartesianTrajectory::message_type trajMsg;
-	for (const auto& point : traj.points){
-		atos_interfaces::msg::CartesianTrajectoryPoint pointMsg;
-		// Time
-		auto millis = point.getTime().count();
-		pointMsg.time_from_start.sec = millis/1000;
-		pointMsg.time_from_start.nanosec = (millis%1000)*1000000;
-
-		// Position
-		pointMsg.pose.position.x = point.getPosition().x();
-		pointMsg.pose.position.y = point.getPosition().y();
-		pointMsg.pose.position.z = point.getPosition().z();
-
-		// Rotation
-		tf2::Quaternion q;
-		q.setRPY(0, 0, point.getHeading());
-		tf2::convert(q, pointMsg.pose.orientation);
-		
-		// Velocity
-		pointMsg.twist.linear.x = point.getLateralVelocity();
-		pointMsg.twist.linear.y = point.getLongitudinalVelocity();
-		pointMsg.twist.linear.z = 0; // TODO: Support for drones etc..
-
-		// Acceleration
-		pointMsg.acceleration.linear.x = point.getLateralAcceleration();
-		pointMsg.acceleration.linear.y = point.getLongitudinalAcceleration();
-		pointMsg.acceleration.linear.z = 0; // TODO: Support for drones etc..
-
-		trajMsg.points.push_back(pointMsg);
-	}
-	return trajMsg;
 }
 
 /*!
@@ -364,9 +334,9 @@ void EsminiAdapter::InitializeEsmini(){
 		auto id = it.first;
 		auto traj = it.second;
 		
-		// Publish trajectories
-		auto publisher = std::make_shared<CartesianTrajectory::Pub>(*me,id);
-		publisher->publish(ROSTrajfromTrajectory(traj));
+		// Create trajectory-services
+		/*objectTrajectorySrvs[id] = me->create_service<ObjectTrajectorySrv>(ServiceNames::getObjectTrajectory,
+			std::bind(&EsminiAdapter::onRequestObjectTrajectory, me, _1, _2));*/
 		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
 		// below is for dumping the trajectory points to the console
 		/*for (auto& tp : traj.points){
@@ -382,6 +352,19 @@ void EsminiAdapter::InitializeEsmini(){
 
 	RCLCPP_DEBUG(me->get_logger(), "Extracted trajectories");
 }
+
+void EsminiAdapter::onRequestObjectTrajectory(
+	const std::shared_ptr<ObjectTrajectorySrv::Request> req,
+	std::shared_ptr<ObjectTrajectorySrv::Response> res)
+{
+	if (me->idToTraj.find(req->id) != me->idToTraj.end()){
+		res->trajectory = me->idToTraj.at(req->id).toCartesianTrajectory();
+	}
+	else{
+		RCLCPP_ERROR(me->get_logger(), "Esmini-trajectory service called, no trajectory found for object %d", req->id);
+	}
+}
+
 
 /*!
  * \brief initializeModule Initializes this module by creating log,

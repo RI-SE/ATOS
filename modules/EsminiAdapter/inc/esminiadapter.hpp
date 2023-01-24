@@ -7,6 +7,7 @@
 #include "esmini/esminiLib.hpp"
 #include "trajectory.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
+#include "atos_interfaces/srv/get_object_trajectory.hpp"
 
 /*!
  * \brief The EsminiAdapter class is a singleton class that 
@@ -30,6 +31,7 @@ private:
 	ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;
 
 	static std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
+	static std::unordered_map<uint32_t,std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>>> objectTrajectorySrvs;
 
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
@@ -45,11 +47,14 @@ private:
 	static void getObjectStates(double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
 	static ATOS::Trajectory getTrajectory(uint32_t,std::vector<SE_ScenarioObjectState>& states);
 	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(double timeStep, double endTime, std::map<uint32_t,ATOS::Trajectory>& idToTraj);
-	
-	static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor::message_type monr);
+	static void onRequestObjectTrajectory(
+	const std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Request> req,
+		std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Response> res);
+
 	static std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> testOriginClient;
 	static std::shared_ptr<EsminiAdapter> me;
 	static std::unordered_map<int, int> objectIdToIndex;
+	static std::map<uint32_t,ATOS::Trajectory> idToTraj;
 	const std::vector<std::string> supportedActions {"start", 
 													 "send_denm"
 													};
