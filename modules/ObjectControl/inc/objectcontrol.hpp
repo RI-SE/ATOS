@@ -194,7 +194,7 @@ private:
 	void onRemoteControlEnableMessage(const ROSChannels::RemoteControlEnable::message_type::SharedPtr) override;
 	void onRemoteControlDisableMessage(const ROSChannels::RemoteControlDisable::message_type::SharedPtr) override;
 	void onControlSignalMessage(const ROSChannels::ControlSignal::message_type::SharedPtr) override;
-	void onTrajectoryMessage(const ROSChannels::Trajectory::message_type::SharedPtr,const uint32_t) override;
+	void onPathMessage(const ROSChannels::Path::message_type::SharedPtr,const uint32_t) override;
 
 	using clock = std::chrono::steady_clock;
 

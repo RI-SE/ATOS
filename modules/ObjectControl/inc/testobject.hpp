@@ -91,7 +91,7 @@ class TestObject : public Loggable {
 	using clock = std::chrono::steady_clock;
 public:
 	TestObject(rclcpp::Logger, 
-		std::shared_ptr<ROSChannels::Trajectory::Sub>, 
+		std::shared_ptr<ROSChannels::Path::Sub>, 
 		std::shared_ptr<ROSChannels::Monitor::Pub>
 	);
 	TestObject(const TestObject&) = delete;
@@ -112,7 +112,7 @@ public:
 	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
 	ObjectConfig getObjectConfig() const { return conf; }
 	void setTrajectory(const ATOS::Trajectory& newTrajectory) { conf.setTrajectory(newTrajectory); }
-	void setLastReceivedTrajectory(ROSChannels::Trajectory::message_type::SharedPtr);
+	void setLastReceivedPath(ROSChannels::Path::message_type::SharedPtr);
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
 	void setOsiAddress(const sockaddr_in& newAddr);
@@ -181,10 +181,10 @@ private:
 	Channel osiChannel;			//!< Channel for communication with object over the OSI protocol
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
 	std::shared_ptr<ROSChannels::Monitor::Pub> monrPub;
-	std::shared_ptr<ROSChannels::Trajectory::Sub> trajSub;
-	std::shared_ptr<ROSChannels::Trajectory::message_type> lastReceivedTrajectory;
+	std::shared_ptr<ROSChannels::Path::Sub> pathSub;
+	std::shared_ptr<ROSChannels::Path::message_type> lastReceivedPath;
 
-	void onTrajMessage(const ROSChannels::Trajectory::message_type::SharedPtr);
+	void onPathMessage(const ROSChannels::Path::message_type::SharedPtr);
 
 	ObjectConfig conf;
 

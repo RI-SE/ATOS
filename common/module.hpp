@@ -114,7 +114,8 @@ class Module : public rclcpp::Node {
 	virtual void onDataDictMessage(const ROSChannels::DataDictionary::message_type::SharedPtr){};
 	virtual void onOSEMMessage(const ROSChannels::Init::message_type::SharedPtr){}; // TODO remove
 	virtual void onASPMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO once channel defined swap type
-	virtual void onTrajectoryMessage(const ROSChannels::Trajectory::message_type::SharedPtr, uint32_t){};
+	virtual void onPathMessage(const ROSChannels::Path::message_type::SharedPtr, uint32_t){};
+	virtual void onTrajectoryMessage(const ROSChannels::CartesianTrajectory::message_type::SharedPtr, uint32_t){};
 	virtual void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr, uint32_t){};
 	virtual void onTrajToSupMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO once channel defined swap type
 	virtual void onTrajFromSupMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO once channel defined swap type

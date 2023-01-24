@@ -233,8 +233,8 @@ void ObjectControl::onControlSignalMessage(const ControlSignal::message_type::Sh
 	}
 }
 
-void ObjectControl::onTrajectoryMessage(const Trajectory::message_type::SharedPtr trajlet,uint32_t id){
-	objects.at(id)->setLastReceivedTrajectory(trajlet);
+void ObjectControl::onPathMessage(const Path::message_type::SharedPtr trajlet,uint32_t id){
+	objects.at(id)->setLastReceivedPath(trajlet);
 }
 
 void ObjectControl::loadScenario() {
@@ -268,7 +268,7 @@ void ObjectControl::loadObjectFiles() {
 				auto foundObject = objects.find(id);
 				if (foundObject == objects.end()) {
 					// Create sub and pub as unique ptrs, when TestObject is destroyed, these get destroyed too.
-					auto trajletSub = std::make_shared<Trajectory::Sub>(*this,id,std::bind(&ObjectControl::onTrajectoryMessage,this,_1,id));
+					auto trajletSub = std::make_shared<Path::Sub>(*this,id,std::bind(&ObjectControl::onPathMessage,this,_1,id));
 					auto monrPub = std::make_shared<Monitor::Pub>(*this,id);
 					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(get_logger(),trajletSub,monrPub);
 					auto getTrajFromRos = get_parameter("use_ros_trajectory").as_bool();

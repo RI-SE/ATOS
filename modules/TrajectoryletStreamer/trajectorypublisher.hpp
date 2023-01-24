@@ -16,7 +16,7 @@ public:
     TrajectoryPublisher(rclcpp::Node& node, const Trajectory&, const uint32_t objectId);
     void handleStart();
 private:
-    ROSChannels::Trajectory::Pub pub;
+    ROSChannels::Path::Pub pub;
     std::shared_ptr<rclcpp::TimerBase> timer;
 
     std::chrono::milliseconds chunkLength = std::chrono::milliseconds(2000);

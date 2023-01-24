@@ -8,6 +8,7 @@
 #include <functional>
 #include <chrono>
 #include <cmath>
+#include <chrono>
 
 #include "atos_interfaces/msg/cartesian_trajectory.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
@@ -26,7 +27,7 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::me = nullptr;
 std::unordered_map<int,int> EsminiAdapter::objectIdToIndex = std::unordered_map<int, int>();
 std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAdapter::monrSubscribers = std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>>();
 int EsminiAdapter::actionId = 0;
-std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> EsminiAdapter::testOriginClient = NULL;
+std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> EsminiAdapter::testOriginClient = nullptr;
 
 /*!
  * \brief Creates an instance and initialize esmini if none exists, otherwise returns the existing instance.
