@@ -100,7 +100,7 @@ public:
 	TestObject& operator=(const TestObject&) = delete;
 	TestObject& operator=(TestObject&&) = default;
 
-	void parseConfigurationFile(const fs::path& file);
+	void parseConfigurationFile(const fs::path& file, bool getTrajFromRos);
 
 	uint32_t getTransmitterID() const { return conf.getTransmitterID(); }
 	std::string getTrajectoryFileName() const { return conf.getTrajectoryFileName(); }

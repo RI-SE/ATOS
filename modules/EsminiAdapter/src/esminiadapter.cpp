@@ -3,9 +3,11 @@
 #include "esmini/esminiRMLib.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <algorithm>
 #include <functional>
 #include <chrono>
+#include <cmath>
 
 #include "atos_interfaces/srv/get_test_origin.hpp"
 #include "rclcpp/wait_for_message.hpp"
@@ -103,13 +105,7 @@ void EsminiAdapter::onEsminiStoryBoardStateChange(const char* name, int type, in
 	RCLCPP_DEBUG(me->get_logger(), "Esmini Storyboard State Change Name: %s, Type: %d, State: %d", name, type, state);
 }
 
-ROSChannels::V2X::message_type EsminiAdapter::denmFromMonitor(const ROSChannels::Monitor::message_type monr){
-	TestOriginSrv::Response::SharedPtr response;
-	me->callService(5ms ,me->testOriginClient, response);
-	double llh[3] = {response->origin.position.latitude, response->origin.position.longitude, response->origin.position.altitude};
-	double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
-	llhOffsetMeters(llh,offset);
-	
+static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor::message_type monr, double *llh){
 	ROSChannels::V2X::message_type denm;
 	denm.message_type = "DENM";
 	denm.event_id = "ATOSEvent1";
@@ -121,6 +117,40 @@ ROSChannels::V2X::message_type EsminiAdapter::denmFromMonitor(const ROSChannels:
 		std::chrono::system_clock::now().time_since_epoch()
 	).count();
 	return denm;
+}
+
+static ROSChannels::CartesianTrajectory::message_type ROSTrajfromTrajectory(const ATOS::Trajectory& traj){
+	ROSChannels::CartesianTrajectory::message_type trajMsg;
+	for (const auto& point : traj.points){
+		atos_interfaces::msg::CartesianTrajectoryPoint pointMsg;
+		// Time
+		auto millis = point.getTime().count();
+		pointMsg.time_from_start.sec = millis/1000;
+		pointMsg.time_from_start.nanosec = (millis%1000)*1000000;
+
+		// Position
+		pointMsg.pose.position.x = point.getPosition().x();
+		pointMsg.pose.position.y = point.getPosition().y();
+		pointMsg.pose.position.z = point.getPosition().z();
+
+		// Rotation
+		tf2::Quaternion q;
+		q.setRPY(0, 0, point.getHeading());
+		tf2::convert(q, pointMsg.pose.orientation);
+		
+		// Velocity
+		pointMsg.twist.linear.x = point.getLateralVelocity();
+		pointMsg.twist.linear.y = point.getLongitudinalVelocity();
+		pointMsg.twist.linear.z = 0; // TODO: Support for drones etc..
+
+		// Acceleration
+		pointMsg.acceleration.linear.x = point.getLateralAcceleration();
+		pointMsg.acceleration.linear.y = point.getLongitudinalAcceleration();
+		pointMsg.acceleration.linear.z = 0; // TODO: Support for drones etc..
+
+		trajMsg.points.push_back(pointMsg);
+	}
+	return trajMsg;
 }
 
 /*!
@@ -174,7 +204,12 @@ void EsminiAdapter::onEsminiConditionTriggered(const char* name, double timestam
 		// Get the latest Monitor message
 		ROSChannels::Monitor::message_type monr;
 		rclcpp::wait_for_message(monr, me, "/atos/object_" + std::to_string(objectId) + "/object_monitor", 10ms);
-		me->v2xPub.publish(me->denmFromMonitor(monr));
+		TestOriginSrv::Response::SharedPtr response;
+		me->callService(5ms ,me->testOriginClient, response);
+		double llh[3] = {response->origin.position.latitude, response->origin.position.longitude, response->origin.position.altitude};
+		double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
+		llhOffsetMeters(llh,offset);
+		me->v2xPub.publish(denmFromMonitor(monr,llh));
 	}
 	
 
@@ -227,16 +262,23 @@ void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr
 ATOS::Trajectory EsminiAdapter::getTrajectory(uint32_t id,std::vector<SE_ScenarioObjectState>& states) {
 	ATOS::Trajectory trajectory;
 	trajectory.name = "Esmini Trajectory for object " + std::to_string(id);
-	auto saveTp = [&](auto& state){
+	auto saveTp = [&](auto& state, auto& prevState){
 		ATOS::Trajectory::TrajectoryPoint tp;
+		double currLonVel = state.speed * cos(state.wheel_angle);
+		double currLatVel = state.speed * sin(state.wheel_angle);
+		double prevLonVel = prevState.speed * cos(prevState.wheel_angle);
+		double prevLatVel = prevState.speed * sin(prevState.wheel_angle);
 		tp.setXCoord(state.x);
 		tp.setYCoord(state.y);
 		tp.setZCoord(state.z);
 		tp.setHeading(state.h);
 		tp.setTime(state.timestamp);
 		tp.setCurvature(0); // TODO: implement support for different curvature, now only support straight lines
-		tp.setLongitudinalVelocity(state.speed * cos(state.wheel_angle));
-		tp.setLateralAcceleration(state.speed * sin(state.wheel_angle));
+		tp.setLongitudinalVelocity(currLonVel);
+		tp.setLateralVelocity(currLatVel);
+		tp.setLongitudinalAcceleration((currLonVel - prevLonVel) / (state.timestamp - prevState.timestamp));
+		tp.setLateralAcceleration((currLatVel - prevLatVel) / (state.timestamp - prevState.timestamp));
+
 		trajectory.points.push_back(tp);
 	};
 	for (auto it = states.begin()+1; it != states.end(); ++it) {
@@ -244,7 +286,7 @@ ATOS::Trajectory EsminiAdapter::getTrajectory(uint32_t id,std::vector<SE_Scenari
 			it->z == (it-1)->z && it->h == (it-1)->h) {
 			continue;
 		}
-		saveTp(*(it-1)); // Next timestep is different, save current one.
+		saveTp(*it,*(it-1)); // Next timestep is different, save current one.
 	}
 	auto startTime = trajectory.points.front().getTime();
 
@@ -311,11 +353,16 @@ std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(double ti
 void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
 	SE_Init(oscFilePath.c_str(),1,0,0,0); // Disable controllers, let DefaultController be used
 	std::map<uint32_t,ATOS::Trajectory> idToTraj;
-	me->extractTrajectories(0.1, 14.0, idToTraj);
+	me->extractTrajectories(0.1, 50.0, idToTraj);
+
 	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", idToTraj.size());
 	for (auto& it : idToTraj){
 		auto id = it.first;
 		auto traj = it.second;
+		
+		// Publish trajectories
+		auto publisher = std::make_shared<CartesianTrajectory::Pub>(*me,id);
+		publisher->publish(ROSTrajfromTrajectory(traj));
 		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
 		// below is for dumping the trajectory points to the console
 		/*for (auto& tp : traj.points){

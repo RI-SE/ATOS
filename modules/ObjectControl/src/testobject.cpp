@@ -161,9 +161,10 @@ std::string TestObject::toString() const {
 }
 
 void TestObject::parseConfigurationFile(
-		const fs::path &objectFile) {
+		const fs::path &objectFile,
+		bool getTrajFromRos) {
 	struct sockaddr_in addr;
-	this->conf.parseConfigurationFile(objectFile);
+	this->conf.parseConfigurationFile(objectFile,getTrajFromRos);
 	addr.sin_addr.s_addr = conf.getIP();
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(ISO_22133_DEFAULT_OBJECT_TCP_PORT);

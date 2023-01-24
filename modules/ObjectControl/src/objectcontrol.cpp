@@ -13,6 +13,7 @@
 #include "util.h"
 #include "journal.h"
 #include "datadictionary.h"
+#include "atos_interfaces/srv/get_object_trajectory.hpp"
 
 #include "objectcontrol.hpp"
 
@@ -41,6 +42,7 @@ ObjectControl::ObjectControl()
 	objectsConnectedPub(*this),
 	connectedObjectIdsPub(*this)
 {
+	declare_parameter("load_ros_cartesian_trajectory",false);
 	int queueSize=0;
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
 
@@ -269,7 +271,14 @@ void ObjectControl::loadObjectFiles() {
 					auto trajletSub = std::make_shared<Trajectory::Sub>(*this,id,std::bind(&ObjectControl::onTrajectoryMessage,this,_1,id));
 					auto monrPub = std::make_shared<Monitor::Pub>(*this,id);
 					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(get_logger(),trajletSub,monrPub);
-					object->parseConfigurationFile(inputFile);
+					auto getTrajFromRos = get_parameter("use_ros_trajectory").as_bool();
+					if (getTrajFromRos){ // TODO: This is a temp solution.. using ros/openscenario we can probably skip having to parse .conf and .opro files
+						auto response = std::shared_ptr<GetTrajectory::Response>;
+						nShotServiceRequest(3,1s,"get_trajectory",response);
+						object->getTrajectory().initializeFromCartesianTrajectory(response->trajectory);
+
+					}
+					object->parseConfigurationFile(inputFile, getTrajFromRos);
 					objects.emplace(id, object);
 				}
 				else {
