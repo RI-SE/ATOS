@@ -63,7 +63,7 @@ const std::string getObjectIds = "get_object_ids";
 const std::string getObjectIp = "get_object_ip";
 const std::string getTestOrigin = "get_test_origin";
 const std::string getObjectTrajectory = "get_object_trajectory";
-const std::string getStartOnTrigger = "get_start_on_trigger";
+const std::string getObjectTriggerStart = "get_object_trigger_start";
 }
 
 // TODO move somewhere else? also make generic to allow more args (variadic template)?
