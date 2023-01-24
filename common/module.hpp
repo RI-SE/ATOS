@@ -62,6 +62,7 @@ const std::string initDataDict = "init_data_dictionary";
 const std::string getObjectIds = "get_object_ids";
 const std::string getTestOrigin = "get_test_origin";
 const std::string getObjectTrajectory = "get_object_trajectory";
+const std::string getStartOnTrigger = "get_start_on_trigger";
 }
 
 // TODO move somewhere else? also make generic to allow more args (variadic template)?
