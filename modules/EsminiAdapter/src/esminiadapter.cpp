@@ -368,10 +368,6 @@ void EsminiAdapter::InitializeEsmini(){
 
 	me->extractTrajectories(0.1, 50.0, me->idToTraj);
 
-	// Start the object-trajectory service
-	me->objectTrajectoryService = me->create_service<ObjectTrajectorySrv>(ServiceNames::getObjectTrajectory,
-		std::bind(&EsminiAdapter::onRequestObjectTrajectory, _1, _2));
-
 	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", me->idToTraj.size());
 
 	// Find object IPs as defined in VehicleCatalog file
@@ -471,12 +467,17 @@ int EsminiAdapter::initializeModule(const LOG_LEVEL logLevel) {
 		RCLCPP_ERROR(me->get_logger(), "Unable to initialize data dictionary");
 	}
 
-	// Set up services
+	// Calling services
 	me->testOriginClient = me->nTimesWaitForService<TestOriginSrv>(3, 1s, ServiceNames::getTestOrigin);
+
+	// Providing services
 	me->startOnTriggerService = me->create_service<ObjectTriggerSrv>(ServiceNames::getObjectTriggerStart,
 		std::bind(&EsminiAdapter::onRequestObjectStartOnTrigger, _1, _2));
 	me->objectIpService = me->create_service<ObjectIpSrv>(ServiceNames::getObjectIp,
 		std::bind(&EsminiAdapter::onRequestObjectIP, _1, _2));
+	me->objectTrajectoryService = me->create_service<ObjectTrajectorySrv>(ServiceNames::getObjectTrajectory,
+		std::bind(&EsminiAdapter::onRequestObjectTrajectory, _1, _2));
+
 
 	return retval;
 }
