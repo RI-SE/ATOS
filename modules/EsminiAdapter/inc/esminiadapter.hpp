@@ -8,7 +8,8 @@
 #include "trajectory.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
-#include "atos_interfaces/srv/get_start_on_trigger.hpp"
+#include "atos_interfaces/srv/get_object_trigger_start.hpp"
+#include "atos_interfaces/srv/get_object_ip.hpp"
 
 /*!
  * \brief The EsminiAdapter class is a singleton class that 
@@ -33,7 +34,9 @@ private:
 
 	static std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> objectTrajectoryService;
-	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetStartOnTrigger>> startOnTriggerService;
+	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTriggerStart>> startOnTriggerService;
+	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectIp>> objectIpService;
+
 
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
@@ -54,14 +57,19 @@ private:
 		const std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Request> req,
 		std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Response> res);
 	
-	static void onRequestStartOnTrigger(
-		const std::shared_ptr<atos_interfaces::srv::GetStartOnTrigger::Request> req,
-		std::shared_ptr<atos_interfaces::srv::GetStartOnTrigger::Response> res);
+	static void onRequestObjectStartOnTrigger(
+		const std::shared_ptr<atos_interfaces::srv::GetObjectTriggerStart::Request> req,
+		std::shared_ptr<atos_interfaces::srv::GetObjectTriggerStart::Response> res);
+	
+	static void onRequestObjectIP(
+		const std::shared_ptr<atos_interfaces::srv::GetObjectIp::Request> req,
+		std::shared_ptr<atos_interfaces::srv::GetObjectIp::Response> res);
 
 	static std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> testOriginClient;
 	static std::shared_ptr<EsminiAdapter> me;
 	static std::unordered_map<int, int> objectIdToIndex;
 	static std::map<uint32_t,ATOS::Trajectory> idToTraj;
+	static std::map<uint32_t,std::string> idToIp;
 	static std::vector<uint32_t> delayedStartIds;
 	const std::vector<std::string> supportedActions {"start", 
 													 "send_denm"

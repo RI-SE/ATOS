@@ -19,7 +19,8 @@
 using namespace ROSChannels;
 using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
 using ObjectTrajectorySrv = atos_interfaces::srv::GetObjectTrajectory;
-using StartOnTriggerSrv = atos_interfaces::srv::GetStartOnTrigger;
+using ObjectTriggerSrv = atos_interfaces::srv::GetObjectTriggerStart;
+using ObjectIpSrv = atos_interfaces::srv::GetObjectIp;
 using std::placeholders::_1;
 using std::placeholders::_2;
 using namespace std::chrono_literals;
@@ -27,9 +28,12 @@ using namespace std::chrono_literals;
 std::shared_ptr<EsminiAdapter> EsminiAdapter::me = nullptr;
 std::unordered_map<int,int> EsminiAdapter::objectIdToIndex = std::unordered_map<int, int>();
 std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::idToTraj = std::map<uint32_t,ATOS::Trajectory>();
+std::map<uint32_t,std::string> EsminiAdapter::idToIp = std::map<uint32_t,std::string>();
+
 std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAdapter::monrSubscribers = std::unordered_map<uint32_t,std::shared_ptr<Monitor::Sub>>();
 std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>> EsminiAdapter::objectTrajectoryService = std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>>();
-std::shared_ptr<rclcpp::Service<StartOnTriggerSrv>> EsminiAdapter::startOnTriggerService = std::shared_ptr<rclcpp::Service<StartOnTriggerSrv>>();
+std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>> EsminiAdapter::startOnTriggerService = std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>>();
+std::shared_ptr<rclcpp::Service<ObjectIpSrv>> EsminiAdapter::objectIpService = std::shared_ptr<rclcpp::Service<ObjectIpSrv>>();
 std::vector<uint32_t> EsminiAdapter::delayedStartIds = std::vector<uint32_t>();
 int EsminiAdapter::actionId = 0;
 std::shared_ptr<rclcpp::Client<TestOriginSrv>> EsminiAdapter::testOriginClient = nullptr;
@@ -356,18 +360,29 @@ void EsminiAdapter::InitializeEsmini(){
 	me->delayedStartIds.clear();
 	me->idToTraj.clear();
 	me->objectIdToIndex.clear();
+	me->idToIp.clear();
 
 	SE_Init(me->oscFilePath.c_str(),1,0,0,0); // Disable controllers, let DefaultController be used
-	me->extractTrajectories(0.1, 50.0, me->idToTraj);
-
 	// Register callbacks to figure out what actions need to be taken
 	SE_RegisterConditionCallback(&onEsminiConditionTriggeredPre);
+
+	me->extractTrajectories(0.1, 50.0, me->idToTraj);
 
 	// Start the object-trajectory service
 	me->objectTrajectoryService = me->create_service<ObjectTrajectorySrv>(ServiceNames::getObjectTrajectory,
 		std::bind(&EsminiAdapter::onRequestObjectTrajectory, _1, _2));
 
 	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", me->idToTraj.size());
+
+	// Find object IPs as defined in VehicleCatalog file
+	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
+		auto id = std::stoi(SE_GetObjectName(SE_GetId(j)));
+		auto ip = SE_GetObjectPropertyValue(j, "ip");
+		if (ip != nullptr){
+			me->idToIp[id] = std::string(ip);
+		}
+	}
+
 
 	for (auto& it : me->idToTraj){
 		auto id = it.first;
@@ -397,18 +412,40 @@ void EsminiAdapter::onRequestObjectTrajectory(
 {
 	if (me->idToTraj.find(req->id) != me->idToTraj.end()){
 		res->trajectory = me->idToTraj.at(req->id).toCartesianTrajectory();
+		res->success = true;
 	}
 	else{
 		RCLCPP_ERROR(me->get_logger(), "Esmini-trajectory service called, no trajectory found for object %d", req->id);
+		res->success = false;
 	}
 }
 
-void EsminiAdapter::onRequestStartOnTrigger(
-	const std::shared_ptr<StartOnTriggerSrv::Request> req,
-	std::shared_ptr<StartOnTriggerSrv::Response> res)
+void EsminiAdapter::onRequestObjectStartOnTrigger(
+	const std::shared_ptr<ObjectTriggerSrv::Request> req,
+	std::shared_ptr<ObjectTriggerSrv::Response> res)
 {	
-	for (auto& id : me->delayedStartIds){
-		res->ids.push_back(id);
+	for (auto& it : me->delayedStartIds){
+		if (it == req->id){
+			res->trigger_start = true;
+			res->success = true;
+			return;
+		}
+	RCLCPP_ERROR(me->get_logger(), "Esmini-trajectory service called, no trajectory found for object %d", req->id);
+	res->success = false;
+	}
+}
+
+void EsminiAdapter::onRequestObjectIP(
+	const std::shared_ptr<ObjectIpSrv::Request> req,
+	std::shared_ptr<ObjectIpSrv::Response> res)
+{	
+	if (me->idToIp.find(req->id) == me->idToIp.end()){
+		RCLCPP_WARN(me->get_logger(), "Esmini-IP service called, no IP found for object %d", req->id);
+		res->success = false;
+	}
+	else{
+		res->ip = me->idToIp.at(req->id);
+		res->success = true;
 	}
 }
 
@@ -436,8 +473,8 @@ int EsminiAdapter::initializeModule(const LOG_LEVEL logLevel) {
 
 	// Set up services
 	me->testOriginClient = me->nTimesWaitForService<TestOriginSrv>(3, 1s, ServiceNames::getTestOrigin);
-	me->startOnTriggerService = me->create_service<StartOnTriggerSrv>(ServiceNames::getStartOnTrigger,
-		std::bind(&EsminiAdapter::onRequestStartOnTrigger, _1, _2));
+	me->startOnTriggerService = me->create_service<ObjectTriggerSrv>(ServiceNames::getObjectTriggerStart,
+		std::bind(&EsminiAdapter::onRequestObjectStartOnTrigger, _1, _2));
 
 	return retval;
 }
