@@ -76,7 +76,13 @@ void TestObject::setObjectConfig(
 void TestObject::setTriggerStart(
 		const bool startOnTrigger) {
 	auto st = this->getState();
-	if (st == OBJECT_STATE_INIT || st == OBJECT_STATE_DISARMED) {
+	if (st != OBJECT_STATE_ARMED && 
+		st != OBJECT_STATE_RUNNING &&
+		st != OBJECT_STATE_POSTRUN &&
+		st != OBJECT_STATE_ABORTING &&
+    	st != OBJECT_STATE_REMOTE_CONTROL &&
+    	st != OBJECT_STATE_PRE_ARMING &&
+    	st != OBJECT_STATE_PRE_RUNNING) {
 		this->startOnTrigger = startOnTrigger;
 	}
 	else {

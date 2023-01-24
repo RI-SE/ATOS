@@ -276,6 +276,14 @@ void ObjectControl::loadScenario() {
 			auto ipRequest = std::make_shared<atos_interfaces::srv::GetObjectIp::Request>();
 			ipRequest->id = id;
 			ipClient->async_send_request(ipRequest, ipCallback);
+
+			auto triggerCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTriggerStart>::SharedFuture future) {
+				auto triggerResponse = future.get();
+				objects.at(id)->setTriggerStart(triggerResponse->trigger_start);
+			};
+			auto triggerRequest = std::make_shared<atos_interfaces::srv::GetObjectTriggerStart::Request>();
+			triggerRequest->id = id;
+			triggerClient->async_send_request(triggerRequest, triggerCallback);
 		}
 	};
 
