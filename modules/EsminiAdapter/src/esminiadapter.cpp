@@ -11,8 +11,6 @@
 #include <chrono>
 
 #include "atos_interfaces/msg/cartesian_trajectory.hpp"
-#include "atos_interfaces/srv/get_test_origin.hpp"
-#include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "rclcpp/wait_for_message.hpp"
 #include "trajectory.hpp"
 #include "datadictionary.h"
@@ -21,6 +19,7 @@
 using namespace ROSChannels;
 using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
 using ObjectTrajectorySrv = atos_interfaces::srv::GetObjectTrajectory;
+using StartOnTriggerSrv = atos_interfaces::srv::GetStartOnTrigger;
 using std::placeholders::_1;
 using std::placeholders::_2;
 using namespace std::chrono_literals;
@@ -28,10 +27,12 @@ using namespace std::chrono_literals;
 std::shared_ptr<EsminiAdapter> EsminiAdapter::me = nullptr;
 std::unordered_map<int,int> EsminiAdapter::objectIdToIndex = std::unordered_map<int, int>();
 std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::idToTraj = std::map<uint32_t,ATOS::Trajectory>();
-std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAdapter::monrSubscribers = std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>>();
-std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> EsminiAdapter::objectTrajectoryService = std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>>();
+std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAdapter::monrSubscribers = std::unordered_map<uint32_t,std::shared_ptr<Monitor::Sub>>();
+std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>> EsminiAdapter::objectTrajectoryService = std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>>();
+std::shared_ptr<rclcpp::Service<StartOnTriggerSrv>> EsminiAdapter::startOnTriggerService = std::shared_ptr<rclcpp::Service<StartOnTriggerSrv>>();
+std::vector<uint32_t> EsminiAdapter::delayedStartIds = std::vector<uint32_t>();
 int EsminiAdapter::actionId = 0;
-std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> EsminiAdapter::testOriginClient = nullptr;
+std::shared_ptr<rclcpp::Client<TestOriginSrv>> EsminiAdapter::testOriginClient = nullptr;
 
 /*!
  * \brief Creates an instance and initialize esmini if none exists, otherwise returns the existing instance.
@@ -126,6 +127,32 @@ static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor
 		std::chrono::system_clock::now().time_since_epoch()
 	).count();
 	return denm;
+}
+
+/*!
+ * \brief Callback to be executed by esmini when a condition is triggered.
+ * \param name Name of the condition that was triggered.
+ * \param timestamp Timestamp when the condition triggered.
+ */
+void EsminiAdapter::onEsminiConditionTriggeredPre(const char* name, double timestamp){
+	// Todo this is copypasted from the other callback, should be refactored
+	std::vector<std::string> res;
+	split(name, ',', res);
+	if (res.size() != 2){
+		RCLCPP_WARN(me->get_logger(), "Esmini Condition Trigger Name %s is not of the form ActorObjectId,Action", name);
+		return;
+	}
+	uint32_t objectId = std::stoul(res[0].c_str());
+	int esminiId = SE_GetIdByName(res[0].c_str());
+	RCLCPP_INFO(me->get_logger(), "Esmini Object ID %d Maestro Object ID: %lu", esminiId,objectId);
+	std::string action = res[1];
+	// Find out if the action is a delayed start action
+	if(action != "start") {
+		RCLCPP_WARN(me->get_logger(), "Esmini Condition Action Name %s is not a supported action", action);
+		return;
+	}
+	// --------------------
+	delayedStartIds.push_back(objectId);
 }
 
 /*!
@@ -322,23 +349,33 @@ std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(double ti
 }
 
 /*!
- * \brief Initialize the esmini simulator and perform subsequent setup tasks
+ * \brief Initialize the esmini simulator and perform subsequent setup tasks.
+ * Can be called many times, each time the test is initialized. 
  */
 void EsminiAdapter::InitializeEsmini(){
+	me->delayedStartIds.clear();
+	me->idToTraj.clear();
+	me->objectIdToIndex.clear();
+
 	SE_Init(me->oscFilePath.c_str(),1,0,0,0); // Disable controllers, let DefaultController be used
-	std::map<uint32_t,ATOS::Trajectory> idToTraj;
-	me->extractTrajectories(0.1, 50.0, idToTraj);
+	me->extractTrajectories(0.1, 50.0, me->idToTraj);
+
+	// Register callbacks to figure out what actions need to be taken
+	SE_RegisterConditionCallback(&onEsminiConditionTriggeredPre);
 
 	// Start the object-trajectory service
 	me->objectTrajectoryService = me->create_service<ObjectTrajectorySrv>(ServiceNames::getObjectTrajectory,
-	std::bind(&EsminiAdapter::onRequestObjectTrajectory, _1, _2));
+		std::bind(&EsminiAdapter::onRequestObjectTrajectory, _1, _2));
 
-	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", idToTraj.size());
-	for (auto& it : idToTraj){
+	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", me->idToTraj.size());
+
+	for (auto& it : me->idToTraj){
 		auto id = it.first;
 		auto traj = it.second;
 
 		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
+		RCLCPP_INFO(me->get_logger(), "Number of objects with delayed start: %d", me->delayedStartIds.size());
+
 		// below is for dumping the trajectory points to the console
 		/*for (auto& tp : traj.points){
 			RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
@@ -366,6 +403,15 @@ void EsminiAdapter::onRequestObjectTrajectory(
 	}
 }
 
+void EsminiAdapter::onRequestStartOnTrigger(
+	const std::shared_ptr<StartOnTriggerSrv::Request> req,
+	std::shared_ptr<StartOnTriggerSrv::Response> res)
+{	
+	for (auto& id : me->delayedStartIds){
+		res->ids.push_back(id);
+	}
+}
+
 
 /*!
  * \brief initializeModule Initializes this module by creating log,
@@ -390,6 +436,8 @@ int EsminiAdapter::initializeModule(const LOG_LEVEL logLevel) {
 
 	// Set up services
 	me->testOriginClient = me->nTimesWaitForService<TestOriginSrv>(3, 1s, ServiceNames::getTestOrigin);
+	me->startOnTriggerService = me->create_service<StartOnTriggerSrv>(ServiceNames::getStartOnTrigger,
+		std::bind(&EsminiAdapter::onRequestStartOnTrigger, _1, _2));
 
 	return retval;
 }
