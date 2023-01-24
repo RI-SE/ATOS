@@ -8,7 +8,6 @@
 #include "trajectory.hpp"
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include "atos_interfaces/msg/cartesian_trajectory.hpp"
 
 namespace ATOS{
 const std::regex Trajectory::fileHeaderPattern("TRAJECTORY;(" + RegexPatterns::intPattern + ");("

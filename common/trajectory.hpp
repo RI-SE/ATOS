@@ -10,6 +10,7 @@
 #include <eigen3/Eigen/Dense>
 #include <math.h>
 #include <chrono>
+#include "atos_interfaces/msg/cartesian_trajectory.hpp"
 
 #include "util.h"
 namespace ATOS {
