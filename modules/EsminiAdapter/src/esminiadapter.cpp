@@ -321,6 +321,7 @@ void EsminiAdapter::getObjectStates(double timeStep, double endTime, std::map<ui
 		SE_StepDT(timeStep);
 		accumTime += timeStep;
 		for (int j = 0; j < SE_GetNumberOfObjects(); j++){
+			SE_SetAlignModeZ(SE_GetId(j), 0); // Disable Z-alignment
 			SE_ScenarioObjectState state;
 			SE_GetObjectState(SE_GetId(j), &state);
 			state.timestamp = accumTime; // Inject time since esmini does not do this
@@ -363,6 +364,10 @@ void EsminiAdapter::InitializeEsmini(){
 	me->idToIp.clear();
 
 	SE_Init(me->oscFilePath.c_str(),1,0,0,0); // Disable controllers, let DefaultController be used
+	
+	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
+		SE_SetAlignModeZ(SE_GetId(j), 0); // Disable Z-alignment
+	}
 	// Register callbacks to figure out what actions need to be taken
 	SE_RegisterConditionCallback(&onEsminiConditionTriggeredPre);
 
@@ -379,7 +384,7 @@ void EsminiAdapter::InitializeEsmini(){
 		}
 	}
 
-
+	RCLCPP_DEBUG(me->get_logger(), "Number of objects with delayed start: %d", me->delayedStartIds.size());
 	for (auto& it : me->idToTraj){
 		auto id = it.first;
 		auto traj = it.second;
@@ -426,7 +431,7 @@ void EsminiAdapter::onRequestObjectStartOnTrigger(
 			res->success = true;
 			return;
 		}
-	RCLCPP_ERROR(me->get_logger(), "Esmini-trajectory service called, no trajectory found for object %d", req->id);
+	RCLCPP_ERROR(me->get_logger(), "Esmini-object start trigger service called, no triggers found for object %d", req->id);
 	res->success = false;
 	}
 }
