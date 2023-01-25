@@ -19,7 +19,7 @@ class OSIAdapter : public Module
 
   private:
     using TimeUnit = std::chrono::milliseconds;
-    static inline std::string const DEFAULT_ADDRESS = "127.0.0.1";
+    static inline std::string const DEFAULT_ADDRESS = "0.0.0.0";
     constexpr static uint16_t DEFAULT_PORT = 55555;
     constexpr static uint8_t QUALITY_OF_SERVICE = 10;
     constexpr static std::chrono::duration SEND_INTERVAL = std::chrono::milliseconds(500);
