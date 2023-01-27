@@ -54,7 +54,7 @@ sudo sh -c "echo '/usr/local/lib/osi3' > /etc/ld.so.conf.d/osi3.conf"
 sudo ldconfig
 ```
 
-### <a name="atos-interfaces"></a> Installing atos-interfaces
+### <a name="atos-interfaces"></a> Installing atos_interfaces
 ```
 git clone https://github.com/RI-SE/atos-interfaces
 ```
