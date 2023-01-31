@@ -28,14 +28,16 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 
 EsminiAdapter::EsminiAdapter() : Module(moduleName) {
 	// Get the file path of xosc file
-	try{
-		char path[MAX_FILE_PATH];
-		UtilGetOscDirectoryPath(path, MAX_FILE_PATH);
-		oscFilePath = std::string(path) + oscFileName;
+	char path[MAX_FILE_PATH];
+	declare_parameter("open_scenario_file");
+	UtilGetOscDirectoryPath(path, MAX_FILE_PATH);
+
+	std::string result;
+	auto success = get_parameter("open_scenario_file", result);
+	if (!success) {
+		throw std::runtime_error("Could not read parameter open_scenario_file");
 	}
-	catch (std::exception& e) {
-		throw std::runtime_error("EsminiAdapter: Could not read xosc file path");
-	}
+	oscFilePath = std::string(path) + result;
 }
 
 //! Message queue callbacks
