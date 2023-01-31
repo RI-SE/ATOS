@@ -42,6 +42,7 @@ public:
 	std::string getTrajectoryFileName() const { return trajectoryFile.filename().string(); }
 	void addInjectionTarget(const uint32_t target) { this->injectionMap.targetIDs.insert(target); }
 	void clearInjectionSources() { this->injectionMap.sourceIDs.clear(); }
+	void setOrigin(const GeographicPositionType& origin) { this->origin = origin; }
 
 	std::string toString() const;
 

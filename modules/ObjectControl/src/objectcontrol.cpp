@@ -13,7 +13,6 @@
 #include "util.h"
 #include "journal.h"
 #include "datadictionary.h"
-#include "atos_interfaces/srv/get_start_on_trigger.hpp"
 
 #include "objectcontrol.hpp"
 
@@ -47,6 +46,7 @@ ObjectControl::ObjectControl()
 	int queueSize=0;
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
     idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
+	originClient = create_client<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin);
 	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory);
 	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp);
 	triggerClient = create_client<atos_interfaces::srv::GetObjectTriggerStart>(ServiceNames::getObjectTriggerStart);
@@ -294,6 +294,14 @@ void ObjectControl::loadScenario() {
 			auto triggerRequest = std::make_shared<atos_interfaces::srv::GetObjectTriggerStart::Request>();
 			triggerRequest->id = id;
 			triggerClient->async_send_request(triggerRequest, triggerCallback);
+
+			// Get test origin
+			auto originCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
+				auto origin = future.get();
+				objects.at(id)->setOrigin({origin->origin.position.latitude, origin->origin.position.longitude, origin->origin.position.altitude,true,true,true});
+			};
+			auto requestOrigin = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
+			auto promiseOrigin = originClient->async_send_request(requestOrigin, originCallback);
 		}
 	};
 
@@ -301,8 +309,7 @@ void ObjectControl::loadScenario() {
 	auto request = std::make_shared<atos_interfaces::srv::GetObjectIds::Request>();
 	auto promise = idClient->async_send_request(request, idsCallback);
 	return;
-	// TODO load trajectories for each participant
-	// TODO configure delayed start
+
 
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, std::shared_ptr<TestObject>> &o) {

@@ -13,6 +13,7 @@
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "atos_interfaces/srv/get_object_ip.hpp"
 #include "atos_interfaces/srv/get_object_trigger_start.hpp"
+#include "atos_interfaces/srv/get_test_origin.hpp"
 
 // Forward declarations
 class ObjectControlState;
@@ -239,6 +240,7 @@ private:
 	ROSChannels::ObjectsConnected::Pub objectsConnectedPub;	//!< Publisher to report that objects have been connected
 	ROSChannels::ConnectedObjectIds::Pub connectedObjectIdsPub;	//!< Publisher to periodically report connected object ids
 	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr idClient;	//!< Client to request object ids
+	rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedPtr originClient;	//!< Client to request object status
 	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr trajectoryClient;	//!< Client to request object trajectories
 	rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedPtr ipClient;	//!< Client to request object IPs
 	rclcpp::Client<atos_interfaces::srv::GetObjectTriggerStart>::SharedPtr triggerClient;	//!< Client to request object trigger start

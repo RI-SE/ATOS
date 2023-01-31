@@ -47,6 +47,10 @@ void TestObject::setObjectIP(
 	this->setOsiAddress(addr);
 }
 
+void TestObject::setOrigin(GeographicPositionType pos){
+	this->conf.setOrigin(pos);
+}
+
 void TestObject::setCommandAddress(
 		const sockaddr_in &newAddr) {
 	if (!this->comms.isConnected()) {

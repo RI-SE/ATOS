@@ -120,6 +120,7 @@ public:
 	void setOsiAddress(const sockaddr_in& newAddr);
 	void setObjectConfig(ObjectConfig& newObjectConfig);
 	void setTriggerStart(const bool startOnTrigger = true);
+	void setOrigin(GeographicPositionType);
 	
 	bool isAnchor() const { return conf.isAnchor(); }
 	bool isOsiCompatible() const { return conf.isOSI(); }
