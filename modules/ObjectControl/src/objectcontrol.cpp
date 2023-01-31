@@ -13,7 +13,6 @@
 #include "util.h"
 #include "journal.h"
 #include "datadictionary.h"
-#include "atos_interfaces/srv/get_start_on_trigger.hpp"
 
 #include "objectcontrol.hpp"
 
