@@ -36,7 +36,6 @@ target_include_directories(${MQTT_BRIDGE_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${CMAKE_INSTALL_INCLUDEDIR}
 	${COMMON_HEADERS}
-	${eclipse-paho-mqtt-c_INCLUDE_DIRS}
 )
 
 # ROS specific rules
