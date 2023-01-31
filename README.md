@@ -56,7 +56,7 @@ sudo ldconfig
 
 ### <a name="atos-interfaces"></a> Installing atos-interfaces
 ```
-git clone https://github.com/RI-SE/atos-interfaces
+git clone https://github.com/RI-SE/atos_interfaces
 ```
 
 
