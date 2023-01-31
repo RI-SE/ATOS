@@ -344,7 +344,7 @@ void EsminiAdapter::getObjectStates(double timeStep, double endTime, std::map<ui
 		SE_StepDT(timeStep);
 		accumTime += timeStep;
 		for (int j = 0; j < SE_GetNumberOfObjects(); j++){
-			SE_SetAlignModeZ(SE_GetId(j), 0); // Disable Z-alignment
+			//SE_SetAlignModeZ(SE_GetId(j), 0); // Disable Z-alignment, not implemented in esmini yet
 			SE_ScenarioObjectState state;
 			SE_GetObjectState(SE_GetId(j), &state);
 			state.timestamp = accumTime; // Inject time since esmini does not do this
@@ -389,7 +389,7 @@ void EsminiAdapter::InitializeEsmini(){
 	SE_Init(me->oscFilePath.c_str(),1,0,0,0); // Disable controllers, let DefaultController be used
 	
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
-		SE_SetAlignModeZ(SE_GetId(j), 0); // Disable Z-alignment
+		SE_SetAlignModeZ(SE_GetId(j), 0); // Disable Z-alignment not implemented in esmini yet
 	}
 	// Register callbacks to figure out what actions need to be taken
 	SE_RegisterConditionCallback(&onEsminiConditionTriggeredPre);
