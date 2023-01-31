@@ -70,6 +70,7 @@ def generate_launch_description():
             executable='esmini_adapter',
             name='esmini_adapter',
             parameters=[atosConfig]
+            ,prefix="xterm -e gdb --args" #Useful for debugging
         ),
         Node(
             package='atos',

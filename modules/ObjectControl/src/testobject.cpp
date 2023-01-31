@@ -385,9 +385,10 @@ void TestObject::sendOsiData(
 	this->osiChannel << vec;
 }
 
-void TestObject::sendStart() {
+void TestObject::sendStart(std::chrono::system_clock::time_point startTime) {
 	StartMessageType strt;
-	TimeSetToCurrentSystemTime(&strt.startTime); // TODO make possible to modify
+	strt.startTime.tv_sec = std::chrono::duration_cast<std::chrono::seconds>(startTime.time_since_epoch()).count();
+	strt.startTime.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(startTime.time_since_epoch()).count() % 1000000;
 	strt.isTimestampValid = true;
 	this->comms.cmd << strt;
 }

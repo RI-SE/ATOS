@@ -26,6 +26,7 @@ ObjectControl::ObjectControl()
 	: Module(ObjectControl::moduleName),
 	scnInitSub(*this, std::bind(&ObjectControl::onInitMessage, this, _1)),
 	scnStartSub(*this, std::bind(&ObjectControl::onStartMessage, this, _1)),
+	objectStartSub(*this, std::bind(&ObjectControl::onStartObjectMessage, this, _1)),
 	scnArmSub(*this, std::bind(&ObjectControl::onArmMessage, this, _1)),
 	scnStopSub(*this, std::bind(&ObjectControl::onStopMessage, this, _1)),
 	scnAbortSub(*this, std::bind(&ObjectControl::onAbortMessage, this, _1)),
@@ -100,12 +101,7 @@ int ObjectControl::initialize() {
 void ObjectControl::handleActionConfigurationCommand(
 		const TestScenarioCommandAction& action) {
 	this->state->settingModificationRequested(*this);
-	if (action.command == ACTION_PARAMETER_VS_SEND_START) {
-		RCLCPP_INFO(get_logger(), "Configuring delayed start for object %u", action.objectID);
-		objects.at(action.objectID)->setTriggerStart(true);
-		this->storedActions[action.actionID] = std::bind(&TestObject::sendStart,
-														 objects.at(action.objectID));
-	}
+	// TODO: Implement
 }
 
 void ObjectControl::handleExecuteActionCommand(
@@ -150,6 +146,14 @@ void ObjectControl::onStartMessage(const Start::message_type::SharedPtr){
 	auto f_try = [&]() { this->state->startRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Start::topicName, get_logger());
+}
+
+void ObjectControl::onStartObjectMessage(const StartObject::message_type::SharedPtr strtObj){
+	using namespace std::chrono;
+	COMMAND cmd = COMM_START_OBJECT;
+	auto f_try = [&]() { this->state->startObjectRequest(*this, strtObj->id, system_clock::time_point{seconds{strtObj->stamp.sec} + nanoseconds{strtObj->stamp.nanosec}});};
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch, StartObject::topicName, get_logger());
 }
 
 void ObjectControl::onDisconnectMessage(const Disconnect::message_type::SharedPtr){	
@@ -247,19 +251,24 @@ void ObjectControl::loadScenario() {
 		auto idResponse = future.get();
 		RCLCPP_ERROR(get_logger(), "Got %d object ids", idResponse->ids.size());
 
-		for (auto id : idResponse->ids) {
+		for (const auto id : idResponse->ids) {
 			auto trajletSub = std::make_shared<Path::Sub>(*this, id, std::bind(&ObjectControl::onPathMessage, this, _1, id));
 			auto monrPub = std::make_shared<Monitor::Pub>(*this, id);
-			objects[id] = std::make_shared<TestObject>(this->get_logger(), trajletSub, monrPub);
+			auto object = std::make_shared<TestObject>(this->get_logger(), trajletSub, monrPub);
+			objects.emplace(id, object);
 			objects.at(id)->setTransmitterID(id);
 
 			auto trajectoryCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
 				auto trajResponse = future.get();
-				//trajResponse->
-				RCLCPP_ERROR(get_logger(), "Got trajectory for object %d", id);
-				ATOS::Trajectory traj;
-				traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
-				objects.at(id)->setTrajectory(traj);
+				if(trajResponse->success){
+					RCLCPP_ERROR(get_logger(), "Successfully got trajectory for object %d", id);
+					ATOS::Trajectory traj;
+					traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
+					objects.at(id)->setTrajectory(traj);
+				}
+				else{
+					RCLCPP_ERROR(get_logger(), "Failed to get trajectory through Service for object %d", id);
+				}
 			};
 			auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
 			trajRequest->id = id;
@@ -270,6 +279,7 @@ void ObjectControl::loadScenario() {
 				// convert from string to in_addr
 				in_addr_t ip;
 				inet_pton(AF_INET, ipResponse->ip.c_str(), &ip);
+				RCLCPP_ERROR(get_logger(), "Got ip %s for object %d, ip as uint32:%u", ipResponse->ip.c_str(), id,ip);
 				objects.at(id)->setObjectIP(ip);
 			};
 
@@ -567,8 +577,8 @@ void ObjectControl::notifyObjectsConnected() {
 void ObjectControl::connectToObject(
 		std::shared_ptr<TestObject> obj,
 		std::shared_future<void> &connStopReq) {
-	constexpr int maxConnHeabs = 10;
-	constexpr int maxConnMonrs = 10;
+	constexpr int maxConnHeabs = 100;
+	constexpr int maxConnMonrs = 100;
 	try {
 		if (!obj->isConnected()) {
 			try {
@@ -676,9 +686,15 @@ void ObjectControl::disarmObjects() {
 
 void ObjectControl::startObjects() {
 	for (auto& id : getVehicleIDs()) {
-		if (!objects.at(id)->isStartingOnTrigger()) {
-			objects.at(id)->sendStart();
-		}
+		startObject(id);
+	}
+}
+
+void ObjectControl::startObject(
+	uint32_t id,
+	std::chrono::system_clock::time_point startTime) {
+	if (!objects.at(id)->isStartingOnTrigger()) {
+		objects.at(id)->sendStart(startTime);
 	}
 }
 

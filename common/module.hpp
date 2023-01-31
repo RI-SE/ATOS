@@ -54,7 +54,8 @@ static std::map<COMMAND, std::string> topicNames = {
 	{COMM_ENABLE_OBJECT, "/enable_object"},
 	{COMM_CONTROL_SIGNAL_PERCENTAGE, "/control_signal_perc"},
 	{COMM_OBJECTS_CONNECTED, "/objects_connected"},
-	{COMM_FAILURE, "/failure"}
+	{COMM_FAILURE, "/failure"},
+	{COMM_START_OBJECT, "/start_object"}
 };
 
 namespace ServiceNames {
@@ -126,6 +127,7 @@ class Module : public rclcpp::Node {
 	virtual void onOBCStateMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO remove
 	virtual void onVIOPMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO remove or swap type
 	virtual void onStartMessage(const ROSChannels::Start::message_type::SharedPtr){};
+	virtual void onStartObjectMessage(const ROSChannels::StartObject::message_type::SharedPtr){};
 	virtual void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr){};
 	virtual void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) = 0;
 	virtual void onACCMMessage(const ROSChannels::ActionConfiguration::message_type::SharedPtr){};

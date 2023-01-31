@@ -27,10 +27,11 @@ public:
 private:
 	EsminiAdapter();
 
-	ROSChannels::ActionConfiguration::Pub accmPub;
-	ROSChannels::ExecuteAction::Pub exacPub;
+	ROSChannels::StartObject::Pub startObjectPub;
 	ROSChannels::V2X::Pub v2xPub;
 	ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;
+	ROSChannels::Init::Sub initSub;
+	ROSChannels::Start::Sub startSub;
 
 	static std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> objectTrajectoryService;
@@ -44,6 +45,10 @@ private:
 	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
 	void onStartMessage(const ROSChannels::Start::message_type::SharedPtr) override;
 	void onExitMessage(const ROSChannels::Start::message_type::SharedPtr) override;
+	// Below is a quickfix, fix properly later
+	static void onStaticInitMessage(const ROSChannels::Init::message_type::SharedPtr);
+	static void onStaticStartMessage(const ROSChannels::Start::message_type::SharedPtr);
+
 	static void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
 	static void reportObjectPosition(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
 	static void onEsminiStoryBoardStateChange(const char* name, int type, int state);
@@ -67,7 +72,7 @@ private:
 
 	static std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> testOriginClient;
 	static std::shared_ptr<EsminiAdapter> me;
-	static std::unordered_map<int, int> objectIdToIndex;
+	static std::unordered_map<int, int> ATOStoEsminiObjectId;
 	static std::map<uint32_t,ATOS::Trajectory> idToTraj;
 	static std::map<uint32_t,std::string> idToIp;
 	static std::vector<uint32_t> delayedStartIds;
@@ -76,5 +81,6 @@ private:
 													};
 	static int actionId;
 	static void testingFun();
+	static geographic_msgs::msg::GeoPose testOrigin;
 
 };

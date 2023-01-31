@@ -37,7 +37,7 @@ set(WITH_JOURNAL_CONTROL ON CACHE BOOL "Enable JournalControl module")
 set(WITH_TRAJECTORYLET_STREAMER ON CACHE BOOL "Enable TrajectoryletStreamer module")
 set(WITH_OSI_ADAPTER ON CACHE BOOL "Enable OSIAdapter module")
 set(WITH_ESMINI_ADAPTER ON CACHE BOOL "Enable EsminiAdapter module")
-set(WITH_MQTT_BRIDGE OFF CACHE BOOL "Enable MQTTBridge module")
+set(WITH_MQTT_BRIDGE ON CACHE BOOL "Enable MQTTBridge module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 

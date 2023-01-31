@@ -189,6 +189,7 @@ private:
 	void onConnectMessage(const ROSChannels::Connect::message_type::SharedPtr) override;
 	void onArmMessage(const ROSChannels::Arm::message_type::SharedPtr) override;
 	void onStartMessage(const ROSChannels::Start::message_type::SharedPtr) override;
+	void onStartObjectMessage(const ROSChannels::StartObject::message_type::SharedPtr) override;
 	void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr) override;
 	void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) override;
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
@@ -217,6 +218,7 @@ private:
 
 	ROSChannels::Init::Sub scnInitSub;			//!< Subscriber to scenario initialization requests
 	ROSChannels::Start::Sub scnStartSub;		//!< Subscriber to scenario start requests
+	ROSChannels::StartObject::Sub objectStartSub;	//!< Subscriber to scenario start requests
 	ROSChannels::Arm::Sub scnArmSub;			//!< Subscriber to scenario arm requests
 	ROSChannels::Stop::Sub scnStopSub;			//!< Subscriber to scenario stop requests
 	ROSChannels::Abort::Sub scnAbortSub;		//!< Subscriber to scenario abort requests
@@ -284,6 +286,8 @@ private:
 	void disarmObjects();
 	//! \brief
 	void startObjects();
+	//! \brief
+	void startObject(uint32_t id, std::chrono::system_clock::time_point startTime = std::chrono::system_clock::now());
 	//! \brief
 	void allClearObjects();
 	//! \brief TODO

@@ -26,7 +26,7 @@ using std::placeholders::_2;
 using namespace std::chrono_literals;
 
 std::shared_ptr<EsminiAdapter> EsminiAdapter::me = nullptr;
-std::unordered_map<int,int> EsminiAdapter::objectIdToIndex = std::unordered_map<int, int>();
+std::unordered_map<int,int> EsminiAdapter::ATOStoEsminiObjectId = std::unordered_map<int, int>();
 std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::idToTraj = std::map<uint32_t,ATOS::Trajectory>();
 std::map<uint32_t,std::string> EsminiAdapter::idToIp = std::map<uint32_t,std::string>();
 
@@ -35,13 +35,14 @@ std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>> EsminiAdapter::objectTraje
 std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>> EsminiAdapter::startOnTriggerService = std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>>();
 std::shared_ptr<rclcpp::Service<ObjectIpSrv>> EsminiAdapter::objectIpService = std::shared_ptr<rclcpp::Service<ObjectIpSrv>>();
 std::vector<uint32_t> EsminiAdapter::delayedStartIds = std::vector<uint32_t>();
-int EsminiAdapter::actionId = 0;
 std::shared_ptr<rclcpp::Client<TestOriginSrv>> EsminiAdapter::testOriginClient = nullptr;
+geographic_msgs::msg::GeoPose EsminiAdapter::testOrigin = geographic_msgs::msg::GeoPose();
 
 EsminiAdapter::EsminiAdapter() : Module(moduleName),
-	accmPub(*this),
-	exacPub(*this),
+	startObjectPub(*this),
 	v2xPub(*this),
+	initSub(*this, &EsminiAdapter::onStaticInitMessage),
+	startSub(*this, &EsminiAdapter::onStaticStartMessage),
 	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage)
  {
 	// Get the file path of xosc file
@@ -66,6 +67,8 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 		me->InitializeEsmini();
 		// Start listening to connected object ids
 		me->connectedObjectIdsSub = ROSChannels::ConnectedObjectIds::Sub(*me,&EsminiAdapter::onConnectedObjectIdsMessage);
+		me->initSub = ROSChannels::Init::Sub(*me,&EsminiAdapter::onStaticInitMessage);
+		me->startSub = ROSChannels::Start::Sub(*me,&EsminiAdapter::onStaticStartMessage);
 		// Start V2X publisher
 		me->v2xPub = ROSChannels::V2X::Pub(*me);
 		
@@ -85,17 +88,37 @@ void EsminiAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::messag
 	}
 }
 
-
 //! Message queue callbacks
 
 void EsminiAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {
 	SE_Close();
 }
 
+void EsminiAdapter::onInitMessage(const Init::message_type::SharedPtr) {
+}
+
+void EsminiAdapter::onStartMessage(const Start::message_type::SharedPtr) {
+}
+
 void EsminiAdapter::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 
-void EsminiAdapter::onInitMessage(const Init::message_type::SharedPtr) {
-	me->InitializeEsmini();
+void EsminiAdapter::onStaticInitMessage(const Init::message_type::SharedPtr) {
+	/*
+	auto request = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
+	auto promise = me->testOriginClient->async_send_request(request);
+	promise.wait_for(100ms);
+	auto response = promise.get();
+	me->testOrigin = response->origin;
+	*/
+	// Hardcoded for now..
+	me->testOrigin.position.latitude = 57.777073115;
+	me->testOrigin.position.longitude = 12.781295498333;
+	me->testOrigin.position.altitude = 193.114;
+	me->testOrigin.orientation.x = 0;
+	me->testOrigin.orientation.y = 0;
+	me->testOrigin.orientation.z = 0;
+	me->testOrigin.orientation.w = 1;
+	//me->InitializeEsmini();
 }
 
 void EsminiAdapter::onExitMessage(const Exit::message_type::SharedPtr){
@@ -104,9 +127,9 @@ void EsminiAdapter::onExitMessage(const Exit::message_type::SharedPtr){
 	rclcpp::shutdown();
 }
 
-void EsminiAdapter::onStartMessage(const Start::message_type::SharedPtr) {
+void EsminiAdapter::onStaticStartMessage(const Start::message_type::SharedPtr) {
 	if (SE_Init(me->oscFilePath.c_str(),0,0,0,0) == -1){
-		RCLCPP_ERROR(me->get_logger(), "Failed to initialize esmini, aborting");
+		RCLCPP_ERROR(me->get_logger(), "Failed to initialize Esmini ScenarioEngine, aborting");
 		exit(1);
 	}
 	// Handle triggers and story board element changes
@@ -132,9 +155,9 @@ static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor
 	denm.message_type = "DENM";
 	denm.event_id = "ATOSEvent1";
 	denm.cause_code = 12;
-	denm.latitude = static_cast<uint32_t>(llh[0]*1000000); // Microdegrees
-	denm.longitude = static_cast<uint32_t>(llh[1]*1000000);
-	denm.altitude = static_cast<uint32_t>(llh[2]);			// Meters
+	denm.latitude = static_cast<int32_t>(llh[0]*1000000); // Microdegrees
+	denm.longitude = static_cast<int32_t>(llh[1]*1000000);
+	denm.altitude = static_cast<int32_t>(llh[2]*100);		// Centimeters
 	denm.detection_time = std::chrono::duration_cast<std::chrono::seconds>( // Time since epoch in seconds
 		std::chrono::system_clock::now().time_since_epoch()
 	).count();
@@ -159,9 +182,12 @@ void EsminiAdapter::onEsminiConditionTriggeredPre(const char* name, double times
 	RCLCPP_INFO(me->get_logger(), "Esmini Object ID %d Maestro Object ID: %lu", esminiId,objectId);
 	std::string action = res[1];
 	// Find out if the action is a delayed start action
-	if(action != "start") {
-		RCLCPP_WARN(me->get_logger(), "Esmini Condition Action Name %s is not a supported action", action);
+	if(action != std::string("start")) {
+		RCLCPP_WARN(me->get_logger(), "Esmini Condition Action Name %s is not a supported action", action.c_str());
 		return;
+	}
+	else{
+		RCLCPP_INFO(me->get_logger(), "Esmini Condition Action Name %s is a supported action", action.c_str());
 	}
 	// --------------------
 	delayedStartIds.push_back(objectId);
@@ -175,7 +201,7 @@ void EsminiAdapter::onEsminiConditionTriggeredPre(const char* name, double times
 void EsminiAdapter::onEsminiConditionTriggered(const char* name, double timestamp){
 	// TODO: investigate possibility of expanding esmini API to include more info, such as: Actor Object ID,
 	// 
-	RCLCPP_DEBUG(me->get_logger(), "Esmini Condition Trigger Name %s at simulation timestamp %lf", name, timestamp);
+	RCLCPP_INFO(me->get_logger(), "WE HAVE TRIGG!!!! Esmini Condition Trigger Name %s at simulation timestamp %lf", name, timestamp);
 	std::vector<std::string> res;
 	split(name, ',', res);
 	if (res.size() != 2){
@@ -194,33 +220,21 @@ void EsminiAdapter::onEsminiConditionTriggered(const char* name, double timestam
 		// First send a configuration message (accm) to ObjectControl, then trigger it (exac)
 		// TODO: Might be better to simply *only* send a trigger to ObjectControl, but the way 
 		// the messages accm, exac etc are set up currently, this was the quickest method.
-
-
-		// Send a action-configuration message to ObjectControl
-		ROSChannels::ActionConfiguration::message_type accmData;
-		accmData.action_id = me->actionId;
-		accmData.action_type = ACTION_TEST_SCENARIO_COMMAND;
-		accmData.action_type_parameter1 = ACTION_PARAMETER_VS_SEND_START;
-		accmData.ip = 2130706433; // 127.0.0.1 TODO: figure out how to get the IP of the object, maybe through OpenSCENARIO parameters. 
-		me->accmPub.publish(accmData); // publish the action configuration message
-		std::this_thread::sleep_for(std::chrono::milliseconds(100)); // sleep for 100 ms to make sure the message is sent before the next one
 	
 		// Send a executeAction-message to ObjectControl, refering to the prev message
-		ROSChannels::ExecuteAction::message_type exacData;
-		exacData.action_id = me->actionId;
-		exacData.executiontime_qmsow = 10; // fix
-		exacData.ip = 2130706433; // 127.0.0.1
-		me->exacPub.publish(exacData); // publish the execute action message
+		ROSChannels::StartObject::message_type onstData;
+		onstData.id = objectId;
+		onstData.stamp = me->get_clock()->now(); // TODO + std::chrono::milliseconds(100);
+		me->startObjectPub.publish(onstData); // publish the execute action message
 
-		me->actionId++;
 	}
 	else if (action == "send_denm"){
 		// Get the latest Monitor message
 		ROSChannels::Monitor::message_type monr;
 		rclcpp::wait_for_message(monr, me, "/atos/object_" + std::to_string(objectId) + "/object_monitor", 10ms);
 		TestOriginSrv::Response::SharedPtr response;
-		me->callService(5ms ,me->testOriginClient, response);
-		double llh[3] = {response->origin.position.latitude, response->origin.position.longitude, response->origin.position.altitude};
+		//me->callService(5ms ,me->testOriginClient, response);
+		double llh[3] = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
 		double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
 		llhOffsetMeters(llh,offset);
 		me->v2xPub.publish(denmFromMonitor(monr,llh));
@@ -235,7 +249,7 @@ void EsminiAdapter::onEsminiConditionTriggered(const char* name, double timestam
  * \param monr ROS Monitor message of an object
  * \param id The object ID to which the monr belongs
  */
-void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr monr, uint32_t id){
+void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr monr, uint32_t esminiObjectId){
 	// Conversions from ROS to Esmini
 	auto ori = monr->pose.pose.orientation;
 	auto quat = tf2::Quaternion(ori.x, ori.y, ori.z, ori.w);
@@ -247,7 +261,7 @@ void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr 
 
 	// Reporting to Esmini
 	int timestamp = 0; // Not really used according to esmini documentation
-	SE_ReportObjectPos(id, timestamp, pos.x, pos.y, pos.z, yaw, pitch, roll);
+	SE_ReportObjectPos(esminiObjectId, timestamp, pos.x, pos.y, pos.z, yaw, pitch, roll);
 }
 
 /*!
@@ -255,13 +269,14 @@ void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr 
  * \param monr ROS Monitor message of an object
  * \param id The object ID to which the monr belongs
 */
-void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr, uint32_t id) {
-	if (me->objectIdToIndex.find(id) != me->objectIdToIndex.end()){
-		reportObjectPosition(monr, id); // Report object position to esmini
+void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr, uint32_t ATOSObjectId) {
+	if (me->ATOStoEsminiObjectId.find(ATOSObjectId) != me->ATOStoEsminiObjectId.end()){
+		auto esminiObjectId = me->ATOStoEsminiObjectId[ATOSObjectId];
+		reportObjectPosition(monr, esminiObjectId); // Report object position to esmini
 		SE_Step(); // Advance the "simulation world"-time
 	}
 	else{
-		RCLCPP_WARN(me->get_logger(), "Received MONR message for object with ID %d, but no such object exists in the scenario", id);
+		RCLCPP_WARN(me->get_logger(), "Received MONR message for object with ATOS Object ID %d, but no such object exists in the scenario", ATOSObjectId);
 	}
 }
 
@@ -368,7 +383,7 @@ std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(double ti
 void EsminiAdapter::InitializeEsmini(){
 	me->delayedStartIds.clear();
 	me->idToTraj.clear();
-	me->objectIdToIndex.clear();
+	me->ATOStoEsminiObjectId.clear();
 	me->idToIp.clear();
 
 	SE_Init(me->oscFilePath.c_str(),1,0,0,0); // Disable controllers, let DefaultController be used
@@ -398,17 +413,18 @@ void EsminiAdapter::InitializeEsmini(){
 		auto traj = it.second;
 
 		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
-		RCLCPP_INFO(me->get_logger(), "Number of objects with delayed start: %d", me->delayedStartIds.size());
 
 		// below is for dumping the trajectory points to the console
-		/*for (auto& tp : traj.points){
+		/*
+		for (auto& tp : traj.points){
 			RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
-		}*/
+		}
+		*/
 	}
 
 	// Populate the map tracking Object ID -> esmini index
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
-		me->objectIdToIndex[std::stoi(SE_GetObjectName(SE_GetId(j)))] = j;
+		me->ATOStoEsminiObjectId[std::stoi(SE_GetObjectName(SE_GetId(j)))] = SE_GetId(j);
 	}
 	SE_Close(); // Stop ScenarioEngine
 
