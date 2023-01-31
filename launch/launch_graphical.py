@@ -33,12 +33,6 @@ def generate_launch_description():
             name='object_control'
             #,prefix="xterm -e gdb --args" #Useful for debugging
         ),
-        Node(
-            package='atos',
-            namespace='atos',
-            executable='trajectorylet_streamer',
-            name='trajectorylet_streamer'
-        ),
         #Node(
         #    package='atos',
         #    namespace='atos',
@@ -50,12 +44,6 @@ def generate_launch_description():
             namespace='atos',
             executable='direct_control',
             name='direct_control'
-        ),
-        Node(
-            package='atos',
-            namespace='atos',
-            executable='scenario_control',
-            name='scenario_control'
         ),
         Node(
             package='atos',
@@ -79,14 +67,15 @@ def generate_launch_description():
             package='atos',
             namespace='atos',
             executable='esmini_adapter',
-            name='esmini_adapter'
+            name='esmini_adapter',
+            parameters=[atosConfig]
+        ),
+        Node(
+            package='atos',
+            namespace='atos',
+            executable='mqtt_bridge',
+            name='mqtt_bridge',
+            # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
+            parameters=[atosConfig]
         )
-        #Node(
-        #    package='atos',
-        #    namespace='atos',
-        #    executable='mqtt_bridge',
-        #    name='mqtt_bridge',
-        #    # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
-        #    parameters=[atosConfig]
-        #)
     ])
