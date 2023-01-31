@@ -38,6 +38,24 @@ std::vector<uint32_t> EsminiAdapter::delayedStartIds = std::vector<uint32_t>();
 int EsminiAdapter::actionId = 0;
 std::shared_ptr<rclcpp::Client<TestOriginSrv>> EsminiAdapter::testOriginClient = nullptr;
 
+EsminiAdapter::EsminiAdapter() : Module(moduleName),
+	accmPub(*this),
+	exacPub(*this),
+	v2xPub(*this),
+	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage)
+ {
+	// Get the file path of xosc file
+	char path[MAX_FILE_PATH];
+	declare_parameter("open_scenario_file");
+	UtilGetOscDirectoryPath(path, MAX_FILE_PATH);
+	std::string result;
+	auto success = get_parameter("open_scenario_file", result);
+	if (!success) {
+		throw std::runtime_error("Could not read parameter open_scenario_file");
+	}
+	oscFilePath = std::string(path) + result;
+}
+
 /*!
  * \brief Creates an instance and initialize esmini if none exists, otherwise returns the existing instance.
  * \return the sole EsminiAdapter instance.
@@ -67,16 +85,6 @@ void EsminiAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::messag
 	}
 }
 
-EsminiAdapter::EsminiAdapter() : Module(moduleName),
-	accmPub(*this),
-	exacPub(*this),
-	v2xPub(*this),
-	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage)
- {
-	// Get the file path of xosc file
-	declare_parameter("open_scenario_path");
-	get_parameter("open_scenario_path", oscFilePath);
-}
 
 //! Message queue callbacks
 
