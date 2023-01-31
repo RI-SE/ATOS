@@ -47,6 +47,7 @@ target_include_directories(${MQTT_BRIDGE_TARGET} PUBLIC
 ament_target_dependencies(${MQTT_BRIDGE_TARGET}
   rclcpp
   atos_interfaces
+  paho-mqtt-c
 )
 
 # Installation rules
