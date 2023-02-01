@@ -1,10 +1,23 @@
 from scenariogeneration import esmini
 from scenariogeneration import xosc
 
-odr_path = "../conf/odr/GaragePlan.xodr"
-catalog_path = "../conf/Catalogs/Vehicles"
+odr_path = "../odr/GaragePlanSouth.xodr"
+catalog_path = "../Catalogs/Vehicles"
 output_filename = "DroneScenario.xosc"
 DRONE_ID = 5
+
+times = [2.5, 5, 7.5, 10, 12.5, 15]
+speed = 2.5 # m/s
+acceleration = 0.8
+positions = [
+        xosc.WorldPosition(0,0,5,0,0,0),
+        xosc.WorldPosition(1,-2,5,0,0,0),
+        xosc.WorldPosition(2,-4,5,0,0,0),
+        xosc.WorldPosition(3,-6,5,0,0,0),
+        xosc.WorldPosition(4,-8,5,0,0,0),
+        xosc.WorldPosition(5,-10,5,0,0,0)
+        ]
+
 
 init = xosc.Init()
 osc_params = xosc.ParameterDeclarations()
@@ -15,21 +28,15 @@ osc_entities = xosc.Entities()
 osc_storyboard = xosc.StoryBoard(init)
 osc_act = xosc.Act("start")
 
-osc_entities = osc_entities.add_scenario_object(str(DRONE_ID), xosc.CatalogReference('VehicleCatalog', 'car_red'))
-osc_teleport_action = xosc.TeleportAction(xosc.WorldPosition(10, 10, 5, 0, 0, 0)) # xyzhpr
-osc_absolute_speed_action = xosc.AbsoluteSpeedAction(15/3.6, xosc.TransitionDynamics(xosc.DynamicsShapes.linear, xosc.DynamicsDimension.time, 0.8),)
+osc_entities = osc_entities.add_scenario_object(str(DRONE_ID), xosc.CatalogReference('VehicleCatalog', 'camera_drone'))
+osc_teleport_action = xosc.TeleportAction(positions[0]) # xyzhpr
+osc_absolute_speed_action = xosc.AbsoluteSpeedAction(speed, xosc.TransitionDynamics(xosc.DynamicsShapes.linear, xosc.DynamicsDimension.time, acceleration),)
 init.add_init_action(str(DRONE_ID), osc_teleport_action)
 init.add_init_action(str(DRONE_ID), osc_absolute_speed_action)
 
 osc_maneuver_group = xosc.ManeuverGroup(str(DRONE_ID) + "_maneuver_group")
 
-times = [0, 4.8, 4.8+8.5]
 
-positions = [
-        xosc.WorldPosition(5,50,5,0,0,0),
-        xosc.WorldPosition(25,50,5,0,0,0),
-        xosc.WorldPosition(30,15,5,0,0,0)
-        ]
 
 
 polyline = xosc.Polyline(times, positions)
@@ -68,13 +75,13 @@ osc_absolute_speed_action = xosc.AbsoluteSpeedAction(
     xosc.TransitionDynamics(
         xosc.DynamicsShapes.linear,
         xosc.DynamicsDimension.time,
-        -0.8
+        -acceleration
     ),
 )
 osc_trigger = xosc.EntityTrigger(
     name=str(DRONE_ID) + "_stop_trigger",
     delay=0,
-    conditionedge=xosc.ConditionEdge.none,
+    conditionedge=xosc.ConditionEdge.rising,
     entitycondition=xosc.ReachPositionCondition(positions[-1], 1.0), # tolerance
     triggerentity=str(DRONE_ID)
 )
