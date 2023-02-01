@@ -357,14 +357,17 @@ void TestObject::sendSettings() {
 }
 
 void TestObject::sendArm() {
+	RCLCPP_INFO(get_logger(), "Arming object %d", conf.getTransmitterID());
 	this->comms.cmd << OBJECT_COMMAND_ARM;
 }
 
 void TestObject::sendDisarm() {
+	RCLCPP_INFO(get_logger(), "Disarming object %d", conf.getTransmitterID());
 	this->comms.cmd << OBJECT_COMMAND_DISARM;
 }
 
 void TestObject::sendAllClear() {
+	RCLCPP_INFO(get_logger(), "Clearing abort for object %d", conf.getTransmitterID());
 	this->comms.cmd << OBJECT_COMMAND_ALL_CLEAR;
 }
 
@@ -390,6 +393,7 @@ void TestObject::sendOsiData(
 }
 
 void TestObject::sendStart(std::chrono::system_clock::time_point startTime) {
+	RCLCPP_INFO(get_logger(), "Starting object %d", conf.getTransmitterID());
 	StartMessageType strt;
 	strt.startTime.tv_sec = std::chrono::duration_cast<std::chrono::seconds>(startTime.time_since_epoch()).count();
 	strt.startTime.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(startTime.time_since_epoch()).count() % 1000000;
