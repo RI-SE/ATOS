@@ -7,6 +7,8 @@ ServerFactory::ServerFactory(const std::string address, const uint16_t port, con
   this->logger = logger;
 }
 
+ServerFactory::~ServerFactory() {}
+
 
 std::unique_ptr<Server> ServerFactory::createServer(const std::string protocol) {
   if (protocol == "tcp") {

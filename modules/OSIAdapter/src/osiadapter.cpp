@@ -15,44 +15,15 @@ OSIAdapter::OSIAdapter() :
   Module(OSIAdapter::moduleName),
   connectedObjectIdsSub(*this,std::bind(&OSIAdapter::onConnectedObjectIdsMessage, this, _1))
   {
-    initialize();
+    initializeServer();
     timer = this->create_wall_timer(SEND_INTERVAL, std::bind(&OSIAdapter::sendOSIData, this));
   };
 
   OSIAdapter::~OSIAdapter() {
-    destroyTCPServer();
+    server->destroyServer();
   }
 
-void OSIAdapter::destroyTCPServer() {
-  RCLCPP_DEBUG(this->get_logger(), "Destroying TCP Server");
-  if (acceptor) {
-    acceptor->close();
-    acceptor.reset();
-  }
-  if (socket) {
-    socket->close();
-    socket.reset();
-  }
-}
 
-void OSIAdapter::setupTCPServer(ip::tcp::endpoint endpoint){
-  acceptor = std::make_shared<ip::tcp::acceptor>(*io_service, endpoint);
-  socket = std::make_shared<ip::tcp::socket>(*io_service);
-  boost::system::error_code ignored_error;
-  RCLCPP_DEBUG(get_logger(), "Waiting for connection on %s:%d", endpoint.address().to_string().c_str(), endpoint.port());
-  acceptor->accept(*socket,ignored_error);
-  while (ignored_error) {
-    RCLCPP_DEBUG(get_logger(), "Failed to accept the connection from %s:%d, retrying..", endpoint.address().to_string().c_str(), endpoint.port());
-    std::this_thread::sleep_for(500ms);
-    acceptor->accept(*socket,ignored_error);
-  }
-  RCLCPP_INFO(get_logger(), "Connection established with %s:%d", socket->remote_endpoint().address().to_string().c_str(), socket->remote_endpoint().port());
-}
-
-void OSIAdapter::resetTCPServer(ip::tcp::endpoint endpoint) {
-  destroyTCPServer();
-  setupTCPServer(endpoint);
-}
 
 /**
  * @brief Intializes socket and waits for someone to connect.
@@ -61,11 +32,11 @@ void OSIAdapter::resetTCPServer(ip::tcp::endpoint endpoint) {
  * @param port Port to use. Default: 55555
  */
 void
-OSIAdapter::initialize(const std::string& address, const uint16_t port) {
+OSIAdapter::initializeServer(const std::string& address, const uint16_t port) {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
-  endpoint = ip::tcp::endpoint(ip::make_address_v4(address), port);
-  io_service = std::make_shared<boost::asio::io_service>();
-  setupTCPServer(endpoint);
+  server = ServerFactory(address, port, moduleName).createServer("tcp");
+  RCLCPP_INFO(get_logger(), "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+
 }
 
 
@@ -85,10 +56,13 @@ OSIAdapter::sendOSIData() {
   std::transform(lastMonitors.begin(),lastMonitors.end(), sensorView.begin(), [&](auto pair) {return OSIAdapter::makeOSIData(pair.second);});
   
   // Serialize the sensorView
-  std::vector<char> positionOSI = OSIAdapter::makeOSIMessage(sensorView);
+  std::vector<char> data = OSIAdapter::makeOSIMessage(sensorView);
   
   // Write the sensorView to the socket
-  write(*socket, buffer(positionOSI), ignored_error);
+  RCLCPP_INFO(get_logger(), "BBBBBBBBBBBBBBBBBBB");
+  server->sendData(data, ignored_error);
+  RCLCPP_INFO(get_logger(), "CCCCCCCCCCCCCCCC");
+
   if (ignored_error.value() != 0){ // Error while sending to client
     if (ignored_error.value() == error::broken_pipe){
       RCLCPP_INFO(get_logger(), "Client has disconnected.");
@@ -97,7 +71,7 @@ OSIAdapter::sendOSIData() {
       RCLCPP_ERROR(get_logger(), "Error while sending data: %s", ignored_error.message().c_str());
     }
     // Either way, reset the socket and go back to listening
-    resetTCPServer(endpoint);
+    server->resetServer();
   }
 }
 

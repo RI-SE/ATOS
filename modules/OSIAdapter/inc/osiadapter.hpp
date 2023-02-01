@@ -6,12 +6,13 @@
 #include "roschannel.hpp"
 #include "osi_handler.hpp"
 #include "unordered_map"
+#include "serverfactory.hpp"
 #include <chrono>
 
 class OSIAdapter : public Module
 {
   public:
-    void initialize(const std::string& address = DEFAULT_ADDRESS,
+    void initializeServer(const std::string& address = DEFAULT_ADDRESS,
                   const uint16_t port = DEFAULT_PORT);
     OSIAdapter();
     ~OSIAdapter();
@@ -32,17 +33,10 @@ class OSIAdapter : public Module
     
     void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
     
+    std::unique_ptr<Server> server;
+
     ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;	//!< Publisher to report connected objects
     rclcpp::TimerBase::SharedPtr timer;
-
-    boost::asio::ip::tcp::endpoint endpoint;
-    std::shared_ptr<boost::asio::ip::tcp::acceptor> acceptor;
-    std::shared_ptr<boost::asio::io_service> io_service;
-    std::shared_ptr<boost::asio::ip::tcp::socket> socket;
-
-    void setupTCPServer(boost::asio::ip::tcp::endpoint endpoint);
-    void destroyTCPServer();
-    void resetTCPServer(boost::asio::ip::tcp::endpoint endpoint);
 
     std::unordered_map<uint32_t,ROSChannels::Monitor::message_type> lastMonitors;
     std::unordered_map<uint32_t,TimeUnit> lastMonitorTimes;

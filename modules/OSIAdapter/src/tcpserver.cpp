@@ -5,6 +5,7 @@ TCPServer::TCPServer(const std::string address, const uint16_t port, const std::
             Server(address, port, logger) {}
 
 
+TCPServer::~TCPServer() {}
 
 void TCPServer::setupServer() {
   acceptor = std::make_shared<ip::tcp::acceptor>(*io_service, endpoint);
@@ -37,7 +38,7 @@ void TCPServer::destroyServer() {
 
 void TCPServer::resetServer() {
   destroyServer();
-  setupServer();#
+  setupServer();
 }
 
 void TCPServer::sendData(std::vector<char> data, boost::system::error_code errorCode) {
