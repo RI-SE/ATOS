@@ -18,7 +18,7 @@ class TCPServer : public Server {
     void resetServer();
     void sendData(std::vector<char> data, boost::system::error_code errorCode);
 
-    ip::tcp::endpoint endpoint;
+    std::shared_ptr<ip::tcp::endpoint> endpoint;
     std::shared_ptr<ip::tcp::acceptor> acceptor;
     std::shared_ptr<ip::tcp::socket> socket;
 
