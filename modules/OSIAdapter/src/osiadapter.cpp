@@ -95,8 +95,7 @@ OSIAdapter::makeOSIMessage(const std::vector<OsiHandler::GlobalObjectGroundTruth
 
 
 /**
- * @brief This method creates test OSI-data for testing the module. Should be removed later,
- * since this data should come from MONR-messages.
+ * @brief Create OSI-data from MONR.
  * 
  * @return const OsiHandler::GlobalObjectGroundTruth_t OSI-data 
  */

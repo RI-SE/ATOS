@@ -10,7 +10,9 @@ TCPServer::TCPServer(const std::string address, const uint16_t port, const std::
 }
 
 
-TCPServer::~TCPServer() {}
+TCPServer::~TCPServer() {
+  destroyServer();
+}
 
 void TCPServer::setupServer() {
   endpoint = std::make_shared<ip::tcp::endpoint>(ip::make_address_v4(address), port);

@@ -19,7 +19,7 @@ class UDPServer : public Server {
     void resetServer();
     void sendData(std::vector<char> data, boost::system::error_code errorCode);
 
-    ip::udp::endpoint endpoint;
+    std::shared_ptr<ip::udp::endpoint> endpoint;
     std::shared_ptr<ip::udp::socket> socket;
 
     std::string address;
