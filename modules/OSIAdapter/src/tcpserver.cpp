@@ -37,7 +37,7 @@ void TCPServer::destroyServer() {
 
 void TCPServer::resetServer() {
   destroyServer();
-  setupServer();
+  setupServer();#
 }
 
 void TCPServer::sendData(std::vector<char> data, boost::system::error_code errorCode) {
