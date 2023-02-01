@@ -138,6 +138,7 @@ public:
 	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
 	std::string toString() const;
 	atos_interfaces::msg::CartesianTrajectory toCartesianTrajectory();
+	std::size_t size() const { return points.size(); }
 
 	void saveToFile(const std::string& fileName) const;
 	Trajectory reversed() const;
