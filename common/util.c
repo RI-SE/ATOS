@@ -45,8 +45,6 @@
 #define SMALL_BUFFER_SIZE_128 128
 #define SMALL_BUFFER_SIZE_64 64
 
-#define ATOS_DIR_NAME_LEN 15
-
 // File paths
 #define TEST_DIR_ENV_VARIABLE_NAME "ATOS_TEST_DIR"
 #define SYSCONF_DIR_NAME "/etc"
