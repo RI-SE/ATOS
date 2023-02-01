@@ -22,4 +22,8 @@ class TCPServer : public Server {
     std::shared_ptr<ip::tcp::acceptor> acceptor;
     std::shared_ptr<ip::tcp::socket> socket;
 
+    std::string address;
+    uint16_t port;
+    std::string logger;
+
 };

@@ -35,8 +35,7 @@ void
 OSIAdapter::initializeServer(const std::string& address, const uint16_t port) {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
   server = ServerFactory(address, port, moduleName).createServer("tcp");
-  RCLCPP_INFO(get_logger(), "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-
+  server->setupServer();
 }
 
 
@@ -59,9 +58,7 @@ OSIAdapter::sendOSIData() {
   std::vector<char> data = OSIAdapter::makeOSIMessage(sensorView);
   
   // Write the sensorView to the socket
-  RCLCPP_INFO(get_logger(), "BBBBBBBBBBBBBBBBBBB");
   server->sendData(data, ignored_error);
-  RCLCPP_INFO(get_logger(), "CCCCCCCCCCCCCCCC");
 
   if (ignored_error.value() != 0){ // Error while sending to client
     if (ignored_error.value() == error::broken_pipe){
