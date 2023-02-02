@@ -9,7 +9,7 @@ using namespace rclcpp;
 class UDPServer : public Server {
 
   public:
-    UDPServer(const std::string address, const uint16_t port, const std::string logger);
+    UDPServer(const std::string address, const uint16_t port, rclcpp::Logger logger);
     ~UDPServer();
 
 
@@ -24,6 +24,5 @@ class UDPServer : public Server {
 
     std::string address;
     uint16_t port;
-    std::string logger;
 
 };

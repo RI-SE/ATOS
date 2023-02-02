@@ -3,11 +3,14 @@
 #include <boost/asio.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include "loggable.hpp"
 
-class Server {
+
+
+class Server : public Loggable {
 
   public:
-    Server(const std::string address, const uint16_t port, const std::string logger);
+    Server(const std::string address, const uint16_t port, rclcpp::Logger logger);
     ~Server();
 
     virtual void setupServer() = 0;
@@ -19,6 +22,5 @@ class Server {
   protected:
     std::string address;
     uint16_t port;
-    std::string logger;
     std::shared_ptr<boost::asio::io_service> io_service;
 };

@@ -8,7 +8,7 @@ using namespace rclcpp;
 class TCPServer : public Server {
 
   public:
-    TCPServer(const std::string address, const uint16_t port, const std::string logger);
+    TCPServer(const std::string address, const uint16_t port, rclcpp::Logger logger);
     ~TCPServer();
 
 
@@ -20,7 +20,6 @@ class TCPServer : public Server {
 
     std::string address;
     uint16_t port;
-    std::string logger;
 
     std::shared_ptr<ip::tcp::endpoint> endpoint;
     std::shared_ptr<ip::tcp::acceptor> acceptor;

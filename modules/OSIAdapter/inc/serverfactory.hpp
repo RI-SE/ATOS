@@ -2,12 +2,13 @@
 
 #include "tcpserver.hpp"
 #include "udpserver.hpp"
+#include "loggable.hpp"
 
 
-class ServerFactory {
+class ServerFactory : public Loggable {
 
   public:
-    ServerFactory(const std::string address, const uint16_t port, const std::string logger);
+    ServerFactory(const std::string address, const uint16_t port, rclcpp::Logger logger);
     ~ServerFactory();
 
     std::unique_ptr<Server> createServer(const std::string protocol);
@@ -16,5 +17,4 @@ class ServerFactory {
   private:
     std::string address;
     uint16_t port;
-    std::string logger;
 };

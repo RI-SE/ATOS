@@ -1,12 +1,11 @@
 #include "udpserver.hpp"
 
 
-UDPServer::UDPServer(const std::string address, const uint16_t port, const std::string logger) : 
+UDPServer::UDPServer(const std::string address, const uint16_t port, rclcpp::Logger logger) : 
             Server(address, port, logger) {
   
   this->address = address;
   this->port = port;
-  this->logger = logger;
 }
 
 
@@ -23,7 +22,7 @@ void UDPServer::setupServer() {
   endpoint = std::make_shared<ip::udp::endpoint>(ip::make_address_v4(address), port);
   socket = std::make_shared<ip::udp::socket>(*io_service);
   socket->open(ip::udp::v4());
-  RCLCPP_DEBUG(get_logger(logger), "Sending OSI-messages on %s:%d", endpoint->address().to_string().c_str(), endpoint->port());
+  RCLCPP_DEBUG(logger, "Sending OSI-messages on %s:%d", endpoint->address().to_string().c_str(), endpoint->port());
 }
 
 
