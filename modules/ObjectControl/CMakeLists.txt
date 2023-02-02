@@ -49,6 +49,7 @@ add_executable(${OBJECT_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/done.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/remotecontrolled.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/type.cpp
 )
 # Link project executable to util libraries
 target_link_libraries(${OBJECT_CONTROL_TARGET} 
