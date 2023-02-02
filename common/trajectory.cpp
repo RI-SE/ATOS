@@ -48,14 +48,14 @@ atos_interfaces::msg::CartesianTrajectory Trajectory::toCartesianTrajectory(){
 		q.setRPY(0, 0, point.getHeading());
 		tf2::convert(q, pointMsg.pose.orientation);
 		
-		// Velocity
-		pointMsg.twist.linear.x = point.getLateralVelocity();
-		pointMsg.twist.linear.y = point.getLongitudinalVelocity();
+		// Velocity TODO convert longitudinal / lateral into xyz coordinate system
+		pointMsg.twist.linear.x = point.getLongitudinalVelocity();
+		pointMsg.twist.linear.y = point.getLateralVelocity();
 		pointMsg.twist.linear.z = 0; // TODO: Support for drones etc..
 
-		// Acceleration
-		pointMsg.acceleration.linear.x = point.getLateralAcceleration();
-		pointMsg.acceleration.linear.y = point.getLongitudinalAcceleration();
+		// Acceleration TODO convert longitudinal / lateral into xyz coordinate system
+		pointMsg.acceleration.linear.x = point.getLongitudinalAcceleration();
+		pointMsg.acceleration.linear.y = point.getLateralAcceleration();
 		pointMsg.acceleration.linear.z = 0; // TODO: Support for drones etc..
 
 		trajMsg.points.push_back(pointMsg);
@@ -75,10 +75,10 @@ void Trajectory::initializeFromCartesianTrajectory(const atos_interfaces::msg::C
 		double roll, pitch, yaw = 0;
 		m.getRPY(roll, pitch, yaw);
 		point.setHeading(yaw);
-		point.setLongitudinalVelocity(tp.twist.linear.y);
-		point.setLateralVelocity(tp.twist.linear.x);
-		point.setLongitudinalAcceleration(tp.acceleration.linear.y);
-		point.setLateralAcceleration(tp.acceleration.linear.x);
+		point.setLongitudinalVelocity(tp.twist.linear.x);
+		point.setLateralVelocity(tp.twist.linear.y);
+		point.setLongitudinalAcceleration(tp.acceleration.linear.x);
+		point.setLateralAcceleration(tp.acceleration.linear.y);
 		point.setCurvature(0); // TODO: Support
 		point.setMode(ATOS::Trajectory::TrajectoryPoint::ModeType::CONTROLLED_BY_DRIVE_FILE); //TODO: Support
 	}
