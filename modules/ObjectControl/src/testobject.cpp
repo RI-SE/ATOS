@@ -6,13 +6,13 @@
 using namespace ATOS;
 
 TestObject::TestObject(rclcpp::Logger log,
-		std::shared_ptr<ROSChannels::Trajectory::Sub> trajSub,
+		std::shared_ptr<ROSChannels::Path::Sub> pathSub,
 		std::shared_ptr<ROSChannels::Monitor::Pub> monrPub
 	) :
 	osiChannel(SOCK_STREAM, log),
 	comms(log),
 	Loggable(log),
-	trajSub(trajSub),
+	pathSub(pathSub),
 	monrPub(monrPub),
 	conf(log)
 	 {
@@ -75,10 +75,10 @@ void TestObject::setTriggerStart(
 	}
 }
 
-void TestObject::setLastReceivedTrajectory(ROSChannels::Trajectory::message_type::SharedPtr trajlet){
+void TestObject::setLastReceivedPath(ROSChannels::Path::message_type::SharedPtr trajlet){
 	// Warning: ensure thread safety here if other thread uses
-	// lastReceivedTrajectory.
-	this->lastReceivedTrajectory = trajlet;
+	// lastReceivedPath.
+	this->lastReceivedPath = trajlet;
 }
 
 ObjectDataType TestObject::getAsObjectData() const {

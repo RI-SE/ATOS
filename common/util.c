@@ -47,8 +47,6 @@
 #define SMALL_BUFFER_SIZE_128 128
 #define SMALL_BUFFER_SIZE_64 64
 
-#define ATOS_DIR_NAME_LEN 8
-
 // File paths
 #define TEST_DIR_ENV_VARIABLE_NAME "ATOS_TEST_DIR"
 #define SYSCONF_DIR_NAME "/etc"
@@ -229,6 +227,30 @@ void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetCont
 	}
 
 }
+
+/*! \brief Makes a directory and all parent directories if they do not exist.
+ * \param dir The path to the directory to be created.
+ * \param mode The permissions to be set on the directory.
+ * \return 0 if it could successfully create the directory, non-zero if it could not.
+*/
+static int recursiveMkdir(const char *dir, int mode) {
+	char tmp[256];
+	char *p = NULL;
+	size_t len;
+	int res = 0;
+
+	snprintf(tmp, sizeof(tmp),"%s",dir);
+	len = strlen(tmp);
+	if (tmp[len - 1] == '/')
+		tmp[len - 1] = 0;
+	for (p = tmp + 1; *p; p++)
+		if (*p == '/') {
+			*p = 0;
+			res = mkdir(tmp, mode);
+			*p = '/';
+		}
+	res = mkdir(tmp, mode);
+	}
 
 /*!
  * \brief deleteFile Deletes the file given in the parameter ::path
@@ -458,6 +480,26 @@ void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int 
 void util_error(const char *message) {
 	fprintf(stderr, "%s\n", message);
 	exit(EXIT_FAILURE);
+}
+
+/**
+ * @brief Returns a new latitude, longitude, height after offsetting x, y, z meters
+ * 
+ * @param llh The latitude, longitude, height [degrees, degrees, meters]
+ * @param xyzOffset Meters offset from llh [meters, meters, meters]
+ */
+void llhOffsetMeters(double *llh, const double *xyzOffset) {
+	const double lat = llh[0];
+	const double lon = llh[1];
+	const double hgt = llh[2];
+
+	const double dx = xyzOffset[0];
+	const double dy = xyzOffset[1];
+	const double dz = xyzOffset[2];
+
+	llh[0] = lat + (dy / EARTH_EQUATOR_RADIUS_M) * (180 / M_PI);
+	llh[1] = lon + (dx / EARTH_EQUATOR_RADIUS_M) * (180 / M_PI) / cos(lat * M_PI / 180);
+	llh[2] = hgt + dz;
 }
 
 void xyzToLlh(double x, double y, double z, double *lat, double *lon, double *height) {
@@ -2002,7 +2044,6 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 	DIR *dir;
 	FILE *file;
 	char testDir[MAX_FILE_PATH];
-	char subDir[MAX_FILE_PATH];
 
 	const char expectedDirs[][MAX_FILE_PATH] = {
 		CONFIGURATION_DIR_NAME,
@@ -2016,6 +2057,7 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 	char *envVar;
 	int result;
 
+	// Get test directory from environment variable, or set it to the default
 	envVar = getenv(TEST_DIR_ENV_VARIABLE_NAME);
 	if (envVar == NULL) {
 		strcpy(testDir, getenv("HOME"));
@@ -2030,14 +2072,9 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 			TEST_DIR_ENV_VARIABLE_NAME, testDir);
 	}
 
-	// Check top level dir and subdirectory
+	// Top level directory.
 	char astazeroDir[MAX_FILE_PATH];
 	strcpy(astazeroDir, testDir);
-	astazeroDir[strlen(astazeroDir) - ATOS_DIR_NAME_LEN] = '\0';
-
-	char testEnvDirs[2][MAX_FILE_PATH];
-	strcpy(testEnvDirs[0], astazeroDir);
-	strcpy(testEnvDirs[1], testDir);
 
 	for (unsigned int i = 0; i < sizeof(testEnvDirs) / sizeof(testEnvDirs[0]); ++i) {
 		dir = opendir(testEnvDirs[i]);
@@ -2069,7 +2106,8 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 	// Check so that all expected directories exist
 	strcat(testDir, "/");
 	for (unsigned int i = 0; i < sizeof (expectedDirs) / sizeof (expectedDirs[0]); ++i) {
-		strcpy(subDir, testDir);
+		char subDir[MAX_FILE_PATH];
+		strcpy(subDir, astazeroDir);
 		strcat(subDir, expectedDirs[i]);
 
 		dir = opendir(subDir);
@@ -2092,9 +2130,10 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 	}
 
 	// Check so that a configuration file exists
-	strcpy(subDir, testDir);
-	strcat(subDir, CONFIGURATION_DIR_NAME "/" CONF_FILE_NAME);
-	file = fopen(subDir, "r+");
+	char confDir[MAX_FILE_PATH];
+	strcpy(confDir, astazeroDir);
+	strcat(confDir, CONFIGURATION_DIR_NAME "/" CONF_FILE_NAME);
+	file = fopen(confDir, "r+");
 
 	if (file != NULL) {
 		fclose(file);
@@ -2114,9 +2153,10 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 
 
 	// check so that a triggeraction.conf file exists
-	strcpy(subDir, testDir);
-	strcat(subDir, CONFIGURATION_DIR_NAME "/" TRIGGER_ACTION_FILE_NAME);
-	file = fopen(subDir, "r+");
+	char triggerActionDir[MAX_FILE_PATH];
+	strcpy(triggerActionDir, astazeroDir);
+	strcat(triggerActionDir, CONFIGURATION_DIR_NAME "/" TRIGGER_ACTION_FILE_NAME);
+	file = fopen(triggerActionDir, "r+");
 
 	if (file != NULL) {
 		fclose(file);
