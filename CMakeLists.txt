@@ -37,6 +37,7 @@ set(WITH_JOURNAL_CONTROL ON CACHE BOOL "Enable JournalControl module")
 set(WITH_TRAJECTORYLET_STREAMER ON CACHE BOOL "Enable TrajectoryletStreamer module")
 set(WITH_OSI_ADAPTER ON CACHE BOOL "Enable OSIAdapter module")
 set(WITH_ESMINI_ADAPTER ON CACHE BOOL "Enable EsminiAdapter module")
+set(WITH_MQTT_BRIDGE OFF CACHE BOOL "Enable MQTTBridge module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -80,6 +81,9 @@ endif()
 if(WITH_ESMINI_ADAPTER)
         list(APPEND ENABLED_MODULES EsminiAdapter)
 endif()
+if(WITH_MQTT_BRIDGE)
+        list(APPEND ENABLED_MODULES MQTTBridge)
+endif()
 
 # Add corresponding subprojects
 add_subdirectory(util/C/time)
@@ -110,7 +114,8 @@ ament_package()
 # Install configuration
 include(GNUInstallDirs)
 file(GLOB CONF_FILES ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.conf)
-install(FILES ${CONF_FILES} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
+file(GLOB PARAMS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.yaml)
+install(FILES ${CONF_FILES} ${PARAMS_FILE} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
 install(DIRECTORY launch DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/)
 
 # Add post install instructions

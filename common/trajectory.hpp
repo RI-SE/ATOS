@@ -11,6 +11,7 @@
 #include <math.h>
 #include <chrono>
 #include "loggable.hpp"
+#include "atos_interfaces/msg/cartesian_trajectory.hpp"
 
 #include "util.h"
 namespace ATOS {
@@ -133,9 +134,11 @@ public:
 	unsigned short id = 0;
 
 	void initializeFromFile(const std::string& fileName);
+	void initializeFromCartesianTrajectory(const atos_interfaces::msg::CartesianTrajectory& cartesianTrajectory);
 	Trajectory relativeTo(const Trajectory& other) const;
 	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
 	std::string toString() const;
+	atos_interfaces::msg::CartesianTrajectory toCartesianTrajectory();
 
 	void saveToFile(const std::string& fileName) const;
 	Trajectory reversed() const;
