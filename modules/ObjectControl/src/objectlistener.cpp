@@ -188,7 +188,7 @@ ObjectMonitorType transformCoordinate(
 			&& point.acceleration.isLateralValid && point.acceleration.isLongitudinalValid;
 	if (print) {
 		dbg << "res:  " << pointInAnchorFrame << ", " << retval.position.heading_rad*180.0/M_PI << "deg";
-		std::cout << dbg.str();
+		std::cerr << dbg.str();
 	}
 	return retval;
 }
