@@ -11,10 +11,11 @@
 #include "util.h"
 #include "iso22133.h"
 #include "roschannel.hpp"
+#include "loggable.hpp"
 
 
 namespace ATOS {
-    class Trigger
+    class Trigger : public Loggable
     {
     public:
         /*! Typedefs */
@@ -34,7 +35,7 @@ namespace ATOS {
 
 
         /*! Constructor */
-        Trigger(TriggerID_t triggerID, TriggerTypeCode_t triggerType);
+        Trigger(rclcpp::Logger log, TriggerID_t triggerID, TriggerTypeCode_t triggerType);
 
 
         /*! Destructor */

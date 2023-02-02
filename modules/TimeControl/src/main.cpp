@@ -5,14 +5,14 @@
 using namespace std::chrono;
 
 static std::shared_ptr<TimeControl> tc;
-static void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+static void timecontrol_task(TimeType * GPSTime, GSDType * GSD);
 
 int main(int argc, char** argv){
 	TimeType *GPSTime;
 	GSDType *GSD;
 	GPSTime = reinterpret_cast<TimeType*>(mmap(NULL, sizeof *GPSTime, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0));
 	GSD = reinterpret_cast<GSDType*>(mmap(NULL, sizeof *GSD, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-	timecontrol_task(GPSTime,GSD,LOG_LEVEL_INFO);
+	timecontrol_task(GPSTime,GSD);
 	return 0;
 }
 
@@ -20,11 +20,11 @@ int main(int argc, char** argv){
  * \brief Initializes the ROS bus and TimeControl. 
  *	Runs the main task of TimeControl until shut off.
  */
-void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+void timecontrol_task(TimeType * GPSTime, GSDType * GSD){
 	// Initialize ROS node
 	rclcpp::init(0,nullptr);
 	tc = std::make_shared<TimeControl>();
-	tc->initialize(GPSTime,GSD,logLevel);
+	tc->initialize(GPSTime,GSD);
 
 	// Set up signal handlers
 	auto f = [](int signo) -> void {tc->signalHandler(signo);};
@@ -37,13 +37,13 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 	
 	while (rclcpp::ok() && !tc->shouldExit()){
 		//Do some work
-		tc->calibrateTime(GPSTime, GSD, logLevel);
+		tc->calibrateTime(GPSTime, GSD);
 		
 		// spin_node_once() adds node to executor, spins and then removes node from executor.
 		// If message exists in queue, it instantly processed callback, else sleeps at most POLL_SLEEP_TIME for a message to arrive.
 		executor.spin_node_once(tc,duration<int64_t,nanoseconds::period>(tc->getQueueEmptyPollPeriod())); 
 	}
-	LogMessage(LOG_LEVEL_INFO, "Time control exiting");
+	RCLCPP_INFO(tc->get_logger(),"Time control exiting");
 	rclcpp::shutdown();
 }
 

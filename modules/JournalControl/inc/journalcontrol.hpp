@@ -16,7 +16,6 @@ extern "C" {
 #endif
 
 #include "util.h"
-#include "logging.h"
 
 #ifdef __cplusplus
 }
@@ -24,7 +23,7 @@ extern "C" {
 
 
 #include "module.hpp"
-#include "journalcollection.hpp"
+#include "journalmodelcollection.hpp"
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -36,7 +35,7 @@ public:
 private:
 	static inline std::string const moduleName = "journal_control";
 
-	JournalCollection journals;
+	JournalModelCollection journals;
 
 	void onArmMessage(const ROSChannels::Arm::message_type::SharedPtr) override;
 	void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) override;

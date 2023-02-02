@@ -1,13 +1,10 @@
-#ifndef __JOURNAL_H
-#define __JOURNAL_H
+#ifndef __JOURNAL_HPP
+#define __JOURNAL_HPP
 
 #define JOURNAL_FILE_ENDING ".jnl"
 
 #include "util.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <rclcpp/logging.hpp>
 
 typedef enum {
 	JOURNAL_RECORD_MONITOR_DATA,
@@ -15,13 +12,8 @@ typedef enum {
 	JOURNAL_RECORD_STRING
 } JournalRecordType;
 
-int JournalInit(const char* name);
+int JournalInit(const char* name, rclcpp::Logger logger);
 int JournalRecordData(JournalRecordType type, const char* format, ...);
 int JournalRecordMonitorData(const ObjectDataType* data);
 
-
-
-#ifdef __cplusplus
-}
-#endif
 #endif

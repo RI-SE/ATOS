@@ -2,7 +2,6 @@
 #include <unistd.h>
 #include <signal.h>
 
-#include "logging.h"
 #include "util.h"
 #include "datadictionary.h"
 #include "directcontrol.hpp"
@@ -14,7 +13,7 @@ static std::shared_ptr<DirectControl> dc;
 int main(int argc, char** argv) {
 	rclcpp::init(argc,argv);
 	dc = std::make_shared<DirectControl>();
-	dc->initializeModule(LOG_LEVEL_DEBUG);
+	dc->initializeModule();
 	dc->startThreads();
 	rclcpp::spin(dc);
 	dc->joinThreads();

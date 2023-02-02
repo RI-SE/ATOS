@@ -3,6 +3,7 @@
 #include <netinet/in.h>
 #include <set>
 #include "trajectory.hpp"
+#include "loggable.hpp"
 
 // GCC version 8.1 brings non-experimental support for std::filesystem
 #if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
@@ -19,9 +20,9 @@ struct DataInjectionMap {
 	std::set<uint32_t> targetIDs;
 };
 
-class ObjectConfig {
+class ObjectConfig : public Loggable {
 public:
-	ObjectConfig();
+	ObjectConfig(rclcpp::Logger);
 	//ObjectConfig(const ObjectConfig&&);
 
 	void parseConfigurationFile(const fs::path& file);

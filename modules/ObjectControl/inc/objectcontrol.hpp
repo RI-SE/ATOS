@@ -114,7 +114,7 @@ public:
 
 	~ObjectControl();
 
-	//! Handlers for MQ bus messages
+	//! Handlers for user commands
 	//! \brief Performs actions in response to an initialization request.
 	void handleInitCommand();
 	//! \brief Performs actions in response to a connect request.

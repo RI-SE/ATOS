@@ -129,11 +129,14 @@ void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr
  * \param states A vector of object states
  * \return A trajectory consisting of trajectory points, one for each state.
  */
-ATOS::Trajectory EsminiAdapter::getTrajectory(uint32_t id,std::vector<SE_ScenarioObjectState>& states) {
-	ATOS::Trajectory trajectory;
+ATOS::Trajectory EsminiAdapter::getTrajectory(
+	uint32_t id,
+	std::vector<SE_ScenarioObjectState>& states)
+{
+	ATOS::Trajectory trajectory(me->get_logger());
 	trajectory.name = "Esmini Trajectory for object " + std::to_string(id);
 	auto saveTp = [&](auto& state){
-		ATOS::Trajectory::TrajectoryPoint tp;
+		ATOS::Trajectory::TrajectoryPoint tp(me->get_logger());
 		tp.setXCoord(state.x);
 		tp.setYCoord(state.y);
 		tp.setZCoord(state.z);
@@ -202,16 +205,22 @@ void EsminiAdapter::getObjectStates(const std::string& oscFilePath, double timeS
  * \param idToTraj The return map of ids mapping to the respective trajectories
  * \return A map of ids mapping to the respective trajectories
  */
-std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(const std::string& oscFilePath, double timeStep, double endTime, std::map<uint32_t,ATOS::Trajectory>& idToTraj){
+std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(
+	const std::string& oscFilePath,
+	double timeStep,
+	double endTime,
+	std::map<uint32_t,ATOS::Trajectory>& idToTraj)
+{
 	// Get object states
 	std::map<uint32_t,std::vector<SE_ScenarioObjectState>> idToStates;
 	getObjectStates(oscFilePath, timeStep, endTime, idToStates);
 
 	// Extract trajectories
-	for (auto& os : idToStates){
+	for (auto& os : idToStates) {
 		auto id = os.first;
 		auto objectStates = os.second;
-		idToTraj[id] = getTrajectory(id, objectStates);
+		auto traj = getTrajectory(id, objectStates);
+		idToTraj.insert(std::pair<uint32_t,ATOS::Trajectory>(id, traj));
 	}
 	return idToTraj;
 }
@@ -253,7 +262,7 @@ void EsminiAdapter::InitializeEsmini(std::string& oscFilePath){
  * \param logLevel Level of the module log to be used.
  * \return 0 on success, -1 otherwise
  */
-int EsminiAdapter::initializeModule(const LOG_LEVEL logLevel) {
+int EsminiAdapter::initializeModule() {
 	int retval = 0;
 
 	RCLCPP_INFO(me->get_logger(), "%s task running with PID: %d",moduleName.c_str(), getpid());

@@ -15,7 +15,7 @@ namespace ATOS {
 
 	class TestScenarioCommandAction : public ExternalAction {
 	public:
-		TestScenarioCommandAction(ActionID_t actionID = 0, uint32_t allowedNumberOfRuns = 1);
+		TestScenarioCommandAction(rclcpp::Logger, ActionID_t actionID = 0, uint32_t allowedNumberOfRuns = 1);
 
 		ActionReturnCode_t appendParameter(std::string) override;
 		ActionReturnCode_t parseParameters(void) override { return parameters.size() == 1 ? OK : NOT_OK; }
@@ -34,7 +34,7 @@ namespace ATOS {
 	class InfrastructureAction : public ExternalAction
 	{
 	public:
-		InfrastructureAction(ActionID_t actionID = 0, uint32_t allowedNumberOfRuns = 1);
+		InfrastructureAction(rclcpp::Logger, ActionID_t actionID = 0, uint32_t allowedNumberOfRuns = 1);
 		ActionReturnCode_t parseParameters(void) override { return parameters.size() == 1 ? OK : NOT_OK; }
 	protected:
 		ActionParameter_t asParameterCode(const std::string &parameterCodeString) const;

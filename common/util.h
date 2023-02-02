@@ -27,9 +27,7 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
-#include "mqbus.h"
 #include "iso22133.h"
-#include "logging.h"
 #include "positioning.h"
 
 #ifdef __cplusplus
@@ -65,8 +63,6 @@ extern "C"{
 #define DEFAULT_RVSS_RATE 1
 #define DEFAULT_MAX_PACKETS_LOST 0
 #define DEFAULT_TRANSMITTER_ID 0
-
-#define MBUS_MAX_DATALEN (MQ_MSG_SIZE-9) // Message queue data minus one byte for the command and 8 for the data length
 
 #define MAX_OBJECTS 10
 #define MAX_FILE_PATH PATH_MAX
@@ -635,17 +631,6 @@ void util_error(const char *message);
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
-// Message bus functions
-int iCommInit(void);
-int iCommClose(void);
-ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, struct timeval *timeRecv);
-int iCommSend(const enum COMMAND iCommand, const char* data, size_t dataLength);
-
-int iCommSendTREO(TREOData data);
-int iCommSendTRCM(TRCMData data);
-int iCommSendEXAC(EXACData data);
-int iCommSendACCM(ACCMData data);
-
 // File system functions
 int UtilVerifyTestDirectory(const char* installationPath);
 int UtilCopyFile(const char* source, const size_t sourceLen, const char* dest, const size_t destLen);
@@ -703,7 +688,7 @@ int UtilAddFourBytesMessageData(unsigned char *MessageBuffer, int StartIndex, un
 int UtilAddTwoBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned short Data);
 int UtilAddOneByteMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned char Data);
 int UtilAddNBytesMessageData(unsigned char *MessageBuffer, int StartIndex, int Length, unsigned char *Data);
-C8 * UtilSearchTextFile(C8 *Filename, C8 *Text1, C8 *Text2, C8 *Result);
+C8 * UtilSearchTextFile(const C8 *Filename, C8 *Text1, C8 *Text2, C8 *Result);
 int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
