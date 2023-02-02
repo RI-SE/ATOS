@@ -7,6 +7,9 @@
 #include "logging.h"
 #include "trajectory.hpp"
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include "atos_interfaces/msg/cartesian_trajectory.hpp"
+
 namespace ATOS{
 const std::regex Trajectory::fileHeaderPattern("TRAJECTORY;(" + RegexPatterns::intPattern + ");("
 											   + RegexPatterns::namePattern + ");" + RegexPatterns::versionPattern + ";("
@@ -24,6 +27,61 @@ Trajectory::Trajectory(const Trajectory& other) {
 	this->name = other.name;
 	this->version = other.version;
 	this->points = std::vector<TrajectoryPoint>(other.points);
+}
+
+atos_interfaces::msg::CartesianTrajectory Trajectory::toCartesianTrajectory(){
+	atos_interfaces::msg::CartesianTrajectory trajMsg;
+	for (const auto& point : this->points){
+		atos_interfaces::msg::CartesianTrajectoryPoint pointMsg;
+		// Time
+		auto millis = point.getTime().count();
+		pointMsg.time_from_start.sec = millis/1000;
+		pointMsg.time_from_start.nanosec = (millis%1000)*1000000;
+
+		// Position
+		pointMsg.pose.position.x = point.getPosition().x();
+		pointMsg.pose.position.y = point.getPosition().y();
+		pointMsg.pose.position.z = point.getPosition().z();
+
+		// Rotation
+		tf2::Quaternion q;
+		q.setRPY(0, 0, point.getHeading());
+		tf2::convert(q, pointMsg.pose.orientation);
+		
+		// Velocity TODO convert longitudinal / lateral into xyz coordinate system
+		pointMsg.twist.linear.x = point.getLongitudinalVelocity();
+		pointMsg.twist.linear.y = point.getLateralVelocity();
+		pointMsg.twist.linear.z = 0; // TODO: Support for drones etc..
+
+		// Acceleration TODO convert longitudinal / lateral into xyz coordinate system
+		pointMsg.acceleration.linear.x = point.getLongitudinalAcceleration();
+		pointMsg.acceleration.linear.y = point.getLateralAcceleration();
+		pointMsg.acceleration.linear.z = 0; // TODO: Support for drones etc..
+
+		trajMsg.points.push_back(pointMsg);
+	}
+	return trajMsg;
+}
+
+void Trajectory::initializeFromCartesianTrajectory(const atos_interfaces::msg::CartesianTrajectory &traj) {
+	using namespace std::chrono;
+	for (const auto &tp : traj.points){
+		TrajectoryPoint point;
+		point.setTime(duration_cast<milliseconds>(seconds{tp.time_from_start.sec} + nanoseconds{tp.time_from_start.nanosec}));
+		point.setXCoord(tp.pose.position.x);
+		point.setYCoord(tp.pose.position.y);
+		point.setZCoord(tp.pose.position.z);
+		tf2::Matrix3x3 m(tf2::Quaternion(tp.pose.orientation.x, tp.pose.orientation.y, tp.pose.orientation.z, tp.pose.orientation.w));
+		double roll, pitch, yaw = 0;
+		m.getRPY(roll, pitch, yaw);
+		point.setHeading(yaw);
+		point.setLongitudinalVelocity(tp.twist.linear.x);
+		point.setLateralVelocity(tp.twist.linear.y);
+		point.setLongitudinalAcceleration(tp.acceleration.linear.x);
+		point.setLateralAcceleration(tp.acceleration.linear.y);
+		point.setCurvature(0); // TODO: Support
+		point.setMode(ATOS::Trajectory::TrajectoryPoint::ModeType::CONTROLLED_BY_DRIVE_FILE); //TODO: Support
+	}
 }
 
 void Trajectory::initializeFromFile(const std::string &fileName) {
