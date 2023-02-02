@@ -1,5 +1,6 @@
 #include "udpserver.hpp"
 
+
 UDPServer::UDPServer(const std::string address, const uint16_t port, const std::string logger) : 
             Server(address, port, logger) {
   
@@ -8,11 +9,16 @@ UDPServer::UDPServer(const std::string address, const uint16_t port, const std::
   this->logger = logger;
 }
 
+
 UDPServer::~UDPServer() {
   destroyServer();
 }
 
 
+/**
+ * @brief Setup and opens a UDP server.
+ * 
+ */
 void UDPServer::setupServer() {
   endpoint = std::make_shared<ip::udp::endpoint>(ip::make_address_v4(address), port);
   socket = std::make_shared<ip::udp::socket>(*io_service);
@@ -21,17 +27,31 @@ void UDPServer::setupServer() {
 }
 
 
+/**
+ * @brief Destroy the UDP server.
+ * 
+ */
 void UDPServer::destroyServer() {
   socket->close();
 }
 
 
+/**
+ * @brief Reset the UDP server.
+ * 
+ */
 void UDPServer::resetServer() {
   destroyServer();
   setupServer();
 }
 
 
+/**
+ * @brief Send data over UDP.
+ * 
+ * @param data Data to be sent
+ * @param errorCode Error code
+ */
 void UDPServer::sendData(std::vector<char> data, boost::system::error_code errorCode) {
   socket->send_to(buffer(data), *endpoint, 0, errorCode);
 }

@@ -16,7 +16,7 @@ TCPServer::~TCPServer() {
 
 
 /**
- * @brief Setup a TCP server. Opens the server and waits for someone to connect
+ * @brief Setup a TCP server. Opens the server and waits for someone to connect.
  * 
  */
 void TCPServer::setupServer() {
