@@ -6,11 +6,15 @@
 #include "osiadapter.hpp"
 
 using namespace ROSChannels;
-using namespace std::chrono_literals;
 using namespace std::chrono;
 using namespace boost::asio;
 using std::placeholders::_1;
 
+
+/**
+ * @brief Module for sending OSI-data from MONR-messages over a server.
+ * 
+ */
 OSIAdapter::OSIAdapter() :
   Module(OSIAdapter::moduleName),
   connectedObjectIdsSub(*this,std::bind(&OSIAdapter::onConnectedObjectIdsMessage, this, _1))
@@ -19,22 +23,26 @@ OSIAdapter::OSIAdapter() :
     timer = this->create_wall_timer(SEND_INTERVAL, std::bind(&OSIAdapter::sendOSIData, this));
   };
 
-  OSIAdapter::~OSIAdapter() {
+
+/**
+ * @brief Destroy the OSIAdapter::OSIAdapter object.
+ * 
+ */
+OSIAdapter::~OSIAdapter() {
     server->destroyServer();
   }
 
 
-
 /**
- * @brief Intializes socket and waits for someone to connect.
+ * @brief Initializes a server, using either TCP or UDP.
  * 
- * @param address Address to connect. Default: 127.0.0.1
- * @param port Port to use. Default: 55555
+ * @param address IP-address. Default: 0.0.0.0
+ * @param port Port. Default: 55555
  */
 void
 OSIAdapter::initializeServer(const std::string& address, const uint16_t port) {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
-  server = ServerFactory(address, port, moduleName).createServer("tcp");
+  server = ServerFactory(address, port, moduleName).createServer("udp");
   server->setupServer();
 }
 
@@ -54,27 +62,23 @@ OSIAdapter::sendOSIData() {
   std::vector<OsiHandler::GlobalObjectGroundTruth_t> sensorView(lastMonitors.size());
   std::transform(lastMonitors.begin(),lastMonitors.end(), sensorView.begin(), [&](auto pair) {return OSIAdapter::makeOSIData(pair.second);});
   
-  // Serialize the sensorView
   std::vector<char> data = OSIAdapter::makeOSIMessage(sensorView);
-  
-  // Write the sensorView to the socket
   server->sendData(data, ignored_error);
 
   if (ignored_error.value() != 0){ // Error while sending to client
-    if (ignored_error.value() == error::broken_pipe){
+    if (ignored_error.value() == error::broken_pipe) {
       RCLCPP_INFO(get_logger(), "Client has disconnected.");
     }
-    else{
+    else {
       RCLCPP_ERROR(get_logger(), "Error while sending data: %s", ignored_error.message().c_str());
     }
-    // Either way, reset the socket and go back to listening
-    server->resetServer();
+    server->resetServer(); // Either way, reset the socket and go back to listening
   }
 }
 
+
 /**
- * @brief Encodes SvGt message and returns vector to use for sending message in socket. This is currently
- * used for making a test message. In the future timestamp and projStr should come from MONR-message?
+ * @brief Encodes SvGt message and returns vector to use for sending message in socket.
  * 
  * @param osiData OSI-data
  * @return std::vector<char> Vector from SvGt encoding
@@ -118,23 +122,35 @@ OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
   osiData.vel_m_s.z = monr.velocity.twist.linear.z;
 
   return osiData;
+
 }
 
 
-double
-OSIAdapter::linPosPrediction(const double position, const double velocity, const TimeUnit dt) {
+/**
+ * @brief Linear extrapolation for a position.
+ * 
+ * @param position The current position
+ * @param velocity The current velocity
+ * @param dt Time forward
+ * @return double extrapolated position, in dt milliseconds
+ */
+double OSIAdapter::linPosPrediction(const double position, const double velocity, const TimeUnit dt) {
   return position + velocity * duration<double>(dt).count();
 }
 
 
+/**
+ * @brief Linear extrapolation for a MONR-message.
+ * 
+ * @param monr MONR-message to extrapolate
+ * @param dt Time forward
+ */
 void
 OSIAdapter::extrapolateMONR(Monitor::message_type& monr,  const TimeUnit dt) {
-
   monr.pose.pose.position.x = linPosPrediction(monr.pose.pose.position.x, monr.velocity.twist.linear.x, dt);
   monr.pose.pose.position.y = linPosPrediction(monr.pose.pose.position.y, monr.velocity.twist.linear.y, dt);
   monr.pose.pose.position.z = linPosPrediction(monr.pose.pose.position.z, monr.velocity.twist.linear.z, dt);
 }
-
 
 void OSIAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::message_type::SharedPtr msg) {
   for (uint32_t id : msg->ids) {
@@ -144,13 +160,12 @@ void OSIAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::message_t
   }
 }
 
+
 void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, uint32_t id) {
-  if (lastMonitors.find(id) == lastMonitors.end()){
-    // Do not extrapolate first message
+  if (lastMonitors.find(id) == lastMonitors.end()){ // Do not extrapolate first message
     lastMonitorTimes[id] = TimeUnit(0);
   }
-  else{
-    // Otherwise take diff between last two messages
+  else{ // Otherwise take diff between last two messages
     auto newTime = seconds(msg->atos_header.header.stamp.sec) + nanoseconds(msg->atos_header.header.stamp.nanosec);
     auto oldTime = seconds(lastMonitors[id].atos_header.header.stamp.sec) + nanoseconds(lastMonitors[id].atos_header.header.stamp.nanosec);
     lastMonitorTimes[id] = duration_cast<TimeUnit>(newTime-oldTime);
