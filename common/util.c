@@ -232,23 +232,23 @@ void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetCont
  * \return 0 if it could successfully create the directory, non-zero if it could not.
 */
 static int recursiveMkdir(const char *dir, int mode) {
-    char tmp[256];
-    char *p = NULL;
-    size_t len;
+	char tmp[256];
+	char *p = NULL;
+	size_t len;
 	int res = 0;
 
-    snprintf(tmp, sizeof(tmp),"%s",dir);
-    len = strlen(tmp);
-    if (tmp[len - 1] == '/')
-        tmp[len - 1] = 0;
-    for (p = tmp + 1; *p; p++)
-        if (*p == '/') {
-            *p = 0;
-            res = mkdir(tmp, mode);
-            *p = '/';
-        }
-    res = mkdir(tmp, mode);
-}
+	snprintf(tmp, sizeof(tmp),"%s",dir);
+	len = strlen(tmp);
+	if (tmp[len - 1] == '/')
+		tmp[len - 1] = 0;
+	for (p = tmp + 1; *p; p++)
+		if (*p == '/') {
+			*p = 0;
+			res = mkdir(tmp, mode);
+			*p = '/';
+		}
+	res = mkdir(tmp, mode);
+	}
 
 /*!
  * \brief deleteFile Deletes the file given in the parameter ::path
