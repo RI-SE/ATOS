@@ -32,7 +32,6 @@
 #include "util.h"
 #include "maestroTime.h"
 #include "datadictionary.h"
-#include "logging.h"
 
 
 /*------------------------------------------------------------
@@ -219,7 +218,7 @@ void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetCont
 	// Check length
 	fieldLength = lastPos - firstPos;
 	if (fieldLength >= targetContainerSize) {
-		LogMessage(LOG_LEVEL_WARNING, "Received too long HTTP header field: %s", fieldName);
+		fprintf(stderr, "Received too long HTTP header field: %s\n", fieldName);
 		targetContainer[0] = '\0';
 		return;
 	}
@@ -239,12 +238,12 @@ void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetCont
  */
 int deleteFile(char *path, size_t pathLen) {
 	if (path == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Path is null-pointer");
+		fprintf(stderr, "Path is null-pointer\n");
 		errno = EINVAL;
 		return -1;
 	}
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too large to handle");
+		fprintf(stderr, "Path variable too large to handle\n");
 		errno = EINVAL;
 		return -1;
 	}
@@ -252,13 +251,13 @@ int deleteFile(char *path, size_t pathLen) {
 	FILE *fd = fopen(path, "a");
 
 	if (fd == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Path <%s> could not be opened", path);
+		fprintf(stderr, "Path <%s> could not be opened\n", path);
 		return -1;
 	}
 	fclose(fd);
 
 	if (remove(path) != 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Path <%s> could not be deleted", path);
+		fprintf(stderr, "Path <%s> could not be deleted\n", path);
 		return -1;
 	}
 	return 0;
@@ -272,12 +271,12 @@ int deleteFile(char *path, size_t pathLen) {
  */
 int deleteDirectoryContents(char *path, size_t pathLen) {
 	if (path == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Path is null-pointer.");
+		fprintf(stderr, "Path is null-pointer.\n");
 		errno = EINVAL;
 		return -1;
 	}
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too large to handle");
+		fprintf(stderr, "Path variable too large to handle.\n");
 		errno = EINVAL;
 		return -1;
 	}
@@ -285,7 +284,7 @@ int deleteDirectoryContents(char *path, size_t pathLen) {
 	DIR *theFolder = opendir(path);
 
 	if (theFolder == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Path: %s could not be opened", path);
+		fprintf(stderr, "Path: %s could not be opened.\n", path);
 		errno = ENOENT;
 		return -1;
 	}
@@ -457,7 +456,7 @@ void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int 
 	strcat(buffer, tmp_buffer_ms);
 }
 void util_error(const char *message) {
-	LogMessage(LOG_LEVEL_ERROR, message);
+	fprintf(stderr, "%s\n", message);
 	exit(EXIT_FAILURE);
 }
 
@@ -706,11 +705,11 @@ int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint * ASP, FILE * filefd, char debug)
 	ASP->TestPort = 0;
 
 	if (debug) {
-		LogPrint("MasterIP: %s", ASP->MasterIP);
-		LogPrint("SlaveIP: %s", ASP->SlaveIP);
-		LogPrint("MasterTrajSyncTime %3.2f", ASP->MasterTrajSyncTime);
-		LogPrint("SlaveTrajSyncTime %3.2f", ASP->SlaveTrajSyncTime);
-		LogPrint("SlaveSyncStopTime %3.2f", ASP->SlaveSyncStopTime);
+		fprintf(stderr, "MasterIP: %s\n", ASP->MasterIP);
+		fprintf(stderr, "SlaveIP: %s\n", ASP->SlaveIP);
+		fprintf(stderr, "MasterTrajSyncTime %3.2f\n", ASP->MasterTrajSyncTime);
+		fprintf(stderr, "SlaveTrajSyncTime %3.2f\n", ASP->SlaveTrajSyncTime);
+		fprintf(stderr, "SlaveSyncStopTime %3.2f\n", ASP->SlaveSyncStopTime);
 	}
 
 	return 0;
@@ -743,7 +742,7 @@ int UtilSetMasterObject(ObjectPosition * OP, char *Filename, char debug) {
 		fclose(filefd);
 
 		if (debug)
-			LogPrint("Master object set: %s, SyncTime: %3.4f", FilenameBuffer, Time);
+			fprintf(stderr, "Master object set: %s, SyncTime: %3.4f\n", FilenameBuffer, Time);
 
 	}
 	else {
@@ -778,7 +777,7 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
 		OP->SyncStopTime = Time;
 		fclose(filefd);
 		if (debug)
-			LogPrint("Slave object set: %s, SyncTime: %3.4f", FilenameBuffer, Time);
+			fprintf(stderr, "Slave object set: %s, SyncTime: %3.4f\n", FilenameBuffer, Time);
 	}
 
 
@@ -1120,7 +1119,7 @@ int UtilPopulateSpaceTimeArr(ObjectPosition * OP, char *TrajFile) {
 		fclose(Trajfd);
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to open file:%s", TrajFile);
+		fprintf(stderr, "Failed to open file:%s\n", TrajFile);
 	}
 
 	return 0;
@@ -1328,8 +1327,8 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 		i = 0;
 	//OP->BestFoundTrajectoryIndex = 0;
 	if (debug)
-		LogPrint("OPOrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d", OP->OrigoDistance, OP->x, OP->y,
-				 OP->SyncIndex);
+		fprintf(stderr, "UtilFindCurrentTrajectoryPosition: StartIndex=%d, CurrentTime=%4.3f, MaxTrajDiff=%4.3f, MaxTimeDiff=%4.3f\n",
+				OP->OrigoDistance, OP->x, OP->y, OP->SyncIndex);
 
 	Init = 1;
 	while (i < (OP->TrajectoryPositionCount - 1) && i <= OP->SyncIndex) {
@@ -1359,8 +1358,8 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 		if (debug == 2) {
 			R1 = sqrt(pow(OP->SpaceTimeArr[i].x, 2) + pow(OP->SpaceTimeArr[i].y, 2));
 			R2 = sqrt(pow(OP->x, 2) + pow(OP->y, 2));
-			LogPrint("%d, %3.5f, %3.5f, %3.5f, %d, %d, %3.6f", i, fabs(R1 - R2), fabs(R1 - OP->OrigoDistance),
-					 fabs(Angle1 - Angle2), Q1, Q2, fabs(Angle1 - OP->ForwardAzimuth1));
+			fprintf(stderr, "%d, %3.5f, %3.5f, %3.5f, %d, %d, %3.6f\n", i, fabs(R1 - R2), fabs(R1 - OP->OrigoDistance),
+					fabs(Angle1 - Angle2), Q1, Q2, fabs(Angle1 - OP->ForwardAzimuth1));
 		}
 
 
@@ -1374,7 +1373,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 				if ((AngleDiff < PrevAngleDiff) && (i > OP->BestFoundTrajectoryIndex) && RDiff <= MaxTrajDiff) {
 					PositionFound = i;
 					if (debug == 2)
-						LogPrint("Minimum: %d, %3.6f, %3.6f", i, AngleDiff, RDiff);
+						fprintf(stderr, "Minimum: %d, %3.6f, %3.6f\n", i, AngleDiff, RDiff);
 					PrevAngleDiff = AngleDiff;
 				}
 			}
@@ -1387,7 +1386,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 	}
 
 	if (debug)
-		LogPrint("Selected time: %3.3f", OP->SpaceTimeArr[PositionFound].Time);
+		fprintf(stderr, "Selected time: %3.3f\n", OP->SpaceTimeArr[PositionFound].Time);
 
 	if (PositionFound == -1)
 		OP->BestFoundTrajectoryIndex = TRAJ_POSITION_NOT_FOUND;
@@ -1397,14 +1396,14 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 	}
 
 	if (debug == 2) {
-		LogPrint("BestFoundTrajectoryIndex=%d", OP->BestFoundTrajectoryIndex);
-		LogPrint("Current origo distance=%4.3f m", OP->OrigoDistance);
-		LogPrint("Current time=%4.3f s", CurrentTime);
-		LogPrint("Matched origo distance=%4.3f m", OP->SpaceTimeArr[PositionFound].OrigoDistance);
-		LogPrint("Distance error=%4.3f m", OP->OrigoDistance - OP->SpaceTimeArr[PositionFound].OrigoDistance);
-		LogPrint("Expected time=%4.3f s (index=%d)", OP->SpaceTimeArr[PositionFound].Time,
-				 OP->SpaceTimeArr[PositionFound].Index);
-		LogPrint("Time error=%4.3f s", CurrentTime - OP->SpaceTimeArr[PositionFound].Time);
+		fprintf(stderr, "BestFoundTrajectoryIndex=%d\n", OP->BestFoundTrajectoryIndex);
+		fprintf(stderr, "Current origo distance=%4.3f m\n", OP->OrigoDistance);
+		fprintf(stderr, "Current time=%4.3f s\n", CurrentTime);
+		fprintf(stderr, "Matched origo distance=%4.3f m\n", OP->SpaceTimeArr[PositionFound].OrigoDistance);
+		fprintf(stderr, "Distance error=%4.3f m\n", OP->OrigoDistance - OP->SpaceTimeArr[PositionFound].OrigoDistance);
+		fprintf(stderr, "Expected time=%4.3f s (index=%d)\n", OP->SpaceTimeArr[PositionFound].Time,
+				OP->SpaceTimeArr[PositionFound].Index);
+		fprintf(stderr, "Time error=%4.3f s\n", CurrentTime - OP->SpaceTimeArr[PositionFound].Time);
 	}
 
 	return PositionFound;
@@ -1422,8 +1421,8 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition * OP, int StartIndex, do
 	if (i <= -1)
 		i = 0;
 	OP->BestFoundTrajectoryIndex = 0;
-	LogMessage(LOG_LEVEL_DEBUG, "OPOrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d", OP->OrigoDistance,
-			   OP->x, OP->y, OP->SyncIndex);
+	fprintf("UtilFindCurrentTrajectoryPositionNew: TrajectoryPositionCount=%d, SyncIndex=%d, OrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d\n",
+			OP->TrajectoryPositionCount, OP->SyncIndex, OP->OrigoDistance, OP->x, OP->y, OP->SyncIndex);
 
 	Init = 1;
 	while (i < (OP->TrajectoryPositionCount - 1) && i <= OP->SyncIndex) {
@@ -1458,7 +1457,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition * OP, int StartIndex, do
 		R1 = sqrt(pow(OP->SpaceTimeArr[i].x, 2) + pow(OP->SpaceTimeArr[i].y, 2));
 		R2 = sqrt(pow(OP->x, 2) + pow(OP->y, 2));
 		if (debug == 2)
-			LogPrint("%d, %3.5f, %3.5f, %3.5f, %d, %d, %3.6f", i, fabs(R1 - R2), fabs(R1 - OP->OrigoDistance),
+			fprintf(stderr, "%d, %3.5f, %3.5f, %3.5f, %d, %d, %3.6f", i, fabs(R1 - R2), fabs(R1 - OP->OrigoDistance),
 					 fabs(Angle1 - Angle2), Q1, Q2, fabs(Angle1 - OP->ForwardAzimuth1));
 
 		if (Q1 == Q2) {
@@ -1472,7 +1471,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition * OP, int StartIndex, do
 					//SampledSpaceIndex[j] = i;
 					//j++ ;
 					if (debug == 2)
-						LogPrint("Minimum: %d, %3.6f, %3.6f", i, AngleDiff, RDiff);
+						fprintf("Minimum: %d, %3.6f, %3.6f", i, AngleDiff, RDiff);
 					PrevAngleDiff = AngleDiff;
 				}
 
@@ -1486,7 +1485,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition * OP, int StartIndex, do
 	}
 
 	if (debug)
-		LogPrint("Selected time: %3.3f", OP->SpaceTimeArr[PositionFound].Time);
+		fprintf(stderr, "Selected time: %3.3f\n", OP->SpaceTimeArr[PositionFound].Time);
 
 	if (PositionFound == -1)
 		OP->BestFoundTrajectoryIndex = TRAJ_POSITION_NOT_FOUND;
@@ -1520,8 +1519,8 @@ int UtilFindCurrentTrajectoryPositionPrev(ObjectPosition * OP, int StartIndex, d
 	if (i <= -1)
 		i = 2;
 	OP->BestFoundTrajectoryIndex = 0;
-	LogMessage(LOG_LEVEL_DEBUG, "OPOrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d", OP->OrigoDistance,
-			   OP->x, OP->y, OP->SyncIndex);
+	fprintf(stderr, "UtilFindCurrentTrajectoryPosition: StartIndex=%d, CurrentTime=%4.3f, MaxTrajDiff=%4.3f, MaxTimeDiff=%4.3f, SyncIndex=%d\n",
+			StartIndex, CurrentTime, MaxTrajDiff, MaxTimeDiff, OP->SyncIndex);
 
 	Init = 1;
 	while (i < (OP->TrajectoryPositionCount - 1) && i <= OP->SyncIndex) {
@@ -1532,7 +1531,7 @@ int UtilFindCurrentTrajectoryPositionPrev(ObjectPosition * OP, int StartIndex, d
 		BearingDiff = fabs(OP->SpaceTimeArr[i].Bearing - OP->ForwardAzimuth2);
 
 		if (debug == 2)
-			LogPrint("%d, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.6f", i, PrevDiff, Diff, FutDiff,
+			fprintf(stderr, "%d, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.6f\n", i, PrevDiff, Diff, FutDiff,
 					 OP->SpaceTimeArr[i].x, OP->x, OP->SpaceTimeArr[i].y, OP->y,
 					 fabs(OP->SpaceTimeArr[i].Bearing - tan(OP->y / OP->x)));
 
@@ -1544,7 +1543,7 @@ int UtilFindCurrentTrajectoryPositionPrev(ObjectPosition * OP, int StartIndex, d
 				SampledSpaceIndex[j] = i;
 				j++;
 				if (debug == 1)
-					LogPrint("Minimum: %d, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.6f", i,
+					fprintf(stderr, "Minimum: %d, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.6f\n", i,
 							 PrevDiff, Diff, FutDiff, OP->SpaceTimeArr[i].x, OP->x, OP->SpaceTimeArr[i].y,
 							 OP->y, fabs(OP->SpaceTimeArr[i].Bearing - tan(OP->y / OP->x)));
 			}
@@ -1568,7 +1567,7 @@ int UtilFindCurrentTrajectoryPositionPrev(ObjectPosition * OP, int StartIndex, d
 	}
 
 	if (debug)
-		LogPrint("Selected time: %3.3f", OP->SpaceTimeArr[PositionFound].Time);
+		fprintf(stderr, "Selected time: %3.3f\n", OP->SpaceTimeArr[PositionFound].Time);
 
 	if (PositionFound == -1)
 		OP->BestFoundTrajectoryIndex = TRAJ_POSITION_NOT_FOUND;
@@ -1844,7 +1843,7 @@ int UtilGetRowInFile(const char *path, const size_t pathLength,
 		for(int i = 0; i < rows; i ++){
 			length = UtilReadLine(fd, rowBuffer);
 			if(length > bufferLength){ 
-				LogMessage(LOG_LEVEL_ERROR, "Buffer to small for read row in file");
+				fprintf(stderr, "Buffer to small for read row in file\n");
 				return -1;
 			}
 			if(rowIndex == i){
@@ -1857,7 +1856,7 @@ int UtilGetRowInFile(const char *path, const size_t pathLength,
 	return -1;
 }
 
-C8 *UtilSearchTextFile(C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
+C8 *UtilSearchTextFile(const C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
 
 	FILE *fd;
 
@@ -1869,17 +1868,17 @@ C8 *UtilSearchTextFile(C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
 	U8 Found = 0;
 	int RowCount = 0;
 
-	fd = fopen(Filename, "r");
+	fd = fopen( (const char*)Filename, "r");
 
 	if (fd == NULL) {
-		sprintf(RowBuffer, "Unable to open file <%s>", Filename);
+		sprintf(RowBuffer, "Unable to open file <%s>", (const char*) Filename);
 		util_error(RowBuffer);
 	}
 
 	RowCount = UtilCountFileRows(fd);
 	fclose(fd);
 
-	fd = fopen(Filename, "r");
+	fd = fopen((const char*) Filename, "r");
 	if (fd != NULL) {
 		do {
 			bzero(RowBuffer, MAX_ROW_SIZE);
@@ -1906,7 +1905,7 @@ C8 *UtilSearchTextFile(C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
 		fclose(fd);
 	}
 	else {
-		sprintf(RowBuffer, "Unable to open file <%s>", Filename);
+		sprintf(RowBuffer, "Unable to open file <%s>", (const char*) Filename);
 		util_error(RowBuffer);
 	}
 
@@ -1953,13 +1952,13 @@ int UtilCopyFile(
 
     fd_from = open(source, O_RDONLY);
     if (fd_from < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to open file %s", source);
-        return -1;
+		fprintf(stderr, "Failed to open file %s\n", source);
+		return -1;
 	}
 
     fd_to = open(dest, O_WRONLY | O_CREAT | O_EXCL, S_IWUSR | S_IRUSR | S_IWGRP | S_IRGRP | S_IROTH);
     if (fd_to < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to open file %s", dest);
+		fprintf(stderr, "Failed to open file %s\n", dest);
 		close(fd_from);
 		return -1;
 	}
@@ -1977,7 +1976,7 @@ int UtilCopyFile(
             else if (errno != EINTR) {
 				close(fd_from);
 				close(fd_to);
-				LogMessage(LOG_LEVEL_ERROR, "Failed to write to file %s", dest);
+				fprintf(stderr, "Failed to write to file %s\n", dest);
             }
         } while (nread > 0);
     }
@@ -1988,7 +1987,7 @@ int UtilCopyFile(
         return 0;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to read from file %s", source);
+		fprintf(stderr, "Failed to read from file %s\n", source);
 		return -1;
 	}
 }
@@ -2022,13 +2021,13 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		strcpy(testDir, getenv("HOME"));
 		strcat(testDir, "/");
 		strcat(testDir, ATOS_TEST_DIR_NAME);
-
-		LogMessage(LOG_LEVEL_INFO, "Environment variable %s unset: defaulting to directory %s",
+		fprintf(stderr, "Environment variable %s unset: defaulting to directory %s\n",
 				   TEST_DIR_ENV_VARIABLE_NAME, testDir);
 	}
 	else {
 		strcpy(testDir, envVar);
-		LogMessage(LOG_LEVEL_INFO, "Using specified test directory %s", testDir);
+		fprintf(stderr, "Environment variable ${%s} unset: defaulting to directory %s\n",
+			TEST_DIR_ENV_VARIABLE_NAME, testDir);
 	}
 
 	// Check top level dir and subdirectory
@@ -2048,22 +2047,21 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		else if (errno == ENOENT) {
 			result = mkdir(testEnvDirs[i], 0755);
 			if (result < 0) {
-				LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", testEnvDirs[i]);
+				fprintf(stderr, "Unable to create directory %s\n", testEnvDirs[i]);
 				return -1;
 			}
 		}
 		else if (errno == EACCES) {
-			LogMessage(LOG_LEVEL_ERROR,
-					   "Permission to access top level test directory %s denied (please do not run me as root)",
+			fprintf(stderr, "Permission to access top level test directory %s denied (please do not run me as root)\n",
 					   testEnvDirs[i]);
 			return -1;
 		}
 		else if (errno == ENOTDIR) {
-			LogMessage(LOG_LEVEL_ERROR, "Top level test directory %s is not a directory", testEnvDirs[i]);
+			fprintf(stderr, "Top level test directory %s is not a directory\n", testEnvDirs[i]);
 			return -1;
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Error opening top level directory %s", testEnvDirs[i]);
+			fprintf(stderr, "Error opening top level directory %s\n", testEnvDirs[i]);
 			return -1;
 		}
 	}
@@ -2080,15 +2078,15 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		}
 		else if (errno == ENOENT) {
 			// It did not exist: create it
-			LogMessage(LOG_LEVEL_INFO, "Directory %s does not exist: creating it", subDir);
+			fprintf(stderr, "Directory %s does not exist: creating it\n", subDir);
 			result = mkdir(subDir, 0755);
 			if (result < 0) {
-				LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", subDir);
+				fprintf(stderr, "Unable to create directory %s\n", subDir);
 				return -1;
 			}
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Error opening directory %s", subDir);
+			fprintf(stderr, "Error opening directory %s\n", subDir);
 			return -1;
 		}
 	}
@@ -2106,10 +2104,10 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		strcpy(sysConfDir, installationPath);
 		strcat(sysConfDir, SYSCONF_DIR_NAME "/" CONF_FILE_NAME);
 		
-		LogMessage(LOG_LEVEL_INFO, "Configuration file %s does not exist, copying default from %s",
+		fprintf(stderr, "Configuration file %s does not exist, copying default from %s\n",
 			subDir, sysConfDir);
 		if (UtilCopyFile(sysConfDir, sizeof(sysConfDir), subDir, sizeof(subDir)) < 0) {
-			LogMessage(LOG_LEVEL_ERROR, "Failed to copy file");
+			fprintf(stderr, "Failed to copy file\n");
 			return -1;
 		}
 	}
@@ -2128,11 +2126,11 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		strcpy(triggerActionFilePath, installationPath);
 		strcat(triggerActionFilePath, SYSCONF_DIR_NAME "/" TRIGGER_ACTION_FILE_NAME);
 		
-		LogMessage(LOG_LEVEL_INFO, "Trigger action %s file does not exist, copying default from %s",
+		fprintf(stderr, "Trigger action %s file does not exist, copying default from %s\n",
 							subDir, triggerActionFilePath);
 		
 		if (UtilCopyFile(triggerActionFilePath, sizeof(triggerActionFilePath), subDir, sizeof(subDir)) < 0) {
-			LogMessage(LOG_LEVEL_ERROR, "Failed to copy file");
+			fprintf(stderr, "Failed to copy file\n");
 			return -1;
 		}
 	}
@@ -2150,7 +2148,7 @@ void UtilGetTestDirectoryPath(char *path, size_t pathLen) {
 	char *envVar;
 
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
@@ -2176,7 +2174,7 @@ void UtilGetTestDirectoryPath(char *path, size_t pathLen) {
  */
 void UtilGetJournalDirectoryPath(char *path, size_t pathLen) {
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
@@ -2193,7 +2191,7 @@ void UtilGetJournalDirectoryPath(char *path, size_t pathLen) {
  */
 void UtilGetConfDirectoryPath(char *path, size_t pathLen) {
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
@@ -2210,7 +2208,7 @@ void UtilGetConfDirectoryPath(char *path, size_t pathLen) {
  */
 void UtilGetTrajDirectoryPath(char *path, size_t pathLen) {
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
@@ -2227,7 +2225,7 @@ void UtilGetTrajDirectoryPath(char *path, size_t pathLen) {
  */
 void UtilGetOdrDirectoryPath(char *path, size_t pathLen) {
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
@@ -2244,7 +2242,7 @@ void UtilGetOdrDirectoryPath(char *path, size_t pathLen) {
  */
 void UtilGetOscDirectoryPath(char *path, size_t pathLen) {
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
@@ -2262,7 +2260,7 @@ void UtilGetOscDirectoryPath(char *path, size_t pathLen) {
  */
 void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
@@ -2279,7 +2277,7 @@ void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
  */
 void UtilGetObjectDirectoryPath(char *path, size_t pathLen) {
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
@@ -2300,18 +2298,17 @@ int UtilDeleteTrajectoryFile(const char *name, const size_t nameLen) {
 
 	if (name == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on null trajectory file");
+		fprintf(stderr, "Attempt to call delete on null trajectory file\n");
 		return -1;
 	}
 	if (strstr(name, "..") != NULL || strstr(name, "/") != NULL) {
 		errno = EPERM;
-		LogMessage(LOG_LEVEL_ERROR,
-				   "Attempt to call delete on trajectory file and navigate out of directory");
+		fprintf(stderr, "Attempt to call delete on trajectory file and navigate out of directory\n");
 		return -1;
 	}
 	if (strlen(filePath) + nameLen > MAX_FILE_PATH) {
 		errno = ENOBUFS;
-		LogMessage(LOG_LEVEL_ERROR, "Trajectory file name too long");
+		fprintf(stderr, "Trajectory file name too long\n");
 		return -1;
 	}
 
@@ -2334,17 +2331,17 @@ int UtilDeleteGeofenceFile(const char *name, const size_t nameLen) {
 
 	if (name == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on null geofence file");
+		fprintf(stderr, "Attempt to call delete on null geofence file\n");
 		return -1;
 	}
 	if (strstr(name, "..") != NULL || strstr(name, "/") != NULL) {
 		errno = EPERM;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on geofence file and navigate out of directory");
+		fprintf(stderr, "Attempt to call delete on geofence file and navigate out of directory\n");
 		return -1;
 	}
 	if (strlen(filePath) + nameLen > MAX_FILE_PATH) {
 		errno = ENOBUFS;
-		LogMessage(LOG_LEVEL_ERROR, "Geofence file name too long");
+		fprintf(stderr, "Geofence file name too long\n");
 		return -1;
 	}
 
@@ -2367,17 +2364,17 @@ int UtilDeleteObjectFile(const char *name, const size_t nameLen) {
 
 	if (name == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on null object file");
+		fprintf(stderr, "Attempt to call delete on null object file\n");
 		return -1;
 	}
 	if (strstr(name, "..") != NULL || strstr(name, "/") != NULL) {
 		errno = EPERM;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on object file and navigate out of directory");
+		fprintf(stderr, "Attempt to call delete on object file and navigate out of directory\n");
 		return -1;
 	}
 	if (strlen(filePath) + nameLen > MAX_FILE_PATH) {
 		errno = ENOBUFS;
-		LogMessage(LOG_LEVEL_ERROR, "Object file name too long");
+		fprintf(stderr, "Object file name too long\n");
 		return -1;
 	}
 
@@ -2399,19 +2396,19 @@ int UtilDeleteGenericFile(const char *pathRelativeToWorkspace, const size_t name
 
 	if (pathRelativeToWorkspace == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on null generic file");
+		fprintf(stderr, "Attempt to call delete on null generic file\n");
 		return -1;
 	}
 
 	if (strstr(pathRelativeToWorkspace, "..") != NULL) {
 		errno = EPERM;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on generic file and navigate out of directory");
+		fprintf(stderr, "Attempt to call delete on generic file and navigate out of directory\n");
 		return -1;
 	}
 
 	if (strlen(filePath) + nameLen > MAX_FILE_PATH) {
 		errno = ENOBUFS;
-		LogMessage(LOG_LEVEL_ERROR, "Generic path name too long");
+		fprintf(stderr, "Generic path name too long\n");
 		return -1;
 	}
 
@@ -2488,7 +2485,7 @@ int UtilParseTrajectoryFileHeader(char *line, TrajectoryFileHeader * header) {
 				break;
 			case 2:
 				if (strlen(token) > sizeof (header->name)) {
-					LogMessage(LOG_LEVEL_ERROR, "Name field \"%s\" in trajectory too long", token);
+					fprintf(stderr, "Name field \"%s\" in trajectory too long\n", token);
 					retval = -1;
 				}
 				else {
@@ -2509,18 +2506,18 @@ int UtilParseTrajectoryFileHeader(char *line, TrajectoryFileHeader * header) {
 				if (noOfLines >= 0)
 					header->numberOfLines = (unsigned int)noOfLines;
 				else {
-					LogMessage(LOG_LEVEL_ERROR, "Found negative number of lines in trajectory");
+					fprintf(stderr, "Found negative number of lines in trajectory\n");
 					retval = -1;
 				}
 				break;
 			default:
-				LogMessage(LOG_LEVEL_ERROR, "Found unexpected \"%s\" in header", token);
+				fprintf(stderr, "Found unexpected \"%s\" in header\n", token);
 				retval = -1;
 			}
 		}
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Cannot parse line \"%s\" as trajectory header", line);
+		fprintf(stderr, "Cannot parse line \"%s\" as trajectory header\n", line);
 		retval = -1;
 	}
 
@@ -2570,7 +2567,7 @@ int UtilParseTrajectoryFileLine(char *line, TrajectoryFileLine * fileLine) {
 		switch (column) {
 		case 1:
 			if (strcmp(token, "LINE")) {
-				LogMessage(LOG_LEVEL_ERROR, "Line start badly formatted");
+				fprintf(stderr, "Line start badly formatted\n");
 				retval = -1;
 			}
 			break;
@@ -2624,19 +2621,19 @@ int UtilParseTrajectoryFileLine(char *line, TrajectoryFileLine * fileLine) {
 			break;
 		case 13:
 			if (strcmp(token, "ENDLINE")) {
-				LogMessage(LOG_LEVEL_ERROR, "Line end badly formatted");
+				fprintf(stderr, "Line end badly formatted\n");
 				retval = -1;
 			}
 			break;
 		default:
-			LogMessage(LOG_LEVEL_ERROR, "Superfluous delimiter in line");
+			fprintf(stderr, "Superfluous delimiter in line\n");
 			retval = -1;
 			break;
 		}
 		tokenIndex = nextTokenIndex + 1;
 	}
 	if (column != 13 && retval == 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Wrong number of fields (%u) in trajectory line", column);
+		fprintf(stderr, "Wrong number of fields (%u) in trajectory line\n", column);
 		retval = -1;
 	}
 
@@ -2656,7 +2653,7 @@ int UtilParseTrajectoryFileFooter(char *line) {
 	token = strtok(line, delimiter);
 	if (!strcmp(token, "ENDTRAJECTORY")) {
 		while ((token = strtok(NULL, delimiter)) != NULL) {
-			LogMessage(LOG_LEVEL_ERROR, "Footer contained unexpected \"%s\"", token);
+			fprintf(stderr, "Footer contained unexpected \"%s\"\n", token);
 			retval = -1;
 		}
 	}
@@ -2689,7 +2686,7 @@ int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen) {
 	memset(&fileLine, 0, sizeof (fileLine));
 
 	if (fp == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Could not open file <%s>", path);
+		fprintf(stderr, "Could not open file <%s>\n", path);
 		return -1;
 	}
 
@@ -2699,31 +2696,31 @@ int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen) {
 		if (row == 1) {			// Header parsing
 			// If header parsing failed, parsing the rest of the file could be risky
 			if ((retval = UtilParseTrajectoryFileHeader(line, &header)) == -1) {
-				LogMessage(LOG_LEVEL_ERROR, "Failed to parse header of file <%s>", path);
+				fprintf(stderr, "Failed to parse header of file <%s>\n", path);
 				break;
 			}
 		}
 		else if (row == header.numberOfLines + 2) {	// Footer parsing
 			if ((retval = UtilParseTrajectoryFileFooter(line)) != 0) {
 				if (UtilParseTrajectoryFileLine(line, &fileLine) == 0) {
-					LogMessage(LOG_LEVEL_ERROR, "File <%s> contains more rows than specified", path);
+					fprintf(stderr, "File <%s> contains %u rows than were specified\n", path);
 					break;
 				}
-				LogMessage(LOG_LEVEL_ERROR, "Failed to parse footer of file <%s>", path);
+				fprintf(stderr, "Failed to parse footer of file <%s>\n", path);
 			}
 		}
 		else if (row > header.numberOfLines + 2) {
-			LogMessage(LOG_LEVEL_ERROR, "File <%s> contains more rows than specified", path);
+			fprintf(stderr, "File <%s> contains more rows than specified\n", path);
 			retval = -1;
 			break;
 		}
 		else {					// Line parsing
 			if (UtilParseTrajectoryFileLine(line, &fileLine) != 0) {
 				if (UtilParseTrajectoryFileFooter(line) == 0)
-					LogMessage(LOG_LEVEL_ERROR, "File <%s> contains %u rows but %u were specified", path,
+					fprintf(stderr, "File <%s> contains %u rows but %u were specified\n", path,
 							   row - 2, header.numberOfLines);
 				else
-					LogMessage(LOG_LEVEL_ERROR, "Failed to parse line %u of file <%s>", row, path);
+					fprintf(stderr, "Failed to parse line %u of file <%s>\n", row, path);
 				retval = -1;
 			}
 		}
@@ -2903,12 +2900,12 @@ I32 UtilConnectTCPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 	*Sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
 	if (*Sockfd < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to open control socket");
+		fprintf(stderr, "Failed to open control socket\n");
 	}
 
 	server = gethostbyname(IP);
 	if (server == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Unknown host");
+		fprintf(stderr, "Unknown host\n");
 	}
 
 	bzero((char *)&serv_addr, sizeof (serv_addr));
@@ -2917,29 +2914,26 @@ I32 UtilConnectTCPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 	bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
 	serv_addr.sin_port = htons(Port);
 
-
-	LogMessage(LOG_LEVEL_INFO, "Attempting to connect to control socket: %s:%i", IP, Port);
+	fprintf(stderr, "Attempting to connect to control socket: %s:%i\n", IP, Port);
 
 	do {
 		iResult = connect(*Sockfd, (struct sockaddr *)&serv_addr, sizeof (serv_addr));
 
 		if (iResult < 0) {
 			if (errno == ECONNREFUSED) {
-				LogMessage(LOG_LEVEL_WARNING, "Unable to connect to %s port %d, retrying in 3 sec...", IP,
-						   Port);
+				fprintf(stderr, "Unable to connect to %s port %d, retrying in 3 sec...\n", IP, Port);
 				fflush(stdout);
 				(void)sleep(3);
 			}
 			else {
-				LogMessage(LOG_LEVEL_ERROR, "Failed to connect to control socket");
+				fprintf(stderr, "Failed to connect to control socket\n");
 			}
 		}
 	} while (iResult < 0);
 
 
 	iResult = fcntl(*Sockfd, F_SETFL, fcntl(*Sockfd, F_GETFL, 0) | O_NONBLOCK);
-
-	LogMessage(LOG_LEVEL_INFO, "ATOS connected to %s:%d", IP, Port);
+	fprintf(stderr, "ATOS connected to %s:%i\n", IP, Port);
 	return iResult;
 
 }
@@ -2965,15 +2959,15 @@ void UtilSendTCPData(const C8 * Module, const C8 * Data, I32 Length, const int *
 	retval = getsockopt(*Sockfd, SOL_SOCKET, SO_ERROR, &error, &len);
 
 	if (retval != 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to get socket error code = %s", strerror(retval));
+		fprintf(stderr, "Failed to get socket error code = %s\n", strerror(retval));
 	}
 
 	if (error != 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Socket error: %s", strerror(error));
+		fprintf(stderr, "Socket error: %s\n", strerror(error));
 	}
 
 	if (n < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to send on control socket, length = %d", Length);
+		fprintf(stderr, "Failed to send on control socket, length = %d\n", Length);
 	}
 }
 
@@ -3012,14 +3006,14 @@ void UtilCreateUDPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 
 	*Sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (*Sockfd < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to connect to CPC socket");
+		fprintf(stderr, "Failed to create CPC socket\n");
 	}
 
 	/* Set address to object */
 	object = gethostbyname(IP);
 
 	if (object == 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Unknown host");
+		fprintf(stderr, "Unknown host\n");
 	}
 
 	bcopy((char *)object->h_addr, (char *)&Addr->sin_addr.s_addr, object->h_length);
@@ -3029,10 +3023,9 @@ void UtilCreateUDPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 	/* set socket to non-blocking */
 	result = fcntl(*Sockfd, F_SETFL, fcntl(*Sockfd, F_GETFL, 0) | O_NONBLOCK);
 	if (result < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Error calling fcntl");
+		fprintf(stderr, "Error calling fcntl\n");
 	}
-
-	LogMessage(LOG_LEVEL_INFO, "Created UDP channel to address: %s:%d", IP, Port);
+	fprintf(stderr, "Created UDP channel to address: %s:%d\n", IP, Port);
 
 
 }
@@ -3053,7 +3046,7 @@ void UtilSendUDPData(const C8 * Module, I32 * Sockfd, struct sockaddr_in *Addr, 
 	}
 
 	if (result < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to send on process control socket");
+		fprintf(stderr, "Failed to send on process control socket\n");
 	}
 
 }
@@ -3069,22 +3062,22 @@ void UtilReceiveUDPData(const C8 * Module, I32 * Sockfd, C8 * Data, I32 Length, 
 
 		if (Result < 0) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK) {
-				LogMessage(LOG_LEVEL_ERROR, "Failed to receive from monitor socket");
+				fprintf(stderr, "Failed to receive from monitor socket\n");
 			}
 			else {
-				LogMessage(LOG_LEVEL_DEBUG, "No data received");
+				fprintf(stderr, "No data received\n");
 			}
 		}
 		else {
 			*ReceivedNewData = 1;
-			LogMessage(LOG_LEVEL_DEBUG, "Received: <%s>", Data);
+			fprintf(stderr, "Received UDP data: %s\n", Data);
 			// TODO: Change this when bytes thingy has been implemented in logging
 			if (Debug == 1) {
-				printf("[%s] Received UDP data: ", Module);
+				fprintf(stderr,"[%s] Received UDP data: ", Module);
 				i = 0;
 				for (i = 0; i < Result; i++)
-					printf("%x-", (C8) * (Data + i));
-				printf("\n");
+					fprintf(stderr,"%x-", (C8) * (Data + i));
+				fprintf(stderr,"\n");
 			}
 
 		}
@@ -3367,7 +3360,7 @@ int32_t UtilWriteConfigurationParameter(const enum ConfigurationFileParameter pa
 					strcat(NewRow, " ");	// Add space
 					strcat(NewRow, ptr2);	// Add the comment
 				}
-				LogMessage(LOG_LEVEL_DEBUG, "Changed parameter: %s", NewRow);
+				fprintf("Changed parameter: %s\n", NewRow);
 
 				strcat(NewRow, "\n");
 				(void)fwrite(NewRow, 1, strlen(NewRow), TempFd);
@@ -3391,7 +3384,7 @@ int32_t UtilWriteConfigurationParameter(const enum ConfigurationFileParameter pa
 		remove(tempConfPathDir);
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to open configuration file %s", confPathDir);
+		fprintf(stderr, "Unable to open configuration file %s\n", confPathDir);
 	}
 
 	return (int32_t) ParameterFound;
@@ -3414,7 +3407,7 @@ int32_t UtilReadConfigurationParameter(const enum ConfigurationFileParameter par
 
 	UtilSearchTextFile(confPathDir, TextBuffer, "", returnValue);
 
-	LogMessage(LOG_LEVEL_DEBUG, "Read parameter: %s%s\n", TextBuffer, returnValue);
+	fprintf("Read parameter: %s%s\n", TextBuffer, returnValue);
 
 	return strnlen(returnValue, bufferLength);
 }
@@ -3500,11 +3493,11 @@ char *UtilGetConfigurationParameterAsString(const enum ConfigurationFileParamete
 		outputString = ParameterNameMiscData;
 		break;
 	default:
-		LogMessage(LOG_LEVEL_ERROR, "No matching configuration parameter for enumerated input");
+		fprintf(stderr, "No matching configuration parameter for enumerated input\n");
 		outputString = "";
 	}
 	if (strlen(outputString) + 1 > bufferLength) {
-		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold configuration parameter name");
+		fprintf(stderr, "Buffer too small to hold configuration parameter name\n");
 		returnValue = "";
 	}
 	else {
@@ -3586,7 +3579,7 @@ int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char 
 	memset(objectSetting, 0, objectSettingSize);
 	UtilSearchTextFile(objectFilePath, textBuffer, "", objectSetting);
 
-	LogMessage(LOG_LEVEL_DEBUG, "Read object parameter: %s%s", textBuffer, objectSetting);
+	fprintf(stderr, "Read object parameter: %s%s\n", textBuffer, objectSetting);
 
 	return objectSetting[0] == '\0' ? -1 : 0;
 }
@@ -3644,12 +3637,12 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 		outputString = ObjectSettingNameMaxSpeed;
 		break;
 	default:
-		LogMessage(LOG_LEVEL_ERROR, "No matching configuration parameter for enumerated input");
+		fprintf(stderr, "No matching configuration parameter for enumerated input\n");
 		outputString = "";
 	}
 
 	if (strlen(outputString) + 1 > bufferLength) {
-		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold object setting parameter name");
+		fprintf(stderr, "Buffer too small to hold object setting parameter name\n");
 		returnValue = "";
 	}
 	else {
@@ -3699,8 +3692,8 @@ int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize,
 
 	if (rawDataSize != sizeof (ObjectDataType)) {
 		errno = EMSGSIZE;
-		LogMessage(LOG_LEVEL_ERROR, "Raw monitor data array wrong size, %d != %d",
-				   rawDataSize, sizeof (ObjectDataType));
+		fprintf(stderr, "Raw monitor data array wrong size, %d != %d\n",
+				rawDataSize, sizeof (ObjectDataType));
 		return -1;
 	}
 
@@ -3719,7 +3712,7 @@ int UtilPopulateTREODataStructFromMQ(char * rawTREO, size_t rawTREOsize, TREODat
 	char *rdPtr = rawTREO;
 
 	if (rawTREOsize < sizeof (TREOData)) {
-		LogMessage(LOG_LEVEL_ERROR, "Raw TREO array too small to hold all necessary TREO data");
+		fprintf(stderr, "Raw TREO array too small to hold all necessary TREO data\n");
 		return -1;
 	}
 
@@ -3745,7 +3738,7 @@ int UtilPopulateEXACDataStructFromMQ(char * rawEXAC, size_t rawEXACsize, EXACDat
 	char *rdPtr = rawEXAC;
 
 	if (rawEXACsize < sizeof (EXACData)) {
-		LogMessage(LOG_LEVEL_ERROR, "Raw EXAC array too small to hold all necessary EXAC data");
+		fprintf(stderr, "Raw EXAC array too small to hold all necessary EXAC data\n");
 		return -1;
 	}
 
@@ -3771,7 +3764,7 @@ int UtilPopulateTRCMDataStructFromMQ(char * rawTRCM, size_t rawTRCMsize, TRCMDat
 	char *rdPtr = rawTRCM;
 
 	if (rawTRCMsize < sizeof (TRCMData)) {
-		LogMessage(LOG_LEVEL_ERROR, "Raw TRCM array too small to hold all necessary TRCM data");
+		fprintf(stderr, "Raw TRCM array too small to hold all necessary TRCM data\n");
 		return -1;
 	}
 
@@ -3806,7 +3799,7 @@ int UtilPopulateACCMDataStructFromMQ(char * rawACCM, size_t rawACCMsize, ACCMDat
 	char *rdPtr = rawACCM;
 
 	if (rawACCMsize < sizeof (ACCMData)) {
-		LogMessage(LOG_LEVEL_ERROR, "Raw ACCM array too small to hold all necessary ACCM data");
+		fprintf(stderr, "Raw ACCM array too small to hold all necessary ACCM data\n");
 		return -1;
 	}
 
@@ -3847,7 +3840,7 @@ struct timeval UtilGetPIDUptime(pid_t pID) {
 
 	pidstat = fopen(filename, "r");
 	if (pidstat == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Error: Couldn't open [%s]\n", filename);
+		fprintf(stderr, "Error: Couldn't open [%s]\n", filename);
 		timeSinceStart.tv_sec = -1;
 		timeSinceStart.tv_usec = -1;
 		return timeSinceStart;
