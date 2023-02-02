@@ -21,8 +21,4 @@ class UDPServer : public Server {
 
     std::shared_ptr<ip::udp::endpoint> endpoint;
     std::shared_ptr<ip::udp::socket> socket;
-
-    std::string address;
-    uint16_t port;
-
 };

@@ -42,7 +42,7 @@ OSIAdapter::~OSIAdapter() {
 void
 OSIAdapter::initializeServer(const std::string& address, const uint16_t port) {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
-  server = ServerFactory(address, port, get_logger()).createServer("tcp");
+  server = ServerFactory(address, port, get_logger()).createServer("udp");
   server->setupServer();
 }
 

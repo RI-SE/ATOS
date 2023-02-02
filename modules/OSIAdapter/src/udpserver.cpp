@@ -2,11 +2,7 @@
 
 
 UDPServer::UDPServer(const std::string address, const uint16_t port, rclcpp::Logger logger) : 
-            Server(address, port, logger) {
-  
-  this->address = address;
-  this->port = port;
-}
+            Server(address, port, logger) {}
 
 
 UDPServer::~UDPServer() {
