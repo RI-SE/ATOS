@@ -17,5 +17,4 @@ class ServerFactory {
     std::string address;
     uint16_t port;
     std::string logger;
-
 };

@@ -17,11 +17,8 @@ class Server {
     
 
   protected:
-    std::shared_ptr<boost::asio::io_service> io_service;
     std::string address;
     uint16_t port;
     std::string logger;
-
-  private:
-
+    std::shared_ptr<boost::asio::io_service> io_service;
 };

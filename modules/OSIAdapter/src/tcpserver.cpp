@@ -14,6 +14,11 @@ TCPServer::~TCPServer() {
   destroyServer();
 }
 
+
+/**
+ * @brief Setup a TCP server. Opens the server and waits for someone to connect
+ * 
+ */
 void TCPServer::setupServer() {
   endpoint = std::make_shared<ip::tcp::endpoint>(ip::make_address_v4(address), port);
   acceptor = std::make_shared<ip::tcp::acceptor>(*io_service, *endpoint);
@@ -29,9 +34,13 @@ void TCPServer::setupServer() {
     acceptor->accept(*socket, ignored_error);
   }
   RCLCPP_INFO(get_logger(logger), "Connection established with %s:%d", socket->remote_endpoint().address().to_string().c_str(), socket->remote_endpoint().port());
-
 }
 
+
+/**
+ * @brief Destroy the TCP server.
+ * 
+ */
 void TCPServer::destroyServer() {
   RCLCPP_DEBUG(get_logger(logger), "Destroying TCP Server");
   if (acceptor) {
@@ -44,11 +53,23 @@ void TCPServer::destroyServer() {
   }
 }
 
+
+/**
+ * @brief Reset TCP server.
+ * 
+ */
 void TCPServer::resetServer() {
   destroyServer();
   setupServer();
 }
 
+
+/**
+ * @brief Send data over TCP.
+ * 
+ * @param data Data to be sent
+ * @param errorCode Error code
+ */
 void TCPServer::sendData(std::vector<char> data, boost::system::error_code errorCode) {
   write(*socket, buffer(data), errorCode);
 }
