@@ -239,8 +239,9 @@ static int recursiveMkdir(const char *dir, int mode) {
 
     snprintf(tmp, sizeof(tmp),"%s",dir);
     len = strlen(tmp);
-    if (tmp[len - 1] == '/')
+    if (tmp[len - 1] == '/') {
         tmp[len - 1] = 0;
+    }
     for (p = tmp + 1; *p; p++)
         if (*p == '/') {
             *p = 0;
