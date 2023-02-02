@@ -1,3 +1,4 @@
+
 #include "type.h"
 #ifdef __GNUG__
 #include <cstdlib>
@@ -24,4 +25,3 @@ std::string demangle(const char* name) {
 }
 
 #endif
-
