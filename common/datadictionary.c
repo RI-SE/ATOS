@@ -20,7 +20,6 @@
 #include <string.h>
 #include <errno.h>
 #include "datadictionary.h"
-#include "logging.h"
 #include "shmem.h"
 
 
@@ -68,11 +67,11 @@ ReadWriteAccess_t DataDictionaryConstructor() {
 
 	// Shared memory variables can either be preexisting or not
 	if (DataDictionaryInitObjectData() != WRITE_OK) {
-		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared monitor data memory found by constructor");
+		fprintf(stderr, "Preexisting shared monitor data memory found by constructor\n");
 		retval = WRITE_FAIL;
 	}
 	if (DataDictionaryInitStateData() != WRITE_OK) {
-		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared state memory found by constructor");
+		fprintf(stderr, "Preexisting shared state memory found by constructor\n");
 		retval = WRITE_FAIL;
 	}
 	else {
@@ -80,7 +79,7 @@ ReadWriteAccess_t DataDictionaryConstructor() {
 	}
 
 	if (DataDictionaryInitRVSSAsp() != WRITE_OK) {
-		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared ASP memory found by constructor");
+		fprintf(stderr, "Preexisting shared ASP memory found by constructor\n");
 		retval = WRITE_FAIL;
 	}
 
@@ -120,7 +119,7 @@ ReadWriteAccess_t DataDictionaryInitScenarioName() {
 	}
 	else {
 		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ScenarioName not found!");
+		fprintf(stderr, "ScenarioName not found!\n");
 	}
 	return Res;
 }
@@ -142,7 +141,7 @@ ReadWriteAccess_t DataDictionaryGetScenarioName(char *name, const size_t nameLen
 	}
 	else {
 		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ScenarioName not found!");
+		fprintf(stderr, "ScenarioName not found!\n");
 	}
 	return Res;
 }
@@ -155,7 +154,7 @@ ReadWriteAccess_t DataDictionaryGetScenarioName(char *name, const size_t nameLen
 ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(const char* latitude) {
 	if (latitude == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -179,7 +178,7 @@ ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(double_t* latitude) {
 	ReadWriteAccess_t retval;
 	if (latitude == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -191,7 +190,7 @@ ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(double_t* latitude) {
 
 	if (endptr == readValue) {
 		*latitude = 0;
-		LogMessage(LOG_LEVEL_ERROR, "Latitude badly formatted");
+		fprintf(stderr, "Latitude badly formatted\n");
 		return PARAMETER_NOTFOUND;
 	}
 	return READ_OK;
@@ -205,7 +204,7 @@ ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(double_t* latitude) {
 ReadWriteAccess_t DataDictionaryGetOriginLatitudeString(char* latitude, const size_t bufferLength) {
 	if (latitude == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -214,7 +213,7 @@ ReadWriteAccess_t DataDictionaryGetOriginLatitudeString(char* latitude, const si
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Latitude not found!");
+		fprintf(stderr, "Latitude not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -230,7 +229,7 @@ ReadWriteAccess_t DataDictionaryGetOriginLatitudeString(char* latitude, const si
 ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(const char* longitude) {
 	if (longitude == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -254,7 +253,7 @@ ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(double_t* longitude) {
 	ReadWriteAccess_t retval;
 	if (longitude == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -266,7 +265,7 @@ ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(double_t* longitude) {
 
 	if (endptr == readValue) {
 		*longitude = 0;
-		LogMessage(LOG_LEVEL_ERROR, "Longitude badly formatted");
+		fprintf(stderr, "Longitude badly formatted\n");
 		return PARAMETER_NOTFOUND;
 	}
 	return READ_OK;
@@ -280,7 +279,7 @@ ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(double_t* longitude) {
 ReadWriteAccess_t DataDictionaryGetOriginLongitudeString(char* longitude, const size_t bufferLength) {
 	if (longitude == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -289,7 +288,7 @@ ReadWriteAccess_t DataDictionaryGetOriginLongitudeString(char* longitude, const 
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Longitude not found!");
+		fprintf(stderr, "Longitude not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -305,7 +304,7 @@ ReadWriteAccess_t DataDictionaryGetOriginLongitudeString(char* longitude, const 
 ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(const char* altitude) {
 	if (altitude == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -329,7 +328,7 @@ ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(double_t* altitude) {
 	ReadWriteAccess_t retval;
 	if (altitude == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -341,7 +340,7 @@ ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(double_t* altitude) {
 
 	if (endptr == readValue) {
 		*altitude = 0;
-		LogMessage(LOG_LEVEL_ERROR, "Altitude badly formatted");
+		fprintf(stderr, "Altitude badly formatted\n");
 		return PARAMETER_NOTFOUND;
 	}
 	return READ_OK;
@@ -355,7 +354,7 @@ ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(double_t* altitude) {
 ReadWriteAccess_t DataDictionaryGetOriginAltitudeString(char* altitude, const size_t bufferLength) {
 	if (altitude == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -364,7 +363,7 @@ ReadWriteAccess_t DataDictionaryGetOriginAltitudeString(char* altitude, const si
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Altitude not found!");
+		fprintf(stderr, "Altitude not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -383,14 +382,14 @@ ReadWriteAccess_t DataDictionarySetVisualizationServerU32(const char* IP) {
 
 	if (IP == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
 	result = inet_pton(AF_INET, IP, &inaddr);
 	if (result <= 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Specified IP %s is not valid", IP);
+		fprintf(stderr, "Specified IP %s is not valid\n", IP);
 		return WRITE_FAIL;
 	}
 	
@@ -416,7 +415,7 @@ ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(in_addr_t* IP) {
 
 	if (IP == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -428,11 +427,11 @@ ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(in_addr_t* IP) {
 		retval = READ_OK;
 	}
 	else if (result == 0) {
-		LogMessage(LOG_LEVEL_ERROR, "VisualizationServerIP string %s is not a valid IPv4 address", ipString);
+		fprintf(stderr, "VisualizationServerIP string %s is not a valid IPv4 address", ipString);
 		retval = PARAMETER_NOTFOUND;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+		fprintf(stderr, "Invalid address family\n");
 		retval = UNDEFINED;
 	}
 	return retval;
@@ -448,7 +447,7 @@ ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(in_addr_t* IP) {
 ReadWriteAccess_t DataDictionaryGetVisualizationServerIPString(char* IP, const size_t bufferLength) {
 	if (IP == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -457,7 +456,7 @@ ReadWriteAccess_t DataDictionaryGetVisualizationServerIPString(char* IP, const s
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "VisualizationServerIP not found!");
+		fprintf(stderr, "VisualizationServerIP not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -477,7 +476,7 @@ ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(const char * ASPMaxTimeDiff
 
 	if (ASPMaxTimeDiff == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -503,7 +502,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(double_t * ASPMaxTimeDiff) 
 
 	if (ASPMaxTimeDiff == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -511,7 +510,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(double_t * ASPMaxTimeDiff) 
 		(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, resultBuffer, sizeof (resultBuffer))) {
 		readSetting = strtod(resultBuffer, &endPtr);
 		if (endPtr == resultBuffer) {
-			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP max time diff configuration");
+			fprintf(stderr, "Invalid configuration for ASP max time diff configuration\n");
 			result = PARAMETER_NOTFOUND;
 			*ASPMaxTimeDiff = 0;
 		}
@@ -522,7 +521,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(double_t * ASPMaxTimeDiff) 
 		result = READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "ASP max time diff configuration not found!");
+		fprintf(stderr, "ASP max time diff configuration not found!\n");
 		result = PARAMETER_NOTFOUND;
 		*ASPMaxTimeDiff = 0;
 	}
@@ -543,7 +542,7 @@ ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(const char * ASPMaxTrajDiff
 
 	if (ASPMaxTrajDiff == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -569,7 +568,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(double_t * ASPMaxTrajDiff) 
 
 	if (ASPMaxTrajDiff == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -577,7 +576,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(double_t * ASPMaxTrajDiff) 
 		(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, resultBuffer, sizeof (resultBuffer))) {
 		readSetting = strtod(resultBuffer, &endPtr);
 		if (endPtr == resultBuffer) {
-			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP max traj diff configuration");
+			fprintf(stderr, "Invalid configuration for ASP max traj diff configuration\n");
 			result = PARAMETER_NOTFOUND;
 			*ASPMaxTrajDiff = 0;
 		}
@@ -588,7 +587,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(double_t * ASPMaxTrajDiff) 
 		result = READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "ASP max traj diff configuration not found!");
+		fprintf(stderr, "ASP max traj diff configuration not found!\n");
 		result = PARAMETER_NOTFOUND;
 		*ASPMaxTrajDiff = 0;
 	}
@@ -608,7 +607,7 @@ ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(const char * ASPStepBackC
 
 	if (ASPStepBackCount == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -634,7 +633,7 @@ ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(uint32_t * ASPStepBackCou
 
 	if (ASPStepBackCount == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -642,7 +641,7 @@ ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(uint32_t * ASPStepBackCou
 		(CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT, resultBuffer, sizeof (resultBuffer))) {
 		readSetting = strtoul(resultBuffer, &endPtr, 10);
 		if (endPtr == resultBuffer) {
-			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP step back count configuration");
+			fprintf(stderr, "Invalid configuration for ASP step back count configuration\n");
 			result = PARAMETER_NOTFOUND;
 			*ASPStepBackCount = 0;
 		}
@@ -653,7 +652,7 @@ ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(uint32_t * ASPStepBackCou
 		result = READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "RASP step back count not found!");
+		fprintf(stderr, "RASP step back count not found!\n");
 		result = PARAMETER_NOTFOUND;
 		*ASPStepBackCount = 0;
 	}
@@ -673,7 +672,7 @@ ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(const char * ASPFilterLevel
 
 	if (ASPFilterLevel == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -699,7 +698,7 @@ ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(dbl * ASPFilterLevel) {
 
 	if (ASPFilterLevel == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -707,7 +706,7 @@ ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(dbl * ASPFilterLevel) {
 		(CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL, resultBuffer, sizeof (resultBuffer))) {
 		readSetting = strtod(resultBuffer, &endPtr);
 		if (endPtr == resultBuffer) {
-			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP filter level configuration");
+			fprintf(stderr, "Invalid configuration for ASP filter level configuration\n");
 			result = PARAMETER_NOTFOUND;
 			*ASPFilterLevel = 0;
 		}
@@ -718,7 +717,7 @@ ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(dbl * ASPFilterLevel) {
 		result = READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "ASP filter level configuration not found!");
+		fprintf(stderr, "ASP filter level configuration not found!\n");
 		result = PARAMETER_NOTFOUND;
 		*ASPFilterLevel = 0;
 	}
@@ -738,7 +737,7 @@ ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(const char * ASPMaxDeltaTi
 
 	if (ASPMaxDeltaTime == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -764,7 +763,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(double_t * ASPMaxDeltaTime
 
 	if (ASPMaxDeltaTime == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -772,7 +771,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(double_t * ASPMaxDeltaTime
 		(CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME, resultBuffer, sizeof (resultBuffer))) {
 		readSetting = strtod(resultBuffer, &endPtr);
 		if (endPtr == resultBuffer) {
-			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP max delta time configuration");
+			fprintf(stderr, "Invalid configuration for ASP max delta time configuration\n");
 			result = PARAMETER_NOTFOUND;
 			*ASPMaxDeltaTime = 0;
 		}
@@ -783,7 +782,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(double_t * ASPMaxDeltaTime
 		result = READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "ASP max delta time configuration not found!");
+		fprintf(stderr, "ASP max delta time configuration not found!\n");
 		result = PARAMETER_NOTFOUND;
 		*ASPMaxDeltaTime = 0;
 	}
@@ -803,14 +802,14 @@ ReadWriteAccess_t DataDictionarySetTimeServerIPU32(const char* timeServerIP) {
 
 	if (timeServerIP == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
 	result = inet_pton(AF_INET, timeServerIP, &inaddr);
 	if (result <= 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Specified IP %s is not valid", timeServerIP);
+		fprintf(stderr, "Specified IP %s is not valid\n", timeServerIP);
 		return WRITE_FAIL;
 	}
 	
@@ -836,7 +835,7 @@ ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(in_addr_t* timeServerIP) {
 
 	if (timeServerIP == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -848,11 +847,11 @@ ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(in_addr_t* timeServerIP) {
 		retval = READ_OK;
 	}
 	else if (result == 0) {
-		LogMessage(LOG_LEVEL_ERROR, "TimeServerIP string %s is not a valid IPv4 address", ipString);
+		fprintf(stderr, "TimeServerIP string %s is not a valid IPv4 address\n", ipString);
 		retval = PARAMETER_NOTFOUND;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+		fprintf(stderr, "Invalid address family\n");
 		retval = UNDEFINED;
 	}
 	return retval;
@@ -868,7 +867,7 @@ ReadWriteAccess_t DataDictionaryGetTimeServerIPString(char * timeServerIP, const
 
 	if (timeServerIP == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -877,7 +876,7 @@ ReadWriteAccess_t DataDictionaryGetTimeServerIPString(char * timeServerIP, const
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "TimeServerIP not found!");
+		fprintf(stderr, "TimeServerIP not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -893,7 +892,7 @@ ReadWriteAccess_t DataDictionarySetTimeServerPortU16(const char* timeServerPort)
 
 	if (timeServerPort == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -902,7 +901,7 @@ ReadWriteAccess_t DataDictionarySetTimeServerPortU16(const char* timeServerPort)
 		return WRITE_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "TimeServerPort not found!");
+		fprintf(stderr, "TimeServerPort not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -918,7 +917,7 @@ ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(uint16_t * timeServerPort) 
 
 	if (timeServerPort == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -927,13 +926,13 @@ ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(uint16_t * timeServerPort) 
 		*timeServerPort = strtoul(resultBuffer, &endptr, 10);
 		if (endptr == resultBuffer) {
 			*timeServerPort = 0;
-			LogMessage(LOG_LEVEL_ERROR, "TimeServerPort badly formatted");
+			fprintf(stderr, "TimeServerPort badly formatted\n");
 			return PARAMETER_NOTFOUND;
 		}
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "TimeServerPort not found!");
+		fprintf(stderr, "TimeServerPort not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -955,14 +954,14 @@ ReadWriteAccess_t DataDictionarySetSimulatorIPU32(const char* simulatorIP) {
 
 	if (simulatorIP == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
 	result = inet_pton(AF_INET, simulatorIP, &inaddr);
 	if (result <= 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Specified IP %s is not valid", simulatorIP);
+		fprintf(stderr, "Specified IP %s is not valid\n", simulatorIP);
 		return WRITE_FAIL;
 	}
 	
@@ -988,7 +987,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(in_addr_t* simulatorIP) {
 
 	if (simulatorIP == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1000,11 +999,11 @@ ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(in_addr_t* simulatorIP) {
 		retval = READ_OK;
 	}
 	else if (result == 0) {
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorIP string %s is not a valid IPv4 address", ipString);
+		fprintf(stderr, "SimulatorIP string %s is not a valid IPv4 address\n", ipString);
 		retval = PARAMETER_NOTFOUND;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+		fprintf(stderr, "Invalid address family\n");
 		retval = UNDEFINED;
 	}
 	return retval;
@@ -1018,7 +1017,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(in_addr_t* simulatorIP) {
 ReadWriteAccess_t DataDictionaryGetSimulatorIPString(char* simulatorIP, const size_t bufferLength) {
 	if (simulatorIP == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1027,7 +1026,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorIPString(char* simulatorIP, const si
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorIP not found!");
+		fprintf(stderr, "SimulatorIP not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -1044,7 +1043,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorIPString(char* simulatorIP, const si
 ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(const char* simulatorTCPPort) {
 	if (simulatorTCPPort == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1053,7 +1052,7 @@ ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(const char* simulatorTCPP
 		return WRITE_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorPort not found!");
+		fprintf(stderr, "SimulatorPort not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -1069,7 +1068,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(uint16_t* simulatorTCPPor
 
 	if (simulatorTCPPort == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1078,13 +1077,13 @@ ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(uint16_t* simulatorTCPPor
 		*simulatorTCPPort = strtoul(resultBuffer, &endptr, 10);
 		if (endptr == resultBuffer) {
 			*simulatorTCPPort = 0;
-			LogMessage(LOG_LEVEL_ERROR, "SimulatorPort badly formatted");
+			fprintf(stderr, "SimulatorPort badly formatted\n");
 			return PARAMETER_NOTFOUND;
 		}
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorPort not found!");
+		fprintf(stderr, "SimulatorPort not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -1100,7 +1099,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(uint16_t* simulatorTCPPor
 ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(const char* simulatorUDPPort) {
 	if (simulatorUDPPort == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1109,7 +1108,7 @@ ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(const char* simulatorUDPP
 		return WRITE_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorPort not found!");
+		fprintf(stderr, "SimulatorPort not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -1126,7 +1125,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(uint16_t* simulatorUDPPor
 
 	if (simulatorUDPPort == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1135,13 +1134,13 @@ ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(uint16_t* simulatorUDPPor
 		*simulatorUDPPort = strtoul(resultBuffer, &endptr, 10);
 		if (endptr == resultBuffer) {
 			*simulatorUDPPort = 0;
-			LogMessage(LOG_LEVEL_ERROR, "SimulatorPort badly formatted");
+			fprintf(stderr, "SimulatorPort badly formatted\n");
 			return PARAMETER_NOTFOUND;
 		}
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorPort not found!");
+		fprintf(stderr, "SimulatorPort not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -1159,7 +1158,7 @@ ReadWriteAccess_t DataDictionarySetSimulatorModeU8(const char* simulatorMode) {
 
 	if (simulatorMode == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 	
@@ -1184,7 +1183,7 @@ ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(uint8_t* simulatorMode) {
 
 	if (simulatorMode == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1193,13 +1192,13 @@ ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(uint8_t* simulatorMode) {
 		*simulatorMode = strtoul(readValue, &endptr, 10);
 		if (endptr == readValue) {
 			*simulatorMode = 0;
-			LogMessage(LOG_LEVEL_ERROR, "SimulatorMode badly formatted");
+			fprintf(stderr, "SimulatorMode badly formatted\n");
 			return PARAMETER_NOTFOUND;
 		}
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorMode not found!");
+		fprintf(stderr, "SimulatorMode not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -1219,7 +1218,7 @@ ReadWriteAccess_t DataDictionarySetVOILReceiversString(const char * VOILReceiver
 
 	if (VOILReceivers == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 	
@@ -1243,7 +1242,7 @@ ReadWriteAccess_t DataDictionaryGetVOILReceiversString(char * VOILReceivers, con
 
 	if (VOILReceivers == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1252,7 +1251,7 @@ ReadWriteAccess_t DataDictionaryGetVOILReceiversString(char * VOILReceivers, con
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_INFO, "VOIL receivers not found!");
+		fprintf(stderr, "VOIL receivers not found!\n");
 		Res = PARAMETER_NOTFOUND;
 		memset(VOILReceivers, 0, buflen);
 	}
@@ -1274,7 +1273,7 @@ ReadWriteAccess_t DataDictionarySetDTMReceiversString(const char * DTMReceivers)
 
 	if (DTMReceivers == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 	
@@ -1298,7 +1297,7 @@ ReadWriteAccess_t DataDictionaryGetDTMReceiversString(char* DTMReceivers, const 
 
 	if (DTMReceivers == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1307,7 +1306,7 @@ ReadWriteAccess_t DataDictionaryGetDTMReceiversString(char* DTMReceivers, const 
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_INFO, "DTM receivers receivers not found!");
+		fprintf(stderr, "DTM receivers not found!\n");
 		Res = PARAMETER_NOTFOUND;
 		memset(DTMReceivers, 0, buflen);
 	}
@@ -1330,7 +1329,7 @@ ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(const char* IP) {
 
 	if (IP == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1355,7 +1354,7 @@ ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(in_addr_t* externalSu
 
 	if (externalSupervisorIP == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1367,11 +1366,11 @@ ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(in_addr_t* externalSu
 		retval = READ_OK;
 	}
 	else if (result == 0) {
-		LogMessage(LOG_LEVEL_ERROR, "External supervisor string %s is not a valid IPv4 address", ipString);
+		fprintf(stderr, "External supervisor string %s is not a valid IPv4 address\n", ipString);
 		retval = PARAMETER_NOTFOUND;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+		fprintf(stderr, "Invalid address family\n");
 		retval = UNDEFINED;
 	}
 	return retval;
@@ -1389,7 +1388,7 @@ ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPString(char * externalSup
 
 	if (externalSupervisorIP == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1398,7 +1397,7 @@ ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPString(char * externalSup
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_INFO, "External supervisor IP not found!");
+		fprintf(stderr, "External supervisor IP not found!\n");
 		Res = PARAMETER_NOTFOUND;
 		memset(externalSupervisorIP, 0, buflen);
 	}
@@ -1421,7 +1420,7 @@ ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(const char * SupervisorT
 
 	if (SupervisorTCPPort == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 	
@@ -1447,7 +1446,7 @@ ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(uint16_t * SupervisorTCP
 
 	if (SupervisorTCPPort == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1456,13 +1455,13 @@ ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(uint16_t * SupervisorTCP
 		*SupervisorTCPPort = strtoul(resultBuffer, &endptr, 10);
 		if (endptr == resultBuffer) {
 			*SupervisorTCPPort = 0;
-			LogMessage(LOG_LEVEL_ERROR, "External SupervisorTCPPort badly formatted");
+			fprintf(stderr, "External SupervisorTCPPort badly formatted\n");
 			return PARAMETER_NOTFOUND;
 		}
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "External SupervisorTCPPort not found!");
+		fprintf(stderr, "External SupervisorTCPPort not found!\n");
 		return PARAMETER_NOTFOUND;
 	}
 }
@@ -1505,7 +1504,7 @@ ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(uint32_t * RVSSConfig) {
 
 	if (RVSSConfig == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1513,12 +1512,12 @@ ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(uint32_t * RVSSConfig) {
 		(CONFIGURATION_PARAMETER_RVSS_CONFIG, resultBuffer, sizeof (resultBuffer))) {
 		readSetting = strtoul(resultBuffer, &endPtr, 10);
 		if (endPtr == resultBuffer) {
-			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for RVSS configuration");
+			fprintf(stderr, "RVSS configuration badly formatted\n");
 			result = PARAMETER_NOTFOUND;
 			*RVSSConfig = DEFAULT_RVSS_CONF;
 		}
 		else if (readSetting > UINT32_MAX) {
-			LogMessage(LOG_LEVEL_WARNING, "Configuration for RVSS configuration outside accepted range");
+			fprintf(stderr, "RVSS configuration outside accepted range\n");
 			result = READ_OK;
 			*RVSSConfig = UINT32_MAX;
 		}
@@ -1529,7 +1528,7 @@ ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(uint32_t * RVSSConfig) {
 		result = READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "RVSS configuration not found!");
+		fprintf(stderr, "RVSS configuration not found!\n");
 		result = PARAMETER_NOTFOUND;
 		*RVSSConfig = DEFAULT_RVSS_CONF;
 	}
@@ -1575,7 +1574,7 @@ ReadWriteAccess_t DataDictionaryGetRVSSRateU8(uint8_t * RVSSRate) {
 
 	if (RVSSRate == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		fprintf(stderr, "Input pointer error\n");
 		return UNDEFINED;
 	}
 
@@ -1583,12 +1582,12 @@ ReadWriteAccess_t DataDictionaryGetRVSSRateU8(uint8_t * RVSSRate) {
 		(CONFIGURATION_PARAMETER_RVSS_RATE, resultBuffer, sizeof (resultBuffer))) {
 		readSetting = strtoul(resultBuffer, &endPtr, 10);
 		if (endPtr == resultBuffer) {
-			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for RVSS rate");
+			fprintf(stderr, "Invalid configuration for RVSS rate\n");
 			result = PARAMETER_NOTFOUND;
 			*RVSSRate = DEFAULT_RVSS_RATE;
 		}
 		else if (readSetting > UINT8_MAX) {
-			LogMessage(LOG_LEVEL_WARNING, "Configuration for RVSS rate outside accepted range");
+			fprintf(stderr, "Configuration for RVSS rate outside accepted range\n");
 			result = READ_OK;
 			*RVSSRate = UINT8_MAX;
 		}
@@ -1599,7 +1598,7 @@ ReadWriteAccess_t DataDictionaryGetRVSSRateU8(uint8_t * RVSSRate) {
 		result = READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "RVSS rate not found!");
+		fprintf(stderr, "RVSS rate not found!\n");
 		result = PARAMETER_NOTFOUND;
 		*RVSSRate = DEFAULT_MAX_PACKETS_LOST;
 	}
@@ -1620,7 +1619,7 @@ ReadWriteAccess_t DataDictionaryInitRVSSAsp() {
 
 	rvssAspDataMemory = createSharedMemory(RVSSASP_DATA_FILENAME, 0, sizeof (ASPType), &createdMemory);
 	if (rvssAspDataMemory == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared RVSSAsp data memory");
+		fprintf(stderr, "Failed to create shared RVSSAsp data memory\n");
 		return UNDEFINED;
 	}
 	return createdMemory ? WRITE_OK : READ_OK;
@@ -1663,7 +1662,7 @@ ReadWriteAccess_t DataDictionaryGetRVSSAsp(ASPType * ASPD) {
 ReadWriteAccess_t DataDictionaryFreeRVSSAsp() {
 	if (rvssAspDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized ASP memory");
+		fprintf(stderr, "Attempt to free uninitialized ASP memory\n");
 		return UNDEFINED;
 	}
 
@@ -1700,7 +1699,7 @@ ReadWriteAccess_t DataDictionaryGetMiscData(char * miscDataBuffer, const size_t 
 		return READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_INFO, "MiscData not found!");
+		fprintf(stderr, "MiscData not found!\n");
 		result = PARAMETER_NOTFOUND;
 		memset(miscDataBuffer, 0, buflen);
 	}
@@ -1717,7 +1716,7 @@ ReadWriteAccess_t DataDictionaryInitStateData() {
 	int createdMemory;
 	stateDataMemory = createSharedMemory(STATE_DATA_FILENAME, 0, sizeof (StateDataType), &createdMemory);
 	if (stateDataMemory == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared state data memory");
+		fprintf(stderr, "Failed to create shared state data memory\n");
 		return UNDEFINED;
 	}
 	return createdMemory ? WRITE_OK : READ_OK;
@@ -1732,13 +1731,13 @@ ReadWriteAccess_t DataDictionaryInitStateData() {
 ReadWriteAccess_t DataDictionarySetOBCState(const OBCState_t OBCState) {
 	if (stateDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 
 	stateDataMemory = claimSharedMemory(stateDataMemory);
 	if (stateDataMemory == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -1755,18 +1754,18 @@ ReadWriteAccess_t DataDictionarySetOBCState(const OBCState_t OBCState) {
 ReadWriteAccess_t DataDictionaryGetOBCState(OBCState_t * OBCState) {
 	if (stateDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (OBCState == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory inpput pointer error");
+		fprintf(stderr, "Shared memory inpput pointer error\n");
 		return UNDEFINED;
 	}
 
 	stateDataMemory = claimSharedMemory(stateDataMemory);
 	if (stateDataMemory == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -1782,7 +1781,7 @@ ReadWriteAccess_t DataDictionaryGetOBCState(OBCState_t * OBCState) {
 ReadWriteAccess_t DataDictionaryFreeStateData() {
 	if (stateDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized memory");
+		fprintf(stderr, "Attempt to free uninitialized memory\n");
 		return UNDEFINED;
 	}
 
@@ -1813,12 +1812,12 @@ ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSettin
 		(CONFIGURATION_PARAMETER_MAX_PACKETS_LOST, resultBuffer, sizeof (resultBuffer))) {
 		readSetting = strtoul(resultBuffer, &endPtr, 10);
 		if (endPtr == resultBuffer) {
-			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for MaxPacketsLost");
+			fprintf(stderr, "Invalid configuration for MaxPacketsLost\n");
 			result = PARAMETER_NOTFOUND;
 			*maxPacketsLostSetting = DEFAULT_MAX_PACKETS_LOST;
 		}
 		else if (readSetting > UINT8_MAX) {
-			LogMessage(LOG_LEVEL_WARNING, "Configuration for MaxPacketsLost outside accepted range");
+			fprintf(stderr, "Configuration for MaxPacketsLost outside accepted range\n");
 			result = READ_OK;
 			*maxPacketsLostSetting = UINT8_MAX;
 		}
@@ -1829,7 +1828,7 @@ ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSettin
 		result = READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "MaxPacketsLost not found!");
+		fprintf(stderr, "MaxPacketsLost not found!\n");
 		result = PARAMETER_NOTFOUND;
 		*maxPacketsLostSetting = DEFAULT_MAX_PACKETS_LOST;
 	}
@@ -1852,12 +1851,12 @@ ReadWriteAccess_t DataDictionaryGetTransmitterID(uint32_t * transmitterID) {
 		(CONFIGURATION_PARAMETER_TRANSMITTER_ID, resultBuffer, sizeof (resultBuffer))) {
 		readSetting = strtoul(resultBuffer, &endPtr, 10);
 		if (endPtr == resultBuffer) {
-			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for TransmitterID");
+			fprintf(stderr, "Invalid configuration for TransmitterID\n");
 			result = PARAMETER_NOTFOUND;
 			*transmitterID = DEFAULT_TRANSMITTER_ID;
 		}
 		else if (readSetting > UINT32_MAX) {
-			LogMessage(LOG_LEVEL_WARNING, "Configuration for TransmitterID outside accepted range");
+			fprintf(stderr, "Configuration for TransmitterID outside accepted range\n");
 			result = READ_OK;
 			*transmitterID = UINT32_MAX;
 		}
@@ -1868,7 +1867,7 @@ ReadWriteAccess_t DataDictionaryGetTransmitterID(uint32_t * transmitterID) {
 		result = READ_OK;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "TransmitterID not found!");
+		fprintf(stderr, "TransmitterID not found!\n");
 		result = PARAMETER_NOTFOUND;
 		*transmitterID = DEFAULT_TRANSMITTER_ID;
 	}
@@ -1892,7 +1891,7 @@ ReadWriteAccess_t DataDictionaryInitObjectData() {
 
 	objectDataMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (ObjectDataType), &createdMemory);
 	if (objectDataMemory == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared monitor data memory");
+		fprintf(stderr, "Failed to create shared monitor data memory\n");
 		return UNDEFINED;
 	}
 	return createdMemory ? WRITE_OK : READ_OK;
@@ -1912,29 +1911,29 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (monitorData == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 	if (receiveTime == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 	if (transmitterId == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -1951,7 +1950,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 
 	if (result == PARAMETER_NOTFOUND) {
 		// Search for unused memory space and place monitor data there
-		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u", transmitterId);
+		fprintf(stderr, "Received first monitor data from transmitter ID %u\n", transmitterId);
 		for (int i = 0; i < numberOfObjects; ++i) {
 			if (objectDataMemory[i].ClientID == 0) {
 				objectDataMemory[i].MonrData = *monitorData;
@@ -1965,13 +1964,12 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 			objectDataMemory = resizeSharedMemory(objectDataMemory, (unsigned int)(numberOfObjects + 1));
 			if (objectDataMemory != NULL) {
 				numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
-				LogMessage(LOG_LEVEL_INFO,
-						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
+				fprintf(stderr, "Created new shared memory to hold monitor data for %u objects\n", numberOfObjects);
 				objectDataMemory[numberOfObjects - 1].MonrData = *monitorData;
 				objectDataMemory[numberOfObjects - 1].lastPositionUpdate = *receiveTime;
 			}
 			else {
-				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
+				fprintf(stderr, "Error resizing shared memory\n");
 				result = UNDEFINED;
 			}
 		}
@@ -1992,7 +1990,7 @@ ReadWriteAccess_t DataDictionaryClearObjectData(const uint32_t transmitterID) {
 
 	if (transmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
@@ -2009,7 +2007,7 @@ ReadWriteAccess_t DataDictionaryClearObjectData(const uint32_t transmitterID) {
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	if (result == PARAMETER_NOTFOUND) {
-		LogMessage(LOG_LEVEL_WARNING, "Unable to find object data for transmitter ID %u", transmitterID);
+		fprintf(stderr, "Unable to find object data for transmitter ID %u\n", transmitterID);
 	}
 
 	return result;
@@ -2026,12 +2024,12 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t transmitterId, Obj
 
 	if (monitorData == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 	if (transmitterId == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
@@ -2049,7 +2047,7 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t transmitterId, Obj
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	if (result == PARAMETER_NOTFOUND) {
-		LogMessage(LOG_LEVEL_WARNING, "Unable to find monitor data for transmitter ID %u", transmitterId);
+		fprintf(stderr, "Unable to find monitor data for transmitter ID %u\n", transmitterId);
 	}
 
 	return result;
@@ -2067,19 +2065,19 @@ ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmi
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (transmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2113,19 +2111,19 @@ ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmi
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (transmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2153,7 +2151,7 @@ ReadWriteAccess_t DataDictionaryFreeObjectData() {
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized memory");
+		fprintf(stderr, "Attempt to free uninitialized memory\n");
 		return UNDEFINED;
 	}
 
@@ -2184,7 +2182,7 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObj
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
+		fprintf(stderr, "Error resizing shared memory\n");
 		return UNDEFINED;
 	}
 
@@ -2218,12 +2216,12 @@ ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDs(uint32_t transmitterIDs[
 
 	if (transmitterIDs == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Data dictionary input pointer error");
+		fprintf(stderr, "Data dictionary input pointer error\n");
 		return UNDEFINED;
 	}
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Data dictionary monitor data read error");
+		fprintf(stderr, "Data dictionary monitor data read error\n");
 		return UNDEFINED;
 	}
 
@@ -2231,13 +2229,12 @@ ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDs(uint32_t transmitterIDs[
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	retval = getNumberOfMemoryElements(objectDataMemory);
 	if (retval == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Error reading number of objects from shared memory");
+		fprintf(stderr, "Error reading number of objects from shared memory\n");
 		objectDataMemory = releaseSharedMemory(objectDataMemory);
 		return UNDEFINED;
 	}
 	else if ((uint32_t) retval > arraySize) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to list %d transmitter IDs in specified array of size %u", retval,
-				   arraySize);
+		fprintf(stderr, "Unable to list %d transmitter IDs in specified array of size %u\n", retval, arraySize);
 		objectDataMemory = releaseSharedMemory(objectDataMemory);
 		return UNDEFINED;
 	}
@@ -2262,24 +2259,24 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (objectData == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 	if (objectData->ClientID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2288,7 +2285,7 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 
 	if (result == PARAMETER_NOTFOUND) {
 		// Search for unused memory space and place monitor data there
-		LogMessage(LOG_LEVEL_INFO, "First object information data from ID %u added", objectData->ClientID);
+		fprintf(stderr, "First object information data from ID %u added\n", objectData->ClientID);
 		for (int i = 0; i < numberOfObjects; ++i) {
 			if (objectDataMemory[i].ClientID == objectData->ClientID) {
 				memcpy(&objectDataMemory[i], objectData, sizeof (ObjectDataType));
@@ -2301,13 +2298,12 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 			objectDataMemory = resizeSharedMemory(objectDataMemory, (unsigned int)(numberOfObjects + 1));
 			if (objectDataMemory != NULL) {
 				numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
-				LogMessage(LOG_LEVEL_INFO,
-						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
+				fprintf(stderr, "Modified shared memory to hold monitor data for %u objects\n", numberOfObjects);
 				memcpy(&objectDataMemory[numberOfObjects - 1], objectData, sizeof (ObjectDataType));
 				result = WRITE_OK;
 			}
 			else {
-				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
+				fprintf(stderr, "Error resizing shared memory\n");
 				result = UNDEFINED;
 			}
 		}
@@ -2333,19 +2329,19 @@ ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitter
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (transmitterId == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2377,19 +2373,19 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmi
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (transmitterId == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2423,19 +2419,19 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const in_addr_t Client
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (ClientIP == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2469,19 +2465,19 @@ ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDByIP(const in_addr_t Clien
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (ClientIP == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Unable to get transmitter ID for IP 0.0.0.0");
+		fprintf(stderr, "Unable to get transmitter ID for IP 0.0.0.0\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2516,19 +2512,19 @@ ReadWriteAccess_t DataDictionaryGetObjectIPByTransmitterID(const in_addr_t trans
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (transmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2561,19 +2557,19 @@ ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitte
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (newTransmitterID == 0 || oldTransmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2605,19 +2601,19 @@ ReadWriteAccess_t DataDictionaryModifyTransmitterIDByIP(const in_addr_t ipKey,
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (newTransmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2643,19 +2639,19 @@ ReadWriteAccess_t DataDictionarySetObjectProperties(const uint32_t transmitterID
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (transmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2682,19 +2678,19 @@ ReadWriteAccess_t DataDictionaryGetObjectProperties(const uint32_t transmitterID
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (transmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2725,19 +2721,19 @@ ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitter
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (transmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2764,18 +2760,18 @@ ReadWriteAccess_t DataDictionarySetRequestedControlAction(const uint32_t transmi
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (transmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2800,18 +2796,18 @@ ReadWriteAccess_t DataDictionaryGetRequestedControlAction(const uint32_t transmi
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (transmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2838,18 +2834,18 @@ ReadWriteAccess_t DataDictionaryResetRequestedControlAction(const uint32_t trans
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (transmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2878,24 +2874,24 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t * transmitterID, const 
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		fprintf(stderr, "Shared memory not initialized\n");
 		return UNDEFINED;
 	}
 	if (origin == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 	if (transmitterID != NULL && transmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
 	if (objectDataMemory == NULL) {
 		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		fprintf(stderr, "Shared memory pointer modified unexpectedly\n");
 		return UNDEFINED;
 	}
 
@@ -2932,12 +2928,12 @@ ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosit
 
 	if (origin == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		fprintf(stderr, "Shared memory input pointer error\n");
 		return UNDEFINED;
 	}
 	if (transmitterID == 0) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		fprintf(stderr, "Transmitter ID 0 is reserved\n");
 		return UNDEFINED;
 	}
 
@@ -2973,42 +2969,42 @@ ReadWriteAccess_t DataDictionaryInitOrigin() {
 									   resultBuffer, sizeof (resultBuffer)) > 0) {
 		origin.Longitude = strtod(resultBuffer, &endptr);
 		if (endptr == resultBuffer) {
-			LogMessage(LOG_LEVEL_ERROR, "OriginLongitude badly formatted");
+			fprintf(stderr, "OriginLongitude badly formatted\n");
 			retval = PARAMETER_NOTFOUND;
 		}
 		memset(resultBuffer, 0, sizeof (resultBuffer));
 	}
 	else {
 		retval = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "OriginLongitude not found!");
+		fprintf(stderr, "OriginLongitude not found!\n");
 	}
 
 	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
 									   resultBuffer, sizeof (resultBuffer)) > 0) {
 		origin.Latitude = strtod(resultBuffer, &endptr);
 		if (endptr == resultBuffer) {
-			LogMessage(LOG_LEVEL_ERROR, "OriginLongitude badly formatted");
+			fprintf(stderr, "OriginLongitude badly formatted\n");
 			retval = PARAMETER_NOTFOUND;
 		}
 		memset(resultBuffer, 0, sizeof (resultBuffer));
 	}
 	else {
 		retval = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "OriginLatitude not found!");
+		fprintf(stderr, "OriginLatitude not found!\n");
 	}
 
 	if (UtilReadConfigurationParameter
 		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, resultBuffer, sizeof (resultBuffer))) {
 		origin.Altitude = strtod(resultBuffer, &endptr);
 		if (endptr == resultBuffer) {
-			LogMessage(LOG_LEVEL_ERROR, "OriginAltitude badly formatted");
+			fprintf(stderr, "OriginAltitude badly formatted\n");
 			retval = PARAMETER_NOTFOUND;
 		}
 		memset(resultBuffer, 0, sizeof (resultBuffer));
 	}
 	else {
 		retval = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "OriginAltitude not found!");
+		fprintf(stderr, "OriginAltitude not found!\n");
 	}
 
 	if (retval != PARAMETER_NOTFOUND) {
