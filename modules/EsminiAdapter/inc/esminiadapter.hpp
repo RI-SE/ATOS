@@ -51,13 +51,17 @@ private:
 
 	static void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
 	static void reportObjectPosition(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
-	static void onEsminiStoryBoardStateChange(const char* name, int type, int state);
-	static void onEsminiConditionTriggered(const char* name, double timestamp);
-	static void onEsminiConditionTriggeredPre(const char* name, double timestamp);
+	static void executeActionIfStarted(const char* name, int type, int state);
 	static void InitializeEsmini();
 	static void getObjectStates(double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
 	static ATOS::Trajectory getTrajectory(uint32_t,std::vector<SE_ScenarioObjectState>& states);
 	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(double timeStep, double endTime, std::map<uint32_t,ATOS::Trajectory>& idToTraj);
+	static std::pair<uint32_t, std::string> parseAction(const std::string& action);
+	static bool isStartAction(const std::string& action);
+	static bool isSendDenmAction(const std::string& action);
+	static void collectStartAction(const char* name, int type, int state);
+	static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor::message_type monr, double *llh);
+
 	static void onRequestObjectTrajectory(
 		const std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Request> req,
 		std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Response> res);

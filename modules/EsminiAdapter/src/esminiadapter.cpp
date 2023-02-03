@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cmath>
 #include <chrono>
+#include <regex>
 
 #include "atos_interfaces/msg/cartesian_trajectory.hpp"
 #include "rclcpp/wait_for_message.hpp"
@@ -64,7 +65,6 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 	if (me == nullptr) {
 		me = std::shared_ptr<EsminiAdapter>(new EsminiAdapter());
-		me->InitializeEsmini();
 		// Start listening to connected object ids
 		me->connectedObjectIdsSub = ROSChannels::ConnectedObjectIds::Sub(*me,&EsminiAdapter::onConnectedObjectIdsMessage);
 		me->initSub = ROSChannels::Init::Sub(*me,&EsminiAdapter::onStaticInitMessage);
@@ -102,55 +102,148 @@ void EsminiAdapter::onStartMessage(const Start::message_type::SharedPtr) {
 
 void EsminiAdapter::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 
-void EsminiAdapter::onStaticInitMessage(const Init::message_type::SharedPtr) {
-	/*
+void EsminiAdapter::onStaticInitMessage(
+	const Init::message_type::SharedPtr)
+{
 	auto request = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
-	auto promise = me->testOriginClient->async_send_request(request);
-	promise.wait_for(100ms);
-	auto response = promise.get();
-	me->testOrigin = response->origin;
-	*/
-	// Hardcoded for now..
-	me->testOrigin.position.latitude = 57.777073115;
-	me->testOrigin.position.longitude = 12.781295498333;
-	me->testOrigin.position.altitude = 193.114;
-	me->testOrigin.orientation.x = 0;
-	me->testOrigin.orientation.y = 0;
-	me->testOrigin.orientation.z = 0;
-	me->testOrigin.orientation.w = 1;
-	//me->InitializeEsmini();
+	me->testOriginClient->async_send_request(request, [](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
+		auto response = future.get();
+		if (!response->success) {
+			RCLCPP_ERROR(me->get_logger(), "Failed to get test origin from test origin service");
+			return; // TODO communicate failure
+		}
+		me->testOrigin = response->origin;
+		me->InitializeEsmini();
+	});
 }
 
-void EsminiAdapter::onExitMessage(const Exit::message_type::SharedPtr){
+void EsminiAdapter::onExitMessage(
+	const Exit::message_type::SharedPtr)
+{
 	SE_Close();
 	RCLCPP_DEBUG(me->get_logger(),"Received exit command");
 	rclcpp::shutdown();
 }
 
-void EsminiAdapter::onStaticStartMessage(const Start::message_type::SharedPtr) {
+void EsminiAdapter::onStaticStartMessage(
+	const Start::message_type::SharedPtr)
+{
 	if (SE_Init(me->oscFilePath.c_str(),0,0,0,0) == -1){
 		RCLCPP_ERROR(me->get_logger(), "Failed to initialize Esmini ScenarioEngine, aborting");
 		exit(1);
 	}
 	// Handle triggers and story board element changes
-	SE_RegisterConditionCallback(&onEsminiConditionTriggered);
-	SE_RegisterStoryBoardElementStateChangeCallback(&onEsminiStoryBoardStateChange);
+	SE_RegisterStoryBoardElementStateChangeCallback(&executeActionIfStarted);
 
 	SE_Step(); // Make sure that the scenario is started
 	RCLCPP_INFO(me->get_logger(), "Esmini ScenarioEngine started");
 }
 
 /*!
- * \brief Callback to be executed by esmini when story board state changes.
+ * \brief Split action into ID and action name.
+ * \param actionName Action name in the form ActorObjectId,Action
+ * \return pair of actor object ID and action name
+*/
+std::pair<uint32_t, std::string> EsminiAdapter::parseAction(const std::string& actionName)
+{
+	std::vector<std::string> res;
+	split(actionName, ',', res);
+	if (res.size() < 2){
+		throw std::runtime_error("Action name " + actionName + "  is not of the form ActorObjectId,Action");
+	}
+	return {std::stoul(res[0]), res[1]};
+}
+
+/*!
+ * \brief Check if action is a start action.
+ * \param action Action name
+ * \return true if action is a start action, false otherwise
+*/
+bool EsminiAdapter::isStartAction(const std::string& action)
+{
+	return std::regex_search(action, std::regex("^(begin|start)", std::regex_constants::icase));
+}
+
+/*!
+ * \brief Check if action is a DENM action.
+ * \param action Action name
+ * \return true if action is a DENM action, false otherwise
+*/
+bool EsminiAdapter::isSendDenmAction(const std::string& action)
+{
+	return std::regex_search(action, std::regex("denm", std::regex_constants::icase));
+}
+
+/*!
+ * \brief Add delayed start to object state if start action occurred.
  * \param name Name of the StoryBoardElement whose state has changed.
  * \param type Possible values: STORY = 1, ACT = 2, MANEUVER_GROUP = 3, MANEUVER = 4, EVENT = 5, ACTION = 6, UNDEFINED_ELEMENT_TYPE = 0.
  * \param state new state, possible values: STANDBY = 1, RUNNING = 2, COMPLETE = 3, UNDEFINED_ELEMENT_STATE = 0.
  */
-void EsminiAdapter::onEsminiStoryBoardStateChange(const char* name, int type, int state){
-	RCLCPP_DEBUG(me->get_logger(), "Esmini Storyboard State Change Name: %s, Type: %d, State: %d", name, type, state);
+void EsminiAdapter::collectStartAction(
+	const char* name,
+	int type,
+	int state)
+{
+	if (type != 6 || state != 2) { return; } // Only handle actions that are started
+	try {
+		auto [objectId, action] = parseAction(name);
+		if (isStartAction(action)) {
+			delayedStartIds.push_back(objectId);
+		}
+	}
+	catch (std::exception& e) {
+		RCLCPP_WARN(me->get_logger(), e.what());
+		return;
+	}
 }
 
-static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor::message_type monr, double *llh){
+/*!
+ * \brief Callback to be executed by esmini when story board state changes.
+ * 		If story board element is an action, and the action is supported, the action is run.
+ * \param name Name of the StoryBoardElement whose state has changed.
+ * \param type Possible values: STORY = 1, ACT = 2, MANEUVER_GROUP = 3, MANEUVER = 4, EVENT = 5, ACTION = 6, UNDEFINED_ELEMENT_TYPE = 0.
+ * \param state new state, possible values: STANDBY = 1, RUNNING = 2, COMPLETE = 3, UNDEFINED_ELEMENT_STATE = 0.
+ */
+void EsminiAdapter::executeActionIfStarted(
+	const char* name,
+	int type,
+	int state)
+{
+	RCLCPP_DEBUG(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d", name, type, state);
+	if (type != 6 || state != 2) { return; } // Only handle actions that are started
+	try {
+		auto [objectId, action] = parseAction(name);
+		if (isStartAction(action)) {
+			RCLCPP_INFO(me->get_logger(), "Running start action for object %d", objectId);
+			ROSChannels::StartObject::message_type startObjectMsg;
+			startObjectMsg.id = objectId;
+			startObjectMsg.stamp = me->get_clock()->now(); // TODO + std::chrono::milliseconds(100);
+			me->startObjectPub.publish(startObjectMsg);
+		}
+		else if (isSendDenmAction(action)) {
+			// Get the latest Monitor message
+			ROSChannels::Monitor::message_type monr;
+			rclcpp::wait_for_message(monr, me, std::string("/") + me->get_namespace() + "/object_" + std::to_string(objectId) + "/object_monitor", 10ms);
+			TestOriginSrv::Response::SharedPtr response;
+			//me->callService(5ms ,me->testOriginClient, response);
+			double llh[3] = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
+			double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
+			llhOffsetMeters(llh,offset);
+			me->v2xPub.publish(denmFromMonitor(monr,llh));
+		}
+		else {
+			RCLCPP_WARN(me->get_logger(), "Action %s is not supported", action.c_str());
+		}
+	}
+	catch (std::exception& e) {
+		RCLCPP_WARN(me->get_logger(), e.what());
+		return;
+	}
+
+}
+
+ROSChannels::V2X::message_type EsminiAdapter::denmFromMonitor(const ROSChannels::Monitor::message_type monr, double *llh) {
 	ROSChannels::V2X::message_type denm;
 	denm.message_type = "DENM";
 	denm.event_id = "ATOSEvent1";
@@ -162,85 +255,6 @@ static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor
 		std::chrono::system_clock::now().time_since_epoch()
 	).count();
 	return denm;
-}
-
-/*!
- * \brief Callback to be executed by esmini when a condition is triggered.
- * \param name Name of the condition that was triggered.
- * \param timestamp Timestamp when the condition triggered.
- */
-void EsminiAdapter::onEsminiConditionTriggeredPre(const char* name, double timestamp){
-	// Todo this is copypasted from the other callback, should be refactored
-	std::vector<std::string> res;
-	split(name, ',', res);
-	if (res.size() != 2){
-		RCLCPP_WARN(me->get_logger(), "Esmini Condition Trigger Name %s is not of the form ActorObjectId,Action", name);
-		return;
-	}
-	uint32_t objectId = std::stoul(res[0].c_str());
-	int esminiId = SE_GetIdByName(res[0].c_str());
-	RCLCPP_INFO(me->get_logger(), "Esmini Object ID %d Maestro Object ID: %lu", esminiId,objectId);
-	std::string action = res[1];
-	// Find out if the action is a delayed start action
-	if(action != std::string("start")) {
-		RCLCPP_WARN(me->get_logger(), "Esmini Condition Action Name %s is not a supported action", action.c_str());
-		return;
-	}
-	else{
-		RCLCPP_INFO(me->get_logger(), "Esmini Condition Action Name %s is a supported action", action.c_str());
-	}
-	// --------------------
-	delayedStartIds.push_back(objectId);
-}
-
-/*!
- * \brief Callback to be executed by esmini when a condition is triggered.
- * \param name Name of the condition that was triggered.
- * \param timestamp Timestamp when the condition triggered.
- */
-void EsminiAdapter::onEsminiConditionTriggered(const char* name, double timestamp){
-	// TODO: investigate possibility of expanding esmini API to include more info, such as: Actor Object ID,
-	// 
-	RCLCPP_INFO(me->get_logger(), "WE HAVE TRIGG!!!! Esmini Condition Trigger Name %s at simulation timestamp %lf", name, timestamp);
-	std::vector<std::string> res;
-	split(name, ',', res);
-	if (res.size() != 2){
-		RCLCPP_WARN(me->get_logger(), "Esmini Condition Trigger Name %s is not of the form ActorObjectId,Action", name);
-		return;
-	}
-	uint32_t objectId = std::stoul(res[0].c_str());
-	int esminiId = SE_GetIdByName(res[0].c_str());
-	RCLCPP_INFO(me->get_logger(), "Esmini Object ID %d Maestro Object ID: %lu", esminiId,objectId);
-	std::string action = res[1];
-	if(std::find(me->supportedActions.begin(), me->supportedActions.end(), action) == me->supportedActions.end()) {
-		RCLCPP_WARN(me->get_logger(), "Esmini Condition Action Name %s is not a supported action", action);
-		return;
-	}
-	if (action == "start"){
-		// First send a configuration message (accm) to ObjectControl, then trigger it (exac)
-		// TODO: Might be better to simply *only* send a trigger to ObjectControl, but the way 
-		// the messages accm, exac etc are set up currently, this was the quickest method.
-	
-		// Send a executeAction-message to ObjectControl, refering to the prev message
-		ROSChannels::StartObject::message_type onstData;
-		onstData.id = objectId;
-		onstData.stamp = me->get_clock()->now(); // TODO + std::chrono::milliseconds(100);
-		me->startObjectPub.publish(onstData); // publish the execute action message
-
-	}
-	else if (action == "send_denm"){
-		// Get the latest Monitor message
-		ROSChannels::Monitor::message_type monr;
-		rclcpp::wait_for_message(monr, me, "/atos/object_" + std::to_string(objectId) + "/object_monitor", 10ms);
-		TestOriginSrv::Response::SharedPtr response;
-		//me->callService(5ms ,me->testOriginClient, response);
-		double llh[3] = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
-		double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
-		llhOffsetMeters(llh,offset);
-		me->v2xPub.publish(denmFromMonitor(monr,llh));
-	}
-	
-
 }
 
 /*!
@@ -380,23 +394,26 @@ std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(double ti
  * \brief Initialize the esmini simulator and perform subsequent setup tasks.
  * Can be called many times, each time the test is initialized. 
  */
-void EsminiAdapter::InitializeEsmini(){
+void EsminiAdapter::InitializeEsmini()
+{
 	me->delayedStartIds.clear();
 	me->idToTraj.clear();
 	me->ATOStoEsminiObjectId.clear();
 	me->idToIp.clear();
 
+	RCLCPP_INFO(me->get_logger(), "Initializing esmini with scenario file %s", me->oscFilePath.c_str());
 	SE_Init(me->oscFilePath.c_str(),1,0,0,0); // Disable controllers, let DefaultController be used
 	
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
 		//SE_SetAlignModeZ(SE_GetId(j), 0); // Disable Z-alignment not implemented in esmini yet
 	}
 	// Register callbacks to figure out what actions need to be taken
-	SE_RegisterConditionCallback(&onEsminiConditionTriggeredPre);
+	SE_RegisterStoryBoardElementStateChangeCallback(&collectStartAction);
 
 	me->extractTrajectories(0.1, 50.0, me->idToTraj);
 
 	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", me->idToTraj.size());
+	RCLCPP_INFO(me->get_logger(), "Number of objects with triggered start: %d", me->delayedStartIds.size());
 
 	// Find object IPs as defined in VehicleCatalog file
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
@@ -407,7 +424,6 @@ void EsminiAdapter::InitializeEsmini(){
 		}
 	}
 
-	RCLCPP_DEBUG(me->get_logger(), "Number of objects with delayed start: %d", me->delayedStartIds.size());
 	for (auto& it : me->idToTraj){
 		auto id = it.first;
 		auto traj = it.second;
