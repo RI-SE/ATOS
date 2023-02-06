@@ -43,8 +43,7 @@ std::string ObjectConfig::toString() const {
 }
 
 void ObjectConfig::parseConfigurationFile(
-		const fs::path &objectFile,
-		bool getTrajFromRos) {
+		const fs::path &objectFile) {
 
 	char setting[100];
 	int result;

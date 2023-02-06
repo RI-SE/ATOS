@@ -51,7 +51,7 @@ CMakeFiles*/
 *.autosave
 
 # CMake
-CMakeCache.txtscripts/*.xosc
+CMakeCache.txt
 
 # Generated files
 scripts/*.xosc
