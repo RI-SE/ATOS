@@ -23,7 +23,6 @@ atos:
     ros__parameters:
       max_missing_heartbeats: 100
       transmitter_id: 15
-      load_ros_cartesian_trajectory: true
   system_control:
     ros__parameters:
       gui_update_rate: 20

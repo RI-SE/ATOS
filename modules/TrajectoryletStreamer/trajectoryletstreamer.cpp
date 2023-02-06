@@ -50,7 +50,7 @@ void TrajectoryletStreamer::loadObjectFiles() {
 	for (const auto& entry : fs::directory_iterator(objectDir)) {
 		if (fs::is_regular_file(entry.status())) {
 			ObjectConfig conf;
-            conf.parseConfigurationFile(entry.path(),false);
+            conf.parseConfigurationFile(entry.path());
             objectConfigurations.push_back(std::make_unique<ObjectConfig>(conf));
 		}
 	}

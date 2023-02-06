@@ -24,7 +24,7 @@ public:
 	ObjectConfig();
 	//ObjectConfig(const ObjectConfig&&);
 
-	void parseConfigurationFile(const fs::path& file, bool getTrajFromRos);
+	void parseConfigurationFile(const fs::path& file);
 
 	bool isAnchor() const { return isAnchorObject; }
 	bool isOSI() const { return isOSICompatible; }

@@ -42,7 +42,6 @@ ObjectControl::ObjectControl()
 	objectsConnectedPub(*this),
 	connectedObjectIdsPub(*this)
 {
-	declare_parameter("load_ros_cartesian_trajectory",false);
 	int queueSize=0;
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
     idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
@@ -345,7 +344,7 @@ void ObjectControl::loadObjectFiles() {
 			const auto inputFile = entry.path();
 			ObjectConfig conf;
 			try {
-				conf.parseConfigurationFile(inputFile,false);
+				conf.parseConfigurationFile(inputFile);
 				uint32_t id = conf.getTransmitterID();
 				RCLCPP_INFO(get_logger(), "Loaded configuration: %s", conf.toString().c_str());
 				// Check preexisting
