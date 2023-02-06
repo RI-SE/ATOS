@@ -21,4 +21,4 @@ atos:
       address: "10.130.23.54"
       port: 55555
       protocol: "udp"
-      frequency: 10
+      frequency: 100

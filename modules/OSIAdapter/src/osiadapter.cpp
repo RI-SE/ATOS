@@ -21,7 +21,9 @@ OSIAdapter::OSIAdapter() :
   {
     getParameters();
     initializeServer();
-    timer = this->create_wall_timer(SEND_INTERVAL, std::bind(&OSIAdapter::sendOSIData, this));
+    
+    std::chrono::duration sendInterval = std::chrono::milliseconds(1000 / frequency);
+    timer = this->create_wall_timer(std::chrono::milliseconds(sendInterval), std::bind(&OSIAdapter::sendOSIData, this));
   };
 
 
@@ -34,6 +36,10 @@ OSIAdapter::~OSIAdapter() {
   }
 
 
+/**
+ * @brief Get parameters from parameter file.
+ * 
+ */
 void OSIAdapter::getParameters() {
   declare_parameter("address");
   declare_parameter("port");
@@ -44,6 +50,7 @@ void OSIAdapter::getParameters() {
   get_parameter("port", port);
   get_parameter("protocol", protocol);
   get_parameter("frequency", frequency);
+
 }
 
 

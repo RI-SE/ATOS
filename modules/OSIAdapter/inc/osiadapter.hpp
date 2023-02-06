@@ -23,8 +23,8 @@ class OSIAdapter : public Module
     uint16_t port;
     std::string protocol;
     uint16_t frequency;
+
     constexpr static uint8_t QUALITY_OF_SERVICE = 10;
-    constexpr static std::chrono::duration SEND_INTERVAL = std::chrono::milliseconds(10);
     static inline std::string const moduleName = "osi_adapter";
 
     void getParameters();
