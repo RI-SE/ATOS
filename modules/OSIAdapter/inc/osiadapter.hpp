@@ -12,16 +12,16 @@
 class OSIAdapter : public Module
 {
   public:
-    void initializeServer(const std::string& address = DEFAULT_ADDRESS,
-                  const uint16_t port = DEFAULT_PORT);
+    void initializeServer();
     OSIAdapter();
     ~OSIAdapter();
 
 
   private:
     using TimeUnit = std::chrono::milliseconds;
-    static inline std::string const DEFAULT_ADDRESS = "0.0.0.0";
-    constexpr static uint16_t DEFAULT_PORT = 55555;
+    std::string address;
+    uint16_t port;
+    std::string protocol;
     constexpr static uint8_t QUALITY_OF_SERVICE = 10;
     constexpr static std::chrono::duration SEND_INTERVAL = std::chrono::milliseconds(50);
 

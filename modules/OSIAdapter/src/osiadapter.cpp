@@ -19,6 +19,13 @@ OSIAdapter::OSIAdapter() :
   Module(OSIAdapter::moduleName),
   connectedObjectIdsSub(*this,std::bind(&OSIAdapter::onConnectedObjectIdsMessage, this, _1))
   {
+    // get_parameter("address", address);
+    // get_parameter("port", port);
+    // get_parameter("protocol", protocol);
+
+    address = "0.0.0.0";
+    port = 55555;
+
     initializeServer();
     timer = this->create_wall_timer(SEND_INTERVAL, std::bind(&OSIAdapter::sendOSIData, this));
   };
@@ -40,7 +47,7 @@ OSIAdapter::~OSIAdapter() {
  * @param port Port. Default: 55555
  */
 void
-OSIAdapter::initializeServer(const std::string& address, const uint16_t port) {
+OSIAdapter::initializeServer() {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
   server = ServerFactory(address, port, get_logger()).createServer("udp");
   server->setupServer();
