@@ -2,8 +2,6 @@
 
 #include "server.hpp"
 
-using namespace boost::asio;
-using namespace rclcpp;
 
 
 class UDPServer : public Server {
@@ -19,6 +17,6 @@ class UDPServer : public Server {
     void resetServer();
     void sendData(std::vector<char> data, boost::system::error_code errorCode);
 
-    std::shared_ptr<ip::udp::endpoint> endpoint;
-    std::shared_ptr<ip::udp::socket> socket;
+    std::shared_ptr<boost::asio::ip::udp::endpoint> endpoint;
+    std::shared_ptr<boost::asio::ip::udp::socket> socket;
 };
