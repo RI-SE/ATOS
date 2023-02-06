@@ -18,6 +18,9 @@
 #include "atos_interfaces/msg/manoeuvre_command.hpp"
 #include "atos_interfaces/msg/control_signal_percentage.hpp"
 #include "atos_interfaces/msg/object_id_array.hpp"
+#include "atos_interfaces/msg/cartesian_trajectory.hpp"
+#include "atos_interfaces/msg/cartesian_trajectory_point.hpp"
+#include "atos_interfaces/msg/cartesian_tolerance.hpp"
 #include "atos_interfaces/msg/v2x.hpp"
 
 namespace ROSChannels {
@@ -515,9 +518,30 @@ namespace TriggerEventOccurred {
     };
 }
 
-namespace Trajectory {
-    const std::string topicName = "trajectory";
+namespace Path {
+    const std::string topicName = "path";
     using message_type = nav_msgs::msg::Path;
+
+    class Pub : public BasePub<message_type> {
+    public:
+        const uint32_t objectId;
+        Pub(rclcpp::Node& node, const uint32_t id) :
+            objectId(id),
+            BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName) {}
+    };
+
+    class Sub : public BaseSub<message_type> {
+    public:
+        const uint32_t objectId;
+        Sub(rclcpp::Node& node, const uint32_t id, std::function<void(const message_type::SharedPtr)> callback) : 
+            objectId(id),
+            BaseSub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, callback) {}
+    };
+}
+
+namespace CartesianTrajectory {
+    const std::string topicName = "cartesian_trajectory";
+    using message_type = atos_interfaces::msg::CartesianTrajectory;
 
     class Pub : public BasePub<message_type> {
     public:

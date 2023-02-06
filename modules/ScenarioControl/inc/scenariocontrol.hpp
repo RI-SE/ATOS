@@ -7,7 +7,7 @@
 #include "datadictionary.h"
 #include "scenario.h"
 #include "util.h"
-#include "journal.h"
+#include "journal.hpp"
 
 namespace ATOS {
 

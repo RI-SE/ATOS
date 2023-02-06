@@ -1,13 +1,12 @@
 #include <arpa/inet.h>
 #include "trigger.h"
 
-#include "logging.h"
-
 using atos_interfaces::msg::TriggerConfiguration;
 
 namespace ATOS {
 
-	Trigger::Trigger(TriggerID_t triggerID, TriggerTypeCode_t triggerType)
+	Trigger::Trigger(rclcpp::Logger log, TriggerID_t triggerID, TriggerTypeCode_t triggerType)
+	: Loggable(log)
 	{
 		this->triggerID = triggerID;
 		this->triggerTypeCode = triggerType;
@@ -376,7 +375,7 @@ namespace ATOS {
 		message.trigger_id = triggerID;
 		message.trigger_type = triggerTypeCode;
 
-		if (triggerObjectIP == 0) LogMessage(LOG_LEVEL_WARNING, "Constructing trigger configuration message with no IP");
+		if (triggerObjectIP == 0) RCLCPP_WARN(get_logger(), "Constructing trigger configuration message with no IP");
 
 		message.ip = triggerObjectIP;
 

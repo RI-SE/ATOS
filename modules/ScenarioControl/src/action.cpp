@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include "action.h"
 
-#include "logging.h"
 #include "maestroTime.h"
 
 using atos_interfaces::msg::ExecuteAction;
@@ -17,7 +16,12 @@ namespace ATOS {
 	* \param actionType ISO action type of the action
 	* \param allowedNumberOfRuns Number of times the action is allowed to be run
 	*/
-	Action::Action(ActionID_t actionID, ActionTypeCode_t actionType, uint32_t allowedNumberOfRuns)
+	Action::Action(
+		rclcpp::Logger log,
+		ActionID_t actionID,
+		ActionTypeCode_t actionType,
+		uint32_t allowedNumberOfRuns)
+		: Loggable(log)
 	{
 		this->actionID = actionID;
 		this->actionTypeCode = actionType;
@@ -49,7 +53,7 @@ namespace ATOS {
 			return NO_REMAINING_RUNS;
 		else {
 			// TODO: Maybe add some more functionality when it is more well specified
-			LogMessage(LOG_LEVEL_DEBUG, "Executing action with ID %u", actionID);
+			RCLCPP_DEBUG(get_logger(), "Executing action with ID %u", actionID);
 			remainingAllowedRuns--;
 			return OK;
 		}
@@ -294,7 +298,7 @@ namespace ATOS {
 		message.action_id = actionID;
 		message.action_type = actionTypeCode;
 
-		if (actionObjectIP == 0) LogMessage(LOG_LEVEL_WARNING, "Constructing action configuration message with no IP");
+		if (actionObjectIP == 0) RCLCPP_WARN(get_logger(), "Constructing action configuration message with no IP");
 
 		message.ip = actionObjectIP;
 

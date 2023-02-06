@@ -3,12 +3,13 @@
 #include "datadictionary.h"
 #include "maestroTime.h"
 #include "iso22133.h"
-#include "journal.h"
+#include "journal.hpp"
 #include "atos_interfaces/msg/monitor.hpp"
 #include <eigen3/Eigen/Dense>
 #include <csignal>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <iostream>
 
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
 static atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& data); // TODO move to somewhere central
@@ -187,7 +188,7 @@ ObjectMonitorType transformCoordinate(
 			&& point.acceleration.isLateralValid && point.acceleration.isLongitudinalValid;
 	if (print) {
 		dbg << "res:  " << pointInAnchorFrame << ", " << retval.position.heading_rad*180.0/M_PI << "deg";
-		LogPrint(dbg.str().c_str());
+		std::cerr << dbg.str();
 	}
 	return retval;
 }

@@ -2,7 +2,6 @@
 #include <deque>
 #include <algorithm>
 #include "maestroTime.h"
-#include "logging.h"
 #include "braketrigger.h"
 
 namespace ATOS {
@@ -12,7 +11,7 @@ namespace ATOS {
 
 	double findMedian(double arr[], unsigned int n);
 
-	BrakeTrigger::BrakeTrigger(Trigger::TriggerID_t triggerID) : BooleanTrigger(triggerID, Trigger::TriggerTypeCode_t::TRIGGER_BRAKE)
+	BrakeTrigger::BrakeTrigger(rclcpp::Logger log, Trigger::TriggerID_t triggerID) : BooleanTrigger(log, triggerID, Trigger::TriggerTypeCode_t::TRIGGER_BRAKE)
 	{
 		setBrakeRetardationThreshold(DEFAULT_RETARDATION_THRESHOLD_G * ACCELERATION_OF_GRAVITY_M_S2);
 	}

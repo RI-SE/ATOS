@@ -11,7 +11,7 @@
 
 #include "state.hpp"
 #include "util.h"
-#include "journal.h"
+#include "journal.hpp"
 #include "datadictionary.h"
 
 #include "objectcontrol.hpp"
@@ -60,7 +60,7 @@ int ObjectControl::initialize() {
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",get_name(), getpid());
 
 	// Create test journal
-	if (JournalInit(get_name()) == -1) {
+	if (JournalInit(get_name(), get_logger()) == -1) {
 		retval = -1;
 		RCLCPP_ERROR(get_logger(), "Unable to create test journal");
 	}
@@ -231,8 +231,8 @@ void ObjectControl::onControlSignalMessage(const ControlSignal::message_type::Sh
 	}
 }
 
-void ObjectControl::onTrajectoryMessage(const Trajectory::message_type::SharedPtr trajlet,uint32_t id){
-	objects.at(id)->setLastReceivedTrajectory(trajlet);
+void ObjectControl::onPathMessage(const Path::message_type::SharedPtr trajlet,uint32_t id){
+	objects.at(id)->setLastReceivedPath(trajlet);
 }
 
 void ObjectControl::loadScenario() {
@@ -257,7 +257,7 @@ void ObjectControl::loadObjectFiles() {
 	for (const auto& entry : fs::directory_iterator(objectDir)) {
 		if (fs::is_regular_file(entry.status())) {
 			const auto inputFile = entry.path();
-			ObjectConfig conf;
+			ObjectConfig conf(get_logger());
 			try {
 				conf.parseConfigurationFile(inputFile);
 				uint32_t id = conf.getTransmitterID();
@@ -266,7 +266,7 @@ void ObjectControl::loadObjectFiles() {
 				auto foundObject = objects.find(id);
 				if (foundObject == objects.end()) {
 					// Create sub and pub as unique ptrs, when TestObject is destroyed, these get destroyed too.
-					auto trajletSub = std::make_shared<Trajectory::Sub>(*this,id,std::bind(&ObjectControl::onTrajectoryMessage,this,_1,id));
+					auto trajletSub = std::make_shared<Path::Sub>(*this,id,std::bind(&ObjectControl::onPathMessage,this,_1,id));
 					auto monrPub = std::make_shared<Monitor::Pub>(*this,id);
 					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(get_logger(),trajletSub,monrPub);
 					object->parseConfigurationFile(inputFile);

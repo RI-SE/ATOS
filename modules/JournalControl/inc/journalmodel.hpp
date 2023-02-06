@@ -1,5 +1,5 @@
-#ifndef JOURNAL_HPP
-#define JOURNAL_HPP
+#ifndef JOURNALMODEL_HPP
+#define JOURNALMODEL_HPP
 
 #if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
 #include <filesystem>
@@ -12,7 +12,7 @@ namespace fs = std::experimental::filesystem;
 #include <set>
 #include "loggable.hpp"
 
-class Journal : public Loggable {
+class JournalModel : public Loggable {
 public:
 	class Bookmark : public Loggable {
 	private:
@@ -30,26 +30,26 @@ public:
 		}
 	};
 
-	Journal(rclcpp::Logger log) : Loggable(log), startReference(log), stopReference(log) {}
+	JournalModel(rclcpp::Logger log) : Loggable(log), startReference(log), stopReference(log) {}
 	std::string moduleName;
 	mutable Bookmark startReference;
 	mutable Bookmark stopReference;
 	mutable std::set<fs::path> containedFiles;
 
-	bool operator==(const Journal &other) const {
+	bool operator==(const JournalModel &other) const {
 		return this->moduleName == other.moduleName;
 	}
 
 	std::string toString() const;
 };
 
-//! Template specialization of std::hash for Journal
+//! Template specialization of std::hash for JournalModel
 namespace std {
-	template <> struct hash<Journal> {
-		size_t operator() (const Journal &journal) const {
+	template <> struct hash<JournalModel> {
+		size_t operator() (const JournalModel &journal) const {
 			return std::hash<std::string>{}(journal.moduleName);
 		}
 	};
 }
 
-#endif // JOURNAL_HPP
+#endif // JOURNALMODEL_HPP

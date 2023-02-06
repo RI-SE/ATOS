@@ -49,7 +49,7 @@ int ScenarioControl::initialize()
 		retval = -1;
 		RCLCPP_ERROR(get_logger(), "Unable to initialize data dictionary");
 	}
-	JournalInit(get_name());	
+	JournalInit(get_name(), get_logger());	
 	//! Start thread
 	manageTriggersThread=std::make_unique<std::thread>(&ScenarioControl::manageTriggers, this);
 	//! Load configuration
@@ -151,13 +151,13 @@ void ScenarioControl::onArmMessage(const Arm::message_type::SharedPtr){
 }
 
 void ScenarioControl::onExitMessage(const Exit::message_type::SharedPtr){
-	LogMessage(LOG_LEVEL_INFO, "Received exit command");
+	RCLCPP_INFO(get_logger(), "Received exit command");
 	quit=true;
 	rclcpp::shutdown();
 }
 
 void ScenarioControl::onDisconnectMessage(const Disconnect::message_type::SharedPtr){
-	LogMessage(LOG_LEVEL_INFO,"Received disconnect command");
+	RCLCPP_INFO(get_logger(),"Received disconnect command");
 	state = UNINITIALIZED;
 }
 
@@ -208,7 +208,7 @@ int ScenarioControl::updateTriggers() {
 
 	// Get number of objects present in shared memory
 	if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
-		LogMessage(LOG_LEVEL_ERROR,
+		RCLCPP_ERROR(get_logger(),
 				"Data dictionary number of objects read error - Cannot update triggers");
 		return -1;
 	}
@@ -219,7 +219,7 @@ int ScenarioControl::updateTriggers() {
 	transmitterIDs.resize(numberOfObjects, 0);
 	// Get transmitter IDs for all connected objects
 	if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size()) != READ_OK) {
-		LogMessage(LOG_LEVEL_ERROR,
+		RCLCPP_ERROR(get_logger(),
 				"Data dictionary transmitter ID read error - Cannot update triggers");
 		return -1;
 	}
@@ -227,7 +227,7 @@ int ScenarioControl::updateTriggers() {
 
 	for (const uint32_t &transmitterID : transmitterIDs) {
 		if (DataDictionaryGetMonitorData(transmitterID, &monitorData.MonrData) && DataDictionaryGetObjectIPByTransmitterID(transmitterID, &monitorData.ClientIP) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR,
+			RCLCPP_ERROR(get_logger(),
 					"Data dictionary monitor data read error for transmitter ID %u",
 					transmitterID);
 			return -1;

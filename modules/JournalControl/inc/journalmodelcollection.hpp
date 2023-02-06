@@ -1,11 +1,11 @@
-#ifndef JOURNALCOLLECTION_HPP
-#define JOURNALCOLLECTION_HPP
+#ifndef JOURNALMODELCOLLECTION_HPP
+#define JOURNALMODELCOLLECTION_HPP
 
 #include <unordered_set>
 #include <chrono>
 #include <string>
 #include <vector>
-#include "journal.hpp"
+#include "journalmodel.hpp"
 #include "loggable.hpp"
 
 // Add a C++20 type
@@ -13,9 +13,9 @@ namespace std::chrono {
 	typedef duration<int64_t, ratio<60*60*24>> days;
 }
 
-class JournalCollection : public std::unordered_set<Journal>, public Loggable {
+class JournalModelCollection : public std::unordered_set<JournalModel>, public Loggable {
 public:
-	JournalCollection(rclcpp::Logger log) : Loggable(log) {}
+	JournalModelCollection(rclcpp::Logger log) : Loggable(log) {}
 	void placeStartBookmarks();
 	void placeStopBookmarks();
 	void insertNonBookmarked();
@@ -45,4 +45,4 @@ private:
     static int printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile);
 };
 
-#endif // JOURNALCOLLECTION_HPP
+#endif // JOURNALMODELCOLLECTION_HPP
