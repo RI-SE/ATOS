@@ -2076,35 +2076,9 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 	char astazeroDir[MAX_FILE_PATH];
 	strcpy(astazeroDir, testDir);
 
-	for (unsigned int i = 0; i < sizeof(testEnvDirs) / sizeof(testEnvDirs[0]); ++i) {
-		dir = opendir(testEnvDirs[i]);
-		if (dir) {
-			closedir(dir);
-		}
-		else if (errno == ENOENT) {
-			result = mkdir(testEnvDirs[i], 0755);
-			if (result < 0) {
-				fprintf(stderr, "Unable to create directory %s\n", testEnvDirs[i]);
-				return -1;
-			}
-		}
-		else if (errno == EACCES) {
-			fprintf(stderr, "Permission to access top level test directory %s denied (please do not run me as root)\n",
-					   testEnvDirs[i]);
-			return -1;
-		}
-		else if (errno == ENOTDIR) {
-			fprintf(stderr, "Top level test directory %s is not a directory\n", testEnvDirs[i]);
-			return -1;
-		}
-		else {
-			fprintf(stderr, "Error opening top level directory %s\n", testEnvDirs[i]);
-			return -1;
-		}
-	}
 	
 	// Check so that all expected directories exist
-	strcat(testDir, "/");
+	strcat(astazeroDir, "/");
 	for (unsigned int i = 0; i < sizeof (expectedDirs) / sizeof (expectedDirs[0]); ++i) {
 		char subDir[MAX_FILE_PATH];
 		strcpy(subDir, astazeroDir);
@@ -2117,7 +2091,7 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		else if (errno == ENOENT) {
 			// It did not exist: create it
 			fprintf(stderr, "Directory %s does not exist: creating it\n", subDir);
-			result = mkdir(subDir, 0755);
+			result = recursiveMkdir(subDir, 0755);
 			if (result < 0) {
 				fprintf(stderr, "Unable to create directory %s\n", subDir);
 				return -1;
@@ -2144,8 +2118,8 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		strcat(sysConfDir, SYSCONF_DIR_NAME "/" CONF_FILE_NAME);
 		
 		fprintf(stderr, "Configuration file %s does not exist, copying default from %s\n",
-			subDir, sysConfDir);
-		if (UtilCopyFile(sysConfDir, sizeof(sysConfDir), subDir, sizeof(subDir)) < 0) {
+			confDir, sysConfDir);
+		if (UtilCopyFile(sysConfDir, sizeof(sysConfDir), confDir, sizeof(confDir)) < 0) {
 			fprintf(stderr, "Failed to copy file\n");
 			return -1;
 		}
@@ -2167,9 +2141,9 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		strcat(triggerActionFilePath, SYSCONF_DIR_NAME "/" TRIGGER_ACTION_FILE_NAME);
 		
 		fprintf(stderr, "Trigger action %s file does not exist, copying default from %s\n",
-							subDir, triggerActionFilePath);
+							triggerActionDir, triggerActionFilePath);
 		
-		if (UtilCopyFile(triggerActionFilePath, sizeof(triggerActionFilePath), subDir, sizeof(subDir)) < 0) {
+		if (UtilCopyFile(triggerActionFilePath, sizeof(triggerActionFilePath), triggerActionDir, sizeof(triggerActionDir)) < 0) {
 			fprintf(stderr, "Failed to copy file\n");
 			return -1;
 		}

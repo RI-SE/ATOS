@@ -65,7 +65,7 @@ atos_interfaces::msg::CartesianTrajectory Trajectory::toCartesianTrajectory(){
 void Trajectory::initializeFromCartesianTrajectory(const atos_interfaces::msg::CartesianTrajectory &traj) {
 	using namespace std::chrono;
 	for (const auto &tp : traj.points){
-		TrajectoryPoint point;
+		TrajectoryPoint point(logger);
 		point.setTime(duration_cast<milliseconds>(seconds{tp.time_from_start.sec} + nanoseconds{tp.time_from_start.nanosec}));
 		point.setXCoord(tp.pose.position.x);
 		point.setYCoord(tp.pose.position.y);
