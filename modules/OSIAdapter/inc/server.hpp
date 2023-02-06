@@ -1,7 +1,6 @@
 #pragma once
 
 #include <boost/asio.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include "loggable.hpp"
 
