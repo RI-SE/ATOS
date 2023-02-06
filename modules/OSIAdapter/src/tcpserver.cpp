@@ -18,8 +18,8 @@ TCPServer::~TCPServer() {
  */
 void TCPServer::setupServer() {
   endpoint = std::make_shared<ip::tcp::endpoint>(ip::make_address_v4(address), port);
-  acceptor = std::make_shared<ip::tcp::acceptor>(*io_service, *endpoint);
-  socket = std::make_shared<ip::tcp::socket>(*io_service);
+  acceptor = std::make_shared<ip::tcp::acceptor>(*ioContext, *endpoint);
+  socket = std::make_shared<ip::tcp::socket>(*ioContext);
   boost::system::error_code ignored_error;
 
   RCLCPP_DEBUG(logger, "Waiting for connection on %s:%d", endpoint->address().to_string().c_str(), endpoint->port());

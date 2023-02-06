@@ -21,5 +21,5 @@ class Server : public Loggable {
   protected:
     std::string address;
     uint16_t port;
-    std::shared_ptr<boost::asio::io_service> io_service;
+    std::shared_ptr<boost::asio::io_context> ioContext;
 };
