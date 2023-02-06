@@ -17,7 +17,8 @@ atos:
       test_origin_rot_z: 0.0
       test_origin_rot_w: 1.0
   osi_adapter:
-    ros_parameters:
-      address: "0.0.0.0"
+    ros__parameters:
+      address: "10.130.23.54"
       port: 55555
       protocol: "udp"
+      frequency: 10

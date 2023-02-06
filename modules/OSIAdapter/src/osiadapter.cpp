@@ -19,13 +19,7 @@ OSIAdapter::OSIAdapter() :
   Module(OSIAdapter::moduleName),
   connectedObjectIdsSub(*this,std::bind(&OSIAdapter::onConnectedObjectIdsMessage, this, _1))
   {
-    // get_parameter("address", address);
-    // get_parameter("port", port);
-    // get_parameter("protocol", protocol);
-
-    address = "0.0.0.0";
-    port = 55555;
-
+    getParameters();
     initializeServer();
     timer = this->create_wall_timer(SEND_INTERVAL, std::bind(&OSIAdapter::sendOSIData, this));
   };
@@ -40,14 +34,26 @@ OSIAdapter::~OSIAdapter() {
   }
 
 
+void OSIAdapter::getParameters() {
+  declare_parameter("address");
+  declare_parameter("port");
+  declare_parameter("protocol");
+  declare_parameter("frequency");
+
+  get_parameter("address", address);
+  get_parameter("port", port);
+  get_parameter("protocol", protocol);
+  get_parameter("frequency", frequency);
+}
+
+
 /**
  * @brief Initializes a server, using either TCP or UDP.
  * 
  * @param address IP-address. Default: 0.0.0.0
  * @param port Port. Default: 55555
  */
-void
-OSIAdapter::initializeServer() {
+void OSIAdapter::initializeServer() {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
   server = ServerFactory(address, port, get_logger()).createServer("udp");
   server->setupServer();
@@ -60,8 +66,7 @@ OSIAdapter::initializeServer() {
  * therefore, the connection is reset and OSIAdapter waits until a client connects again.
  * 
  */
-void
-OSIAdapter::sendOSIData() {
+void OSIAdapter::sendOSIData() {
   boost::system::error_code ignored_error;
   
   // Extrapolate monr data and create a sensorView containing the objects
@@ -90,8 +95,7 @@ OSIAdapter::sendOSIData() {
  * @param osiData OSI-data
  * @return std::vector<char> Vector from SvGt encoding
  */
-std::vector<char>
-OSIAdapter::makeOSIMessage(const std::vector<OsiHandler::GlobalObjectGroundTruth_t>& osiData) {
+std::vector<char> OSIAdapter::makeOSIMessage(const std::vector<OsiHandler::GlobalObjectGroundTruth_t>& osiData) {
 
   OsiHandler osi;
   std::chrono::system_clock::time_point timestamp = std::chrono::system_clock::now();
@@ -110,8 +114,7 @@ OSIAdapter::makeOSIMessage(const std::vector<OsiHandler::GlobalObjectGroundTruth
  * 
  * @return const OsiHandler::GlobalObjectGroundTruth_t OSI-data 
  */
-const OsiHandler::GlobalObjectGroundTruth_t
-OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
+const OsiHandler::GlobalObjectGroundTruth_t OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
   
   OsiHandler::GlobalObjectGroundTruth_t osiData;
   osiData.id = monr.atos_header.object_id;
@@ -127,6 +130,8 @@ OSIAdapter::makeOSIData(ROSChannels::Monitor::message_type& monr) {
   osiData.vel_m_s.x = monr.velocity.twist.linear.x;
   osiData.vel_m_s.y = monr.velocity.twist.linear.y;
   osiData.vel_m_s.z = monr.velocity.twist.linear.z;
+
+  osiData.orientation_rad.yaw = 2 * acos(monr.pose.pose.orientation.w);
 
   return osiData;
 
@@ -152,8 +157,7 @@ double OSIAdapter::linPosPrediction(const double position, const double velocity
  * @param monr MONR-message to extrapolate
  * @param dt Time forward
  */
-void
-OSIAdapter::extrapolateMONR(Monitor::message_type& monr,  const TimeUnit dt) {
+void OSIAdapter::extrapolateMONR(Monitor::message_type& monr,  const TimeUnit dt) {
   monr.pose.pose.position.x = linPosPrediction(monr.pose.pose.position.x, monr.velocity.twist.linear.x, dt);
   monr.pose.pose.position.y = linPosPrediction(monr.pose.pose.position.y, monr.velocity.twist.linear.y, dt);
   monr.pose.pose.position.z = linPosPrediction(monr.pose.pose.position.z, monr.velocity.twist.linear.z, dt);

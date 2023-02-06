@@ -19,7 +19,8 @@ UDPServer::~UDPServer() {
 void UDPServer::setupServer() {
   endpoint = std::make_shared<ip::udp::endpoint>(ip::make_address_v4(address), port);
   socket = std::make_shared<ip::udp::socket>(*ioContext);
-  socket->open(ip::udp::v4());
+  // socket->open(ip::udp::v4());
+  socket->connect(*endpoint);
   RCLCPP_DEBUG(logger, "Sending OSI-messages on %s:%d", endpoint->address().to_string().c_str(), endpoint->port());
 }
 
