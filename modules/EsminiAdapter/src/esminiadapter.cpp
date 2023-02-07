@@ -14,7 +14,6 @@
 #include "atos_interfaces/msg/cartesian_trajectory.hpp"
 #include "rclcpp/wait_for_message.hpp"
 #include "trajectory.hpp"
-#include "datadictionary.h"
 #include "string_utility.hpp"
 
 using namespace ROSChannels;
@@ -559,12 +558,6 @@ int EsminiAdapter::initializeModule() {
 	int retval = 0;
 
 	RCLCPP_INFO(me->get_logger(), "%s task running with PID: %d",moduleName.c_str(), getpid());
-	if (me->requestDataDictInitialization()) {
-		if (DataDictionaryInitObjectData() != READ_OK) {
-			retval = -1;
-			RCLCPP_ERROR(me->get_logger(), "Preexisting data dictionary not found");
-		}
-	}
 	else{
 		retval = -1;
 		RCLCPP_ERROR(me->get_logger(), "Unable to initialize data dictionary");
