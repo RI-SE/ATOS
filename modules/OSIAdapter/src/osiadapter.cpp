@@ -74,7 +74,7 @@ void OSIAdapter::initializeServer() {
  * 
  */
 void OSIAdapter::sendOSIData() {
-  boost::system::error_code ignored_error;
+  boost::system::error_code errorCode;
   
   // Extrapolate monr data and create a sensorView containing the objects
   std::for_each(lastMonitors.begin(),lastMonitors.end(),[&](auto pair){ OSIAdapter::extrapolateMONR(pair.second,lastMonitorTimes.at(pair.first));});
@@ -82,18 +82,9 @@ void OSIAdapter::sendOSIData() {
   std::transform(lastMonitors.begin(),lastMonitors.end(), sensorView.begin(), [&](auto pair) {return OSIAdapter::makeOSIData(pair.second);});
   
   std::vector<char> data = OSIAdapter::makeOSIMessage(sensorView);
-  server->sendData(data, ignored_error);
+  server->sendData(data, errorCode);
 
-
-  if (ignored_error.value() != 0){ // Error while sending to client
-    if (ignored_error.value() == error::broken_pipe) {
-      RCLCPP_DEBUG(get_logger(), "Client has disconnected.");
-    }
-    else {
-      RCLCPP_ERROR(get_logger(), "Error while sending data: %s", ignored_error.message().c_str());
-    }
-    server->resetServer(); // Either way, reset the socket and go back to listening
-  }
+  server->handleError(errorCode);
 }
 
 

@@ -23,8 +23,6 @@ class OSIAdapter : public Module
     uint16_t port;
     std::string protocol;
     uint16_t frequency;
-
-    constexpr static uint8_t QUALITY_OF_SERVICE = 10;
     static inline std::string const moduleName = "osi_adapter";
 
     void getParameters();
@@ -35,9 +33,8 @@ class OSIAdapter : public Module
     void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
     
     std::unique_ptr<Server> server;
-
-    ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;	//!< Publisher to report connected objects
     rclcpp::TimerBase::SharedPtr timer;
+    ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;	//!< Publisher to report connected objects
 
     std::unordered_map<uint32_t,ROSChannels::Monitor::message_type> lastMonitors;
     std::unordered_map<uint32_t,TimeUnit> lastMonitorTimes;

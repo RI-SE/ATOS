@@ -52,3 +52,15 @@ void UDPServer::resetServer() {
 void UDPServer::sendData(std::vector<char>& data, boost::system::error_code& errorCode) {
   socket->send_to(buffer(data), *endpoint, 0, errorCode);
 }
+
+
+/**
+ * @brief Handle the error code if fails to send data.
+ * 
+ * @param errorCode The error code from trying to send data
+ */
+void UDPServer::handleError(boost::system::error_code& errorCode) {
+  if (errorCode.value() != 0){
+    resetServer();
+  }
+}

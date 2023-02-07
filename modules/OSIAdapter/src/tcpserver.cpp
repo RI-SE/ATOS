@@ -70,3 +70,21 @@ void TCPServer::resetServer() {
 void TCPServer::sendData(std::vector<char>& data, boost::system::error_code& errorCode) {
   write(*socket, buffer(data), errorCode);
 }
+
+
+/**
+ * @brief Handle the error code if fails to send data.
+ * 
+ * @param errorCode The error code from trying to send data
+ */
+void TCPServer::handleError(boost::system::error_code& errorCode) {
+  if (errorCode.value() != 0){
+    if (errorCode.value() == error::broken_pipe) {
+      RCLCPP_INFO(get_logger(), "Client has disconnected.");
+    }
+    else {
+      RCLCPP_ERROR(logger, "Error while sending data: %s", errorCode.message().c_str());
+    }
+    resetServer();
+  }
+}
