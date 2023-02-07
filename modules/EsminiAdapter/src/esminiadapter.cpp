@@ -167,7 +167,7 @@ void EsminiAdapter::onStaticStartMessage(
 		exit(1);
 	}
 	// Handle triggers and story board element changes
-	SE_RegisterStoryBoardElementStateChangeCallback(&executeActionIfStarted);
+	SE_RegisterStoryBoardElementStateChangeCallback(&handleStoryBoardElementChange);
 
 	SE_Step(); // Make sure that the scenario is started
 	RCLCPP_INFO(me->get_logger(), "Esmini ScenarioEngine started");
@@ -239,42 +239,64 @@ void EsminiAdapter::collectStartAction(
  * \param type Possible values: STORY = 1, ACT = 2, MANEUVER_GROUP = 3, MANEUVER = 4, EVENT = 5, ACTION = 6, UNDEFINED_ELEMENT_TYPE = 0.
  * \param state new state, possible values: STANDBY = 1, RUNNING = 2, COMPLETE = 3, UNDEFINED_ELEMENT_STATE = 0.
  */
-void EsminiAdapter::executeActionIfStarted(
-	const char* name,
+void EsminiAdapter::handleStoryBoardElementChange(
+	const char *name,
 	int type,
 	int state)
 {
-	RCLCPP_DEBUG(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d", name, type, state);
-	if (type != 6 || state != 2) { return; } // Only handle actions that are started
-	try {
+	RCLCPP_INFO(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d", name, type, state);
+	// switch on type
+	RCLCPP_INFO(me->get_logger(), "Handle action 1 %s", name);
+	switch (type)
+	{
+	case 6: // Action
+		RCLCPP_INFO(me->get_logger(), "Handle action 2 %s", name);
+		me->handleActionElementStateChange(name, state);
+		break;
+	default: RCLCPP_INFO(me->get_logger(), "Type of value %d is not implemented", type);
+		break;
+	}
+}
+
+void EsminiAdapter::handleActionElementStateChange(
+		const char *name,
+		int state)
+{
+	RCLCPP_INFO(me->get_logger(), "Handle action 3 %s", name);
+	try
+	{
 		auto [objectId, action] = parseAction(name);
-		if (isStartAction(action)) {
+		if (isStartAction(action) && state == 2)
+		{
 			RCLCPP_INFO(me->get_logger(), "Running start action for object %d", objectId);
 			ROSChannels::StartObject::message_type startObjectMsg;
 			startObjectMsg.id = objectId;
 			startObjectMsg.stamp = me->get_clock()->now(); // TODO + std::chrono::milliseconds(100);
 			me->startObjectPub.publish(startObjectMsg);
 		}
-		else if (isSendDenmAction(action)) {
+		else if (isSendDenmAction(action) && state == 3)
+		{
 			// Get the latest Monitor message
+			RCLCPP_INFO(me->get_logger(), "Running send denm action triggered by object %d", objectId);
 			ROSChannels::Monitor::message_type monr;
-			rclcpp::wait_for_message(monr, me, std::string("/") + me->get_namespace() + "/object_" + std::to_string(objectId) + "/object_monitor", 10ms);
+			rclcpp::wait_for_message(monr, me, std::string(me->get_namespace()) + "/object_" + std::to_string(objectId) + "/object_monitor", 10ms);
 			TestOriginSrv::Response::SharedPtr response;
-			//me->callService(5ms ,me->testOriginClient, response);
+			// me->callService(5ms ,me->testOriginClient, response);
 			double llh[3] = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
 			double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
-			llhOffsetMeters(llh,offset);
-			me->v2xPub.publish(denmFromMonitor(monr,llh));
+			llhOffsetMeters(llh, offset);
+			me->v2xPub.publish(denmFromMonitor(monr, llh));
 		}
-		else {
+		else
+		{
 			RCLCPP_WARN(me->get_logger(), "Action %s is not supported", action.c_str());
 		}
 	}
-	catch (std::exception& e) {
+	catch (std::exception &e)
+	{
 		RCLCPP_WARN(me->get_logger(), e.what());
 		return;
 	}
-
 }
 
 ROSChannels::V2X::message_type EsminiAdapter::denmFromMonitor(const ROSChannels::Monitor::message_type monr, double *llh) {
@@ -306,10 +328,12 @@ void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr 
 	m.getRPY(roll, pitch, yaw);
 
 	auto pos = monr->pose.pose.position;
+	auto speed = monr->velocity.twist.linear;
 
 	// Reporting to Esmini
 	int timestamp = 0; // Not really used according to esmini documentation
 	SE_ReportObjectPos(esminiObjectId, timestamp, pos.x, pos.y, pos.z, yaw, pitch, roll);
+	SE_ReportObjectSpeed(esminiObjectId, speed.x);
 }
 
 /*!

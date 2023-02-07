@@ -1,11 +1,11 @@
 atos:
   mqtt_bridge:
     ros__parameters:
-      broker_ip: ""
+      broker_ip: "192.71.100.198"
       pub_client_id: "ATOS"
-      username: ""
-      password: ""
-      topic: ""
+      username: "astauser"
+      password: "resuatsa"
+      topic: "azapos/cmd"
       quality_of_service: "1"
   atos_base:
     ros__parameters:
@@ -18,7 +18,7 @@ atos:
       test_origin_rot_w: 1.0
   esmini_adapter:
     ros__parameters:
-      open_scenario_file: ""
+      open_scenario_file: "FLXZoneDemoScenario.xosc"
   object_control:
     ros__parameters:
       max_missing_heartbeats: 100

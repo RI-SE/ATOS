@@ -55,6 +55,8 @@ private:
 	static void executeActionIfStarted(const char* name, int type, int state);
 	static std::filesystem::path getOpenScenarioFileParameter();
 	static void setOpenScenarioFile(const std::filesystem::path&);
+	static void handleStoryBoardElementChange(const char* name, int type, int state);
+	static void handleActionElementStateChange(const char* name, int state);
 	static void InitializeEsmini();
 	static void getObjectStates(double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
 	static ATOS::Trajectory getTrajectory(uint32_t,std::vector<SE_ScenarioObjectState>& states);
