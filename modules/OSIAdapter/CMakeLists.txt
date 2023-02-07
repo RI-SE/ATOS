@@ -25,10 +25,6 @@ include(GNUInstallDirs)
 add_executable(${OSI_ADAPTER_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/osiadapter.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/server.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/tcpserver.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/udpserver.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/serverfactory.cpp
 )
 # Link project executable to util libraries
 target_link_libraries(${OSI_ADAPTER_TARGET} 
