@@ -47,7 +47,7 @@ void TestObject::setObjectIP(
 	this->setOsiAddress(addr);
 }
 
-void TestObject::setOrigin(GeographicPositionType pos){
+void TestObject::setOrigin(const GeographicPositionType& pos){
 	this->conf.setOrigin(pos);
 }
 
