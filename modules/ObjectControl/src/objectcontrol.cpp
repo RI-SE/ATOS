@@ -519,7 +519,7 @@ void ObjectControl::heartbeat() {
 					objects.at(id)->sendHeartbeat(this->state->asControlCenterStatus());
 				}
 			}
-			catch (std::invalid_argument& e) {
+			catch (std::exception& e) {
 				RCLCPP_WARN(get_logger(), e.what());
 				objects.at(id)->disconnect();
 				this->state->disconnectedFromObject(*this, id);
