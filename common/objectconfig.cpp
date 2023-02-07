@@ -99,21 +99,20 @@ void ObjectConfig::parseConfigurationFile(
 	}
 
 	// Get trajectory file setting
-	if (!getTrajFromRos){
-		if (UtilGetObjectFileSetting(OBJECT_SETTING_TRAJ, objectFile.c_str(),
-									objectFile.string().length(),
-									setting, sizeof (setting)) == 0) {
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_TRAJ, objectFile.c_str(),
+								objectFile.string().length(),
+								setting, sizeof (setting)) == 0) {
 
-			fs::path trajFile(std::string(trajDirPath) + std::string(setting));
-			if (!fs::exists(trajFile.string())) {
-				throw std::invalid_argument("Configured trajectory file " + std::string(setting)
-											+ " in file " + objectFile.string() + " not found");
-			}
-			this->trajectoryFile = trajFile;
-			this->trajectory.initializeFromFile(setting);
-			LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectory.points.size());
+		fs::path trajFile(std::string(trajDirPath) + std::string(setting));
+		if (!fs::exists(trajFile.string())) {
+			throw std::invalid_argument("Configured trajectory file " + std::string(setting)
+										+ " in file " + objectFile.string() + " not found");
 		}
+		this->trajectoryFile = trajFile;
+		this->trajectory.initializeFromFile(setting);
+		LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectory.points.size());
 	}
+	
 	// Get opendrive file setting
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_OPENDRIVE, objectFile.c_str(),
 								objectFile.string().length(),

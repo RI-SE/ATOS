@@ -355,14 +355,7 @@ void ObjectControl::loadObjectFiles() {
 					auto trajletSub = std::make_shared<Path::Sub>(*this, id, std::bind(&ObjectControl::onPathMessage, this, _1, id));
 					auto monrPub = std::make_shared<Monitor::Pub>(*this, id);
 					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(get_logger(),trajletSub,monrPub);
-					auto getTrajFromRos = get_parameter("use_ros_trajectory").as_bool();
-					if (getTrajFromRos){ // TODO: This is a temp solution.. using ros/openscenario we can probably skip having to parse .conf and .opro files
-						//auto response = std::shared_ptr<GetTrajectory::Response>;
-						//nShotServiceRequest(3,1s,"get_trajectory",response);
-						//object->getTrajectory().initializeFromCartesianTrajectory(response->trajectory);
-
-					}
-					object->parseConfigurationFile(inputFile, getTrajFromRos);
+					object->parseConfigurationFile(inputFile);
 					objects.emplace(id, object);
 				}
 				else {
