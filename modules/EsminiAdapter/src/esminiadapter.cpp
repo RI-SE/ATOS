@@ -46,16 +46,43 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	startSub(*this, &EsminiAdapter::onStaticStartMessage),
 	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage)
  {
-	// Get the file path of xosc file
-	char path[MAX_FILE_PATH];
 	declare_parameter("open_scenario_file");
-	UtilGetOscDirectoryPath(path, MAX_FILE_PATH);
+}
+
+/*!
+ * \brief Fetches the open_scenario_file parameter from node and prepends
+ * 		necessary config path.
+ * \return Configured path
+*/
+std::filesystem::path EsminiAdapter::getOpenScenarioFileParameter()
+{
+	// Get the file path of xosc file
 	std::string result;
-	auto success = get_parameter("open_scenario_file", result);
+	auto success = me->get_parameter("open_scenario_file", result);
 	if (!success) {
 		throw std::runtime_error("Could not read parameter open_scenario_file");
 	}
-	oscFilePath = std::string(path) + result;
+	if (std::filesystem::path(result).is_absolute()) {
+		return result;
+	}
+	else {
+		char path[MAX_FILE_PATH];
+		UtilGetOscDirectoryPath(path, MAX_FILE_PATH);
+		return std::string(path) + result;
+	}
+}
+
+/*!
+ * \brief Sets the OpenSCENARIO file path to use
+ * \param path OpenSCENARIO file path
+*/
+void EsminiAdapter::setOpenScenarioFile(
+	const std::filesystem::path& path)
+{
+	if (!std::filesystem::is_regular_file(path)) {
+		throw std::runtime_error("Could not open file " + path.string());
+	}
+	oscFilePath = path;
 }
 
 /*!
@@ -105,6 +132,13 @@ void EsminiAdapter::onAllClearMessage(const AllClear::message_type::SharedPtr) {
 void EsminiAdapter::onStaticInitMessage(
 	const Init::message_type::SharedPtr)
 {
+	try {
+		setOpenScenarioFile(getOpenScenarioFileParameter());
+	}
+	catch (std::exception& e) {
+		RCLCPP_ERROR(me->get_logger(), e.what());
+		return;
+	}
 	auto request = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
 	me->testOriginClient->async_send_request(request, [](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
 		auto response = future.get();
@@ -497,7 +531,7 @@ void EsminiAdapter::onRequestObjectIP(
  * \param logLevel Level of the module log to be used.
  * \return 0 on success, -1 otherwise
  */
-int EsminiAdapter::initializeModule(const LOG_LEVEL logLevel) {
+int EsminiAdapter::initializeModule() {
 	int retval = 0;
 
 	RCLCPP_INFO(me->get_logger(), "%s task running with PID: %d",moduleName.c_str(), getpid());

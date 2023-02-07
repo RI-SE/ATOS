@@ -3,6 +3,7 @@
 #include "module.hpp"
 #include "roschannel.hpp"
 #include <unordered_map>
+#include <filesystem>
 #include "util.h"
 #include "esmini/esminiLib.hpp"
 #include "trajectory.hpp"
@@ -18,8 +19,8 @@
 class EsminiAdapter : public Module {
 public:
 	static inline std::string const moduleName = "esmini_adapter";
-	static inline std::string oscFilePath;
-	static int initializeModule(const LOG_LEVEL logLevel);
+	static inline std::filesystem::path oscFilePath;
+	static int initializeModule();
 	EsminiAdapter(EsminiAdapter const&) = delete;
     EsminiAdapter& operator=(EsminiAdapter const&) = delete;
 	static std::shared_ptr<EsminiAdapter> instance();
@@ -52,6 +53,8 @@ private:
 	static void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
 	static void reportObjectPosition(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
 	static void executeActionIfStarted(const char* name, int type, int state);
+	static std::filesystem::path getOpenScenarioFileParameter();
+	static void setOpenScenarioFile(const std::filesystem::path&);
 	static void InitializeEsmini();
 	static void getObjectStates(double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
 	static ATOS::Trajectory getTrajectory(uint32_t,std::vector<SE_ScenarioObjectState>& states);
@@ -80,11 +83,7 @@ private:
 	static std::map<uint32_t,ATOS::Trajectory> idToTraj;
 	static std::map<uint32_t,std::string> idToIp;
 	static std::vector<uint32_t> delayedStartIds;
-	const std::vector<std::string> supportedActions {"start", 
-													 "send_denm"
-													};
-	static int actionId;
-	static void testingFun();
+
 	static geographic_msgs::msg::GeoPose testOrigin;
 
 };
