@@ -248,7 +248,7 @@ void ObjectControl::loadScenario() {
 	RCLCPP_INFO(get_logger(), "Loading scenario");
 	auto idsCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFuture future) {
 		auto idResponse = future.get();
-		RCLCPP_ERROR(get_logger(), "Got %d object ids", idResponse->ids.size());
+		RCLCPP_INFO(get_logger(), "Received %d configured object ids", idResponse->ids.size());
 
 		for (const auto id : idResponse->ids) {
 			auto trajletSub = std::make_shared<Path::Sub>(*this, id, std::bind(&ObjectControl::onPathMessage, this, _1, id));
