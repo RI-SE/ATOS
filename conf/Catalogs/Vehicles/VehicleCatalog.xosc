@@ -7,8 +7,105 @@
                 author="esmini team"/>
 
     <!-- Cars -->
-
     <Catalog name="VehicleCatalog">
+        <Vehicle name="mondeo" vehicleCategory="car" model3d="../models/car_blue.osgb">
+            <ParameterDeclarations>
+                <ParameterDeclaration name="EgoModelId" parameterType="integer" value="1"/>
+            </ParameterDeclarations>
+            <BoundingBox>
+                <Center x="0.0" y="0.0" z="0.0"/>
+                <Dimensions width="1.852" length="4.871" height="1.482"/>
+            </BoundingBox>
+            <Performance maxSpeed="${190/3.6}" maxDeceleration="10" maxAcceleration="5"/>
+            <Properties>
+                <Property name="ip" value="192.168.218.37"/>
+                <Property name="model_id" value="$EgoModelId"/>
+                <!-- Scale modes: None, BBToModel, ModelToBB -->
+                <Property name="scaleMode" value="BBToModel"/>
+            </Properties>
+        </Vehicle>
+	    <Vehicle name="humanetics" vehicleCategory="car" model3d="../models/car_white.osgb">
+            <ParameterDeclarations>
+                <ParameterDeclaration name="EgoModelId" parameterType="integer" value="2"/>
+            </ParameterDeclarations>
+            <BoundingBox>
+                <Center x="0.0" y="0.0" z="0.0"/>
+                <Dimensions width="0.8" length="0.7" height="0.065"/>
+            </BoundingBox>
+            <Performance maxSpeed="${20/3.6}" maxDeceleration="2" maxAcceleration="2"/>
+            <Properties>
+                <Property name="ip" value="192.168.218.37"/>
+                <Property name="model_id" value="$EgoModelId"/>
+                <!-- Scale modes: None, BBToModel, ModelToBB -->
+                <Property name="scaleMode" value="BBToModel"/>
+            </Properties>
+        </Vehicle>
+	    <Vehicle name="flexible_target_carrier" vehicleCategory="car" model3d="../models/cyclist.osgb">
+            <ParameterDeclarations>
+                <ParameterDeclaration name="EgoModelId" parameterType="integer" value="3"/>
+            </ParameterDeclarations>
+            <BoundingBox>
+                <Center x="0.0" y="0.0" z="0.0"/>
+                <Dimensions width="0.6" length="0.7" height="0.1"/>
+            </BoundingBox>
+            <Performance maxSpeed="${50/3.6}" maxDeceleration="2" maxAcceleration="2"/>
+            <Properties>
+                <Property name="ip" value="192.168.218.37"/>
+                <Property name="model_id" value="$EgoModelId"/>
+                <!-- Scale modes: None, BBToModel, ModelToBB -->
+                <Property name="scaleMode" value="BBToModel"/>
+            </Properties>
+        </Vehicle>
+	    <Vehicle name="virtual_object" vehicleCategory="car" model3d="../models/car_red.osgb">
+            <!-- model bounding box xyz: 1.46, 0.00, 0.77 lwh: 5.04, 2.04, 1.49 -->
+            <ParameterDeclarations>
+                <ParameterDeclaration name="EgoModelId" parameterType="integer" value="4"/>
+            </ParameterDeclarations>
+            <BoundingBox>
+                <Center x="0.0" y="0.0" z="0.0"/>
+                <Dimensions width="1.852" length="4.871" height="1.482"/>
+            </BoundingBox>
+            <Performance maxSpeed="${500/3.6}" maxDeceleration="200" maxAcceleration="200"/>
+            <Properties>
+                <Property name="ip" value="192.168.218.37"/>
+                <Property name="model_id" value="$EgoModelId"/>
+                <!-- Scale modes: None, BBToModel, ModelToBB -->
+                <Property name="scaleMode" value="BBToModel"/>
+            </Properties>
+        </Vehicle>
+	    <Vehicle name="camera_drone" vehicleCategory="car" model3d="../models/walkman.osgb">
+            <ParameterDeclarations>
+                <ParameterDeclaration name="EgoModelId" parameterType="integer" value="5"/>
+            </ParameterDeclarations>
+            <BoundingBox>
+                <Center x="0.0" y="0.0" z="0.0"/>
+                <Dimensions width="0.25" length="0.33" height="0.09"/>
+            </BoundingBox>
+            <Performance maxSpeed="${70/3.6}" maxDeceleration="20" maxAcceleration="20"/>
+            <Properties>
+                <Property name="ip" value="192.168.218.37"/>
+                <Property name="model_id" value="$EgoModelId"/>
+                <!-- Scale modes: None, BBToModel, ModelToBB -->
+                <Property name="scaleMode" value="BBToModel"/>
+            </Properties>
+        </Vehicle>
+	    <Vehicle name="marker_drone" vehicleCategory="car" model3d="../models/walkman.osgb">
+            <ParameterDeclarations>
+                <ParameterDeclaration name="EgoModelId" parameterType="integer" value="6"/>
+            </ParameterDeclarations>
+            <BoundingBox>
+                <Center x="0.0" y="0.0" z="0.0"/>
+                <Dimensions width="0.25" length="0.33" height="0.09"/>
+            </BoundingBox>
+            <Performance maxSpeed="${70/3.6}" maxDeceleration="20" maxAcceleration="20"/>
+            <Properties>
+                <Property name="ip" value="192.168.218.37"/>
+                <Property name="model_id" value="$EgoModelId"/>
+                <!-- Scale modes: None, BBToModel, ModelToBB -->
+                <Property name="scaleMode" value="BBToModel"/>
+            </Properties>
+        </Vehicle>
+
 
         <Vehicle name="car_white" vehicleCategory="car" model3d="../models/car_white.osgb">
             <!-- model bounding box xyz: 1.46, 0.00, 0.77 lwh: 5.04, 2.04, 1.49 -->
