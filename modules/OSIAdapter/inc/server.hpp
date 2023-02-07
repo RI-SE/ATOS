@@ -9,7 +9,7 @@
 class Server : public Loggable {
 
   public:
-    Server(const std::string address, const uint16_t port, rclcpp::Logger logger);
+    Server(const std::string& address, const uint16_t& port, rclcpp::Logger& logger);
     ~Server();
 
     virtual void setupServer() = 0;

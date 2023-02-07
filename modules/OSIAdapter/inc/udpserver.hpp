@@ -7,7 +7,7 @@
 class UDPServer : public Server {
 
   public:
-    UDPServer(const std::string address, const uint16_t port, rclcpp::Logger logger);
+    UDPServer(const std::string& address, const uint16_t& port, rclcpp::Logger& logger);
     ~UDPServer();
 
 

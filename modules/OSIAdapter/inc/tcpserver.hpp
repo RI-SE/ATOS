@@ -6,7 +6,7 @@
 class TCPServer : public Server {
 
   public:
-    TCPServer(const std::string address, const uint16_t port, rclcpp::Logger logger);
+    TCPServer(const std::string& address, const uint16_t& port, rclcpp::Logger& logger);
     ~TCPServer();
 
 
