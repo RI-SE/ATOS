@@ -530,8 +530,8 @@ void EsminiAdapter::onRequestObjectStartOnTrigger(
 			return;
 		}
 	}
-	RCLCPP_ERROR(me->get_logger(), "Esmini-object start trigger service called, no triggers found for object %d", req->id);
-	res->success = false;
+	RCLCPP_INFO(me->get_logger(), "No triggers found for object %d", req->id);
+	res->success = true;
 }
 
 void EsminiAdapter::onRequestObjectIP(
