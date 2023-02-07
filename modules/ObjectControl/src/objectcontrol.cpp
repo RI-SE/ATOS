@@ -708,8 +708,19 @@ void ObjectControl::startObjects() {
 void ObjectControl::startObject(
 	uint32_t id,
 	std::chrono::system_clock::time_point startTime) {
-	if (!objects.at(id)->isStartingOnTrigger()) {
-		objects.at(id)->sendStart(startTime);
+	try {
+		if (!objects.at(id)->isStartingOnTrigger()) {
+			objects.at(id)->sendStart(startTime);
+		}
+	}
+	catch (std::out_of_range& e) {
+		std::stringstream ss;
+		for (auto& id : getVehicleIDs()) {
+			ss << " " << id << ",";
+		}
+		auto str = ss.str();
+		str.pop_back();
+		RCLCPP_WARN(get_logger(), "Attempted to start nonexistent object %u - configured objects are%s", id, str.c_str());
 	}
 }
 
