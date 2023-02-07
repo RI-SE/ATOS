@@ -62,7 +62,7 @@ void OSIAdapter::getParameters() {
  */
 void OSIAdapter::initializeServer() {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
-  server = ServerFactory(address, port, get_logger()).createServer("udp");
+  server = ServerFactory(address, port, get_logger()).createServer(protocol);
   server->setupServer();
 }
 
