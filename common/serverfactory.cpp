@@ -1,7 +1,7 @@
 #include "serverfactory.hpp"
 
 
-ServerFactory::ServerFactory(const std::string address, const uint16_t port, rclcpp::Logger logger) : Loggable(logger) {
+ServerFactory::ServerFactory(const std::string& address, const uint16_t& port, rclcpp::Logger logger) : Loggable(logger) {
   this->address = address;
   this->port = port;
 }

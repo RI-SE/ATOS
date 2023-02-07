@@ -57,8 +57,8 @@ void OSIAdapter::getParameters() {
 /**
  * @brief Initializes a server, using either TCP or UDP.
  * 
- * @param address IP-address. Default: 0.0.0.0
- * @param port Port. Default: 55555
+ * @param address IP-address
+ * @param port Port
  */
 void OSIAdapter::initializeServer() {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());

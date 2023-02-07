@@ -8,7 +8,7 @@
 class ServerFactory : public Loggable {
 
   public:
-    ServerFactory(const std::string address, const uint16_t port, rclcpp::Logger logger);
+    ServerFactory(const std::string& address, const uint16_t& port, rclcpp::Logger logger);
     ~ServerFactory();
 
     std::unique_ptr<Server> createServer(const std::string protocol);
