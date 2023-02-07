@@ -19,7 +19,6 @@ UDPServer::~UDPServer() {
 void UDPServer::setupServer() {
   endpoint = std::make_shared<ip::udp::endpoint>(ip::make_address_v4(address), port);
   socket = std::make_shared<ip::udp::socket>(*ioContext);
-  // socket->open(ip::udp::v4());
   socket->connect(*endpoint);
   RCLCPP_DEBUG(logger, "Sending OSI-messages on %s:%d", endpoint->address().to_string().c_str(), endpoint->port());
 }
@@ -50,6 +49,6 @@ void UDPServer::resetServer() {
  * @param data Data to be sent
  * @param errorCode Error code
  */
-void UDPServer::sendData(std::vector<char> data, boost::system::error_code errorCode) {
+void UDPServer::sendData(std::vector<char>& data, boost::system::error_code& errorCode) {
   socket->send_to(buffer(data), *endpoint, 0, errorCode);
 }

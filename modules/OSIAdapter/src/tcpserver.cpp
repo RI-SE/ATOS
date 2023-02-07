@@ -67,6 +67,6 @@ void TCPServer::resetServer() {
  * @param data Data to be sent
  * @param errorCode Error code
  */
-void TCPServer::sendData(std::vector<char> data, boost::system::error_code errorCode) {
+void TCPServer::sendData(std::vector<char>& data, boost::system::error_code& errorCode) {
   write(*socket, buffer(data), errorCode);
 }

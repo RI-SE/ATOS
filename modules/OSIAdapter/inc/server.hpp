@@ -15,7 +15,7 @@ class Server : public Loggable {
     virtual void setupServer() = 0;
     virtual void destroyServer() = 0;
     virtual void resetServer() = 0;
-    virtual void sendData(std::vector<char> data, boost::system::error_code errorCode) = 0;
+    virtual void sendData(std::vector<char>& data, boost::system::error_code& errorCode) = 0;
     
 
   protected:

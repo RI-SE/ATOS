@@ -84,9 +84,10 @@ void OSIAdapter::sendOSIData() {
   std::vector<char> data = OSIAdapter::makeOSIMessage(sensorView);
   server->sendData(data, ignored_error);
 
+
   if (ignored_error.value() != 0){ // Error while sending to client
     if (ignored_error.value() == error::broken_pipe) {
-      RCLCPP_INFO(get_logger(), "Client has disconnected.");
+      RCLCPP_DEBUG(get_logger(), "Client has disconnected.");
     }
     else {
       RCLCPP_ERROR(get_logger(), "Error while sending data: %s", ignored_error.message().c_str());
