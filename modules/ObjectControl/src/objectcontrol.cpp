@@ -263,7 +263,7 @@ void ObjectControl::loadScenario() {
 					RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
 					return;
 				}
-				ATOS::Trajectory traj;
+				ATOS::Trajectory traj(get_logger());
 				traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
 				objects.at(id)->setTrajectory(traj);
 				RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %d points", id, traj.size());
