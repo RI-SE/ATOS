@@ -6,43 +6,35 @@
 #include "roschannel.hpp"
 #include "osi_handler.hpp"
 #include "unordered_map"
+#include "serverfactory.hpp"
 #include <chrono>
 
 class OSIAdapter : public Module
 {
   public:
-    void initialize(const std::string& address = DEFAULT_ADDRESS,
-                  const uint16_t port = DEFAULT_PORT);
+    void initializeServer();
     OSIAdapter();
     ~OSIAdapter();
 
 
   private:
     using TimeUnit = std::chrono::milliseconds;
-    static inline std::string const DEFAULT_ADDRESS = "0.0.0.0";
-    constexpr static uint16_t DEFAULT_PORT = 55555;
-    constexpr static uint8_t QUALITY_OF_SERVICE = 10;
-    constexpr static std::chrono::duration SEND_INTERVAL = std::chrono::milliseconds(500);
-
+    std::string address;
+    uint16_t port;
+    std::string protocol;
+    uint16_t frequency;
     static inline std::string const moduleName = "osi_adapter";
 
+    void getParameters();
     void sendOSIData();
     std::vector<char> makeOSIMessage(const std::vector<OsiHandler::GlobalObjectGroundTruth_t>& osiData);
     const OsiHandler::GlobalObjectGroundTruth_t makeOSIData(ROSChannels::Monitor::message_type& monr);
     
     void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
     
-    ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;	//!< Publisher to report connected objects
+    std::unique_ptr<Server> server;
     rclcpp::TimerBase::SharedPtr timer;
-
-    boost::asio::ip::tcp::endpoint endpoint;
-    std::shared_ptr<boost::asio::ip::tcp::acceptor> acceptor;
-    std::shared_ptr<boost::asio::io_service> io_service;
-    std::shared_ptr<boost::asio::ip::tcp::socket> socket;
-
-    void setupTCPServer(boost::asio::ip::tcp::endpoint endpoint);
-    void destroyTCPServer();
-    void resetTCPServer(boost::asio::ip::tcp::endpoint endpoint);
+    ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;	//!< Publisher to report connected objects
 
     std::unordered_map<uint32_t,ROSChannels::Monitor::message_type> lastMonitors;
     std::unordered_map<uint32_t,TimeUnit> lastMonitorTimes;

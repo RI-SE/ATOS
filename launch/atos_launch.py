@@ -63,17 +63,19 @@ def generate_launch_description():
             executable='journal_control',
             name='journal_control'
         ),
-        Node(
-            package='rviz2',
-            namespace='atos',
-            executable='rviz2',
-            name='rviz2'
-        ),
+        # Node(
+        #     package='rviz2',
+        #     namespace='atos',
+        #     executable='rviz2',
+        #     name='rviz2'
+        # ),
         Node(
             package='atos',
             namespace='atos',
             executable='osi_adapter',
-            name='osi_adapter'
+            name='osi_adapter',
+            parameters=[atosConfig]
+
         ),
         Node(
             package='atos',
