@@ -260,13 +260,13 @@ void ObjectControl::loadScenario() {
 			auto trajectoryCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
 				auto trajResponse = future.get();
 				if (!trajResponse->success) {
-					RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %d", id);
+					RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
 					return;
 				}
 				ATOS::Trajectory traj;
 				traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
 				objects.at(id)->setTrajectory(traj);
-				RCLCPP_INFO(get_logger(), "Loaded trajectory for object %d with %d points", id, traj.size());
+				RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %d points", id, traj.size());
 			};
 			auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
 			trajRequest->id = id;
@@ -275,13 +275,13 @@ void ObjectControl::loadScenario() {
 			auto ipCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedFuture future) {
 				auto ipResponse = future.get();
 				if (!ipResponse->success) {
-					RCLCPP_ERROR(get_logger(), "Get IP service call failed for object %d", id);
+					RCLCPP_ERROR(get_logger(), "Get IP service call failed for object %u", id);
 					return;
 				}
 				// convert from string to in_addr
 				in_addr_t ip;
 				inet_pton(AF_INET, ipResponse->ip.c_str(), &ip);
-				RCLCPP_INFO(get_logger(), "Got ip %s for object %d", ipResponse->ip.c_str(), id,ip);
+				RCLCPP_INFO(get_logger(), "Got ip %s for object %u", ipResponse->ip.c_str(), id,ip);
 				objects.at(id)->setObjectIP(ip);
 			};
 
@@ -293,10 +293,11 @@ void ObjectControl::loadScenario() {
 			auto triggerCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTriggerStart>::SharedFuture future) {
 				auto triggerResponse = future.get();
 				if (!triggerResponse->success) {
-					RCLCPP_ERROR(get_logger(), "Get trigger start service call failed for object %d", id);
+					RCLCPP_ERROR(get_logger(), "Get trigger start service call failed for object %u", id);
 					return;
 				}
 				objects.at(id)->setTriggerStart(triggerResponse->trigger_start);
+				RCLCPP_INFO(get_logger(), "Got trigger start for object %u: %u", id, triggerResponse->trigger_start);
 			};
 			auto triggerRequest = std::make_shared<atos_interfaces::srv::GetObjectTriggerStart::Request>();
 			triggerRequest->id = id;
@@ -306,10 +307,18 @@ void ObjectControl::loadScenario() {
 			auto originCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
 				auto origin = future.get();
 				if (!origin->success) {
-					RCLCPP_ERROR(get_logger(), "Get origin service call failed for object %d", id);
+					RCLCPP_ERROR(get_logger(), "Get origin service call failed for object %u", id);
 					return;
 				}
-				objects.at(id)->setOrigin({origin->origin.position.latitude, origin->origin.position.longitude, origin->origin.position.altitude,true,true,true});
+				objects.at(id)->setOrigin({
+					origin->origin.position.latitude,
+					origin->origin.position.longitude,
+					origin->origin.position.altitude,
+					true,true,true});
+				RCLCPP_INFO(get_logger(), "Got origin for object %u: (%.6f, %.6f, %.3f)", id,
+					origin->origin.position.latitude,
+					origin->origin.position.longitude,
+					origin->origin.position.altitude);
 			};
 			auto requestOrigin = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
 			auto promiseOrigin = originClient->async_send_request(requestOrigin, originCallback);
