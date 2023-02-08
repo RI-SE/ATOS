@@ -53,7 +53,7 @@ void ObjectListener::listen() {
 				int oldCancelState;
 				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldCancelState);
 				// Save to memory
-				DataDictionarySetMonitorData(monr.first, &monr.second, &currentTime);
+				//DataDictionarySetMonitorData(monr.first, &monr.second, &currentTime);
 				auto objData = obj->getAsObjectData();
 				objData.MonrData = monr.second;
 				JournalRecordMonitorData(&objData);
