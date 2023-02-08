@@ -161,9 +161,8 @@ void EsminiAdapter::onExitMessage(
 void EsminiAdapter::onStaticStartMessage(
 	const Start::message_type::SharedPtr)
 {
-	if (SE_Init(me->oscFilePath.c_str(),0,0,0,0) == -1){
-		RCLCPP_ERROR(me->get_logger(), "Failed to initialize Esmini ScenarioEngine, aborting");
-		exit(1);
+	if (SE_Init(me->oscFilePath.c_str(),0,0,0,0) < 0) {
+		throw std::runtime_error("Failed to initialize esmini with scenario file " + me->oscFilePath.string());
 	}
 	// Handle triggers and story board element changes
 	SE_RegisterStoryBoardElementStateChangeCallback(&handleStoryBoardElementChange);
@@ -457,9 +456,12 @@ void EsminiAdapter::InitializeEsmini()
 	me->idToTraj.clear();
 	me->ATOStoEsminiObjectId.clear();
 	me->idToIp.clear();
+	SE_Close(); // Stop ScenarioEngine in case it is running
 
 	RCLCPP_INFO(me->get_logger(), "Initializing esmini with scenario file %s", me->oscFilePath.c_str());
-	SE_Init(me->oscFilePath.c_str(),1,0,0,0); // Disable controllers, let DefaultController be used
+	if (SE_Init(me->oscFilePath.c_str(),1,0,0,0) < 0) { // Disable controllers, let DefaultController be used
+		throw std::runtime_error("Failed to initialize esmini with scenario file " + me->oscFilePath.string());
+	}
 	
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
 		//SE_SetAlignModeZ(SE_GetId(j), 0); // Disable Z-alignment not implemented in esmini yet
