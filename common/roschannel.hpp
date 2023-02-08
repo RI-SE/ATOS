@@ -21,6 +21,7 @@
 #include "atos_interfaces/msg/cartesian_trajectory.hpp"
 #include "atos_interfaces/msg/cartesian_trajectory_point.hpp"
 #include "atos_interfaces/msg/cartesian_tolerance.hpp"
+#include "atos_interfaces/msg/object_trigger_start.hpp"
 #include "atos_interfaces/msg/v2x.hpp"
 
 namespace ROSChannels {
@@ -566,10 +567,24 @@ namespace V2X {
 
     class Pub : public BasePub<message_type> {
     public:
-        const uint32_t objectId;
-        Pub(rclcpp::Node& node, const uint32_t id) :
-            objectId(id),
-            BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName) {}
+        Pub(rclcpp::Node& node) :
+            BasePub<message_type>(node, topicName) {}
+    };
+
+    class Sub : public BaseSub<message_type> {
+    public:
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
+    };
+}
+
+namespace StartObject {
+    const std::string topicName = "start_object";
+    using message_type = atos_interfaces::msg::ObjectTriggerStart;
+
+    class Pub : public BasePub<message_type> {
+    public:
+        Pub(rclcpp::Node& node) :
+            BasePub<message_type>(node, topicName) {}
     };
 
     class Sub : public BaseSub<message_type> {

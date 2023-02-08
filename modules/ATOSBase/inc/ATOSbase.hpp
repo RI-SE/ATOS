@@ -27,7 +27,7 @@ class ATOSBase : public Module {
 	void onRequestObjectIDs(const std::shared_ptr<atos_interfaces::srv::GetObjectIds::Request>,
 							std::shared_ptr<atos_interfaces::srv::GetObjectIds::Response>);
 	void onRequestTestOrigin(const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,
-						std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response>);
+							 std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response>);
 	bool isInitialized = false;
 	ROSChannels::Exit::Sub exitSub;
 };

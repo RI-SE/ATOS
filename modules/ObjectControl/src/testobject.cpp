@@ -35,6 +35,23 @@ TestObject::TestObject(TestObject&& other) :
 	this->nextMonitor = std::move(other.nextMonitor);
 }
 
+void TestObject::setObjectIP(
+	const in_addr_t newIP) {
+	struct sockaddr_in addr;
+	addr.sin_addr.s_addr = newIP;
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(ISO_22133_DEFAULT_OBJECT_TCP_PORT);
+	this->setCommandAddress(addr);
+	addr.sin_port = htons(ISO_22133_OBJECT_UDP_PORT);
+	this->setMonitorAddress(addr);
+	addr.sin_port = htons(OSI_DEFAULT_OBJECT_TCP_PORT);
+	this->setOsiAddress(addr);
+}
+
+void TestObject::setOrigin(const GeographicPositionType& pos){
+	this->conf.setOrigin(pos);
+}
+
 void TestObject::setCommandAddress(
 		const sockaddr_in &newAddr) {
 	if (!this->comms.isConnected()) {
@@ -64,7 +81,13 @@ void TestObject::setObjectConfig(
 void TestObject::setTriggerStart(
 		const bool startOnTrigger) {
 	auto st = this->getState();
-	if (st == OBJECT_STATE_INIT || st == OBJECT_STATE_DISARMED) {
+	if (st != OBJECT_STATE_ARMED && 
+		st != OBJECT_STATE_RUNNING &&
+		st != OBJECT_STATE_POSTRUN &&
+		st != OBJECT_STATE_ABORTING &&
+    	st != OBJECT_STATE_REMOTE_CONTROL &&
+    	st != OBJECT_STATE_PRE_ARMING &&
+    	st != OBJECT_STATE_PRE_RUNNING) {
 		this->startOnTrigger = startOnTrigger;
 	}
 	else {
@@ -334,14 +357,17 @@ void TestObject::sendSettings() {
 }
 
 void TestObject::sendArm() {
+	RCLCPP_INFO(get_logger(), "Arming object %d", conf.getTransmitterID());
 	this->comms.cmd << OBJECT_COMMAND_ARM;
 }
 
 void TestObject::sendDisarm() {
+	RCLCPP_INFO(get_logger(), "Disarming object %d", conf.getTransmitterID());
 	this->comms.cmd << OBJECT_COMMAND_DISARM;
 }
 
 void TestObject::sendAllClear() {
+	RCLCPP_INFO(get_logger(), "Clearing abort for object %d", conf.getTransmitterID());
 	this->comms.cmd << OBJECT_COMMAND_ALL_CLEAR;
 }
 
@@ -366,9 +392,11 @@ void TestObject::sendOsiData(
 	this->osiChannel << vec;
 }
 
-void TestObject::sendStart() {
+void TestObject::sendStart(std::chrono::system_clock::time_point startTime) {
+	RCLCPP_INFO(get_logger(), "Starting object %d", conf.getTransmitterID());
 	StartMessageType strt;
-	TimeSetToCurrentSystemTime(&strt.startTime); // TODO make possible to modify
+	strt.startTime.tv_sec = std::chrono::duration_cast<std::chrono::seconds>(startTime.time_since_epoch()).count();
+	strt.startTime.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(startTime.time_since_epoch()).count() % 1000000;
 	strt.isTimestampValid = true;
 	this->comms.cmd << strt;
 }

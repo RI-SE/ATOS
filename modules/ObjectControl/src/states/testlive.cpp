@@ -9,6 +9,13 @@ void AbstractKinematics::TestLive::onEnter(
 	handler.startObjects();
 }
 
+void AbstractKinematics::TestLive::startObjectRequest(
+		ObjectControl& handler, 
+		uint32_t id, 
+		std::chrono::system_clock::time_point startTime) { 
+	handler.startObject(id, startTime);
+}
+
 void AbstractKinematics::TestLive::stopRequest(ObjectControl&) {
 	// TODO
 }

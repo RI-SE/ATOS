@@ -99,8 +99,8 @@ void ObjectConfig::parseConfigurationFile(
 
 	// Get trajectory file setting
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_TRAJ, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) == 0) {
+								objectFile.string().length(),
+								setting, sizeof (setting)) == 0) {
 
 		fs::path trajFile(std::string(trajDirPath) + std::string(setting));
 		if (!fs::exists(trajFile.string())) {
@@ -111,7 +111,7 @@ void ObjectConfig::parseConfigurationFile(
 		this->trajectory.initializeFromFile(setting);
 		RCLCPP_DEBUG(get_logger(), "Loaded trajectory with %u points", trajectory.points.size());
 	}
-
+	
 	// Get opendrive file setting
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_OPENDRIVE, objectFile.c_str(),
 								objectFile.string().length(),

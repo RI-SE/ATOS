@@ -4,6 +4,7 @@
 #include "util.h"
 #include "type.h"
 #include <stdexcept>
+#include <chrono>
 #include <rclcpp/logging.hpp>
 
 class ObjectControl;
@@ -42,6 +43,7 @@ public:
 	virtual void postProcessingCompleted(ObjectControl&) { throw std::runtime_error("Unexpected postprocessing completion in state " + type(*this)); }
 	virtual void settingModificationRequested(ObjectControl&) { throw std::runtime_error("Unexpected setting modification in state " + type(*this)); }
 	virtual void actionExecutionRequested(ObjectControl&) { throw std::runtime_error("Unexpected action execution in state " + type(*this)); }
+	virtual void startObjectRequest(ObjectControl&, uint32_t, std::chrono::system_clock::time_point) { throw std::runtime_error("Unexpected start object request in state " + type(*this)); }
 
 	//! Enter/exit functionality - defaults to nothing
 	virtual void onEnter(ObjectControl&) {}
@@ -234,6 +236,7 @@ public:
 	virtual void disconnectedFromObject(ObjectControl&, uint32_t) override;
 	virtual void objectDisarmed(ObjectControl&,uint32_t) override;
 	virtual void objectAborting(ObjectControl&,uint32_t) override;
+	virtual void startObjectRequest(ObjectControl&, uint32_t, std::chrono::system_clock::time_point) override;
 
 	virtual void onEnter(ObjectControl&) override;
 

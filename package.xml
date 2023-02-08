@@ -23,6 +23,7 @@
   <depend>nav_msgs</depend>
   <depend>std_srvs</depend>
   <depend>atos_interfaces</depend>
+  <depend>paho-mqtt-c</depend>
   <doc_depend>doxygen</doc_depend>
 
   <test_depend>ament_lint_auto</test_depend>

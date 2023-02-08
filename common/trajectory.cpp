@@ -7,7 +7,6 @@
 #include "trajectory.hpp"
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include "atos_interfaces/msg/cartesian_trajectory.hpp"
 
 namespace ATOS{
 const std::regex Trajectory::fileHeaderPattern("TRAJECTORY;(" + RegexPatterns::intPattern + ");("
@@ -64,6 +63,8 @@ atos_interfaces::msg::CartesianTrajectory Trajectory::toCartesianTrajectory(){
 
 void Trajectory::initializeFromCartesianTrajectory(const atos_interfaces::msg::CartesianTrajectory &traj) {
 	using namespace std::chrono;
+	// TODO: add name to traj
+	
 	for (const auto &tp : traj.points){
 		TrajectoryPoint point(logger);
 		point.setTime(duration_cast<milliseconds>(seconds{tp.time_from_start.sec} + nanoseconds{tp.time_from_start.nanosec}));
@@ -80,6 +81,7 @@ void Trajectory::initializeFromCartesianTrajectory(const atos_interfaces::msg::C
 		point.setLateralAcceleration(tp.acceleration.linear.y);
 		point.setCurvature(0); // TODO: Support
 		point.setMode(ATOS::Trajectory::TrajectoryPoint::ModeType::CONTROLLED_BY_DRIVE_FILE); //TODO: Support
+		this->points.push_back(point);
 	}
 }
 

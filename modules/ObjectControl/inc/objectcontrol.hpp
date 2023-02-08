@@ -9,6 +9,11 @@
 #include "state.hpp"
 #include "testobject.hpp"
 #include "objectlistener.hpp"
+#include "atos_interfaces/srv/get_object_ids.hpp"
+#include "atos_interfaces/srv/get_object_trajectory.hpp"
+#include "atos_interfaces/srv/get_object_ip.hpp"
+#include "atos_interfaces/srv/get_object_trigger_start.hpp"
+#include "atos_interfaces/srv/get_test_origin.hpp"
 
 // Forward declarations
 class ObjectControlState;
@@ -185,6 +190,7 @@ private:
 	void onConnectMessage(const ROSChannels::Connect::message_type::SharedPtr) override;
 	void onArmMessage(const ROSChannels::Arm::message_type::SharedPtr) override;
 	void onStartMessage(const ROSChannels::Start::message_type::SharedPtr) override;
+	void onStartObjectMessage(const ROSChannels::StartObject::message_type::SharedPtr) override;
 	void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr) override;
 	void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) override;
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
@@ -213,6 +219,7 @@ private:
 
 	ROSChannels::Init::Sub scnInitSub;			//!< Subscriber to scenario initialization requests
 	ROSChannels::Start::Sub scnStartSub;		//!< Subscriber to scenario start requests
+	ROSChannels::StartObject::Sub objectStartSub;	//!< Subscriber to scenario start requests
 	ROSChannels::Arm::Sub scnArmSub;			//!< Subscriber to scenario arm requests
 	ROSChannels::Stop::Sub scnStopSub;			//!< Subscriber to scenario stop requests
 	ROSChannels::Abort::Sub scnAbortSub;		//!< Subscriber to scenario abort requests
@@ -232,6 +239,12 @@ private:
 	ROSChannels::Abort::Pub scnAbortPub;					//!< Publisher to scenario abort reports
 	ROSChannels::ObjectsConnected::Pub objectsConnectedPub;	//!< Publisher to report that objects have been connected
 	ROSChannels::ConnectedObjectIds::Pub connectedObjectIdsPub;	//!< Publisher to periodically report connected object ids
+	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr idClient;	//!< Client to request object ids
+	rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedPtr originClient;	//!< Client to request object status
+	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr trajectoryClient;	//!< Client to request object trajectories
+	rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedPtr ipClient;	//!< Client to request object IPs
+	rclcpp::Client<atos_interfaces::srv::GetObjectTriggerStart>::SharedPtr triggerClient;	//!< Client to request object trigger start
+
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
 	//!			and can be terminated by calling ::abortConnectionAttempt or setting ::connStopReqFuture.
@@ -275,6 +288,8 @@ private:
 	void disarmObjects();
 	//! \brief
 	void startObjects();
+	//! \brief
+	void startObject(uint32_t id, std::chrono::system_clock::time_point startTime = std::chrono::system_clock::now());
 	//! \brief
 	void allClearObjects();
 	//! \brief TODO

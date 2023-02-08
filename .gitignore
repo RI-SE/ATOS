@@ -52,3 +52,7 @@ CMakeFiles*/
 
 # CMake
 CMakeCache.txt
+
+# Generated files
+scripts/*.xosc
+scripts/openscenario/*.xosc

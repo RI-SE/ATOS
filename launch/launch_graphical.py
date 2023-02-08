@@ -30,14 +30,9 @@ def generate_launch_description():
             package='atos',
             namespace='atos',
             executable='object_control',
-            name='object_control'
+            name='object_control',
+            parameters=[atosConfig]
             #,prefix="xterm -e gdb --args" #Useful for debugging
-        ),
-        Node(
-            package='atos',
-            namespace='atos',
-            executable='trajectorylet_streamer',
-            name='trajectorylet_streamer'
         ),
         #Node(
         #    package='atos',
@@ -54,41 +49,35 @@ def generate_launch_description():
         Node(
             package='atos',
             namespace='atos',
-            executable='scenario_control',
-            name='scenario_control'
-        ),
-        Node(
-            package='atos',
-            namespace='atos',
             executable='journal_control',
             name='journal_control'
         ),
-        # Node(
-        #     package='rviz2',
-        #     namespace='atos',
-        #     executable='rviz2',
-        #     name='rviz2'
-        # ),
+        Node(
+            package='rviz2',
+            namespace='atos',
+            executable='rviz2',
+            name='rviz2'
+        ),
         Node(
             package='atos',
             namespace='atos',
             executable='osi_adapter',
-            name='osi_adapter',
-            parameters=[atosConfig]
-
+            name='osi_adapter'
         ),
         Node(
             package='atos',
             namespace='atos',
             executable='esmini_adapter',
-            name='esmini_adapter'
+            name='esmini_adapter',
+            parameters=[atosConfig]
+            ,prefix="xterm -e gdb --args" #Useful for debugging
+        ),
+        Node(
+            package='atos',
+            namespace='atos',
+            executable='mqtt_bridge',
+            name='mqtt_bridge',
+            # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
+            parameters=[atosConfig]
         )
-        #Node(
-        #    package='atos',
-        #    namespace='atos',
-        #    executable='mqtt_bridge',
-        #    name='mqtt_bridge',
-        #    # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
-        #    parameters=[atosConfig]
-        #)
     ])

@@ -37,11 +37,13 @@ public:
 	ATOS::Trajectory getTrajectory() const { return trajectory; }
 	void setTrajectory(const ATOS::Trajectory& newTraj) { trajectory = newTraj; } // TODO danger danger - don't do this
 	uint32_t getTransmitterID() const { return transmitterID; }
+	void setTransmitterID(const uint32_t id) { transmitterID = id; }
 	double getTurningDiameter() const { return turningDiameter; }
 	std::string getObjectFileName() const { return objectFile.filename().string(); }
 	std::string getTrajectoryFileName() const { return trajectoryFile.filename().string(); }
 	void addInjectionTarget(const uint32_t target) { this->injectionMap.targetIDs.insert(target); }
 	void clearInjectionSources() { this->injectionMap.sourceIDs.clear(); }
+	void setOrigin(const GeographicPositionType& origin) { this->origin = origin; }
 
 	std::string toString() const;
 

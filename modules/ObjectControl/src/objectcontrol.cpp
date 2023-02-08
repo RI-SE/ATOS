@@ -25,6 +25,7 @@ ObjectControl::ObjectControl()
 	: Module(ObjectControl::moduleName),
 	scnInitSub(*this, std::bind(&ObjectControl::onInitMessage, this, _1)),
 	scnStartSub(*this, std::bind(&ObjectControl::onStartMessage, this, _1)),
+	objectStartSub(*this, std::bind(&ObjectControl::onStartObjectMessage, this, _1)),
 	scnArmSub(*this, std::bind(&ObjectControl::onArmMessage, this, _1)),
 	scnStopSub(*this, std::bind(&ObjectControl::onStopMessage, this, _1)),
 	scnAbortSub(*this, std::bind(&ObjectControl::onAbortMessage, this, _1)),
@@ -43,7 +44,11 @@ ObjectControl::ObjectControl()
 {
 	int queueSize=0;
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
-
+    idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
+	originClient = create_client<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin);
+	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory);
+	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp);
+	triggerClient = create_client<atos_interfaces::srv::GetObjectTriggerStart>(ServiceNames::getObjectTriggerStart);
 	if (this->initialize() == -1) {
 		throw std::runtime_error(std::string("Failed to initialize ") + get_name());
 	}
@@ -95,12 +100,7 @@ int ObjectControl::initialize() {
 void ObjectControl::handleActionConfigurationCommand(
 		const TestScenarioCommandAction& action) {
 	this->state->settingModificationRequested(*this);
-	if (action.command == ACTION_PARAMETER_VS_SEND_START) {
-		RCLCPP_INFO(get_logger(), "Configuring delayed start for object %u", action.objectID);
-		objects.at(action.objectID)->setTriggerStart(true);
-		this->storedActions[action.actionID] = std::bind(&TestObject::sendStart,
-														 objects.at(action.objectID));
-	}
+	// TODO: Implement
 }
 
 void ObjectControl::handleExecuteActionCommand(
@@ -145,6 +145,14 @@ void ObjectControl::onStartMessage(const Start::message_type::SharedPtr){
 	auto f_try = [&]() { this->state->startRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Start::topicName, get_logger());
+}
+
+void ObjectControl::onStartObjectMessage(const StartObject::message_type::SharedPtr strtObj){
+	using namespace std::chrono;
+	COMMAND cmd = COMM_START_OBJECT;
+	auto f_try = [&]() { this->state->startObjectRequest(*this, strtObj->id, system_clock::time_point{seconds{strtObj->stamp.sec} + nanoseconds{strtObj->stamp.nanosec}});};
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch, StartObject::topicName, get_logger());
 }
 
 void ObjectControl::onDisconnectMessage(const Disconnect::message_type::SharedPtr){	
@@ -236,6 +244,93 @@ void ObjectControl::onPathMessage(const Path::message_type::SharedPtr trajlet,ui
 }
 
 void ObjectControl::loadScenario() {
+	this->clearScenario();
+	RCLCPP_INFO(get_logger(), "Loading scenario");
+	auto idsCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFuture future) {
+		auto idResponse = future.get();
+		RCLCPP_INFO(get_logger(), "Received %d configured object ids", idResponse->ids.size());
+
+		for (const auto id : idResponse->ids) {
+			auto trajletSub = std::make_shared<Path::Sub>(*this, id, std::bind(&ObjectControl::onPathMessage, this, _1, id));
+			auto monrPub = std::make_shared<Monitor::Pub>(*this, id);
+			auto object = std::make_shared<TestObject>(this->get_logger(), trajletSub, monrPub);
+			objects.emplace(id, object);
+			objects.at(id)->setTransmitterID(id);
+
+			auto trajectoryCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
+				auto trajResponse = future.get();
+				if (!trajResponse->success) {
+					RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
+					return;
+				}
+				ATOS::Trajectory traj(get_logger());
+				traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
+				objects.at(id)->setTrajectory(traj);
+				RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %d points", id, traj.size());
+			};
+			auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
+			trajRequest->id = id;
+			trajectoryClient->async_send_request(trajRequest, trajectoryCallback);
+
+			auto ipCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedFuture future) {
+				auto ipResponse = future.get();
+				if (!ipResponse->success) {
+					RCLCPP_ERROR(get_logger(), "Get IP service call failed for object %u", id);
+					return;
+				}
+				// convert from string to in_addr
+				in_addr_t ip;
+				inet_pton(AF_INET, ipResponse->ip.c_str(), &ip);
+				RCLCPP_INFO(get_logger(), "Got ip %s for object %u", ipResponse->ip.c_str(), id,ip);
+				objects.at(id)->setObjectIP(ip);
+			};
+
+			auto ipRequest = std::make_shared<atos_interfaces::srv::GetObjectIp::Request>();
+			ipRequest->id = id;
+			ipClient->async_send_request(ipRequest, ipCallback);
+
+			// Get delayed start
+			auto triggerCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTriggerStart>::SharedFuture future) {
+				auto triggerResponse = future.get();
+				if (!triggerResponse->success) {
+					RCLCPP_ERROR(get_logger(), "Get trigger start service call failed for object %u", id);
+					return;
+				}
+				objects.at(id)->setTriggerStart(triggerResponse->trigger_start);
+				RCLCPP_INFO(get_logger(), "Got trigger start for object %u: %u", id, triggerResponse->trigger_start);
+			};
+			auto triggerRequest = std::make_shared<atos_interfaces::srv::GetObjectTriggerStart::Request>();
+			triggerRequest->id = id;
+			triggerClient->async_send_request(triggerRequest, triggerCallback);
+
+			// Get test origin
+			auto originCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
+				auto origin = future.get();
+				if (!origin->success) {
+					RCLCPP_ERROR(get_logger(), "Get origin service call failed for object %u", id);
+					return;
+				}
+				objects.at(id)->setOrigin({
+					origin->origin.position.latitude,
+					origin->origin.position.longitude,
+					origin->origin.position.altitude,
+					true,true,true});
+				RCLCPP_INFO(get_logger(), "Got origin for object %u: (%.6f, %.6f, %.3f)", id,
+					origin->origin.position.latitude,
+					origin->origin.position.longitude,
+					origin->origin.position.altitude);
+			};
+			auto requestOrigin = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
+			auto promiseOrigin = originClient->async_send_request(requestOrigin, originCallback);
+		}
+	};
+
+	// TODO query scenario participants from scenario manager
+	auto request = std::make_shared<atos_interfaces::srv::GetObjectIds::Request>();
+	auto promise = idClient->async_send_request(request, idsCallback);
+	return;
+
+
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, std::shared_ptr<TestObject>> &o) {
 		auto data = o.second->getAsObjectData();
@@ -244,7 +339,6 @@ void ObjectControl::loadScenario() {
 }
 
 void ObjectControl::loadObjectFiles() {
-	this->clearScenario();
 	char path[MAX_FILE_PATH];
 	std::vector<std::invalid_argument> errors;
 
@@ -266,8 +360,9 @@ void ObjectControl::loadObjectFiles() {
 				auto foundObject = objects.find(id);
 				if (foundObject == objects.end()) {
 					// Create sub and pub as unique ptrs, when TestObject is destroyed, these get destroyed too.
-					auto trajletSub = std::make_shared<Path::Sub>(*this,id,std::bind(&ObjectControl::onPathMessage,this,_1,id));
-					auto monrPub = std::make_shared<Monitor::Pub>(*this,id);
+					
+					auto trajletSub = std::make_shared<Path::Sub>(*this, id, std::bind(&ObjectControl::onPathMessage, this, _1, id));
+					auto monrPub = std::make_shared<Monitor::Pub>(*this, id);
 					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(get_logger(),trajletSub,monrPub);
 					object->parseConfigurationFile(inputFile);
 					objects.emplace(id, object);
@@ -433,7 +528,7 @@ void ObjectControl::heartbeat() {
 					objects.at(id)->sendHeartbeat(this->state->asControlCenterStatus());
 				}
 			}
-			catch (std::invalid_argument& e) {
+			catch (std::exception& e) {
 				RCLCPP_WARN(get_logger(), e.what());
 				objects.at(id)->disconnect();
 				this->state->disconnectedFromObject(*this, id);
@@ -502,8 +597,8 @@ void ObjectControl::notifyObjectsConnected() {
 void ObjectControl::connectToObject(
 		std::shared_ptr<TestObject> obj,
 		std::shared_future<void> &connStopReq) {
-	constexpr int maxConnHeabs = 10;
-	constexpr int maxConnMonrs = 10;
+	constexpr int maxConnHeabs = 100;
+	constexpr int maxConnMonrs = 100;
 	try {
 		if (!obj->isConnected()) {
 			try {
@@ -605,15 +700,36 @@ void ObjectControl::disarmObjects() {
 		catch (std::invalid_argument& e) {
 			RCLCPP_ERROR(get_logger(), "Unable to disarm object %u: %s", id, e.what());
 		}
+		catch (std::runtime_error& e) {
+			RCLCPP_ERROR(get_logger(), "Unable to disarm object %u: %s", id, e.what());
+			objects.at(id)->disconnect();
+		}
 	}
 	this->state->allObjectsDisarmed(*this); // TODO add a check on object states as well
 }
 
 void ObjectControl::startObjects() {
 	for (auto& id : getVehicleIDs()) {
+		startObject(id);
+	}
+}
+
+void ObjectControl::startObject(
+	uint32_t id,
+	std::chrono::system_clock::time_point startTime) {
+	try {
 		if (!objects.at(id)->isStartingOnTrigger()) {
-			objects.at(id)->sendStart();
+			objects.at(id)->sendStart(startTime);
 		}
+	}
+	catch (std::out_of_range& e) {
+		std::stringstream ss;
+		for (auto& id : getVehicleIDs()) {
+			ss << " " << id << ",";
+		}
+		auto str = ss.str();
+		str.pop_back();
+		RCLCPP_WARN(get_logger(), "Attempted to start nonexistent object %u - configured objects are%s", id, str.c_str());
 	}
 }
 

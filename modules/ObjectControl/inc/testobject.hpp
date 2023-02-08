@@ -112,12 +112,15 @@ public:
 	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
 	ObjectConfig getObjectConfig() const { return conf; }
 	void setTrajectory(const ATOS::Trajectory& newTrajectory) { conf.setTrajectory(newTrajectory); }
+	void setTransmitterID(const uint32_t newID) { conf.setTransmitterID(newID); }
 	void setLastReceivedPath(ROSChannels::Path::message_type::SharedPtr);
+	void setObjectIP(const in_addr_t newIP);
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
 	void setOsiAddress(const sockaddr_in& newAddr);
 	void setObjectConfig(ObjectConfig& newObjectConfig);
 	void setTriggerStart(const bool startOnTrigger = true);
+	void setOrigin(const GeographicPositionType&);
 	
 	bool isAnchor() const { return conf.isAnchor(); }
 	bool isOsiCompatible() const { return conf.isOSI(); }
@@ -139,7 +142,7 @@ public:
 	void sendArm();
 	void sendDisarm();
 	void sendRemoteControl(bool on);
-	void sendStart();
+	void sendStart(std::chrono::system_clock::time_point timestamp);
 	void sendAllClear();
 	void sendOsiData(const OsiHandler::LocalObjectGroundTruth_t& osidata,
 					 const std::string& projStr,

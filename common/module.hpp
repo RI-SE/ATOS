@@ -54,13 +54,17 @@ static std::map<COMMAND, std::string> topicNames = {
 	{COMM_ENABLE_OBJECT, "/enable_object"},
 	{COMM_CONTROL_SIGNAL_PERCENTAGE, "/control_signal_perc"},
 	{COMM_OBJECTS_CONNECTED, "/objects_connected"},
-	{COMM_FAILURE, "/failure"}
+	{COMM_FAILURE, "/failure"},
+	{COMM_START_OBJECT, "/start_object"}
 };
 
 namespace ServiceNames {
 const std::string initDataDict = "init_data_dictionary";
 const std::string getObjectIds = "get_object_ids";
+const std::string getObjectIp = "get_object_ip";
 const std::string getTestOrigin = "get_test_origin";
+const std::string getObjectTrajectory = "get_object_trajectory";
+const std::string getObjectTriggerStart = "get_object_trigger_start";
 }
 
 // TODO move somewhere else? also make generic to allow more args (variadic template)?
@@ -123,6 +127,7 @@ class Module : public rclcpp::Node {
 	virtual void onOBCStateMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO remove
 	virtual void onVIOPMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO remove or swap type
 	virtual void onStartMessage(const ROSChannels::Start::message_type::SharedPtr){};
+	virtual void onStartObjectMessage(const ROSChannels::StartObject::message_type::SharedPtr){};
 	virtual void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr){};
 	virtual void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) = 0;
 	virtual void onACCMMessage(const ROSChannels::ActionConfiguration::message_type::SharedPtr){};
