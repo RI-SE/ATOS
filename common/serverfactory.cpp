@@ -1,10 +1,18 @@
 #include "serverfactory.hpp"
 
 
+/**
+ * @brief Factory for creating TCP and UDP servers.
+ * 
+ * @param address Address
+ * @param port Port
+ * @param logger Logger for output
+ */
 ServerFactory::ServerFactory(const std::string& address, const uint16_t& port, rclcpp::Logger logger) : Loggable(logger) {
   this->address = address;
   this->port = port;
 }
+
 
 ServerFactory::~ServerFactory() {}
 

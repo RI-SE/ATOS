@@ -3,6 +3,14 @@
 using namespace boost::asio;
 using namespace rclcpp;
 
+
+/**
+ * @brief Class for UDP server extending Server.
+ * 
+ * @param address Address
+ * @param port Port
+ * @param logger Logger for output
+ */
 UDPServer::UDPServer(const std::string& address, const uint16_t& port, rclcpp::Logger& logger) : 
             Server(address, port, logger) {}
 
