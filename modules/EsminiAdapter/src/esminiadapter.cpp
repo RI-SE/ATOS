@@ -358,11 +358,14 @@ void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr
  * \param states A vector of object states
  * \return A trajectory consisting of trajectory points, one for each state.
  */
-ATOS::Trajectory EsminiAdapter::getTrajectory(uint32_t id,std::vector<SE_ScenarioObjectState>& states) {
-	ATOS::Trajectory trajectory;
+ATOS::Trajectory EsminiAdapter::getTrajectory(
+	uint32_t id,
+	std::vector<SE_ScenarioObjectState>& states)
+{
+	ATOS::Trajectory trajectory(me->get_logger());
 	trajectory.name = "Esmini Trajectory for object " + std::to_string(id);
-	auto saveTp = [&](auto& state, auto& prevState){
-		ATOS::Trajectory::TrajectoryPoint tp;
+	auto saveTp = [&](auto& state, auto& prevState) {
+		ATOS::Trajectory::TrajectoryPoint tp(me->get_logger());
 		double currLonVel = state.speed * cos(state.wheel_angle);
 		double currLatVel = state.speed * sin(state.wheel_angle);
 		double prevLonVel = prevState.speed * cos(prevState.wheel_angle);
@@ -432,16 +435,21 @@ void EsminiAdapter::getObjectStates(double timeStep, double endTime, std::map<ui
  * \param idToTraj The return map of ids mapping to the respective trajectories
  * \return A map of ids mapping to the respective trajectories
  */
-std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(double timeStep, double endTime, std::map<uint32_t,ATOS::Trajectory>& idToTraj){
+std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(
+	double timeStep,
+	double endTime,
+	std::map<uint32_t,ATOS::Trajectory>& idToTraj)
+{
 	// Get object states
 	std::map<uint32_t,std::vector<SE_ScenarioObjectState>> idToStates;
 	getObjectStates(timeStep, endTime, idToStates);
 
 	// Extract trajectories
-	for (auto& os : idToStates){
+	for (auto& os : idToStates) {
 		auto id = os.first;
 		auto objectStates = os.second;
-		idToTraj[id] = getTrajectory(id, objectStates);
+		auto traj = getTrajectory(id, objectStates);
+		idToTraj.insert(std::pair<uint32_t,ATOS::Trajectory>(id, traj));
 	}
 	return idToTraj;
 }

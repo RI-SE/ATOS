@@ -1,5 +1,4 @@
-#include "journal.h"
-#include "logging.h"
+#include "journal.hpp"
 #include "util.h"
 
 #include <linux/limits.h>
@@ -8,6 +7,7 @@
 #include <chrono>
 #include <ctime>
 #include <cerrno>
+#include <cstring>
 
 #define JOURNAL_LABEL_MAX_LENGTH 100
 #define FILENAME_DATESTR_MAX_LENGTH 100
@@ -33,7 +33,10 @@ static int checkDate(void);
 static FILE* beginJournalEntry(void);
 static int endJournalEntry(FILE*);
 
-int JournalInit(const char* journalName) {
+static std::string logName;
+
+int JournalInit(const char* journalName, rclcpp::Logger log) {
+	logName = log.get_name();
 	journalLabel = journalName;
 	return reinitializeJournal();
 }
@@ -62,7 +65,7 @@ int JournalRecordData(const JournalRecordType type, const char* format, ...) {
 		return endJournalEntry(fp);
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to open journal file %s for writing", journalPath.c_str());
+		RCLCPP_ERROR(rclcpp::get_logger(logName), "Unable to open journal file %s for writing", journalPath.c_str());
 		return -1;
 	}
 }
@@ -123,7 +126,7 @@ int JournalRecordMonitorData(const ObjectDataType* objectData) {
 		return endJournalEntry(fp);
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to open journal file %s for writing", journalPath.c_str());
+		RCLCPP_ERROR(rclcpp::get_logger(logName), "Unable to open journal file %s for writing", journalPath.c_str());
 		return -1;
 	}
 }
@@ -150,10 +153,10 @@ int reinitializeJournal() {
 	if(stat(journalDirPath, &sb)) {
 		// Create directory if not
 		if (mkdir(journalDirPath, 0775) != -1) {
-			LogMessage(LOG_LEVEL_INFO, "Created directory %s", journalDirPath);
+			RCLCPP_INFO(rclcpp::get_logger(logName), "Created directory %s", journalDirPath);
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Unable to create directory <%s>", journalDirPath);
+			RCLCPP_ERROR(rclcpp::get_logger(logName), "Unable to create directory <%s>", journalDirPath);
 			return -1;
 		}
 	}
@@ -165,23 +168,23 @@ int reinitializeJournal() {
 
 	// Check if journal already exists
 	if (access(journalPath.c_str(), F_OK) != -1) {
-		LogMessage(LOG_LEVEL_DEBUG, "Found existing journal %s", journalPath.c_str());
+		RCLCPP_DEBUG(rclcpp::get_logger(logName), "Found existing journal %s", journalPath.c_str());
 		printout = "Opened on ";
 		printout.append(dateStr);
 	}
 	else {
-		LogMessage(LOG_LEVEL_DEBUG, "No journal found, creating %s", journalPath.c_str());
+		RCLCPP_DEBUG(rclcpp::get_logger(logName), "No journal found, creating %s", journalPath.c_str());
 		printout = "Created on ";
 		printout.append(dateStr);
 	}
 
 	// Print initialization message to journal to catch errors
 	if (JournalRecordData(JOURNAL_RECORD_STRING,printout.c_str()) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to write to file %s", journalPath.c_str());
+		RCLCPP_ERROR(rclcpp::get_logger(logName), "Unable to write to file %s", journalPath.c_str());
 		return -1;
 	}
 
-	LogMessage(LOG_LEVEL_INFO, "Opened journal file %s", journalPath.c_str());
+	RCLCPP_INFO(rclcpp::get_logger(logName), "Opened journal file %s", journalPath.c_str());
 	return 0;
 }
 
@@ -190,9 +193,9 @@ int checkDate() {
 	if (today == creationDate) {
 		return 0;
 	}
-	LogMessage(LOG_LEVEL_INFO, "Detected day rollover - beginning new journal");
+	RCLCPP_INFO(rclcpp::get_logger(logName), "Detected day rollover - beginning new journal");
 	if (reinitializeJournal() == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to reinitialize journal");
+		RCLCPP_ERROR(rclcpp::get_logger(logName), "Unable to reinitialize journal");
 		return -1;
 	}
 	return 0;

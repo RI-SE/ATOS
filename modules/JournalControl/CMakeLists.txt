@@ -18,14 +18,15 @@ set(FILESYSTEM_LIBRARY stdc++fs)
 set(COMMON_LIBRARY ATOSCommon)
 
 get_target_property(COMMON_HEADERS ${COMMON_LIBRARY} INCLUDE_DIRECTORIES)
+get_target_property(COREUTILS_HEADERS ${COREUTILS_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
 # Create project main executable target
 add_executable(${JOURNAL_CONTROL_TARGET}
-	${CMAKE_CURRENT_SOURCE_DIR}/src/journalcollection.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/journalmodelcollection.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/journalcontrol.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/journal.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/journalmodel.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 )
 # Link project executable to util libraries

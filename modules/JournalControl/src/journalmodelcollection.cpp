@@ -1,6 +1,6 @@
-#include "journalcollection.hpp"
+#include "journalmodelcollection.hpp"
 #include "datadictionary.h"
-#include "journal.h"
+#include "journal.hpp"
 #include <fstream>
 #include <iterator>
 #include <algorithm>
@@ -11,7 +11,7 @@
 /*!
  * \brief placeStartBookmarks Stores references to the current end of file of all journals.
  */
-void JournalCollection::placeStartBookmarks() {
+void JournalModelCollection::placeStartBookmarks() {
 
 	auto journalFilesFromToday = getJournalFilesFromToday();
 	auto currentDate = getCurrentDateAsString();
@@ -20,7 +20,7 @@ void JournalCollection::placeStartBookmarks() {
 
 	for (const auto &journalFile : journalFilesFromToday) {
 		RCLCPP_DEBUG(get_logger(), "Storing start bookmark in file %s", journalFile.c_str());
-		Journal journal(get_logger());
+		JournalModel journal(get_logger());
 		auto datePosition = journalFile.stem().string().find("-" + currentDate);
 		journal.moduleName = journalFile.stem().string().substr(0, datePosition);
 		journal.startReference.place(journalFile);
@@ -35,7 +35,7 @@ void JournalCollection::placeStartBookmarks() {
 /*!
  * \brief placeStopBookmarks Stores references to the current end of file of all journals.
  */
-void JournalCollection::placeStopBookmarks() {
+void JournalModelCollection::placeStopBookmarks() {
 
 	auto journalFilesFromToday = getJournalFilesFromToday();
 	auto currentDate = getCurrentDateAsString();
@@ -43,7 +43,7 @@ void JournalCollection::placeStopBookmarks() {
 	for (const auto &journalFile : journalFilesFromToday) {
 		RCLCPP_DEBUG(get_logger(), "Storing stop bookmark in file %s", journalFile.c_str());
 		// Find existing journal matching module name from file
-		Journal soughtJournal(get_logger());
+		JournalModel soughtJournal(get_logger());
 		auto datePosition = journalFile.stem().string().find("-" + currentDate);
 		soughtJournal.moduleName = journalFile.stem().string().substr(0, datePosition);
 		soughtJournal.startReference.place(journalFile, true); // In case we are emplacing, startReference at beginning
@@ -57,12 +57,12 @@ void JournalCollection::placeStopBookmarks() {
 }
 
 /*!
- * \brief JournalCollection::insertNonBookmarked Inserts journal files that were not included
+ * \brief JournalModelCollection::insertNonBookmarked Inserts journal files that were not included
  *			among the start/stop bookmarks for some reason, e.g. that the start/stop bookmarks
  *			are separated by more than a day, or that the journal file did not extend to the
  *			stop bookmark day.
  */
-void JournalCollection::insertNonBookmarked() {
+void JournalModelCollection::insertNonBookmarked() {
 
 	if (startDay.time_since_epoch().count() == 0) {
 		RCLCPP_ERROR(get_logger(), "Start time invalid, unable to insert non-bookmarked journals");
@@ -86,7 +86,7 @@ void JournalCollection::insertNonBookmarked() {
 
 		for (const auto &journalFile : journalFilesFromDay) {
 			// Find existing journal matching module name from file
-			Journal soughtJournal(get_logger());
+			JournalModel soughtJournal(get_logger());
 			auto datePosition = journalFile.stem().string().find("-" + date);
 			soughtJournal.moduleName = journalFile.stem().string().substr(0, datePosition);
 			// Insert checks if an equivalent element (same module) already exists
@@ -132,7 +132,7 @@ void JournalCollection::insertNonBookmarked() {
  *			interleaving relevant entries from all contained journals.
  * \return 0 on success, -1 otherwise
  */
-int JournalCollection::dumpToFile() {
+int JournalModelCollection::dumpToFile() {
 
 	int retval = 0;
 	char scenarioName[PATH_MAX] = {'\0'};
@@ -269,7 +269,7 @@ int JournalCollection::dumpToFile() {
 
 
 
-int JournalCollection::printJournalHeaderTo(std::ofstream &ostrm) {
+int JournalModelCollection::printJournalHeaderTo(std::ofstream &ostrm) {
 	std::vector<char> trajectoryDirectory(PATH_MAX, '\0');
 	std::vector<char> configurationDirectory(PATH_MAX, '\0');
 	std::vector<char> objectDirectory(PATH_MAX, '\0');
@@ -324,7 +324,7 @@ int JournalCollection::printJournalHeaderTo(std::ofstream &ostrm) {
  * \brief getCurrentDateAsString Creates a string on the format YYYY-MM-DD of the current date.
  * \return A std::string containing the current date
  */
-std::string JournalCollection::getCurrentDateAsString() {
+std::string JournalModelCollection::getCurrentDateAsString() {
 	return getDateAsString(std::chrono::system_clock::now());
 }
 
@@ -333,7 +333,7 @@ std::string JournalCollection::getCurrentDateAsString() {
  * \param date Timestamp for which date string is to be extracted.
  * \return A std::string containing the date representation
  */
-std::string JournalCollection::getDateAsString(const std::chrono::system_clock::time_point &date) {
+std::string JournalModelCollection::getDateAsString(const std::chrono::system_clock::time_point &date) {
 	using Clock = std::chrono::system_clock;
 	char dateString[DATE_STRING_MAX_LEN] = {'\0'};
 	auto dateRaw = Clock::to_time_t(date);
@@ -348,7 +348,7 @@ std::string JournalCollection::getDateAsString(const std::chrono::system_clock::
  * \param date Date for which journals are to be fetched
  * \return A std::vector containing file paths
  */
-std::vector<fs::path> JournalCollection::getJournalFilesFrom(const std::chrono::system_clock::time_point &date) {
+std::vector<fs::path> JournalModelCollection::getJournalFilesFrom(const std::chrono::system_clock::time_point &date) {
 	std::vector<fs::path> journalsFromDate;
 	std::vector<char> buffer(PATH_MAX, '\0');
 
@@ -383,7 +383,7 @@ std::vector<fs::path> JournalCollection::getJournalFilesFrom(const std::chrono::
  * \param outputFile Stream to which contents are to be printed
  * \return 0 on success, -1 otherwise
  */
-int JournalCollection::printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile) {
+int JournalModelCollection::printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile) {
 
 	if (!exists(inputDirectory)) {
 		throw std::runtime_error("Unable to find directory " + inputDirectory.string());

@@ -8,7 +8,7 @@
 namespace ATOS {
 	constexpr CartesianPosition DistanceTrigger::defaultReferencePoint;
 
-	DistanceTrigger::DistanceTrigger(Trigger::TriggerID_t triggerID) : BooleanTrigger(triggerID, Trigger::TriggerTypeCode_t::TRIGGER_DISTANCE) {
+	DistanceTrigger::DistanceTrigger(rclcpp::Logger log, Trigger::TriggerID_t triggerID) : BooleanTrigger(log, triggerID, Trigger::TriggerTypeCode_t::TRIGGER_DISTANCE) {
 		this->setReferencePoint(defaultReferencePoint);
 		this->setTriggerDistance(0.0);
 	}
@@ -39,7 +39,7 @@ namespace ATOS {
 			networkDelayCorrection_m = networkDelay_s * newValue.MonrData.speed.longitudinal_m_s;
 		}
 		else {
-			LogMessage(LOG_LEVEL_WARNING, "Invalid monitor data speed or timestamp: cannot correct for network delay");
+			RCLCPP_WARN(get_logger(), "Invalid monitor data speed or timestamp: cannot correct for network delay");
 		}
 
 		switch (this->oper) {
@@ -81,7 +81,7 @@ namespace ATOS {
 		}
 		else return INVALID_ARGUMENT;
 
-		LogMessage(LOG_LEVEL_INFO, "Distance trigger configured with reference point (%.3f, %.3f, %.3f) and %.3f m trigger distance",
+		RCLCPP_INFO(get_logger(), "Distance trigger configured with reference point (%.3f, %.3f, %.3f) and %.3f m trigger distance",
 				this->referencePoint.xCoord_m, this->referencePoint.yCoord_m, this->referencePoint.zCoord_m, this->triggerDistance_m);
 		return retval;
 	}

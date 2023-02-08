@@ -51,7 +51,8 @@ int main()
 				loadObjectFiles();
 			} catch (std::invalid_argument& e) {
 				LogMessage(LOG_LEVEL_ERROR, "Loading of object files failed - %s", e.what());
-				iCommSend(COMM_FAILURE, nullptr, 0);
+				LogMessage(LOG_LEVEL_ERROR, "Unimplemented response COMM_FAILURE");
+				//iCommSend(COMM_FAILURE, nullptr, 0);
 			}
 			break;
 
@@ -134,7 +135,8 @@ void backToStart() {
 			memset(btsResponseBuffer, 0, sizeof (btsResponseBuffer));
 			BTSResponse btsResponse = BTS_FAIL;
 			memcpy(btsResponseBuffer, &btsResponse, sizeof (btsResponse));
-			iCommSend(COMM_BACKTOSTART_RESPONSE, btsResponseBuffer, sizeof (btsResponse));
+			LogMessage(LOG_LEVEL_ERROR, "Unimplemented response COMM_BACKTOSTART_RESPONSE");
+			//iCommSend(COMM_BACKTOSTART_RESPONSE, btsResponseBuffer, sizeof (btsResponse));
 			return;
 		}
 		b2sTrajectories.push_back(b2sTraj);
@@ -155,7 +157,8 @@ void backToStart() {
 	memset(btsResponseBuffer, 0, sizeof (btsResponseBuffer));
 	BTSResponse btsResponse = BTS_PASS;
 	memcpy(btsResponseBuffer, &btsResponse, sizeof (btsResponse));
-	iCommSend(COMM_BACKTOSTART_RESPONSE, btsResponseBuffer, sizeof (btsResponse));
+	LogMessage(LOG_LEVEL_ERROR, "Unimplemented response COMM_BACKTOSTART_RESPONSE");
+	//iCommSend(COMM_BACKTOSTART_RESPONSE, btsResponseBuffer, sizeof (btsResponse));
 
 }
 

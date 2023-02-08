@@ -13,7 +13,8 @@ TestObject::TestObject(rclcpp::Logger log,
 	comms(log),
 	Loggable(log),
 	pathSub(pathSub),
-	monrPub(monrPub)
+	monrPub(monrPub),
+	conf(log)
 	 {
 }
 

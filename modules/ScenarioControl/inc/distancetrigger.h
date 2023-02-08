@@ -10,7 +10,7 @@ namespace ATOS {
 	class DistanceTrigger : public BooleanTrigger
 	{
 	public:
-		DistanceTrigger(TriggerID_t triggerID);
+		DistanceTrigger(rclcpp::Logger log, TriggerID_t triggerID);
 
 		TriggerReturnCode_t appendParameter(std::string inputStr) override;
 		TriggerReturnCode_t parseParameters() override;

@@ -1,5 +1,4 @@
 #include "state.hpp"
-#include "logging.h"
 #include "type.h"
 #include "datadictionary.h"
 #include <exception>
