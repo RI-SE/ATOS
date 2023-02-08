@@ -37,15 +37,16 @@ def generate_launch_description():
         #Node(
         #    package='atos',
         #    namespace='atos',
+        #    executable='direct_control',
+        #    name='direct_control'
+        #),
+
+        #Node(
+        #    package='atos',
+        #    namespace='atos',
         #    executable='time_control',
         #    name='time_control'
         #),
-        Node(
-            package='atos',
-            namespace='atos',
-            executable='direct_control',
-            name='direct_control'
-        ),
         Node(
             package='atos',
             namespace='atos',
@@ -70,7 +71,7 @@ def generate_launch_description():
             executable='esmini_adapter',
             name='esmini_adapter',
             parameters=[atosConfig]
-            ,prefix="xterm -e gdb --args" #Useful for debugging
+            #,prefix="xterm -e gdb --args" #Useful for debugging
         ),
         Node(
             package='atos',
