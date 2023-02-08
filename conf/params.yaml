@@ -18,7 +18,7 @@ atos:
       test_origin_rot_w: 1.0
   esmini_adapter:
     ros__parameters:
-      open_scenario_file: "GaragePlanScenario.xosc"
+      open_scenario_file: ""
   object_control:
     ros__parameters:
       max_missing_heartbeats: 100
