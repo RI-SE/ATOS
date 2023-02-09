@@ -6,7 +6,7 @@ AbstractKinematics::TestLive::TestLive() {
 
 void AbstractKinematics::TestLive::onEnter(
 		ObjectControl& handler) {
-	handler.startObjects();
+	handler.startScenario();
 }
 
 void AbstractKinematics::TestLive::startObjectRequest(

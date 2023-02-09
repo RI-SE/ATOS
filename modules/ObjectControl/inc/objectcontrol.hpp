@@ -287,7 +287,7 @@ private:
 	//! \brief TODO
 	void disarmObjects();
 	//! \brief
-	void startObjects();
+	void startScenario();
 	//! \brief
 	void startObject(uint32_t id, std::chrono::system_clock::time_point startTime = std::chrono::system_clock::now());
 	//! \brief
