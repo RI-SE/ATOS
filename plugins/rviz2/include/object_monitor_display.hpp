@@ -11,7 +11,7 @@
 #include "rviz_rendering/objects/axes.hpp"
 #include "rviz_rendering/objects/shape.hpp"
 
-namespace ATOS_rviz_plugins {
+namespace atos_rviz_plugins {
 
 class MonitorDisplay : public rviz_common::RosTopicDisplay<atos_interfaces::msg::Monitor> {
 	Q_OBJECT
@@ -60,4 +60,4 @@ class MonitorDisplay : public rviz_common::RosTopicDisplay<atos_interfaces::msg:
 	bool pose_valid_;
 };
 
-}  // namespace ATOS_rviz_plugins
+}  // namespace atos_rviz_plugins

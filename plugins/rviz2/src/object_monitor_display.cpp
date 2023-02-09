@@ -4,7 +4,7 @@
 #include <OgreSceneNode.h>
 #include "rclcpp/logging.hpp"
 
-namespace ATOS_rviz_plugins {
+namespace atos_rviz_plugins {
 
 MonitorDisplay::MonitorDisplay()
 : arrow_(nullptr), axes_(nullptr), pose_valid_(false) {
@@ -174,10 +174,10 @@ void MonitorDisplay::reset()
 }
 
 
-}  // namespace ATOS_rviz_plugins
+}  // namespace atos_rviz_plugins
 
 #include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(ATOS_rviz_plugins::MonitorDisplay, rviz_common::Display)
+PLUGINLIB_EXPORT_CLASS(atos_rviz_plugins::MonitorDisplay, rviz_common::Display)
 
 
 

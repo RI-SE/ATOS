@@ -34,12 +34,12 @@ def generate_launch_description():
             parameters=[atosConfig]
             #,prefix="xterm -e gdb --args" #Useful for debugging
         ),
-        Node(
-            package='atos',
-            namespace='atos',
-            executable='direct_control',
-            name='direct_control'
-        ),
+        #Node(
+        #    package='atos',
+        #    namespace='atos',
+        #    executable='direct_control',
+        #    name='direct_control'
+        #),
         Node(
             package='atos',
             namespace='atos',
