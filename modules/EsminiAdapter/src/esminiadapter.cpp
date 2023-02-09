@@ -242,16 +242,21 @@ void EsminiAdapter::handleStoryBoardElementChange(
 	int type,
 	int state)
 {
-	RCLCPP_INFO(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d", name, type, state);
+	RCLCPP_DEBUG(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d", name, type, state);
 	// switch on type
-	RCLCPP_INFO(me->get_logger(), "Handle action 1 %s", name);
 	switch (type)
 	{
 	case 6: // Action
-		RCLCPP_INFO(me->get_logger(), "Handle action 2 %s", name);
 		me->handleActionElementStateChange(name, state);
 		break;
-	default: RCLCPP_INFO(me->get_logger(), "Type of value %d is not implemented", type);
+	case 1: // Ignore story type
+	case 2: // Ignore act type
+	case 3: // Ignore maneuver group type
+	case 4: // Ignore maneuver type
+	case 5: // Ignore event type
+		break; 
+	default:
+		RCLCPP_INFO(me->get_logger(), "Type %d not recognised for element %s", type, name);
 		break;
 	}
 }
@@ -260,7 +265,6 @@ void EsminiAdapter::handleActionElementStateChange(
 		const char *name,
 		int state)
 {
-	RCLCPP_INFO(me->get_logger(), "Handle action 3 %s", name);
 	try
 	{
 		auto [objectId, action] = parseAction(name);
@@ -275,7 +279,7 @@ void EsminiAdapter::handleActionElementStateChange(
 		else if (isSendDenmAction(action) && state == 3)
 		{
 			// Get the latest Monitor message
-			RCLCPP_INFO(me->get_logger(), "Running send denm action triggered by object %d", objectId);
+			RCLCPP_INFO(me->get_logger(), "Running send DENM action triggered by object %d", objectId);
 			ROSChannels::Monitor::message_type monr;
 			rclcpp::wait_for_message(monr, me, std::string(me->get_namespace()) + "/object_" + std::to_string(objectId) + "/object_monitor", 10ms);
 			TestOriginSrv::Response::SharedPtr response;

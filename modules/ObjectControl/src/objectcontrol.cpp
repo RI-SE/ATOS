@@ -708,9 +708,11 @@ void ObjectControl::disarmObjects() {
 	this->state->allObjectsDisarmed(*this); // TODO add a check on object states as well
 }
 
-void ObjectControl::startObjects() {
+void ObjectControl::startScenario() {
 	for (auto& id : getVehicleIDs()) {
-		startObject(id);
+		if (!objects.at(id)->isStartingOnTrigger()) {
+			startObject(id);
+		}
 	}
 }
 
@@ -718,9 +720,7 @@ void ObjectControl::startObject(
 	uint32_t id,
 	std::chrono::system_clock::time_point startTime) {
 	try {
-		if (!objects.at(id)->isStartingOnTrigger()) {
 			objects.at(id)->sendStart(startTime);
-		}
 	}
 	catch (std::out_of_range& e) {
 		std::stringstream ss;
