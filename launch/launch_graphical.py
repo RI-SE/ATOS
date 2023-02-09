@@ -63,7 +63,8 @@ def generate_launch_description():
             package='atos',
             namespace='atos',
             executable='osi_adapter',
-            name='osi_adapter'
+            name='osi_adapter',
+            parameters=[atosConfig]
         ),
         Node(
             package='atos',
