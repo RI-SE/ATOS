@@ -1,4 +1,6 @@
 #include "systemcontrol.hpp"
+#include <cstdio>
+#include <fcntl.h>
 
 #define SYSTEM_CONTROL_SERVICE_POLL_TIME_MS 5000
 #define SYSTEM_CONTROL_TASK_PERIOD_MS 1
@@ -127,8 +129,7 @@ bool SystemControl::shouldExit(){
 	return iExit;
 }
 
-void SystemControl::initialize(LOG_LEVEL logLevel){
-	LogInit(get_name(), logLevel);
+void SystemControl::initialize(){
 	RCLCPP_INFO(get_logger(), "System control task running with PID: %i", getpid());
 
 	if (requestDataDictInitialization()) {
@@ -1176,27 +1177,6 @@ void SystemControl::processUserCommand()
 			SystemControlState = SERVER_STATE_ERROR;
 
 		}
-		/*
-		if (iCommSend(COMM_EXIT, NULL, 0) < 0) {
-			RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending EXIT command");
-			SystemControlState = SERVER_STATE_ERROR;
-		}
-		else {
-			iExit = 1;
-			GSD->ExitU8 = 1;
-			usleep(1000000);
-			SystemControlCommand = Idle_0;
-			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "Exit:",
-												ControlResponseBuffer, 0, &ClientSocket, 0);
-			close(ClientSocket);
-			ClientSocket = -1;
-			if (USE_LOCAL_USER_CONTROL == 0) {
-				close(ServerHandle);
-				ServerHandle = -1;
-			}
-			RCLCPP_INFO(get_logger(), "Server closing");
-		}*/
 		break;
 
 	default:
@@ -1575,8 +1555,6 @@ I32 SystemControl::SystemControlInitServer(int *ClientSocket, int *ServerHandle,
 		*ClientSocket = accept(*ServerHandle, (struct sockaddr *)&cli_addr, &cli_length);
 		if ((*ClientSocket == -1 && errno != EAGAIN && errno != EWOULDBLOCK) || iExit)
 			util_error("Failed to establish connection");
-		// Varför läser man bus-meddelanden här? Tömmer den bara sin queue?
-		//bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 	} while (*ClientSocket == -1);
 
 	RCLCPP_INFO(get_logger(), "Connection established: %s:%i", inet_ntoa(cli_addr.sin_addr),
@@ -1840,7 +1818,7 @@ I32 SystemControl::SystemControlSetServerParameter(char * parameterName, char * 
 	}
 
 	if (debug) {
-		LogPrint("SetServerParameter: %s = %s", parameterName, newValue);
+		RCLCPP_WARN(get_logger(),"SetServerParameter: %s = %s", parameterName, newValue);
 	}
 
 	enum ConfigurationFileParameter parameter =
@@ -2075,7 +2053,7 @@ I32 SystemControl::SystemControlReadServerParameterList(char * ParameterList, U8
 	}
 
 	if (Debug) {
-		LogPrint("ParameterList = %s\n", ParameterList);
+		RCLCPP_WARN(get_logger(),"ParameterList = %s\n", ParameterList);
 	}
 
 	return strlen(ParameterList);
@@ -2147,7 +2125,7 @@ I32 SystemControl::SystemControlCheckFileDirectoryExist(char * ParameterName, ch
 
 
 	if (Debug)
-		LogPrint("%d %s", *ReturnValue, CompletePath);
+		RCLCPP_WARN(get_logger(),"%d %s", *ReturnValue, CompletePath);
 
 
 	return 0;
@@ -2298,7 +2276,7 @@ I32 SystemControl::SystemControlCreateDirectory(const char * Path, char * Return
 	}
 
 	if (Debug)
-		LogPrint("%d %s", *(ReturnValue), CompletePath);
+		RCLCPP_WARN(get_logger(),"%d %s", *(ReturnValue), CompletePath);
 
 	if (*ReturnValue == SUCCEDED_CREATE_FOLDER)
 		RCLCPP_INFO(get_logger(), "Directory created: %s", CompletePath);
@@ -2356,12 +2334,12 @@ I32 SystemControl::SystemControlUploadFile(const char * Filename, const char * F
 	strcpy(CompleteFilePath, CompletePath);
 
 	if (Debug) {
-		LogPrint("Filename: %s", Filename);
-		LogPrint("FileSize: %s", FileSize);
-		LogPrint("PacketSize: %s", PacketSize);
-		LogPrint("FileType: %s", FileType);
-		LogPrint("CompletePath: %s", CompletePath);
-		LogPrint("CompleteFilePath: %s", CompleteFilePath);
+		RCLCPP_WARN(get_logger(),"Filename: %s", Filename);
+		RCLCPP_WARN(get_logger(),"FileSize: %s", FileSize);
+		RCLCPP_WARN(get_logger(),"PacketSize: %s", PacketSize);
+		RCLCPP_WARN(get_logger(),"FileType: %s", FileType);
+		RCLCPP_WARN(get_logger(),"CompletePath: %s", CompletePath);
+		RCLCPP_WARN(get_logger(),"CompleteFilePath: %s", CompleteFilePath);
 	}
 
 	if (atoi(PacketSize) > SYSTEM_CONTROL_RX_PACKET_SIZE) {	//Check packet size
@@ -2421,11 +2399,11 @@ I32 SystemControl::SystemControlReceiveRxData(I32 * sockfd, const char * Path, c
 
 
 	if (Debug) {
-		LogPrint("Receive Rx data:");
-		LogPrint("Path: %s", Path);
-		LogPrint("FileSize: %s", FileSize);
-		LogPrint("PacketSize: %s", PacketSize);
-		LogPrint("CompletePath: %s", CompletePath);
+		RCLCPP_WARN(get_logger(),"Receive Rx data:");
+		RCLCPP_WARN(get_logger(),"Path: %s", Path);
+		RCLCPP_WARN(get_logger(),"FileSize: %s", FileSize);
+		RCLCPP_WARN(get_logger(),"PacketSize: %s", PacketSize);
+		RCLCPP_WARN(get_logger(),"CompletePath: %s", CompletePath);
 	}
 
 
@@ -2513,10 +2491,10 @@ I32 SystemControl::SystemControlSendFileContent(I32 * sockfd, const char * Path,
 	RestCount = (U32) (st.st_size) % PacketSizeU16;
 
 	if (Debug) {
-		LogPrint("Send file content:");
-		LogPrint("%s", Path);
-		LogPrint("%s", PacketSize);
-		LogPrint("%s", CompletePath);
+		RCLCPP_WARN(get_logger(),"Send file content:");
+		RCLCPP_WARN(get_logger(),"%s", Path);
+		RCLCPP_WARN(get_logger(),"%s", PacketSize);
+		RCLCPP_WARN(get_logger(),"%s", CompletePath);
 	}
 
 	fd = fopen(CompletePath, "r");
@@ -2603,7 +2581,7 @@ I32 SystemControl::SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32
 	snprintf(RVSSData, SYSTEM_CONTROL_RVSS_DATA_BUFFER, "%s.%06ld", tmpbuf, systemTime.tv_usec);
 
 	if (Debug) {
-		LogPrint(RVSSData);
+		RCLCPP_WARN(get_logger(),RVSSData);
 	}
 	*RVSSDataLengthU32 = strlen(RVSSData);
 

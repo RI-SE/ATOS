@@ -3,12 +3,13 @@
 #include "datadictionary.h"
 #include "maestroTime.h"
 #include "iso22133.h"
-#include "journal.h"
+#include "journal.hpp"
 #include "atos_interfaces/msg/monitor.hpp"
 #include <eigen3/Eigen/Dense>
 #include <csignal>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <iostream>
 
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
 static atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& data); // TODO move to somewhere central
@@ -52,7 +53,10 @@ void ObjectListener::listen() {
 				int oldCancelState;
 				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldCancelState);
 				// Save to memory
-				DataDictionarySetMonitorData(monr.first, &monr.second, &currentTime);
+				// TODO disabled in preparation of removing
+				// will be replaced by ROS message
+				// if not disabled, will cause error printouts
+				//DataDictionarySetMonitorData(monr.first, &monr.second, &currentTime);
 				auto objData = obj->getAsObjectData();
 				objData.MonrData = monr.second;
 				JournalRecordMonitorData(&objData);
@@ -187,7 +191,7 @@ ObjectMonitorType transformCoordinate(
 			&& point.acceleration.isLateralValid && point.acceleration.isLongitudinalValid;
 	if (print) {
 		dbg << "res:  " << pointInAnchorFrame << ", " << retval.position.heading_rad*180.0/M_PI << "deg";
-		LogPrint(dbg.str().c_str());
+		std::cerr << dbg.str();
 	}
 	return retval;
 }

@@ -1,6 +1,5 @@
 #include "state.hpp"
-#include "logging.h"
-#include "journal.h"
+#include "journal.hpp"
 
 
 AbstractKinematics::Initialized::Initialized() {

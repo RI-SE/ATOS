@@ -10,12 +10,13 @@
 #include "util.h"
 #include "iso22133.h"
 #include "roschannel.hpp"
+#include "loggable.hpp"
 
 namespace ATOS {
 
     #define ACTION_NUMBER_PARAMETER_FIELDS 3
 
-    class Action
+    class Action : public Loggable
     {
     public:
         /*! Typedefs */
@@ -33,8 +34,8 @@ namespace ATOS {
         typedef uint16_t ActionID_t;
 
         /*! Constructor */
-        Action(ActionID_t actionID = 0, ActionTypeCode_t actionTypeCode = ACTION_NONE, uint32_t allowedNumberOfRuns = 1);
-
+        Action(rclcpp::Logger, ActionID_t actionID = 0, ActionTypeCode_t actionTypeCode = ACTION_NONE, uint32_t allowedNumberOfRuns = 1);
+        
         /*! Destructor */
         virtual ~Action() { parameters.clear(); }
 

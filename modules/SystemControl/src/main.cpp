@@ -5,21 +5,21 @@ using namespace std::chrono;
 
 /* decl */
 static std::shared_ptr<SystemControl> sc;
-static void systemcontrol_task(LOG_LEVEL logLevel, int argc, char** argv);
+static void systemcontrol_task(int argc, char** argv);
 
 int main(int argc, char** argv){
-	systemcontrol_task(LOG_LEVEL_INFO, argc, argv);
+	systemcontrol_task(argc, argv);
 	return 0;
 }
 
 /*
 Initializes Logs, Shared memory and mode, then runs the main loop
 */
-void systemcontrol_task(LOG_LEVEL logLevel, int argc, char** argv){
+void systemcontrol_task(int argc, char** argv){
 	// Initialize ROS node
 	rclcpp::init(argc, argv);
 	sc = std::make_shared<SystemControl>();
-	sc->initialize(logLevel);
+	sc->initialize();
 	
 	// Set up signal handlers
 	auto f = [](int signo) -> void {sc->signalHandler(signo);};

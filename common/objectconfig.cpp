@@ -1,9 +1,8 @@
 #include "objectconfig.hpp"
 #include "util.h"
-#include "logging.h"
 #include <iomanip>
 
-ObjectConfig::ObjectConfig() {
+ObjectConfig::ObjectConfig(rclcpp::Logger lg) : Loggable(lg), trajectory(lg) {
 	origin.latitude_deg = origin.longitude_deg = origin.altitude_m = 0.0;
 	origin.isLongitudeValid = origin.isLatitudeValid = origin.isAltitudeValid = false;
 }
@@ -110,7 +109,7 @@ void ObjectConfig::parseConfigurationFile(
 		}
 		this->trajectoryFile = trajFile;
 		this->trajectory.initializeFromFile(setting);
-		LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectory.points.size());
+		RCLCPP_DEBUG(get_logger(), "Loaded trajectory with %u points", trajectory.points.size());
 	}
 	
 	// Get opendrive file setting
@@ -240,7 +239,7 @@ void ObjectConfig::parseConfigurationFile(
 		this->injectionMap.targetIDs.clear();
 
 		for (const auto& id : ids) {
-			LogMessage(LOG_LEVEL_DEBUG, "Injection ID %d", id);
+			RCLCPP_DEBUG(get_logger(), "Injection ID %d", id);
 			this->injectionMap.sourceIDs.insert(static_cast<uint32_t>(id));
 		}
 	}

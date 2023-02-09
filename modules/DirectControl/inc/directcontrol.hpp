@@ -10,7 +10,7 @@ class DirectControl : public Module {
 public:
 	static inline std::string const moduleName = "direct_control";
 	DirectControl();
-	int initializeModule(const LOG_LEVEL logLevel);
+	int initializeModule();
 	void startThreads();
 	void joinThreads();
 

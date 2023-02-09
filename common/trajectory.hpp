@@ -10,20 +10,22 @@
 #include <eigen3/Eigen/Dense>
 #include <math.h>
 #include <chrono>
+
+#include "loggable.hpp"
 #include "atos_interfaces/msg/cartesian_trajectory.hpp"
 
 #include "util.h"
 namespace ATOS {
-class Trajectory {
+class Trajectory : public Loggable {
 public:
-	class TrajectoryPoint {
+	class TrajectoryPoint : public Loggable {
 	public:
 		typedef enum {
 			CONTROLLED_BY_DRIVE_FILE,
 			CONTROLLED_BY_VEHICLE
 		} ModeType;
 
-		TrajectoryPoint() {
+		TrajectoryPoint(rclcpp::Logger log) : Loggable(log) {
 			position[2] = std::numeric_limits<double>::quiet_NaN();
 			velocity[0] = std::numeric_limits<double>::quiet_NaN();
 			velocity[1] = std::numeric_limits<double>::quiet_NaN();
@@ -124,7 +126,7 @@ public:
 	typedef std::vector<TrajectoryPoint>::reverse_iterator reverse_iterator;
 	typedef std::vector<TrajectoryPoint>::const_reverse_iterator const_reverse_iterator;
 
-	Trajectory() = default;
+	Trajectory(rclcpp::Logger log) : Loggable(log) {}
 	~Trajectory() { points.clear(); }
 	Trajectory(const Trajectory& other);
 	std::vector<TrajectoryPoint> points;
@@ -143,7 +145,7 @@ public:
 	void saveToFile(const std::string& fileName) const;
 	Trajectory reversed() const;
 	Trajectory rescaledToVelocity(const double vel_m_s) const;
-	static Trajectory createWilliamsonTurn(double turnRadius = 5, double acceleration = 1, TrajectoryPoint startPoint = TrajectoryPoint(), std::chrono::milliseconds startTime = std::chrono::milliseconds(0));
+	static Trajectory createWilliamsonTurn(double turnRadius, double acceleration, TrajectoryPoint startPoint, std::chrono::milliseconds startTime = std::chrono::milliseconds(0));
 
 	Trajectory appendedWith(const Trajectory& other);
 	template<class Rep,class Period>

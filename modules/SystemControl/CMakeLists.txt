@@ -15,7 +15,6 @@ set(SYSTEM_CONTROL_TARGET ${PROJECT_NAME})
 
 set(COREUTILS_LIBRARY ATOSCoreUtil)
 set(TIME_LIBRARY MaestroTime)
-set(LOGGING_LIBRARY MaestroLogging)
 set(ATOS_COMMON_LIBRARY ATOSCommon)
 
 include(GNUInstallDirs)
@@ -35,7 +34,6 @@ ament_target_dependencies(${SYSTEM_CONTROL_TARGET}
 target_link_libraries(${SYSTEM_CONTROL_TARGET}
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
-	${LOGGING_LIBRARY}
 	${ATOS_COMMON_LIBRARY}
 )
 

@@ -1,4 +1,3 @@
-#include "logging.h"
 #include "util.h"
 #include "rclcpp/rclcpp.hpp"
 #include "journalcontrol.hpp"
