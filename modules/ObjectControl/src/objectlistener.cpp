@@ -53,6 +53,9 @@ void ObjectListener::listen() {
 				int oldCancelState;
 				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldCancelState);
 				// Save to memory
+				// TODO disabled in preparation of removing
+				// will be replaced by ROS message
+				// if not disabled, will cause error printouts
 				//DataDictionarySetMonitorData(monr.first, &monr.second, &currentTime);
 				auto objData = obj->getAsObjectData();
 				objData.MonrData = monr.second;
