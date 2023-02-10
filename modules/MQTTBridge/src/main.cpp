@@ -1,14 +1,12 @@
 
 #include "mqttbridge.hpp"
 
-static std::shared_ptr<MqttBridge> mqttBridge;
-
 int main(int argc, char** argv) {
 	rclcpp::init(argc,argv);
-	mqttBridge = MqttBridge::instance();
-	auto retval = mqttBridge->initializeModule();
-	if (!retval){
-		rclcpp::spin(mqttBridge);
+
+	auto mb = std::make_shared<MqttBridge>();
+	if(rclcpp::ok()) {
+		rclcpp::spin(mb);
 	}
 	rclcpp::shutdown();
 	return 0;

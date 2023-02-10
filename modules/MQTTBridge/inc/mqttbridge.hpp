@@ -8,22 +8,19 @@
 using json = nlohmann::json;
 
 /*!
- * \brief The MQTTBridge class is a singleton class that
- *  forwards ATOS V2X ROS msgs to a MQTT publisher client
+ * \brief The MQTTBridge node forwards ATOS V2X ROS msgs to a MQTTClient publisher 
  */
 
 class MqttBridge : public Module
 {
 public:
-    static inline std::string const moduleName = "mqtt_bridge";
-    static int initializeModule();
-    MqttBridge(MqttBridge const &) = delete;
-    MqttBridge &operator=(MqttBridge const &) = delete;
-    static std::shared_ptr<MqttBridge> instance();
+	explicit MqttBridge();
+    void initialize();
     MQTTClient mqttClient;
 
-    constexpr static std::chrono::milliseconds SEND_INTERVAL = std::chrono::milliseconds(5000);
 private:
+    static inline std::string const moduleName = "mqtt_bridge";
+    constexpr static std::chrono::milliseconds SEND_INTERVAL = std::chrono::milliseconds(5000);
     std::string brokerIP;
     std::string pubClientId;
     std::string username;
@@ -32,15 +29,10 @@ private:
     std::string QoS;
 
     rclcpp::TimerBase::SharedPtr timer;
-    MqttBridge();
-    ROSChannels::Abort::Sub mqttAbortSub; //!< Subscriber to scenario abort requests
     ROSChannels::V2X::Sub v2xMsgSub;      //!< Subscriber to v2x messages requests
 
     void yieldMqttClient();
-    void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
     void setupConnection();
     void onV2xMsg(const ROSChannels::V2X::message_type::SharedPtr);
     json v2xToJson(const ROSChannels::V2X::message_type::SharedPtr v2x_msg);
-
-    static std::shared_ptr<MqttBridge> me;
 };

@@ -3,25 +3,10 @@
 
 using namespace ROSChannels;
 
-std::shared_ptr<MqttBridge> MqttBridge::me = NULL;
 using std::placeholders::_1;
 
-/*!
- * \brief Creates an instance and initialize mqttbridge if none exists, otherwise returns the existing instance.
- * \return the sole MqttBridge instance.
- */
-std::shared_ptr<MqttBridge> MqttBridge::instance()
-{
-	if (me == nullptr)
-	{
-		me = std::shared_ptr<MqttBridge>(new MqttBridge());
-	}
-	return me;
-}
-
 MqttBridge::MqttBridge() : Module(MqttBridge::moduleName),
-						   v2xMsgSub(*this, std::bind(&MqttBridge::onV2xMsg, this, _1)),
-						   mqttAbortSub(*this, std::bind(&MqttBridge::onAbortMessage, this, _1))
+						   v2xMsgSub(*this, std::bind(&MqttBridge::onV2xMsg, this, _1))
 {
 	declare_parameter("broker_ip");
 	declare_parameter("pub_client_id");
@@ -38,24 +23,25 @@ MqttBridge::MqttBridge() : Module(MqttBridge::moduleName),
 	get_parameter("quality_of_service", QoS);
 
 	timer = this->create_wall_timer(SEND_INTERVAL, std::bind(&MqttBridge::yieldMqttClient, this));
+
+	this->initialize();
 }
 
 /*!
- * \brief initializeModule Initializes this module by starting the mqtt client with conf setting.
+ * \brief initializeModule Initializes this module by starting the mqtt client with ros parameter settings.
  *		  return 0 if successfully initalized. None 0 otherwise. 
  */
-int MqttBridge::initializeModule()
+void MqttBridge::initialize()
 {
-	RCLCPP_INFO(me->get_logger(), "%s task running with PID: %d", moduleName.c_str(), getpid());
-	if (me->brokerIP.empty())
+	RCLCPP_INFO(this->get_logger(), "%s task running with PID: %d", moduleName.c_str(), getpid());
+	if (this->brokerIP.empty())
 	{
-		RCLCPP_INFO(me->get_logger(), "No Broker IP provided in configuration. Shuting down...");
-		return 1;
+		RCLCPP_INFO(this->get_logger(), "No Broker IP provided in configuration. Shutting down...");
+		rclcpp::shutdown();
 	}
 	else
 	{
-		me->setupConnection();
-		return 0;
+		this->setupConnection();
 	}
 }
 
@@ -70,8 +56,6 @@ void MqttBridge::yieldMqttClient()
 
 void MqttBridge::setupConnection()
 {
-	RCLCPP_INFO(me->get_logger(), "Setting up MQTT connection with param %s", brokerIP.c_str());
-
 	MQTTClient mqttClient = MQTT::setupConnection(brokerIP.c_str(),
 												  QoS.c_str(),
 												  username.c_str(),
@@ -81,24 +65,19 @@ void MqttBridge::setupConnection()
 
 	if (mqttClient == nullptr)
 	{
-		RCLCPP_ERROR(me->get_logger(), "Failed to initialize MQTT connection to broker, exiting...");
+		RCLCPP_ERROR(this->get_logger(), "Failed to initialize MQTT connection to broker, exiting...");
 		rclcpp::shutdown();
 	}
 	else
 	{
-		RCLCPP_INFO(me->get_logger(), "Successfully initialized MQTT connection to broker");
-		me->mqttClient = mqttClient;
+		RCLCPP_INFO(this->get_logger(), "Successfully initialized MQTT connection to broker with IP %s", brokerIP.c_str());
+		this->mqttClient = mqttClient;
 	}
-}
-
-void MqttBridge::onAbortMessage(const Abort::message_type::SharedPtr)
-{
-	// Any exceptions here should crash the program
 }
 
 void MqttBridge::onV2xMsg(const V2X::message_type::SharedPtr v2x_msg)
 {
-	if (MQTTClient_isConnected(me->mqttClient))
+	if (MQTTClient_isConnected(this->mqttClient))
 	{
 		json payload = v2xToJson(v2x_msg);
 		const MQTT::Message mqttMsg = MQTT::Message(payload.dump(), topic.c_str());
@@ -106,17 +85,17 @@ void MqttBridge::onV2xMsg(const V2X::message_type::SharedPtr v2x_msg)
 
 		try
 		{
-			RCLCPP_DEBUG(me->get_logger(), "Publishing MQTT v2x msg to broker %s", payload.dump().c_str());
-			MQTT::publishMessage(mqttMsg, me->mqttClient, retained);
+			RCLCPP_DEBUG(this->get_logger(), "Publishing MQTT v2x msg to broker %s", payload.dump().c_str());
+			MQTT::publishMessage(mqttMsg, this->mqttClient, retained);
 		}
 		catch (std::runtime_error)
 		{
-			RCLCPP_ERROR(me->get_logger(), "Failed to publish MQTT message");
+			RCLCPP_ERROR(this->get_logger(), "Failed to publish MQTT message");
 		}
 	}
 	else
 	{
-		RCLCPP_ERROR(me->get_logger(), "Received v2x msg while the client is not connected, dropping msg...");
+		RCLCPP_ERROR(this->get_logger(), "Received v2x msg while the client is disconnected, dropping msg...");
 	}
 }
 
