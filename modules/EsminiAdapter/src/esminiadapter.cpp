@@ -364,6 +364,7 @@ ATOS::Trajectory EsminiAdapter::getTrajectory(
 {
 	ATOS::Trajectory trajectory(me->get_logger());
 	trajectory.name = "Esmini Trajectory for object " + std::to_string(id);
+	
 	auto saveTp = [&](auto& state, auto& prevState) {
 		ATOS::Trajectory::TrajectoryPoint tp(me->get_logger());
 		double currLonVel = state.speed * cos(state.wheel_angle);
@@ -390,11 +391,13 @@ ATOS::Trajectory EsminiAdapter::getTrajectory(
 		}
 		saveTp(*it,*(it-1)); // Next timestep is different, save current one.
 	}
-	auto startTime = trajectory.points.front().getTime();
+	if (trajectory.points.size() > 0) {
+		auto startTime = trajectory.points.front().getTime();
 
-	// Subtract start time from all timesteps
-	for (auto& tp : trajectory.points){
-		tp.setTime(tp.getTime() - startTime);
+		// Subtract start time from all timesteps
+		for (auto& tp : trajectory.points){
+			tp.setTime(tp.getTime() - startTime);
+		}
 	}
 	return trajectory;
 }
@@ -451,6 +454,8 @@ std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(
 		auto traj = getTrajectory(id, objectStates);
 		idToTraj.insert(std::pair<uint32_t,ATOS::Trajectory>(id, traj));
 	}
+
+	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", me->idToTraj.size());
 	return idToTraj;
 }
 
@@ -479,7 +484,6 @@ void EsminiAdapter::InitializeEsmini()
 
 	me->extractTrajectories(0.1, 50.0, me->idToTraj);
 
-	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", me->idToTraj.size());
 	RCLCPP_INFO(me->get_logger(), "Number of objects with triggered start: %d", me->delayedStartIds.size());
 
 	// Find object IPs as defined in VehicleCatalog file
