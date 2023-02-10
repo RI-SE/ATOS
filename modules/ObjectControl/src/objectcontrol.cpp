@@ -485,6 +485,7 @@ void ObjectControl::disconnectObject(
 		const uint32_t id) {
 	objects.at(id)->disconnect();
 	objectListeners.erase(id);
+	this->state->disconnectedFromObject(*this, id);
 }
 
 void ObjectControl::uploadObjectConfiguration(
@@ -682,13 +683,25 @@ void ObjectControl::connectToObject(
 
 void ObjectControl::remoteControlObjects(bool on) {
 	for (auto& id : getVehicleIDs()) {
-		objects.at(id)->sendRemoteControl(on);
+		try {
+			objects.at(id)->sendRemoteControl(on);
+		}
+		catch (std::exception& e) {
+			RCLCPP_ERROR(get_logger(), "Unable to remote control object %u: %s", id, e.what());
+			disconnectObject(id);
+		}
 	}
 }
 
 void ObjectControl::armObjects() {
 	for (auto& id : getVehicleIDs()) {
-		objects.at(id)->sendArm();
+		try {
+			objects.at(id)->sendArm();
+		}
+		catch (std::exception& e) {
+			RCLCPP_ERROR(get_logger(), "Unable to arm object %u: %s", id, e.what());
+			disconnectObject(id);
+		}
 	}
 }
 
@@ -702,7 +715,7 @@ void ObjectControl::disarmObjects() {
 		}
 		catch (std::runtime_error& e) {
 			RCLCPP_ERROR(get_logger(), "Unable to disarm object %u: %s", id, e.what());
-			objects.at(id)->disconnect();
+			disconnectObject(id);
 		}
 	}
 	this->state->allObjectsDisarmed(*this); // TODO add a check on object states as well
@@ -719,7 +732,13 @@ void ObjectControl::startObject(
 	std::chrono::system_clock::time_point startTime) {
 	try {
 		if (!objects.at(id)->isStartingOnTrigger()) {
-			objects.at(id)->sendStart(startTime);
+			try {
+				objects.at(id)->sendStart(startTime);
+			}
+			catch (std::exception& e) {
+				RCLCPP_ERROR(get_logger(), "Unable to start object %u: %s", id, e.what());
+				disconnectObject(id);
+			}
 		}
 	}
 	catch (std::out_of_range& e) {
@@ -735,7 +754,13 @@ void ObjectControl::startObject(
 
 void ObjectControl::allClearObjects() {
 	for (auto& id : getVehicleIDs()) {
-		objects.at(id)->sendAllClear();
+		try {
+			objects.at(id)->sendAllClear();
+		}
+		catch (std::exception& e) {
+			RCLCPP_ERROR(get_logger(), "Unable to send all clear to object %u: %s", id, e.what());
+			disconnectObject(id);
+		}
 	}
 	this->state->allObjectsAbortDisarmed(*this); // TODO wait for all objects really are disarmed
 }
