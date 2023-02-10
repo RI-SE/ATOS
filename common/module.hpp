@@ -129,7 +129,7 @@ class Module : public rclcpp::Node {
 	virtual void onStartMessage(const ROSChannels::Start::message_type::SharedPtr){};
 	virtual void onStartObjectMessage(const ROSChannels::StartObject::message_type::SharedPtr){};
 	virtual void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr){};
-	virtual void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) = 0;
+	virtual void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr){};
 	virtual void onACCMMessage(const ROSChannels::ActionConfiguration::message_type::SharedPtr){};
 	virtual void onTRCMMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO
 	virtual void onEXACMessage(const ROSChannels::ExecuteAction::message_type::SharedPtr){};
