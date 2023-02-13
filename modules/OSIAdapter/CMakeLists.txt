@@ -41,7 +41,6 @@ ament_target_dependencies(${OSI_ADAPTER_TARGET}
 target_include_directories(${OSI_ADAPTER_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${OSI_HEADERS}
-	${Boost_INCLUDE_DIRS}
 )
 
 # Installation rules
