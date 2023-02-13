@@ -146,7 +146,7 @@ Also add the above line to ~/.bashrc or similar.
 
 Launch ATOS
 ```
-ros2 launch atos atos_launch.py
+ros2 launch atos launch_basic.py
 ```
 
 # <a name="optional-builds--installations"></a> Optional builds & installations
