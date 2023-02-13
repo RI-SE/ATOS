@@ -9,7 +9,6 @@ project(osi_adapter)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
-find_package(Boost REQUIRED)
 
 # Define target names
 set(OSI_ADAPTER_TARGET ${PROJECT_NAME})
