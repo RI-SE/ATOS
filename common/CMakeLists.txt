@@ -21,6 +21,7 @@ find_package(atos_interfaces REQUIRED)
 set(TIME_LIBRARY MaestroTime)
 set(SHARED_MEMORY_LIBRARY MaestroSHM)
 set(ISO_22133_LIBRARY ISO22133)
+set(SOCKET_LIBRARY TCPUDPSocket)
 set(MATH_LIBRARY m)
 set(FILESYSTEM_LIBRARY stdc++fs)
 set(PTHREAD_LIBRARY pthread)
@@ -28,6 +29,8 @@ set(PTHREAD_LIBRARY pthread)
 get_target_property(TIME_HEADERS ${TIME_LIBRARY} INCLUDE_DIRECTORIES)
 get_target_property(SHARED_MEMORY_HEADERS ${SHARED_MEMORY_LIBRARY} INCLUDE_DIRECTORIES)
 get_target_property(ISO_22133_HEADERS ${ISO_22133_LIBRARY} INCLUDE_DIRECTORIES)
+get_target_property(SOCKET_HEADERS ${SOCKET_LIBRARY} INCLUDE_DIRECTORIES)
+
 
 # Built targets
 add_library(${ATOS_UTIL_TARGET} SHARED
@@ -42,10 +45,6 @@ add_library(${ATOS_COMMON_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/journal.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/type.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/serverfactory.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/server.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/tcpserver.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/udpserver.cpp
-
 )
 
 # Includes
@@ -57,6 +56,7 @@ target_include_directories(${ATOS_UTIL_TARGET} PUBLIC
   ${ISO_22133_HEADERS}
 	${SHARED_MEMORY_HEADERS}
 	${rclcpp_INCLUDE_DIRS}
+	${SOCKET_HEADERS}
 )
 target_include_directories(${ATOS_COMMON_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}
@@ -71,6 +71,7 @@ target_link_libraries(${ATOS_UTIL_TARGET}
 	${ISO_22133_LIBRARY}
 	${SHARED_MEMORY_LIBRARY}
 	${rclcpp_LIBRARIES}
+	${SOCKET_LIBRARY}
 )
 
 target_link_libraries(${ATOS_COMMON_TARGET}

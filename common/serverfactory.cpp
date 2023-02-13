@@ -25,10 +25,10 @@ ServerFactory::~ServerFactory() {}
  */
 std::unique_ptr<Server> ServerFactory::createServer(const std::string protocol) {
   if (protocol == "tcp") {
-    return std::make_unique<TCPServer>(this->address, this->port, logger);
+    return std::make_unique<TCPServer>(this->address, this->port);;
   }
   else if (protocol == "udp") {
-    return std::make_unique<UDPServer>(this->address, this->port, logger);
+    return std::make_unique<UDPServer>(this->address, this->port);
   }
   else {
     throw std::invalid_argument("Protocol must be either tcp or udp");

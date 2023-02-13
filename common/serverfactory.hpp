@@ -1,7 +1,6 @@
 #pragma once
 
-#include "tcpserver.hpp"
-#include "udpserver.hpp"
+#include "server.hpp"
 #include "loggable.hpp"
 
 

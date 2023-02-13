@@ -20,7 +20,7 @@ OSIAdapter::OSIAdapter() :
   connectedObjectIdsSub(*this,std::bind(&OSIAdapter::onConnectedObjectIdsMessage, this, _1))
   {
     getParameters();
-    initializeServer();
+    // initializeServer();
     
     std::chrono::duration sendInterval = std::chrono::milliseconds(1000 / frequency);
     timer = this->create_wall_timer(std::chrono::milliseconds(sendInterval), std::bind(&OSIAdapter::sendOSIData, this));
@@ -32,7 +32,7 @@ OSIAdapter::OSIAdapter() :
  * 
  */
 OSIAdapter::~OSIAdapter() {
-    server->destroyServer();
+    // server->destroyServer();
   }
 
 
@@ -63,7 +63,7 @@ void OSIAdapter::getParameters() {
 void OSIAdapter::initializeServer() {
   RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
   server = ServerFactory(address, port, get_logger()).createServer(protocol);
-  server->setupServer();
+  // server->setupServer();
 }
 
 
@@ -82,9 +82,9 @@ void OSIAdapter::sendOSIData() {
   std::transform(lastMonitors.begin(),lastMonitors.end(), sensorView.begin(), [&](auto pair) {return OSIAdapter::makeOSIData(pair.second);});
   
   std::vector<char> data = OSIAdapter::makeOSIMessage(sensorView);
-  server->sendData(data, errorCode);
+  // server->sendData(data, errorCode);
 
-  server->handleError(errorCode);
+  // server->handleError(errorCode);
 }
 
 
