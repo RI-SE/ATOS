@@ -1,7 +1,5 @@
 #pragma once
 
-#include <boost/asio.hpp>
-
 #include "module.hpp"
 #include "roschannel.hpp"
 #include "osi_handler.hpp"
@@ -32,7 +30,7 @@ class OSIAdapter : public Module
     
     void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
     
-    std::unique_ptr<Server> server;
+    std::unique_ptr<ServerFactory> server;
     rclcpp::TimerBase::SharedPtr timer;
     ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;	//!< Publisher to report connected objects
 
