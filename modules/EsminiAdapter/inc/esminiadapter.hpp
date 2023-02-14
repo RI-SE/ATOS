@@ -66,6 +66,7 @@ private:
 	static bool isSendDenmAction(const std::string& action);
 	static void collectStartAction(const char* name, int type, int state);
 	static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor::message_type monr, double *llh);
+	static int getProjFromODR(const std::shared_ptr<RM_GeoReference> geoRefODR);
 
 	static void onRequestObjectTrajectory(
 		const std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Request> req,

@@ -37,6 +37,7 @@ std::shared_ptr<rclcpp::Service<ObjectIpSrv>> EsminiAdapter::objectIpService = s
 std::vector<uint32_t> EsminiAdapter::delayedStartIds = std::vector<uint32_t>();
 std::shared_ptr<rclcpp::Client<TestOriginSrv>> EsminiAdapter::testOriginClient = nullptr;
 geographic_msgs::msg::GeoPose EsminiAdapter::testOrigin = geographic_msgs::msg::GeoPose();
+std::shared_ptr<RM_GeoReference> geoRefODR;
 
 EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	startObjectPub(*this),
@@ -133,6 +134,7 @@ void EsminiAdapter::onStaticInitMessage(
 {
 	try {
 		setOpenScenarioFile(getOpenScenarioFileParameter());
+		me->InitializeEsmini();
 	}
 	catch (std::exception& e) {
 		RCLCPP_ERROR(me->get_logger(), e.what());
@@ -146,7 +148,6 @@ void EsminiAdapter::onStaticInitMessage(
 			return; // TODO communicate failure
 		}
 		me->testOrigin = response->origin;
-		me->InitializeEsmini();
 	});
 }
 
@@ -164,6 +165,10 @@ void EsminiAdapter::onStaticStartMessage(
 	if (SE_Init(me->oscFilePath.c_str(),0,0,0,0) < 0) {
 		throw std::runtime_error("Failed to initialize esmini with scenario file " + me->oscFilePath.string());
 	}
+	if(getProjFromODR(geoRefODR)!=0){
+		throw std::runtime_error("Failed to get projection from ODR file");
+	}
+	TranformProjinODRtoTestOrigin();
 	// Handle triggers and story board element changes
 	SE_RegisterStoryBoardElementStateChangeCallback(&handleStoryBoardElementChange);
 
@@ -561,6 +566,24 @@ void EsminiAdapter::onRequestObjectIP(
 	}
 }
 
+/*! \brief Get the projection from the ODR file
+ * \param geoRefODR The projection to be filled
+ * \return 0 on success, -1 otherwise
+ */
+int EsminiAdapter::getProjFromODR(const std::shared_ptr<RM_GeoReference> geoRefODR){
+	int retval = -1;
+	// Get the projection from the ODR file
+	retval = RM_GetOpenDriveGeoReference(geoRefODR);
+	if (retval != 0){
+		RCLCPP_ERROR(me->get_logger(), "Failed to get ODR projection");
+		return retval;
+	}
+	
+	RCLCPP_INFO(me->get_logger(), "ODR projection: %s");
+	return retval;
+	
+
+}
 
 /*!
  * \brief initializeModule Initializes this module by creating log,
@@ -586,4 +609,37 @@ int EsminiAdapter::initializeModule() {
 
 
 	return retval;
+}
+
+int EsminiAdapter::onRequestTestOriginODR(const std::shared_ptr<TestOriginSrv::Request> req,
+	std::shared_ptr<TestOriginSrv::Response> res)
+{
+	
+
+
+
+	// get the lat long for origin 0,0,0 from proj
+
+	proj(geoRefODR);
+
+	RCLCPP_INFO(me->get_logger(), "Received request for test origin");
+	res->origin = me->testOrigin;
+	return 0;
+}
+
+int EsminiAdapter::TranformProjinODRtoTestOrigin(){
+	PJ_CONTEXT *C;
+    PJ *P;
+    PJ_COORD a;
+
+
+	P = proj_create(0, geoRefODR->proj4str);
+	if (0==P) {
+		fprintf(stderr, "Oops\n");
+		return 1;
+	}
+
+	a = proj_coord(0, 0, 0, 0);
+	print(a.xyzt.x); 
+
 }
