@@ -6,7 +6,7 @@
  * 
  * @param address Address
  * @param port Port
- * @param logger Logger for output
+ * @param protocol Either "tcp" or "udp"
  */
 ServerFactory::ServerFactory(const std::string& address, const uint16_t& port, const std::string protocol) {
   this->address = address;
@@ -15,6 +15,10 @@ ServerFactory::ServerFactory(const std::string& address, const uint16_t& port, c
 }
 
 
+/**
+ * @brief Destroy the Server Factory:: Server Factory object
+ * 
+ */
 ServerFactory::~ServerFactory() {
   destroyServer();
 }
@@ -39,6 +43,11 @@ void ServerFactory::createServer() {
 }
 
 
+/**
+ * @brief Setup the server. TCP: Wait for a connection on address and port. UDP: Wait for someone to connect
+ *        in order to get address and port to send to,
+ * 
+ */
 void ServerFactory::setupServer() {
   if (protocol == "tcp") {
     socket = std::make_shared<Socket>(tcpServer->await(address, port));
@@ -50,6 +59,10 @@ void ServerFactory::setupServer() {
 }
 
 
+/**
+ * @brief Close the server.
+ * 
+ */
 void ServerFactory::destroyServer() {
   if (protocol == "tcp") {
     tcpServer->close();
@@ -60,16 +73,24 @@ void ServerFactory::destroyServer() {
 }
 
 
+/**
+ * @brief Reset the server.
+ * 
+ */
 void ServerFactory::resetServer() {
   destroyServer();
   setupServer();
 }
 
 
+/**
+ * @brief Send data to the client.
+ * 
+ * @param data The data to be sent
+ */
 void ServerFactory::sendData(const std::vector<char>& data) {
   if (protocol == "tcp") {
-    std::cerr << "Cc\n";
-    socket->send(data, data.size(), Socket::NOSIGNAL);
+    socket->send(data, Socket::NOSIGNAL);
   }
   else if (protocol == "udp") {
     udpServer->sendto(std::make_pair(data, hostInfo));

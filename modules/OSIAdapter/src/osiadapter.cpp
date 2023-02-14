@@ -80,15 +80,18 @@ void OSIAdapter::sendOSIData() {
   std::transform(lastMonitors.begin(),lastMonitors.end(), sensorView.begin(), [&](auto pair) {return OSIAdapter::makeOSIData(pair.second);});
   
   std::vector<char> data = OSIAdapter::makeOSIMessage(sensorView);
-  RCLCPP_INFO(get_logger(), "Aa");
+  
   try {
     server->sendData(data);
   }
-  catch (...) {
-    RCLCPP_INFO(get_logger(), "Disconnected!");
+  catch (const SocketErrors::DisconnectedError& e) {
+    RCLCPP_INFO(get_logger(), "Client disconnected: %s. Restarting server", e.what());
     server->resetServer();
   }
-  RCLCPP_INFO(get_logger(), "Bb");
+  catch (const SocketErrors::SocketSendError& e) {
+    RCLCPP_INFO(get_logger(), "Client disconnected: %s. Restarting server" , e.what());
+    server->resetServer();
+  }
 }
 
 
