@@ -60,9 +60,16 @@ void ServerFactory::destroyServer() {
 }
 
 
-void ServerFactory::sendData(const std::vector<char> data) {
+void ServerFactory::resetServer() {
+  destroyServer();
+  setupServer();
+}
+
+
+void ServerFactory::sendData(const std::vector<char>& data) {
   if (protocol == "tcp") {
-    socket->send(data);
+    std::cerr << "Cc\n";
+    socket->send(data, data.size(), Socket::NOSIGNAL);
   }
   else if (protocol == "udp") {
     udpServer->sendto(std::make_pair(data, hostInfo));

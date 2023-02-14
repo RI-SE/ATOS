@@ -13,7 +13,8 @@ class ServerFactory {
     void createServer();
     void setupServer();
     void destroyServer();
-    void sendData(const std::vector<char> data);
+    void resetServer();
+    void sendData(const std::vector<char>& data);
 
 
   private:
