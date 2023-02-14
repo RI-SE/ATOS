@@ -8,6 +8,8 @@ project(esmini_adapter)
 find_package(atos_interfaces REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(esminiLib REQUIRED)
+find_package(PROJ4 REQUIRED CONFIG)
+
 
 # Define target names
 set(ESMINI_ADAPTER_TARGET ${PROJECT_NAME})
@@ -15,7 +17,6 @@ set(ESMINI_ADAPTER_TARGET ${PROJECT_NAME})
 set(ATOS_COMMON_LIBRARY ATOSCommon)
 set(COREUTILS_LIBRARY ATOSCoreUtil)
 get_target_property(COMMON_HEADERS ${ATOS_COMMON_LIBRARY} INCLUDE_DIRECTORIES)
-
 include(GNUInstallDirs)
 
 # Create project main executable target
@@ -28,6 +29,7 @@ target_link_libraries(${ESMINI_ADAPTER_TARGET}
 	${COREUTILS_LIBRARY}
 	${ATOS_COMMON_LIBRARY}
 	${esminiLib_LIBRARIES}
+	PROJ::proj
 )
 
 target_include_directories(${ESMINI_ADAPTER_TARGET} PUBLIC
