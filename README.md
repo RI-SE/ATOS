@@ -1,5 +1,5 @@
 # ATOS 
-<img align="left" width="100" height="100" src="/doc/ATOS_icon.svg">
+<img align="left" width="100" height="100" src="./doc/ATOS_icon.svg">
 
 The ATOS server is a communication hub for all test objects. The server monitors and controls the test objects and is also responsible for creating logfiles. To build ATOS follow the guide below.
 
@@ -31,7 +31,7 @@ Prerequisites: C/C++ compiler, CMake (minimum version 3.10.2)
 ## <a name="dependencies"></a> Dependencies & external libraries
 In order to build ATOS, dependencies and exernal libraries need to be installed. First install the necessary development packages:
 ```
-sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev
+sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev ros-foxy-paho-mqtt-c nlohmann-json3-dev
 ```
 
 Then, the following external libraries need to be installed:
@@ -151,21 +151,6 @@ ros2 launch atos atos_launch.py
 
 # <a name="optional-builds--installations"></a> Optional builds & installations
 ATOS can be installed in alternative ways, and built with support for various optional modules, described here.
-
-## <a name="build-MQTT-Bridge"></a> Building the server with MQTT bridge module
-Module for relaying v2x ROS msg to a MQTT broker. 
-Configuration can done in the conf/params.yaml file.  
-
-```sh
-sudo apt install ros-foxy-paho-mqtt-c nlohmann-json3-dev
-```
-
-## <a name="installation-dpkg"></a> Installation via dpkg
-Navigate to the .deb file and install it
-```sh
-sudo dpkg -i Maestro-x.x.x-Linux.deb
-```
-on first install, it is necessary to reboot to reload groups
 
 ## <a name="relativekinematics"></a> How to build with RelativeKinematics instead of ObjectControl
 
