@@ -14,7 +14,7 @@ using json = nlohmann::json;
 class MqttBridge : public Module
 {
 public:
-	explicit MqttBridge();
+	MqttBridge();
     void initialize();
     MQTTClient mqttClient;
 
