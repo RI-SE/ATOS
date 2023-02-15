@@ -6,7 +6,6 @@
 #include <filesystem>
 #include "util.h"
 #include "esmini/esminiLib.hpp"
-#include "esmini/esminiRMLib.hpp"
 
 #include "trajectory.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"

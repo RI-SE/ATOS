@@ -167,10 +167,6 @@ void EsminiAdapter::onStaticStartMessage(
 	if (SE_Init(me->oscFilePath.c_str(),0,0,0,0) < 0) {
 		throw std::runtime_error("Failed to initialize esmini with scenario file " + me->oscFilePath.string());
 	}
-
-	// tmpfunction();
-
-	// TranformProjinODRtoTestOrigin();
 	// Handle triggers and story board element changes
 	SE_RegisterStoryBoardElementStateChangeCallback(&handleStoryBoardElementChange);
 
