@@ -13,6 +13,7 @@
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "atos_interfaces/srv/get_object_trigger_start.hpp"
 #include "atos_interfaces/srv/get_object_ip.hpp"
+#include "proj.h"
 
 /*!
  * \brief The EsminiAdapter class is a singleton class that 
