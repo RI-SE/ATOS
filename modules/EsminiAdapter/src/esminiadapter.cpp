@@ -643,7 +643,7 @@ PJ_COORD EsminiAdapter::TranformProjinODRtoTestOrigin(){
 	std::cout << "we got the proj string"<< geoRefODR->proj4str << std::endl;
 	if (0==P) {
 		fprintf(stderr, "Oops\n");
-		return 1;
+		return(proj_coord(0,0,0,0))
 	}
 
 	a = proj_trans(P,PJ_INV, proj_coord(0, 0, 0, 0));
