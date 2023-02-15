@@ -138,7 +138,6 @@ void EsminiAdapter::onStaticInitMessage(
 {
 	try {
 		setOpenScenarioFile(getOpenScenarioFileParameter());
-		me->InitializeEsmini();
 	}
 	catch (std::exception& e) {
 		RCLCPP_ERROR(me->get_logger(), e.what());
@@ -152,6 +151,8 @@ void EsminiAdapter::onStaticInitMessage(
 			return; // TODO communicate failure
 		}
 		me->testOrigin = response->origin;
+		me->InitializeEsmini();
+
 	});
 }
 
@@ -172,9 +173,9 @@ void EsminiAdapter::onStaticStartMessage(
 	if(getProjFromODR(geoRefODR)!=0){
 		throw std::runtime_error("Failed to get projection from ODR file");
 	}
-	tmpfunction();
+	// tmpfunction();
 
-	TranformProjinODRtoTestOrigin();
+	// TranformProjinODRtoTestOrigin();
 	// Handle triggers and story board element changes
 	SE_RegisterStoryBoardElementStateChangeCallback(&handleStoryBoardElementChange);
 
@@ -643,7 +644,7 @@ PJ_COORD EsminiAdapter::TranformProjinODRtoTestOrigin(){
 	std::cout << "we got the proj string"<< geoRefODR->proj4str << std::endl;
 	if (0==P) {
 		fprintf(stderr, "Oops\n");
-		return(proj_coord(0,0,0,0))
+		return(proj_coord(0,0,0,0));
 	}
 
 	a = proj_trans(P,PJ_INV, proj_coord(0, 0, 0, 0));
