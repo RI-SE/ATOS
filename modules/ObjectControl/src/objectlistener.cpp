@@ -8,8 +8,13 @@
 #include <eigen3/Eigen/Dense>
 #include <csignal>
 #include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <iostream>
+
+#if ROS_FOXY
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#elif ROS_HUMBLE
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#endif
 
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
 static atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& data); // TODO move to somewhere central

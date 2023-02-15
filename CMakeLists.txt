@@ -6,6 +6,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "Enable verbose make")
 set(CMAKE_COLOR_MAKEFILE   ON)
 
+#Set preprocessor macros depending on used ros version
+if ($ENV{ROS_DISTRO} STREQUAL "foxy")
+  add_definitions(-DROS_FOXY)
+elseif($ENV{ROS_DISTRO} STREQUAL "humble")
+  add_definitions(-DROS_HUMBLE)
+endif()
+
 project(atos VERSION 1.0.0)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")

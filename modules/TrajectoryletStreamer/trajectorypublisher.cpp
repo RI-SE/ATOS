@@ -1,7 +1,12 @@
 #include "trajectorypublisher.hpp"
 #include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <nav_msgs/msg/path.hpp>
+
+#if ROS_FOXY
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#elif ROS_HUMBLE
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#endif
 
 using namespace ATOS;
 
