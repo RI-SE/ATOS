@@ -8,8 +8,8 @@ project(esmini_adapter)
 find_package(atos_interfaces REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(esminiLib REQUIRED)
-find_package(PROJ4 REQUIRED CONFIG)
-
+find_package(PROJ REQUIRED CONFIG)
+find_library(esminiRMLib_LIBRARIES NAMES esminiRMLib)
 
 # Define target names
 set(ESMINI_ADAPTER_TARGET ${PROJECT_NAME})
@@ -29,6 +29,7 @@ target_link_libraries(${ESMINI_ADAPTER_TARGET}
 	${COREUTILS_LIBRARY}
 	${ATOS_COMMON_LIBRARY}
 	${esminiLib_LIBRARIES}
+	${esminiRMLib_LIBRARIES}
 	PROJ::proj
 )
 
