@@ -3,6 +3,7 @@
 #include "maestroTime.h"
 #include "datadictionary.h"
 #include "osi_handler.hpp"
+
 using namespace ATOS;
 
 TestObject::TestObject(rclcpp::Logger log,

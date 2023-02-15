@@ -1,6 +1,6 @@
 #include "trajectorypublisher.hpp"
 #include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <nav_msgs/msg/path.hpp>
 
 using namespace ATOS;
