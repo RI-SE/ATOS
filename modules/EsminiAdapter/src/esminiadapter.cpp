@@ -3,7 +3,6 @@
 #include "esmini/esminiRMLib.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <algorithm>
 #include <functional>
 #include <chrono>
@@ -15,6 +14,8 @@
 #include "rclcpp/wait_for_message.hpp"
 #include "trajectory.hpp"
 #include "string_utility.hpp"
+#include "proj.h"
+
 
 using namespace ROSChannels;
 using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
@@ -24,6 +25,9 @@ using ObjectIpSrv = atos_interfaces::srv::GetObjectIp;
 using std::placeholders::_1;
 using std::placeholders::_2;
 using namespace std::chrono_literals;
+
+
+
 
 std::shared_ptr<EsminiAdapter> EsminiAdapter::me = nullptr;
 std::unordered_map<int,int> EsminiAdapter::ATOStoEsminiObjectId = std::unordered_map<int, int>();
@@ -46,7 +50,7 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	startSub(*this, &EsminiAdapter::onStaticStartMessage),
 	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage)
  {
-	declare_parameter("open_scenario_file");
+	declare_parameter("open_scenario_file","");
 }
 
 /*!
@@ -168,6 +172,8 @@ void EsminiAdapter::onStaticStartMessage(
 	if(getProjFromODR(geoRefODR)!=0){
 		throw std::runtime_error("Failed to get projection from ODR file");
 	}
+	tmpfunction();
+
 	TranformProjinODRtoTestOrigin();
 	// Handle triggers and story board element changes
 	SE_RegisterStoryBoardElementStateChangeCallback(&handleStoryBoardElementChange);
@@ -573,7 +579,8 @@ void EsminiAdapter::onRequestObjectIP(
 int EsminiAdapter::getProjFromODR(const std::shared_ptr<RM_GeoReference> geoRefODR){
 	int retval = -1;
 	// Get the projection from the ODR file
-	retval = RM_GetOpenDriveGeoReference(geoRefODR);
+	retval = RM_GetOpenDriveGeoReference(geoRefODR.get());
+	std::cout << geoRefODR->proj4str << std::endl;
 	if (retval != 0){
 		RCLCPP_ERROR(me->get_logger(), "Failed to get ODR projection");
 		return retval;
@@ -611,35 +618,38 @@ int EsminiAdapter::initializeModule() {
 	return retval;
 }
 
-int EsminiAdapter::onRequestTestOriginODR(const std::shared_ptr<TestOriginSrv::Request> req,
-	std::shared_ptr<TestOriginSrv::Response> res)
+// int EsminiAdapter::onRequestTestOriginODR(const std::shared_ptr<TestOriginSrv::Request> req,
+// 	std::shared_ptr<TestOriginSrv::Response> res)
+int EsminiAdapter::tmpfunction()
 {
+	auto projOrigo = TranformProjinODRtoTestOrigin();
+	// res->origin.position.latitude = projOrigo.lp.phi
+	// res->origin.position.longitude = projOrigo.lp.lam
+	// res->origin.position.altitude = projOrigo.lp.h
+	std::cout << "inverse trans gave us lat lon" << projOrigo.lp.phi << " " << projOrigo.lp.lam << std::endl;
 	
-
-
-
-	// get the lat long for origin 0,0,0 from proj
-
-	proj(geoRefODR);
-
 	RCLCPP_INFO(me->get_logger(), "Received request for test origin");
-	res->origin = me->testOrigin;
 	return 0;
 }
 
-int EsminiAdapter::TranformProjinODRtoTestOrigin(){
+PJ_COORD EsminiAdapter::TranformProjinODRtoTestOrigin(){
 	PJ_CONTEXT *C;
     PJ *P;
     PJ_COORD a;
 
+	C = proj_context_create();
 
-	P = proj_create(0, geoRefODR->proj4str);
+	P = proj_create(C, geoRefODR->proj4str);
+	std::cout << "we got the proj string"<< geoRefODR->proj4str << std::endl;
 	if (0==P) {
 		fprintf(stderr, "Oops\n");
 		return 1;
 	}
 
-	a = proj_coord(0, 0, 0, 0);
-	print(a.xyzt.x); 
+	a = proj_trans(P,PJ_INV, proj_coord(0, 0, 0, 0));
+
+	proj_destroy(P);
+	proj_context_destroy(C);
+	return a; 
 
 }

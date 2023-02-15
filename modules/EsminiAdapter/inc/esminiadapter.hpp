@@ -6,6 +6,8 @@
 #include <filesystem>
 #include "util.h"
 #include "esmini/esminiLib.hpp"
+#include "esmini/esminiRMLib.hpp"
+
 #include "trajectory.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
@@ -66,7 +68,6 @@ private:
 	static bool isSendDenmAction(const std::string& action);
 	static void collectStartAction(const char* name, int type, int state);
 	static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor::message_type monr, double *llh);
-	static int getProjFromODR(const std::shared_ptr<RM_GeoReference> geoRefODR);
 
 	static void onRequestObjectTrajectory(
 		const std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Request> req,
@@ -79,7 +80,11 @@ private:
 	static void onRequestObjectIP(
 		const std::shared_ptr<atos_interfaces::srv::GetObjectIp::Request> req,
 		std::shared_ptr<atos_interfaces::srv::GetObjectIp::Response> res);
-
+	
+	static int getProjFromODR(const std::shared_ptr<RM_GeoReference> geoRefODR);
+	static PJ_COORD TranformProjinODRtoTestOrigin();
+	static int onRequestTestOriginODR(const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request> req, std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response> res);
+	static int tmpfunction();
 	static std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> testOriginClient;
 	static std::shared_ptr<EsminiAdapter> me;
 	static std::unordered_map<int, int> ATOStoEsminiObjectId;
