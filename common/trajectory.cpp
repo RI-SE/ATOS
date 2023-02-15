@@ -6,7 +6,7 @@
 #include "regexpatterns.hpp"
 #include "trajectory.hpp"
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 namespace ATOS{
 const std::regex Trajectory::fileHeaderPattern("TRAJECTORY;(" + RegexPatterns::intPattern + ");("
