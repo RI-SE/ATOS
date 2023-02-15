@@ -18,6 +18,12 @@ find_package(std_srvs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
 
+find_package(geometry_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_kdl REQUIRED)
+
 set(TIME_LIBRARY MaestroTime)
 set(SHARED_MEMORY_LIBRARY MaestroSHM)
 set(ISO_22133_LIBRARY ISO22133)
@@ -87,6 +93,10 @@ ament_target_dependencies(${ATOS_COMMON_TARGET}
   std_srvs
   nav_msgs
   atos_interfaces
+  geometry_msgs
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
 )
 
 # Exported headers
@@ -97,7 +107,6 @@ set_property(TARGET ${ATOS_UTIL_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/datadictionary.h
 )
 
-#
 set_property(TARGET ${ATOS_COMMON_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/trajectory.hpp
 )
