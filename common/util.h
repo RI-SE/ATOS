@@ -3,9 +3,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-/*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2016 CHRONOS project
-  ------------------------------------------------------------------------------
   -- File        : util.h
   -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS

@@ -11,9 +11,6 @@
  * a visualizer
  * @version 0.1
  * @date 2020-10-16
- *
- * @copyright Copyright (c) 2020
- *
  */
 #include <signal.h>
 #include <systemd/sd-daemon.h>
