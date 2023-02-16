@@ -10,8 +10,6 @@
 extern "C" {
 #endif
 /*! ------------------------------------------------------------------------------
- *  -- Copyright	: (C) AstaZero AB
- *  ------------------------------------------------------------------------------
  *  -- File			: sharedmemory.h
  *  -- Author		: Lukas Wikander
  *  -- Description	: This file provides function for handling shared memory in a
