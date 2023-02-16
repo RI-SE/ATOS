@@ -21,7 +21,7 @@ ATOSBase::ATOSBase()
 	std::string installationPath = ament_index_cpp::get_package_prefix("atos");
 	if (UtilVerifyTestDirectory(installationPath.c_str()) == -1) {
         throw std::runtime_error("Failed to verify test directory");
-  }
+  	}
 
 
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d", get_name(), getpid());
