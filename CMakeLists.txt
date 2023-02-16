@@ -86,7 +86,7 @@ if(WITH_MQTT_BRIDGE)
 endif()
 
 # Add corresponding subprojects
-add_subdirectory(util/C/time)
+add_subdirectory(common/time)
 add_subdirectory(util/C/shmem)
 add_subdirectory(util/C/iso22133)
 add_subdirectory(util/C/mathutils)

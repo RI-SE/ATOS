@@ -15,7 +15,7 @@ find_package(atos_interfaces REQUIRED)
 set(TIME_CONTROL_TARGET ${PROJECT_NAME})
 
 set(COREUTILS_LIBRARY ATOSCoreUtil)
-set(TIME_LIBRARY MaestroTime)
+set(TIME_LIBRARY ATOSTime)
 set(ATOS_COMMON_LIBRARY ATOSCommon)
 set(FILESYSTEM_LIBRARY stdc++fs)
 set(THREAD_LIBRARY pthread)

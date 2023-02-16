@@ -14,7 +14,7 @@ find_package(std_msgs REQUIRED)
 set(SYSTEM_CONTROL_TARGET ${PROJECT_NAME})
 
 set(COREUTILS_LIBRARY ATOSCoreUtil)
-set(TIME_LIBRARY MaestroTime)
+set(TIME_LIBRARY ATOSTime)
 set(ATOS_COMMON_LIBRARY ATOSCommon)
 
 include(GNUInstallDirs)
