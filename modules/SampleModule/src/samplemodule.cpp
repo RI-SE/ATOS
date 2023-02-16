@@ -41,11 +41,11 @@ void SampleModule::onAbortMessage(const Abort::message_type::SharedPtr) {}
 
 void SampleModule::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 
-
+/*! \brief This function is executed in a separate thread
+ * It is used to handle incoming TCP connections
+ * and receive data from them
+*/
 void SampleModule::tcpSocketProcedure() {
-	// This function is executed in a separate thread
-	// It is used to handle incoming TCP connections
-	// and receive data from them
 	while (!quit) {
 		auto socket = tcpServer.await();
 		auto bytes = socket.recv();
@@ -56,8 +56,8 @@ void SampleModule::tcpSocketProcedure() {
 }
 
 /*!
- * \brief initializeModule Initializes this module by creating log,
- *			connecting to the message queue bus, setting up signal handers etc.
+ * \brief initializeModule Initializes this module by 
+ *	setting up the data dictionary
  * \return 0 on success, -1 otherwise
  */
 int SampleModule::initializeModule() {

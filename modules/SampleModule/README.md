@@ -36,5 +36,5 @@ MAKEFLAGS=-j5 colcon build --packages-up-to atos
 ```
 (tune -j5 to an approperiate number depending on your availiable RAM memory and CPU cores)
 ```
-ros2 launch atos atos.launch.py
+ros2 launch atos launch_basic.py
 ```
