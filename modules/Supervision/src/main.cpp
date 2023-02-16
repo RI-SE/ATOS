@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include <iostream>
 #include <vector>
 #include <array>
@@ -12,7 +17,7 @@
 #include "objectconfiguration.hpp"
 #include "logging.h"
 #include "datadictionary.h"
-#include "maestroTime.h"
+#include "atosTime.h"
 #include "util.h"
 
 #define MODULE_NAME "Supervision"

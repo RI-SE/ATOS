@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include "module.hpp"
 
 #include <sys/time.h>
@@ -17,7 +22,7 @@
 #include <netdb.h>
 
 #include "journal.hpp"
-#include "maestroTime.h"
+#include "atosTime.h"
 #include "datadictionary.h"
 
 class TimeControl : public Module

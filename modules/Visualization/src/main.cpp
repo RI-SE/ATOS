@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 
 /**
  * @file main.cpp
@@ -6,9 +11,6 @@
  * a visualizer
  * @version 0.1
  * @date 2020-10-16
- *
- * @copyright Copyright (c) 2020
- *
  */
 #include <signal.h>
 #include <systemd/sd-daemon.h>
@@ -21,7 +23,7 @@
 #include "datadictionary.h"
 #include "iso22133.h"
 #include "logging.h"
-#include "maestroTime.h"
+#include "atosTime.h"
 #include "tcphandler.hpp"
 #include "trajfilehandler.hpp"
 #include "udphandler.hpp"

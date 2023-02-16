@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include "externalaction.h"
 
 #include <stdexcept>
@@ -7,7 +12,7 @@
 
 #include "journal.hpp"
 #include "util.h"
-#include "maestroTime.h"
+#include "atosTime.h"
 #include "roschannel.hpp"
 
 using atos_interfaces::msg::ExecuteAction;

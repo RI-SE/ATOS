@@ -1,12 +1,14 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 /**
  * @file filehandler.cpp
  * @author Adam Eriksson (adam.eriksson@astazero.com)
  * @brief atm Reads trajectory files in .ATOS (ATOS home folder)
  * @version 0.1
  * @date 2020-10-16
- * 
- * @copyright Copyright (c) 2020 
- * 
  */
 
 #include "trajfilehandler.hpp"

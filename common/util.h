@@ -1,6 +1,9 @@
-/*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2016 CHRONOS project
-  ------------------------------------------------------------------------------
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+ /* ----------------------------------------------------------------------------
   -- File        : util.h
   -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS
@@ -119,7 +122,7 @@ extern "C"{
 
 #define CONF_FILE_NAME "test.conf"
 #define ADAPTIVE_SYNC_FILE_NAME "adaptivesync.conf"
-#define TRIGGER_ACTION_FILE_NAME "triggeraction.conf"
+#define PARAMS_FILE_NAME "params.yaml"
 
 #define MASTER_FILE_EXTENSION ".sync.m"
 #define SLAVE_FILE_EXTENSION ".sync.s"
