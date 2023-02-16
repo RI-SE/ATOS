@@ -9,9 +9,6 @@
  * @brief atm Reads trajectory files in .ATOS (ATOS home folder)
  * @version 0.1
  * @date 2020-10-16
- * 
- * @copyright Copyright (c) 2020 
- * 
  */
 
 #include "trajfilehandler.hpp"

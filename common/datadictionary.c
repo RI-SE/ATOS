@@ -4,8 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 /*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2019 CHRONOS II project
-  ------------------------------------------------------------------------------
   -- File        : datadictionary.c
   -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS II
