@@ -5,7 +5,7 @@ The sample module is a ros2 node that features some basic publishers and subscri
 It also features a TCPServer running in a separate thread. 
 
 ## Usage
-In order to launch compile and launch this module (or any other module created from the template) you need to go to the outer-most CMakeLists.txt file in the root of the repository and add the following line:
+In order to compile and launch this module (or any other module created from the template) you need to go to the outer-most CMakeLists.txt file in the root of the repository and add the following line:
 ```
 set(WITH_MODULE_X ON CACHE BOOL "Enable ModuleX module")
 ```
