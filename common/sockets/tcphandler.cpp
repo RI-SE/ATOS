@@ -10,9 +10,6 @@
  * @brief  TCP handler class that can be either server or client. 
  * @version 0.1
  * @date 2020-04-07
- * 
- * @copyright Copyright (c) AstaZero 2020
- * 
  */
 
 #include <unistd.h>
