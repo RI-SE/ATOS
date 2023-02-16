@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include "ATOSbase.hpp"
 #include "datadictionary.h"
 #include "objectconfig.hpp"
@@ -21,7 +26,7 @@ ATOSBase::ATOSBase()
 	std::string installationPath = ament_index_cpp::get_package_prefix("atos");
 	if (UtilVerifyTestDirectory(installationPath.c_str()) == -1) {
         throw std::runtime_error("Failed to verify test directory");
-  }
+  	}
 
 
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d", get_name(), getpid());

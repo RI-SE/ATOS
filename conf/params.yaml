@@ -1,17 +1,9 @@
 atos:
-  mqtt_bridge:
-    ros__parameters:
-      broker_ip: "192.71.100.198"
-      pub_client_id: "ATOS"
-      username: "astauser"
-      password: "resuatsa"
-      topic: "azapos/cmd"
-      quality_of_service: "1"
   atos_base:
     ros__parameters:
-      test_origin_latitude: 57.77744364201314
-      test_origin_longitude: 12.7809807263866
-      test_origin_altitude: 193.114
+      test_origin_latitude: 0.0
+      test_origin_longitude: 0.0
+      test_origin_altitude: 0.0
       test_origin_rot: 0.0
   esmini_adapter:
     ros__parameters:
@@ -29,4 +21,11 @@ atos:
       port: 55555
       protocol: "tcp"
       frequency: 100
-      
+  mqtt_bridge:
+    ros__parameters:
+      broker_ip: ""
+      pub_client_id: ""
+      username: ""
+      password: ""
+      topic: ""
+      quality_of_service: ""

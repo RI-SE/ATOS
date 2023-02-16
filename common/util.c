@@ -1,6 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 /*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2016 CHRONOS project
-  ------------------------------------------------------------------------------
   -- File        : util.c
   -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS
@@ -1975,7 +1978,7 @@ int iUtilGetIntParaConfFile(char *pcParameter, int *iValue) {
   -- File system functions
   ------------------------------------------------------------*/
 /*!
- * \brief UtilVerifyTestDirectory Copies a file from source to destination
+ * \brief UtilCopyFile Copies a file from source to destination
  * \param source File to be copied
  * \param sourceLen Length of path to file to be copied
  * \param dest Target path
@@ -2037,7 +2040,6 @@ int UtilCopyFile(
 /*!
  * \brief UtilVerifyTestDirectory Checks so that all the required directories exist
  * (i.e. traj, conf etc.) and that a configuration file exists.
- * \param installationPath Installation path where ATOS is installed
  * \return 0 if successfully verified, -1 otherwise
  */
 int UtilVerifyTestDirectory(const char* installationPath) {
@@ -2068,7 +2070,7 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 	}
 	else {
 		strcpy(testDir, envVar);
-		fprintf(stderr, "Environment variable ${%s} unset: defaulting to directory %s\n",
+		fprintf(stderr, "Environment variable ${%s} set: Using directory %s\n",
 			TEST_DIR_ENV_VARIABLE_NAME, testDir);
 	}
 
@@ -2104,10 +2106,10 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 	}
 
 	// Check so that a configuration file exists
-	char confDir[MAX_FILE_PATH];
-	strcpy(confDir, astazeroDir);
-	strcat(confDir, CONFIGURATION_DIR_NAME "/" CONF_FILE_NAME);
-	file = fopen(confDir, "r+");
+	char confFile[MAX_FILE_PATH];
+	strcpy(confFile, astazeroDir);
+	strcat(confFile, CONFIGURATION_DIR_NAME "/" CONF_FILE_NAME);
+	file = fopen(confFile, "r+");
 
 	if (file != NULL) {
 		fclose(file);
@@ -2118,32 +2120,32 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		strcat(sysConfDir, SYSCONF_DIR_NAME "/" CONF_FILE_NAME);
 		
 		fprintf(stderr, "Configuration file %s does not exist, copying default from %s\n",
-			confDir, sysConfDir);
-		if (UtilCopyFile(sysConfDir, sizeof(sysConfDir), confDir, sizeof(confDir)) < 0) {
+			confFile, sysConfDir);
+		if (UtilCopyFile(sysConfDir, sizeof(sysConfDir), confFile, sizeof(confFile)) < 0) {
 			fprintf(stderr, "Failed to copy file\n");
 			return -1;
 		}
 	}
 
 
-	// check so that a triggeraction.conf file exists
-	char triggerActionDir[MAX_FILE_PATH];
-	strcpy(triggerActionDir, astazeroDir);
-	strcat(triggerActionDir, CONFIGURATION_DIR_NAME "/" TRIGGER_ACTION_FILE_NAME);
-	file = fopen(triggerActionDir, "r+");
+	// check so that a params.yaml file exists
+	char paramsFile[MAX_FILE_PATH];
+	strcpy(paramsFile, astazeroDir);
+	strcat(paramsFile, CONFIGURATION_DIR_NAME "/" PARAMS_FILE_NAME);
+	file = fopen(paramsFile, "r+");
 
 	if (file != NULL) {
 		fclose(file);
 	}
 	else {
-		char triggerActionFilePath[MAX_FILE_PATH];
-		strcpy(triggerActionFilePath, installationPath);
-		strcat(triggerActionFilePath, SYSCONF_DIR_NAME "/" TRIGGER_ACTION_FILE_NAME);
+		char defaultParamsFilePath[MAX_FILE_PATH];
+		strcpy(defaultParamsFilePath, installationPath);
+		strcat(defaultParamsFilePath, SYSCONF_DIR_NAME "/" PARAMS_FILE_NAME);
 		
-		fprintf(stderr, "Trigger action %s file does not exist, copying default from %s\n",
-							triggerActionDir, triggerActionFilePath);
+		fprintf(stderr, "%s file does not exist, copying default from %s\n",
+							paramsFile, defaultParamsFilePath);
 		
-		if (UtilCopyFile(triggerActionFilePath, sizeof(triggerActionFilePath), triggerActionDir, sizeof(triggerActionDir)) < 0) {
+		if (UtilCopyFile(defaultParamsFilePath, sizeof(defaultParamsFilePath), paramsFile, sizeof(paramsFile)) < 0) {
 			fprintf(stderr, "Failed to copy file\n");
 			return -1;
 		}
@@ -2167,17 +2169,11 @@ void UtilGetTestDirectoryPath(char *path, size_t pathLen) {
 		return;
 	}
 
-	envVar = getenv(TEST_DIR_ENV_VARIABLE_NAME);
-	if (envVar == NULL) {
-		strcpy(path, getenv("HOME"));
-		strcat(path, "/");
-		strcat(path, ATOS_TEST_DIR_NAME);
-		strcat(path, "/");
-	}
-	else {
-		strcpy(path, envVar);
-		strcat(path, "/");
-	}
+	strcpy(path, getenv("HOME"));
+	strcat(path, "/");
+	strcat(path, ATOS_TEST_DIR_NAME);
+	strcat(path, "/");
+
 }
 
 /*!
