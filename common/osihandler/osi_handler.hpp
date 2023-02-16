@@ -9,9 +9,6 @@
  * @author Albin Nykvist 
  * @brief  Osi handler class for encoding/decoding osi messages 
  * @date 2021-05-25
- * 
- * @copyright Copyright (c) AstaZero 2021
- * 
  */
 
 #pragma once
