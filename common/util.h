@@ -121,7 +121,7 @@ extern "C"{
 
 #define CONF_FILE_NAME "test.conf"
 #define ADAPTIVE_SYNC_FILE_NAME "adaptivesync.conf"
-#define TRIGGER_ACTION_FILE_NAME "triggeraction.conf"
+#define PARAMS_FILE_NAME "params.yaml"
 
 #define MASTER_FILE_EXTENSION ".sync.m"
 #define SLAVE_FILE_EXTENSION ".sync.s"
