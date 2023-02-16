@@ -90,7 +90,7 @@ add_subdirectory(iso22133)
 add_subdirectory(common/time)
 add_subdirectory(common/shmem)
 add_subdirectory(common/osihandler)
-add_subdirectory(util/C/sockets)
+add_subdirectory(common/sockets)
 add_subdirectory(common)
 add_subdirectory(modules/ATOSBase)
 
