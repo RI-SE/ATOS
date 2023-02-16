@@ -6,7 +6,7 @@
 #include <sys/time.h>
 #include <deque>
 #include <algorithm>
-#include "maestroTime.h"
+#include "atosTime.h"
 #include "braketrigger.h"
 
 namespace ATOS {

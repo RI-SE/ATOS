@@ -22,7 +22,7 @@ find_package(std_srvs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
 
-set(TIME_LIBRARY MaestroTime)
+set(TIME_LIBRARY ATOSTime)
 set(SHARED_MEMORY_LIBRARY MaestroSHM)
 set(ISO_22133_LIBRARY ISO22133)
 set(MATH_LIBRARY m)

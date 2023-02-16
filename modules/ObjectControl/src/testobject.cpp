@@ -5,7 +5,7 @@
  */
 #include "testobject.hpp"
 #include "util.h"
-#include "maestroTime.h"
+#include "atosTime.h"
 #include "datadictionary.h"
 #include "osi_handler.hpp"
 using namespace ATOS;

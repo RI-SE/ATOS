@@ -22,7 +22,7 @@
 #include <netdb.h>
 
 #include "journal.hpp"
-#include "maestroTime.h"
+#include "atosTime.h"
 #include "datadictionary.h"
 
 class TimeControl : public Module

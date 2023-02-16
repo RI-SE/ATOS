@@ -7,7 +7,7 @@
 #include "directcontrol.hpp"
 #include "util.h"
 #include "tcphandler.hpp"
-#include "maestroTime.h"
+#include "atosTime.h"
 #include "datadictionary.h"
 #include "atos_interfaces/msg/control_signal_percentage.hpp"
 

@@ -17,7 +17,7 @@
 #include "objectconfiguration.hpp"
 #include "logging.h"
 #include "datadictionary.h"
-#include "maestroTime.h"
+#include "atosTime.h"
 #include "util.h"
 
 #define MODULE_NAME "Supervision"

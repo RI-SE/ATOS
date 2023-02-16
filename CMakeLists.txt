@@ -90,12 +90,11 @@ if(WITH_MQTT_BRIDGE)
 endif()
 
 # Add corresponding subprojects
-add_subdirectory(util/C/time)
-add_subdirectory(util/C/shmem)
-add_subdirectory(util/C/iso22133)
-add_subdirectory(util/C/mathutils)
-add_subdirectory(util/C/osihandler)
-add_subdirectory(util/C/sockets)
+add_subdirectory(iso22133)
+add_subdirectory(common/time)
+add_subdirectory(common/shmem)
+add_subdirectory(common/osihandler)
+add_subdirectory(common/sockets)
 add_subdirectory(common)
 add_subdirectory(modules/ATOSBase)
 

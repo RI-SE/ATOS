@@ -23,7 +23,7 @@
 #include "datadictionary.h"
 #include "iso22133.h"
 #include "logging.h"
-#include "maestroTime.h"
+#include "atosTime.h"
 #include "tcphandler.hpp"
 #include "trajfilehandler.hpp"
 #include "udphandler.hpp"
