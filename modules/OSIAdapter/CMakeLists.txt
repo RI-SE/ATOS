@@ -9,15 +9,16 @@ project(osi_adapter)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
-find_package(Boost REQUIRED)
 
 # Define target names
 set(OSI_ADAPTER_TARGET ${PROJECT_NAME})
 
 set(OSI_LIBRARY OSIHandler)
 set(ATOS_COMMON_LIBRARY ATOSCommon)
+set(SOCKET_LIBRARY TCPUDPSocket)
 
 get_target_property(OSI_HEADERS ${OSI_LIBRARY} INCLUDE_DIRECTORIES)
+get_target_property(SOCKET_HEADERS ${SOCKET_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
@@ -25,11 +26,13 @@ include(GNUInstallDirs)
 add_executable(${OSI_ADAPTER_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/osiadapter.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/serverfactory.cpp
 )
 # Link project executable to util libraries
 target_link_libraries(${OSI_ADAPTER_TARGET} 
 	${ATOS_COMMON_LIBRARY}
 	${OSI_LIBRARY}
+	${SOCKET_LIBRARY}
 )
 
 # ROS specific settings
@@ -42,7 +45,7 @@ ament_target_dependencies(${OSI_ADAPTER_TARGET}
 target_include_directories(${OSI_ADAPTER_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${OSI_HEADERS}
-	${Boost_INCLUDE_DIRS}
+	${SOCKET_HEADERS}
 )
 
 # Installation rules
