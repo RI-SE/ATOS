@@ -14,6 +14,7 @@ SampleModule::SampleModule() :
 	tcpServer("0.0.0.0",TCPPort)
 {
 	tcpThread = std::make_unique<std::thread>(&SampleModule::tcpSocketProcedure, this);
+	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",moduleName.c_str(), getpid());
 }
 
 SampleModule::~SampleModule() {
@@ -51,16 +52,4 @@ void SampleModule::tcpSocketProcedure() {
 			RCLCPP_INFO(get_logger(), "Received byte: %d", b);
 		}
 	}
-}
-
-/*!
- * \brief initializeModule Initializes this module by 
- *	setting up the data dictionary
- * \return 0 on success, -1 otherwise
- */
-int SampleModule::initializeModule() {
-	int retval = 0;
-
-	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",moduleName.c_str(), getpid());
-	return retval;
 }

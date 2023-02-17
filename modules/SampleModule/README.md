@@ -20,7 +20,7 @@ endif()
 
 Note: When switching ON/OFF certain modules, it might be nessesscary to remove the CMakeCache.txt file in ~/atos_ws/install/atos/.
 
-It is also necessary to add the module to a launch file, located in the launch directory. This is done by adding the following line to the list of nodes:
+It is also necessary to add the module to a launch file, located in the launch directory. This is done by adding the following line to the list of nodes in the appropriate launch file:
 ```
     Node(
         package='atos',

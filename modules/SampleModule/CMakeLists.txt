@@ -10,7 +10,6 @@ find_package(atos_interfaces REQUIRED)
 # Define target names
 set(SAMPLE_MODULE_TARGET ${PROJECT_NAME})
 
-set(COREUTILS_LIBRARY ATOSCoreUtil) # Core utils library written in C. 
 set(COMMON_LIBRARY ATOSCommon) # Common library for ATOS with e.g. Trajectory class
 set(SOCKET_LIBRARY TCPUDPSocket) # Socket library for TCP/UDP communication
 
@@ -23,7 +22,7 @@ add_executable(${SAMPLE_MODULE_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/samplemodule.cpp
 )
-# Link project executable to util libraries
+# Link project executable to common libraries
 target_link_libraries(${SAMPLE_MODULE_TARGET}
 	${COREUTILS_LIBRARY}
 	${SOCKET_LIBRARY}
