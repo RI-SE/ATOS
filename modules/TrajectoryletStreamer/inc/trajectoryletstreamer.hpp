@@ -10,6 +10,10 @@
 #include "trajectorypublisher.hpp"
 #include <vector>
 #include <map>
+#include <memory>
+#include <chrono>
+#include "atos_interfaces/srv/get_object_ids.hpp"
+#include "atos_interfaces/srv/get_object_trajectory.hpp"
 
 namespace ATOS {
 
@@ -27,17 +31,20 @@ private:
     void loadObjectFiles();
     void clearScenario();
 
-    std::vector<uint32_t> getObjectIds() const;
-
     ROSChannels::Init::Sub initSub;
     ROSChannels::ObjectsConnected::Sub connectedSub;
     ROSChannels::Start::Sub startSub;
     ROSChannels::Abort::Sub abortSub;
     ROSChannels::Stop::Sub stopSub;
 
+	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr idClient;	//!< Client to request object ids
+	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr trajectoryClient;	//!< Client to request object trajectories
+
     std::vector<TrajectoryPublisher> publishers;
 
-    std::vector<std::unique_ptr<ObjectConfig>> objectConfigurations;
+    std::map<uint32_t, std::unique_ptr<ATOS::Trajectory>> trajectories;
+
+    std::chrono::milliseconds chunkLength;
 };
 
 }  // namespace ATOS

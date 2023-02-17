@@ -9,20 +9,25 @@
 #include <nav_msgs/msg/path.hpp>
 
 using namespace ATOS;
+using namespace std::chrono_literals;
 
 TrajectoryPublisher::TrajectoryPublisher(
     rclcpp::Node& node,
     const Trajectory& _traj,
-    const uint32_t objectId)
+    const uint32_t objectId,
+    const std::chrono::milliseconds chunkLength)
     : traj(std::make_unique<const Trajectory>(_traj)),
     pub(node, objectId),
-    lastPublishedChunk(traj->points.end(), traj->points.end())
+    lastPublishedChunk(traj->points.end(), traj->points.end()),
+    chunkLength(chunkLength)
 {
     timer = node.create_wall_timer(publishPeriod, std::bind(&TrajectoryPublisher::publishChunk, this));
 }
 
-void TrajectoryPublisher::publishChunk() {
+void TrajectoryPublisher::publishChunk()
+{
     using std::chrono::steady_clock;
+    Chunk chunk(traj->points.cbegin(), traj->points.cend());
     auto now = steady_clock::now();
     auto trajTimeOffset = now;
     auto timeIntoTraj = steady_clock::duration(0);
@@ -30,12 +35,15 @@ void TrajectoryPublisher::publishChunk() {
         timeIntoTraj = now-*startTime;
         trajTimeOffset = *startTime;
     }
-
-    auto chunk = extractChunk(timeIntoTraj, timeIntoTraj + chunkLength);
-    if (chunk != lastPublishedChunk) {
+    if (chunkLength.count() > 0) {
+        chunk = extractChunk(timeIntoTraj, timeIntoTraj + chunkLength);
+    }
+    if (chunk != lastPublishedChunk ||
+        (chunkLength > 0ms && now - lastPublishTime > 1s)) {
         auto trajMsg = chunkToPath(chunk, trajTimeOffset);
         pub.publish(trajMsg);
         lastPublishedChunk = chunk;
+        lastPublishTime = now;
     }
 }
 

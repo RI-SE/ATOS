@@ -19,7 +19,9 @@ TrajectoryletStreamer::TrajectoryletStreamer()
     stopSub(*this, std::bind(&TrajectoryletStreamer::onStopMessage, this, _1)),
     abortSub(*this, std::bind(&TrajectoryletStreamer::onAbortMessage, this, _1))
 {
-
+    declare_parameter("chunk_duration", 0.0);
+    idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
+	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory);
 }
 
 void TrajectoryletStreamer::onInitMessage(const std_msgs::msg::Empty::SharedPtr) {
@@ -30,8 +32,8 @@ void TrajectoryletStreamer::onInitMessage(const std_msgs::msg::Empty::SharedPtr)
 void TrajectoryletStreamer::onObjectsConnectedMessage(const ObjectsConnected::message_type::SharedPtr msg) {
     // TODO setup and first chunk transmission
     RCLCPP_INFO(get_logger(), "Starting trajectory publishers");
-    for (const auto& conf : objectConfigurations) {
-        publishers.emplace_back(*this, conf->getTrajectory(), conf->getTransmitterID());
+    for (const auto& [id, traj] : trajectories) {
+        publishers.emplace_back(*this, *traj, id, chunkLength);
     }
 }
 
@@ -43,36 +45,45 @@ void TrajectoryletStreamer::onStartMessage(const std_msgs::msg::Empty::SharedPtr
 
 void TrajectoryletStreamer::loadObjectFiles() {
 	clearScenario();
-	char path[MAX_FILE_PATH];
-	std::vector<std::invalid_argument> errors;
-
-	UtilGetObjectDirectoryPath(path, sizeof (path));
-	fs::path objectDir(path);
-	if (!fs::exists(objectDir)) {
-		throw std::ios_base::failure("Object directory does not exist");
-	}
-
-	for (const auto& entry : fs::directory_iterator(objectDir)) {
-		if (fs::is_regular_file(entry.status())) {
-			ObjectConfig conf(get_logger());
-            conf.parseConfigurationFile(entry.path());
-            objectConfigurations.push_back(std::make_unique<ObjectConfig>(conf));
-		}
-	}
-    RCLCPP_INFO(get_logger(), "Loaded %d object configurations", objectConfigurations.size());
+    double res = 0.0;
+    auto success = get_parameter("chunk_duration", res);
+    if (!success) {
+        RCLCPP_ERROR(get_logger(), "Could not get parameter chunk_duration");
+        return;
+    }
+    else {
+        chunkLength = std::chrono::milliseconds(static_cast<int>(res * 1000.0));
+        RCLCPP_INFO(get_logger(), "Chunk duration: %d ms", chunkLength.count());
+    }
+    RCLCPP_INFO(get_logger(), "Loading trajectories");
+    auto idsCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFuture future) {
+        auto idResponse = future.get();
+        for (const auto id : idResponse->ids) {
+            auto trajectoryCallback = [this](const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
+                RCLCPP_INFO(get_logger(), "Got trajectory");
+				auto trajResponse = future.get();
+				if (!trajResponse->success) {
+					RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", trajResponse->id);
+					return;
+				}
+				ATOS::Trajectory traj(get_logger());
+				traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
+				trajectories[trajResponse->id] = std::make_unique<ATOS::Trajectory>(traj);
+				RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %d points", trajResponse->id, trajectories[trajResponse->id]->size());
+			};
+			auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
+			trajRequest->id = id;
+			trajectoryClient->async_send_request(trajRequest, trajectoryCallback);
+        }
+    };
+	auto request = std::make_shared<atos_interfaces::srv::GetObjectIds::Request>();
+	idClient->async_send_request(request, idsCallback);
 }
 
 
 void TrajectoryletStreamer::clearScenario() {
     publishers.clear();
-	objectConfigurations.clear();
-}
-
-std::vector<uint32_t> TrajectoryletStreamer::getObjectIds() const {
-    std::vector<uint32_t> retval;
-    std::transform(objectConfigurations.begin(), objectConfigurations.end(), std::back_inserter(retval),
-        [](const auto& conf){ return conf->getTransmitterID(); });
-    return retval;
+	trajectories.clear();
 }
 
 void TrajectoryletStreamer::onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) {
