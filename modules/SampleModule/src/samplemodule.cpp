@@ -1,5 +1,4 @@
 #include "samplemodule.hpp"
-#include "util.h"
 #include "roschannel.hpp"
 #include "rclcpp/wait_for_message.hpp"
 
