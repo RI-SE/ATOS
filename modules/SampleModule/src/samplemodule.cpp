@@ -63,15 +63,5 @@ int SampleModule::initializeModule() {
 	int retval = 0;
 
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",moduleName.c_str(), getpid());
-	if (requestDataDictInitialization()) {
-		if (DataDictionaryInitObjectData() != READ_OK) {
-			retval = -1;
-			RCLCPP_ERROR(get_logger(), "Preexisting data dictionary not found");
-		}
-	}
-	else{
-		retval = -1;
-		RCLCPP_ERROR(get_logger(), "Unable to initialize data dictionary");
-	}
 	return retval;
 }
