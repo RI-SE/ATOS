@@ -1,5 +1,6 @@
 ARG ROS_DISTRO=humble
-ARG FROM_IMAGE=osrf/ros:${ROS_DISTRO}-desktop-full-jammy
+ARG OS=jammy
+ARG FROM_IMAGE=osrf/ros:${ROS_DISTRO}-desktop-full-${OS}
 ARG OVERLAY_WS=/opt/ros/${ROS_DISTRO}/overlay_ws
 
 FROM ${FROM_IMAGE} AS cacher
@@ -18,10 +19,13 @@ RUN sudo apt update \
     && sudo apt install -y libeigen3-dev \
     && sudo apt install -y nlohmann-json3-dev \
     && sudo apt install -y libpaho-mqtt-dev \
-    && sudo apt install -y curl \
+    && sudo apt install -y curl \   
     && sudo apt install -y gnupg2 \
-    && sudo apt install -y lsb-release \
-    && sudo apt install -y mesa-common-dev 
+    && sudo apt install -y lsb-release 
+
+
+RUN if [ "$OS" == "jammy" ]; then sudo apt install -y libpaho-mqtt-dev; fi
+RUN if [ "$OS" == "foxy" ]; then sudo apt install -y ros-foxy-paho-mqtt-c; fi
 
 RUN sudo apt install -y ros-${ROS_DISTRO}-geographic-msgs \
     && sudo apt install -y ros-${ROS_DISTRO}-geometry-msgs \
@@ -83,4 +87,4 @@ RUN mv ./src/atos/atos_interfaces ./src
 
 
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
-   && colcon build 
+   &&  MAKEFLAGS=-j5 colcon build 
