@@ -29,3 +29,6 @@ atos:
       password: ""
       topic: ""
       quality_of_service: ""
+  trajectorylet_streamer:
+    ros__parameters:
+      chunk_duration: 2.0
