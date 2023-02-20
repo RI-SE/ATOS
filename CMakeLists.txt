@@ -42,6 +42,7 @@ set(WITH_TRAJECTORYLET_STREAMER ON CACHE BOOL "Enable TrajectoryletStreamer modu
 set(WITH_OSI_ADAPTER ON CACHE BOOL "Enable OSIAdapter module")
 set(WITH_ESMINI_ADAPTER ON CACHE BOOL "Enable EsminiAdapter module")
 set(WITH_MQTT_BRIDGE ON CACHE BOOL "Enable MQTTBridge module")
+set(WITH_SAMPLE_MODULE ON CACHE BOOL "Enable SampleModule module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -88,6 +89,9 @@ endif()
 if(WITH_MQTT_BRIDGE)
         list(APPEND ENABLED_MODULES MQTTBridge)
 endif()
+if(WITH_SAMPLE_MODULE)
+        list(APPEND ENABLED_MODULES SampleModule)
+endif()
 
 # Add corresponding subprojects
 add_subdirectory(iso22133)
@@ -113,6 +117,9 @@ ament_package()
 # Install configuration
 include(GNUInstallDirs)
 install(DIRECTORY launch DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/)
+file(GLOB CONF_FILES ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.conf)
+file(GLOB PARAMS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.yaml)
+install(FILES ${CONF_FILES} ${PARAMS_FILE} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
 
 # Add post install instructions
 add_subdirectory(cmake/cpack)
