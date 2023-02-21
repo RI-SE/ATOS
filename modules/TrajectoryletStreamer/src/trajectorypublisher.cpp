@@ -39,7 +39,7 @@ void TrajectoryPublisher::publishChunk()
 		chunk = extractChunk(timeIntoTraj, timeIntoTraj + chunkLength);
 	}
 	if (chunk != lastPublishedChunk ||
-		(chunkLength > 0ms && now - lastPublishTime > 1s)) {
+		(chunkLength == 0ms && now - lastPublishTime > 1s)) {
 		auto trajMsg = chunkToPath(chunk, trajTimeOffset);
 		pub.publish(trajMsg);
 		lastPublishedChunk = chunk;
