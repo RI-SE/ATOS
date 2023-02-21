@@ -55,5 +55,12 @@ def get_base_nodes():
             name='mqtt_bridge',
             # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
             parameters=[params]
-        )
+        ),
+        Node(
+            package='atos',
+            namespace='atos',
+            executable='trajectorylet_streamer',
+            name='trajectorylet_streamer',
+            parameters=[params]
+        ),
     ]
