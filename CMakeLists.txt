@@ -113,6 +113,9 @@ ament_package()
 # Install configuration
 include(GNUInstallDirs)
 install(DIRECTORY launch DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/)
+file(GLOB CONF_FILES ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.conf)
+file(GLOB PARAMS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.yaml)
+install(FILES ${CONF_FILES} ${PARAMS_FILE} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
 
 # Add post install instructions
 add_subdirectory(cmake/cpack)
