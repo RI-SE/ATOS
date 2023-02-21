@@ -432,24 +432,44 @@ ATOS::Trajectory EsminiAdapter::getTrajectory(
  * \param states The return map of ids mapping to the respective object states at different timesteps
  * \return A map of object states, where the key is the object ID and the value is a vector of states
  */
-void EsminiAdapter::getObjectStates(double timeStep, double endTime, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states) {
-	// Populate States map with empty vector for each object
+void EsminiAdapter::getObjectStates(
+	double timeStep,
+	std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states)
+{
+	double accumTime = 0.0;
+	auto pushCurrentState = [&](auto& st, auto& index) {
+		auto id = SE_GetId(index);
+		//SE_SetAlignModeZ(id, 0); // Disable Z-alignment, not implemented in esmini yet
+		SE_ScenarioObjectState s;
+		SE_GetObjectState(id, &s);
+		s.timestamp = accumTime;
+		st.at(std::stoi(SE_GetObjectName(id))).push_back(s);
+	};
+
+	// Populate States map with vector for each object containing the initial state
+	SE_StepDT(timeStep);
+	accumTime += timeStep;
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
 		states[std::stoi(SE_GetObjectName(SE_GetId(j)))] = std::vector<SE_ScenarioObjectState>();
+		pushCurrentState(states, j);
 	}
-	double accumTime = 0;
-	while (accumTime < endTime) {
+
+	constexpr double MAX_SCENARIO_TIME = 3600.0;
+	bool reachedEnd = false;
+	while (!reachedEnd && accumTime < MAX_SCENARIO_TIME) {
 		SE_StepDT(timeStep);
 		accumTime += timeStep;
 		for (int j = 0; j < SE_GetNumberOfObjects(); j++){
-			//SE_SetAlignModeZ(SE_GetId(j), 0); // Disable Z-alignment, not implemented in esmini yet
-			SE_ScenarioObjectState state;
-			SE_GetObjectState(SE_GetId(j), &state);
-			state.timestamp = accumTime; // Inject time since esmini does not do this
-			states.at(std::stoi(SE_GetObjectName(SE_GetId(j)))).push_back(state); // Copy state into vector
+			pushCurrentState(states, j);
 		}
+		reachedEnd = std::all_of(states.begin(), states.end(), [&](auto& pair) {
+			return pair.second.back().speed < 0.1;
+		});
 	}
-	RCLCPP_INFO(me->get_logger(), "Finished esmini simulation");
+	if (accumTime > MAX_SCENARIO_TIME) {
+		RCLCPP_WARN(me->get_logger(), "Scenario time limit reached, stopping simulation");
+	}
+	RCLCPP_INFO(me->get_logger(), "Finished %f s simulation", accumTime);
 }
 
 
@@ -462,12 +482,11 @@ void EsminiAdapter::getObjectStates(double timeStep, double endTime, std::map<ui
  */
 std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(
 	double timeStep,
-	double endTime,
 	std::map<uint32_t,ATOS::Trajectory>& idToTraj)
 {
 	// Get object states
 	std::map<uint32_t,std::vector<SE_ScenarioObjectState>> idToStates;
-	getObjectStates(timeStep, endTime, idToStates);
+	getObjectStates(timeStep, idToStates);
 
 	// Extract trajectories
 	for (auto& os : idToStates) {
@@ -502,7 +521,7 @@ void EsminiAdapter::InitializeEsmini()
 	// Register callbacks to figure out what actions need to be taken
 	SE_RegisterStoryBoardElementStateChangeCallback(&collectStartAction);
 
-	me->extractTrajectories(0.1, 50.0, me->idToTraj);
+	me->extractTrajectories(0.1, me->idToTraj);
 
 	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", me->idToTraj.size());
 	RCLCPP_INFO(me->get_logger(), "Number of objects with triggered start: %d", me->delayedStartIds.size());
