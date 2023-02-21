@@ -11,10 +11,10 @@ from launch_ros.actions import Node
 
 def generate_launch_description():    
     base_nodes = launch_base.get_base_nodes()
-    base_nodes.append([Node(
+    base_nodes.append(Node(
         package='atos',
         namespace='atos',
         executable='trajectorylet_streamer',
         name='trajectorylet_streamer'
-    )])
+    ))
     return LaunchDescription(base_nodes)

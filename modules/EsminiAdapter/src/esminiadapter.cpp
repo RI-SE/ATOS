@@ -527,12 +527,13 @@ void EsminiAdapter::onRequestObjectTrajectory(
 	const std::shared_ptr<ObjectTrajectorySrv::Request> req,
 	std::shared_ptr<ObjectTrajectorySrv::Response> res)
 {
-	if (me->idToTraj.find(req->id) != me->idToTraj.end()){
+	res->id = req->id;
+	try {
 		res->trajectory = me->idToTraj.at(req->id).toCartesianTrajectory();
 		res->success = true;
 	}
-	else{
-		RCLCPP_ERROR(me->get_logger(), "Esmini-trajectory service called, no trajectory found for object %d", req->id);
+	catch (std::out_of_range& e){
+		RCLCPP_ERROR(me->get_logger(), "Esmini trajectory service called, no trajectory found for object %d", req->id);
 		res->success = false;
 	}
 }
@@ -540,29 +541,27 @@ void EsminiAdapter::onRequestObjectTrajectory(
 void EsminiAdapter::onRequestObjectStartOnTrigger(
 	const std::shared_ptr<ObjectTriggerSrv::Request> req,
 	std::shared_ptr<ObjectTriggerSrv::Response> res)
-{	
-	for (auto& it : me->delayedStartIds){
-		if (it == req->id){
-			res->trigger_start = true;
-			res->success = true;
-			return;
-		}
-	}
-	RCLCPP_INFO(me->get_logger(), "No triggers found for object %d", req->id);
+{
+	res->id = req->id;
 	res->success = true;
+	res->trigger_start = std::count(me->delayedStartIds.begin(), me->delayedStartIds.end(), req->id) > 0;
+	if (!res->trigger_start){
+		RCLCPP_INFO(me->get_logger(), "No triggers found for object %d", req->id);
+	}
 }
 
 void EsminiAdapter::onRequestObjectIP(
 	const std::shared_ptr<ObjectIpSrv::Request> req,
 	std::shared_ptr<ObjectIpSrv::Response> res)
 {	
-	if (me->idToIp.find(req->id) == me->idToIp.end()){
-		RCLCPP_WARN(me->get_logger(), "Esmini-IP service called, no IP found for object %d", req->id);
-		res->success = false;
-	}
-	else{
+	res->id = req->id;
+	try {
 		res->ip = me->idToIp.at(req->id);
 		res->success = true;
+	}
+	catch (std::out_of_range& e){
+		RCLCPP_ERROR(me->get_logger(), "Esmini IP service called, no IP found for object %d", req->id);
+		res->success = false;
 	}
 }
 

@@ -11,10 +11,10 @@ from launch_ros.actions import Node
 
 def generate_launch_description():   
     base_nodes = launch_base.get_base_nodes()
-    base_nodes.append([Node(
+    base_nodes.append(Node(
         package='rviz2',
         namespace='atos',
         executable='rviz2',
         name='rviz2'
-    )])
+    ))
     return LaunchDescription(base_nodes)
