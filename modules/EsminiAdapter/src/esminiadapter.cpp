@@ -373,6 +373,10 @@ ATOS::Trajectory EsminiAdapter::getTrajectory(
 {
 	ATOS::Trajectory trajectory(me->get_logger());
 	trajectory.name = "Esmini Trajectory for object " + std::to_string(id);
+	if (states.empty()) {
+		return trajectory;
+	}
+
 	auto saveTp = [&](auto& state, auto& prevState) {
 		ATOS::Trajectory::TrajectoryPoint tp(me->get_logger());
 		double currLonVel = state.speed * cos(state.wheel_angle);
@@ -387,17 +391,29 @@ ATOS::Trajectory EsminiAdapter::getTrajectory(
 		tp.setCurvature(0); // TODO: implement support for different curvature, now only support straight lines
 		tp.setLongitudinalVelocity(currLonVel);
 		tp.setLateralVelocity(currLatVel);
-		tp.setLongitudinalAcceleration((currLonVel - prevLonVel) / (state.timestamp - prevState.timestamp));
-		tp.setLateralAcceleration((currLatVel - prevLatVel) / (state.timestamp - prevState.timestamp));
+		if (state.timestamp != prevState.timestamp) {
+			tp.setLongitudinalAcceleration((currLonVel - prevLonVel) / (state.timestamp - prevState.timestamp));
+			tp.setLateralAcceleration((currLatVel - prevLatVel) / (state.timestamp - prevState.timestamp));
+		}
+		else {
+			tp.setLongitudinalAcceleration(0);
+			tp.setLateralAcceleration(0);
+		}
 
 		trajectory.points.push_back(tp);
 	};
-	for (auto it = states.begin()+1; it != states.end(); ++it) {
-		if (it->x == (it-1)->x && it->y == (it-1)->y && // Nothing interesting happens within 1 timestep, skip
-			it->z == (it-1)->z && it->h == (it-1)->h) {
-			continue;
+
+	if (states.size() > 1) {
+		for (auto it = states.begin()+1; it != states.end(); ++it) {
+			if (it->x == (it-1)->x && it->y == (it-1)->y && // Nothing interesting happens within 1 timestep, skip
+				it->z == (it-1)->z && it->h == (it-1)->h) {
+				continue;
+			}
+			saveTp(*it,*(it-1)); // Next timestep is different, save current one.
 		}
-		saveTp(*it,*(it-1)); // Next timestep is different, save current one.
+	}
+	if (trajectory.points.size() == 0) {
+		saveTp(states.front(), states.front()); // Only one state or no points, save it.
 	}
 	auto startTime = trajectory.points.front().getTime();
 
