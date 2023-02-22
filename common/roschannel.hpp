@@ -533,7 +533,7 @@ namespace Path {
         const uint32_t objectId;
         Pub(rclcpp::Node& node, const uint32_t id) :
             objectId(id),
-            BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName) {}
+            BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local()) {}
     };
 
     class Sub : public BaseSub<message_type> {
@@ -541,7 +541,7 @@ namespace Path {
         const uint32_t objectId;
         Sub(rclcpp::Node& node, const uint32_t id, std::function<void(const message_type::SharedPtr)> callback) : 
             objectId(id),
-            BaseSub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, callback) {}
+            BaseSub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, callback, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local()) {}
     };
 }
 
