@@ -22,6 +22,7 @@
 #include "objectcontrol.hpp"
 
 using std::placeholders::_1;
+using std::placeholders::_2;
 using namespace ROSChannels;
 using namespace std::chrono_literals;
 using namespace ATOS;
@@ -57,6 +58,8 @@ ObjectControl::ObjectControl()
 	if (this->initialize() == -1) {
 		throw std::runtime_error(std::string("Failed to initialize ") + get_name());
 	}
+	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(ServiceNames::getObjectControlState,
+		std::bind(&ObjectControl::onRequestState, this, _1, _2));
 };
 
 ObjectControl::~ObjectControl() {
@@ -100,6 +103,23 @@ int ObjectControl::initialize() {
 		RCLCPP_ERROR(get_logger(), "Unable to initialize data dictionary");
 	}
 	return retval;
+}
+
+void ObjectControl::onRequestState(
+		const std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Request> req,
+		std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Response> res) {
+	try {
+		if (!this->state) {
+			throw std::runtime_error("No state set");
+		}
+		res->state = this->state->asNumber();
+		res->success = true;
+	}
+	catch (std::exception& e) {
+		RCLCPP_ERROR(get_logger(), "Failed to get state: %s", e.what());
+		res->state = -1;
+		res->success = false;
+	}
 }
 
 void ObjectControl::handleActionConfigurationCommand(
