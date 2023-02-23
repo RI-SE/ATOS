@@ -508,6 +508,7 @@ void EsminiAdapter::InitializeEsmini()
 	me->idToTraj.clear();
 	me->ATOStoEsminiObjectId.clear();
 	me->idToIp.clear();
+	me->pathPublishers.clear();
 	SE_Close(); // Stop ScenarioEngine in case it is running
 
 	RCLCPP_INFO(me->get_logger(), "Initializing esmini with scenario file %s", me->oscFilePath.c_str());
