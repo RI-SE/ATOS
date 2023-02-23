@@ -143,6 +143,7 @@ void EsminiAdapter::onStaticInitMessage(
 		RCLCPP_ERROR(me->get_logger(), e.what());
 		return;
 	}
+	me->InitializeEsmini();
 	auto request = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
 	me->testOriginClient->async_send_request(request, [](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
 		auto response = future.get();
@@ -151,7 +152,6 @@ void EsminiAdapter::onStaticInitMessage(
 			return; // TODO communicate failure
 		}
 		me->testOrigin = response->origin;
-		me->InitializeEsmini();
 	});
 }
 
