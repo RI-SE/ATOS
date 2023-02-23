@@ -19,6 +19,7 @@
 #include "atos_interfaces/srv/get_object_ip.hpp"
 #include "atos_interfaces/srv/get_object_trigger_start.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
+#include "atos_interfaces/srv/get_object_control_state.hpp"
 
 // Forward declarations
 class ObjectControlState;
@@ -206,6 +207,8 @@ private:
 	void onRemoteControlDisableMessage(const ROSChannels::RemoteControlDisable::message_type::SharedPtr) override;
 	void onControlSignalMessage(const ROSChannels::ControlSignal::message_type::SharedPtr) override;
 	void onPathMessage(const ROSChannels::Path::message_type::SharedPtr,const uint32_t) override;
+	void onRequestState(const std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Request>,
+							 std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Response>);
 
 	using clock = std::chrono::steady_clock;
 
@@ -249,7 +252,7 @@ private:
 	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr trajectoryClient;	//!< Client to request object trajectories
 	rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedPtr ipClient;	//!< Client to request object IPs
 	rclcpp::Client<atos_interfaces::srv::GetObjectTriggerStart>::SharedPtr triggerClient;	//!< Client to request object trigger start
-
+	rclcpp::Service<atos_interfaces::srv::GetObjectControlState>::SharedPtr stateService;	//!< Service to request object control state
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
 	//!			and can be terminated by calling ::abortConnectionAttempt or setting ::connStopReqFuture.
