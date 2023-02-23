@@ -66,6 +66,30 @@ atos_interfaces::msg::CartesianTrajectory Trajectory::toCartesianTrajectory(){
 	return trajMsg;
 }
 
+nav_msgs::msg::Path Trajectory::toPath() const
+{
+	nav_msgs::msg::Path path;
+	path.header.frame_id = "map";
+	path.header.stamp = rclcpp::Time(0);
+	auto rosTimeOffset = rclcpp::Time(std::chrono::system_clock::now().time_since_epoch().count());
+	for (const auto& point : this->points){
+		geometry_msgs::msg::PoseStamped pose;
+		pose.header.stamp = rosTimeOffset + rclcpp::Duration(point.getTime());
+		pose.pose.position.x = point.getPosition().x();
+		pose.pose.position.y = point.getPosition().y();
+		pose.pose.position.z = point.getPosition().z();
+		tf2::Quaternion q;
+		q.setRPY(0, 0, point.getHeading());
+		tf2::convert(q, pose.pose.orientation);
+		path.poses.push_back(pose);
+	}
+	// Force same coordinate frame as header
+	for (auto& pose : path.poses) {
+		pose.header.frame_id = path.header.frame_id;
+	}
+	return path;
+}
+
 void Trajectory::initializeFromCartesianTrajectory(const atos_interfaces::msg::CartesianTrajectory &traj) {
 	using namespace std::chrono;
 	// TODO: add name to traj

@@ -15,6 +15,7 @@
 #include <eigen3/Eigen/Dense>
 #include <math.h>
 #include <chrono>
+#include <nav_msgs/msg/path.hpp>
 
 #include "loggable.hpp"
 #include "atos_interfaces/msg/cartesian_trajectory.hpp"
@@ -145,6 +146,7 @@ public:
 	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
 	std::string toString() const;
 	atos_interfaces::msg::CartesianTrajectory toCartesianTrajectory();
+	nav_msgs::msg::Path toPath() const;
 	std::size_t size() const { return points.size(); }
 
 	void saveToFile(const std::string& fileName) const;
