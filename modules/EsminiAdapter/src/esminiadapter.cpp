@@ -535,19 +535,6 @@ void EsminiAdapter::InitializeEsmini()
 		}
 	}
 
-	for (auto& it : me->idToTraj){
-		auto id = it.first;
-		auto traj = it.second;
-
-		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
-
-		// below is for dumping the trajectory points to the console
-		/*
-		for (auto& tp : traj.points){
-			RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
-		}
-		*/
-	}
 
 	// Populate the map tracking Object ID -> esmini index
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
@@ -556,6 +543,22 @@ void EsminiAdapter::InitializeEsmini()
 	SE_Close(); // Stop ScenarioEngine
 
 	RCLCPP_DEBUG(me->get_logger(), "Extracted trajectories");
+
+	for (auto& it : me->idToTraj) {
+		auto id = it.first;
+		auto traj = it.second;
+
+		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
+
+		me->pathPublishers.emplace(id, ROSChannels::Path::Pub(*me, id));
+		me->pathPublishers.at(id).publish(traj.toPath());
+		// below is for dumping the trajectory points to the console
+		/*
+		for (auto& tp : traj.points){
+			RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
+		}
+		*/
+	}
 }
 
 void EsminiAdapter::onRequestObjectTrajectory(
