@@ -1,13 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[337]:
-
-
 from scenariogeneration import xosc
-
-
-# In[338]:
 
 
 # Fixed parameters
@@ -33,9 +27,6 @@ CONTROLLER_CATALOG_NAME = "ControllerCatalog"
 OPENDRIVE_PATH = "../odr/GaragePlan.xodr"
 SCENARIO_NAME = "GaragePlanScenario"
 SCENARIO_FILE_NAME = SCENARIO_NAME + ".xosc"
-
-
-# In[339]:
 
 
 # Dynamic parameters
@@ -96,9 +87,6 @@ marker_drone_brake_position = virtual_brake_position
 denm_trigger_speed = 10 / 3.6 # m/s
 
 
-# In[340]:
-
-
 # Preamble
 init = xosc.Init()
 osc_params = xosc.ParameterDeclarations()
@@ -133,9 +121,6 @@ carrier_maneuver_group.add_actor(CARRIER_ID)
 marker_drone_maneuver_group = xosc.ManeuverGroup(MARKER_DRONE_ID + ",maneuver_group")
 marker_drone_maneuver = xosc.Maneuver(MARKER_DRONE_ID + ",maneuver")
 marker_drone_maneuver_group.add_actor(MARKER_DRONE_ID)
-
-
-# In[341]:
 
 
 # Starting position
@@ -184,9 +169,6 @@ init.add_init_action(VIRTUAL_ID, virtual_start_teleport)
 init.add_init_action(CARRIER_ID, carrier_start_teleport)
 init.add_init_action(MARKER_DRONE_ID, marker_drone_start_teleport)
 
-
-
-# In[342]:
 
 
 # Camera drone movement profile:
@@ -251,9 +233,6 @@ drone_brake_event.add_action(CAMERA_DRONE_ID + ",brake_to_stop", drone_brake)
 camera_drone_maneuver.add_event(drone_brake_event)
 
 
-# In[343]:
-
-
 # Virtual movement profile:
 # accelerate to top speed,
 # follow a trajectory,
@@ -303,9 +282,6 @@ virtual_brake_event = xosc.Event(
 virtual_brake_event.add_trigger(virtual_reach_stop_position)
 virtual_brake_event.add_action(VIRTUAL_ID + ",brake_to_stop", virtual_brake)
 virtual_maneuver.add_event(virtual_brake_event)
-
-
-# In[344]:
 
 
 # UFO movement profile:
@@ -360,9 +336,6 @@ ufo_brake_event.add_action(UFO_ID + ",brake_to_stop", ufo_brake)
 ufo_maneuver.add_event(ufo_brake_event)
 
 
-# In[345]:
-
-
 # Carrier movement profile:
 # accelerate to top speed,
 # follow a trajectory,
@@ -414,9 +387,6 @@ carrier_brake_event.add_action(CARRIER_ID + ",brake_to_stop", carrier_brake)
 carrier_maneuver.add_event(carrier_brake_event)
 
 
-# In[346]:
-
-
 # Marker drone movement profile:
 # accelerate to top speed,
 # follow a trajectory,
@@ -453,9 +423,6 @@ marker_drone_brake_event = xosc.Event(
 marker_drone_brake_event.add_trigger(marker_drone_reach_stop_position)
 marker_drone_brake_event.add_action(MARKER_DRONE_ID + ",brake_to_stop", marker_drone_brake)
 marker_drone_maneuver.add_event(marker_drone_brake_event)
-
-
-# In[347]:
 
 
 # Mondeo movement profile:
@@ -580,9 +547,6 @@ mondeo_brake_event.add_action(MONDEO_ID + ",brake_to_stop", mondeo_brake)
 mondeo_maneuver.add_event(mondeo_brake_event)
 
 
-# In[348]:
-
-
 # Mondeo triggers camera drone
 mondeo_reached_camera_drone_trigger_position = xosc.EntityTrigger(
 	name=MONDEO_ID + ",reached_camera_drone_trigger_position",
@@ -600,9 +564,6 @@ camera_drone_move_event.add_trigger(mondeo_reached_camera_drone_trigger_position
 camera_drone_move_event.add_action(CAMERA_DRONE_ID + ",start_follow_trajectory", camera_drone_follow_trajectory)
 camera_drone_move_event.add_action(CAMERA_DRONE_ID + ",set_speed", camera_drone_set_speed)
 camera_drone_maneuver.add_event(camera_drone_move_event)
-
-
-# In[349]:
 
 
 # Mondeo object triggers DENM warning
@@ -628,9 +589,6 @@ denm_osc_event.add_action(MONDEO_ID + ",send_denm",
 mondeo_maneuver.add_event(denm_osc_event)
 
 
-# In[350]:
-
-
 # Mondeo triggers UFO
 mondeo_reached_ufo_trigger_position = xosc.EntityTrigger(
 	name=MONDEO_ID + ",reached_ufo_trigger_position",
@@ -648,9 +606,6 @@ ufo_move_event.add_trigger(mondeo_reached_ufo_trigger_position)
 ufo_move_event.add_action(UFO_ID + ",start_follow_trajectory", ufo_follow_trajectory)
 ufo_move_event.add_action(UFO_ID + ",set_speed", ufo_set_speed)
 ufo_maneuver.add_event(ufo_move_event)
-
-
-# In[351]:
 
 
 # Mondeo triggers virtual
@@ -672,9 +627,6 @@ virtual_move_event.add_action(VIRTUAL_ID + ",set_speed", virtual_set_speed)
 virtual_maneuver.add_event(virtual_move_event)
 
 
-# In[352]:
-
-
 # Mondeo triggers carrier
 mondeo_reached_carrier_trigger_position = xosc.EntityTrigger(
 	name=MONDEO_ID + ",reached_carrier_trigger_position",
@@ -694,9 +646,6 @@ carrier_move_event.add_action(CARRIER_ID + ",set_speed", carrier_set_speed)
 carrier_maneuver.add_event(carrier_move_event)
 
 
-# In[353]:
-
-
 # Mondeo triggers marker drone
 mondeo_reached_marker_drone_trigger_position = xosc.EntityTrigger(
 	name=MONDEO_ID + ",reached_marker_drone_trigger_position",
@@ -714,9 +663,6 @@ marker_drone_move_event.add_trigger(mondeo_reached_marker_drone_trigger_position
 marker_drone_move_event.add_action(MARKER_DRONE_ID + ",start_follow_trajectory", marker_drone_follow_trajectory)
 marker_drone_move_event.add_action(MARKER_DRONE_ID + ",set_speed", marker_drone_set_speed)
 marker_drone_maneuver.add_event(marker_drone_move_event)
-
-
-# In[354]:
 
 
 # Collect into a scenario and write to file
