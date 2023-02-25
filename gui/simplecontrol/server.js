@@ -86,18 +86,10 @@ rclnodejs.init().then(() => {
   node.spin();
 
   // Helper functions
-  function respondToClient(command, data ,ws) {
-    var wsResponse = new Object();
-    wsResponse.msg_type = command + "_response";
-    wsResponse = Object.assign(wsResponse, data);
-    ws.send(JSON.stringify(wsResponse));
-  }
-
   function requestService(serviceClient, command, ws){
     if ( !serviceClient.isServiceServerAvailable() || !serviceClient.waitForService(1000)) {
       console.log('Service not available after waiting');
       common.wsSend(command, ws, {"success" : "false"})
-
     }
     else{
       console.log('Service available, sending request...');
@@ -132,7 +124,6 @@ rclnodejs.init().then(() => {
 
     // Wire up logic for the message event (when a client sends something)
     ws.on('message', function incoming(message) {
-      console.log('received: %s', message);
       var clientCommand = JSON.parse(message).msg_type;
       executeCommand(clientCommand,ws);
     });
