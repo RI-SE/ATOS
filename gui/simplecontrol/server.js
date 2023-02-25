@@ -97,16 +97,15 @@ rclnodejs.init().then(() => {
     if ( !serviceClient.isServiceServerAvailable() || !serviceClient.waitForService(1000)) {
       console.log('Service not available after waiting');
       common.wsSend(command, ws, {"success" : "false"})
-      //respondToClient(command, {"success" : "false"}, ws)
 
     }
     else{
       console.log('Service available, sending request...');
+      // Following is async
       obcStateClient.sendRequest({}, (response) => {
         console.log(`Result: ${typeof response}`, response);
         // Let websocket client know that the service call is done
         common.wsSend(command, ws, response)
-        //respondToClient(command, response, ws)
       });
     }
   }
@@ -116,7 +115,6 @@ rclnodejs.init().then(() => {
       console.log("Sending command: " + command);
       commandToPublisher[command].publish({}); // Publish an empty message
       common.wsSend(command, ws, {"success" : "true"})
-      //respondToClient(command, {"success" : "true"}, ws)
     }
     else if (command in commandToSrvClient){ // if the command should be called as a service
       requestService(commandToSrvClient[command], command, ws);
