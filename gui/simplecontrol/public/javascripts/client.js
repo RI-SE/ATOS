@@ -39,7 +39,7 @@ const ws = new WebSocket('ws://localhost:8082');
 // Periodically execute this callback
 var intervalId = setInterval(function() {
     sendCommand("get_obc_state", ws);
-  }, 5000);
+  }, 500);
 
 // HTML-Button callbacks
 function sendResetTest(){
@@ -67,6 +67,7 @@ function sendAllClear(){
 ws.addEventListener('open', function (event) {
     console.log("Connection opened");
     document.getElementById("isConnected").innerText = "Connected to ATOS";
+    sendCommand("get_obc_state", ws); // Get state of OBC on connection
 });
 
 ws.addEventListener('close', function (event) {
@@ -78,7 +79,6 @@ ws.addEventListener('close', function (event) {
 // Websocket callbacks from server
 ws.addEventListener('message', function (event) {
     var serverResponse = JSON.parse(event.data);
-    console.log(serverResponse);
     switch (serverResponse.msg_type) {
         case "get_obc_state_response":
             document.getElementById("OBCState").innerText = "OBC State: " + getOBCState(parseInt(serverResponse.state));
