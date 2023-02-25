@@ -68,8 +68,12 @@ function sendAllClear(){
 ws.addEventListener('message', function (event) {
     var serverResponse = JSON.parse(event.data);
     console.log(serverResponse);
-    if (serverResponse.msg_type == "get_obc_state_response"){ // Got an update regarding the OBC state, update the HTML
-        document.getElementById("OBCState").innerText = "OBC State: " + getOBCState(parseInt(serverResponse.state));
+    switch (serverResponse.msg_type) {
+        case "get_obc_state_response":
+            document.getElementById("OBCState").innerText = "OBC State: " + getOBCState(parseInt(serverResponse.state));
+            break;
+        // Add more callbacks here, e.g. feedback of successfully executed ros2 commands
+        default:
+            break;
     }
-    // Add more callbacks here, e.g. feedback of successfully executed ros2 commands
 });
