@@ -92,10 +92,8 @@ rclnodejs.init().then(() => {
       common.wsSend(command, ws, {"success" : "false"})
     }
     else{
-      console.log('Service available, sending request...');
       // Following is async
       obcStateClient.sendRequest({}, (response) => {
-        console.log(`Result: ${typeof response}`, response);
         // Let websocket client know that the service call is done
         common.wsSend(command, ws, response)
       });
@@ -104,7 +102,6 @@ rclnodejs.init().then(() => {
 
   function executeCommand(command, ws){
     if (command in commandToPublisher){ // If the command should be published
-      console.log("Sending command: " + command);
       commandToPublisher[command].publish({}); // Publish an empty message
       common.wsSend(command, ws, {"success" : "true"})
     }
