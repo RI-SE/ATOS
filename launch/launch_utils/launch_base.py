@@ -9,7 +9,7 @@ def get_base_nodes():
     params = os.path.join(atos_dir, 'conf', 'params.yaml')
 
     #webgui logging
-    log = open(atos_dir / Path("webgui.log"), 'a')
+    log = open(atos_dir / Path("webgui.log"), 'w')
     # start webgui server
     path = Path(__file__).parent.parent.parent.parent.parent.absolute() / Path("etc/simplecontrol/")
     subprocess.Popen("/usr/bin/npm start --prefix " + str(path),shell=True, stdout=log, stderr=log)
