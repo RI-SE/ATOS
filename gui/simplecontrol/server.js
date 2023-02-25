@@ -1,11 +1,11 @@
 var createError = require('http-errors');
 var express = require('express');
-const common = require('./public/javascripts/common');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const WebSocket = require('ws'); // Websocket lib
 const rclnodejs = require('rclnodejs'); // ROS2 lib
+const common = require('./public/javascripts/common'); // Server/client common functions
 
 /* Start of boilerplate */
 var indexRouter = require('./routes/index');
