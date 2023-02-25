@@ -64,6 +64,17 @@ function sendAllClear(){
     sendCommand("send_all_clear", ws);
 }
 
+ws.addEventListener('open', function (event) {
+    console.log("Connection opened");
+    document.getElementById("isConnected").innerText = "Connected to ATOS";
+});
+
+ws.addEventListener('close', function (event) {
+    console.log("Connection closed");
+    clearInterval(intervalId);
+    document.getElementById("isConnected").innerText = "Connection to ATOS lost";
+});
+
 // Websocket callbacks from server
 ws.addEventListener('message', function (event) {
     var serverResponse = JSON.parse(event.data);
