@@ -1,0 +1,23 @@
+extends layout
+
+block content
+  h1= title
+  script(type='text/javascript' src='/javascripts/client.js')
+  button(class="btn", onclick='sendResetTest()')
+    | Reset Test
+  button(class="btn", onclick='sendInit()')
+    | Init
+  button(class="btn", onclick='sendConnect()')
+    | Connect
+  button(class="btn", onclick='sendArm()')
+    | Arm
+  button(class="btn", onclick='sendStart()')
+    | Start
+  button(class="btn", onclick='sendAbort()')
+    | Abort
+  button(class="btn", onclick='sendAllClear()')
+    | All Clear
+  
+  div(id="OBCState")
+    | OBC State: Unavailable
+    
