@@ -34,7 +34,7 @@ function sendCommand(command, ws){
 }
 
 // Create WebSocket connection with the server
-const ws = new WebSocket('ws://localhost:8082');
+const ws = new WebSocket('ws://' + window.location.hostname + ':8082');
 
 // Periodically execute this callback
 var intervalId = setInterval(function() {
