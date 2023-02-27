@@ -33,8 +33,47 @@ function sendCommand(command, ws){
     ws.send(JSON.stringify(clientCommand));
 }
 
-// Create WebSocket connection with the server
-const ws = new WebSocket('ws://' + window.location.hostname + ':8082');
+function setTextAndColor(id, color, text) {
+    document.getElementById(id).innerText = text;
+    document.getElementById(id).style.color = color;
+}
+
+// Websocket connection
+function startWebsocket() {
+    var ws = new WebSocket('ws://' + window.location.hostname + ':8082');
+
+    ws.onopen = function (event) {
+        console.log("Connection opened");
+        setTextAndColor("isConnected", "green", "Connected to ATOS")
+        sendCommand("get_obc_state", ws); // Get state of OBC on connection
+    };
+    
+    ws.onclose = function (event) {
+        console.log("Connection closed");
+        clearInterval(intervalId); // Stop periodic get_obc_state
+        setTextAndColor("isConnected", "red", "Connection to ATOS lost, trying to reconnect...")
+        // connection closed, discard old websocket and create a new one in 1s
+        ws = null;
+        setTimeout(startWebsocket, 1000);
+    };
+    
+    // Websocket callbacks from server
+    ws.onmessage = function (event) {
+        var serverResponse = JSON.parse(event.data);
+        switch (serverResponse.msg_type) {
+            case "get_obc_state_response":
+                document.getElementById("OBCState").innerText = "OBC State: " + getOBCState(parseInt(serverResponse.state));
+                break;
+            // Add more callbacks here, e.g. feedback of successfully executed ros2 commands
+            default:
+                break;
+        }
+    };
+    return ws;
+    
+  }
+  
+ var ws = startWebsocket();
 
 // Periodically execute this callback
 var intervalId = setInterval(function() {
