@@ -38,10 +38,10 @@ mondeo_retardation = 2.17 # m/s^2
 mondeo_O1_point = xosc.LanePosition(16, 0, 1, 3)
 mondeo_trigger_positions = {
 	UFO_ID: xosc.LanePosition(0, 0, 1, 3),
-	VIRTUAL_ID: xosc.LanePosition(5, 0, 1, 3),
+	VIRTUAL_ID: xosc.LanePosition(0, 0, 1, 3),
     CARRIER_ID: xosc.LanePosition(5, 0, 1, 3),
-	CAMERA_DRONE_ID: xosc.LanePosition(0, 0, 1, 3),
-    MARKER_DRONE_ID: xosc.LanePosition(5, 0, 1, 3)
+	CAMERA_DRONE_ID: xosc.LanePosition(9, 0, 1, 3),
+    MARKER_DRONE_ID: xosc.LanePosition(0, 0, 1, 3)
 }
 mondeo_slow_down_position = xosc.LanePosition(2, 0, 1, 3)
 mondeo_accelerate_position = xosc.LanePosition(30, 0, 1, 0)
@@ -71,12 +71,11 @@ carrier_O3_point = xosc.LanePosition(20, 0, -1, 0)
 carrier_brake_position = xosc.LanePosition(6.957085132598877, 0, -1, 1)
 
 # camera drone
-camera_drone_speed = ufo_speed
-camera_drone_acceleration = ufo_acceleration
-camera_drone_retardation = 1.96 # m/s^2
-camera_drone_O5_point = copy.deepcopy(ufo_O2_point)
-camera_drone_O5_point.lane_id = -1
-camera_drone_brake_position = xosc.LanePosition(10, 0, -1, 0)
+camera_drone_speed = 25 / 3.6
+camera_drone_acceleration = 6 # m/s^2 
+camera_drone_retardation = 6 # m/s^2
+camera_drone_O5_point = xosc.LanePosition(16, 0, -1, 3)
+camera_drone_brake_position = xosc.LanePosition(25, 0, -1, 0)
 
 # marker drone
 marker_drone_speed = virtual_speed # m/s
@@ -86,7 +85,7 @@ marker_drone_O6_point = virtual_O4_point
 marker_drone_brake_position = virtual_brake_position
 
 
-denm_trigger_speed = 20 / 3.6 # m/s
+denm_trigger_speed = 10 / 3.6 # m/s
 
 
 # Preamble
@@ -335,6 +334,19 @@ virtual_maneuver.add_event(virtual_brake_event)
 times = []
 positions = [
 	camera_drone_O5_point,
+    xosc.LanePosition(0, 0, -1, 3),
+    xosc.LanePosition(9.5, 0, -1, 8),
+    xosc.LanePosition(8.75, 0, -1, 8),
+    xosc.LanePosition(7.75, 0, -1, 8),
+    xosc.LanePosition(6.75, 0, -1, 8),
+    xosc.LanePosition(5.75, 0, -1, 8),
+    xosc.LanePosition(4.75, 0, -1, 8),
+    xosc.LanePosition(3.75, 0, -1, 8),
+    xosc.LanePosition(2.75, 0, -1, 8),
+    xosc.LanePosition(1.75, 0, -1, 8),
+    xosc.LanePosition(0.75, 0, -1, 8),
+    xosc.LanePosition(0.0, 0, -1, 8),
+    xosc.LanePosition(30, 0, -1, 0),
 	camera_drone_brake_position,
 ]
 polyline = xosc.Polyline(times, positions)
