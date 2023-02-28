@@ -1,6 +1,9 @@
 //const common = require('./public/javascripts/commonfuns');
 // Find a way to import common here to remove the need for sendCommand.
 
+// Websocket connection
+var ws;
+
 // Helper functions
 function getOBCState(intState){
     switch(intState){
@@ -38,48 +41,6 @@ function setTextAndColor(id, color, text) {
     document.getElementById(id).style.color = color;
 }
 
-// Websocket connection
-function startWebsocket() {
-    var ws = new WebSocket('ws://' + window.location.hostname + ':8082');
-
-    ws.onopen = function (event) {
-        console.log("Connection opened");
-        setTextAndColor("isConnected", "green", "Connected to ATOS")
-        sendCommand("get_obc_state", ws); // Get state of OBC on connection
-    };
-    
-    ws.onclose = function (event) {
-        console.log("Connection closed");
-        clearInterval(intervalId); // Stop periodic get_obc_state
-        setTextAndColor("isConnected", "red", "Connection to ATOS lost, trying to reconnect...")
-        // connection closed, discard old websocket and create a new one in 1s
-        ws = null;
-        setTimeout(startWebsocket, 1000);
-    };
-    
-    // Websocket callbacks from server
-    ws.onmessage = function (event) {
-        var serverResponse = JSON.parse(event.data);
-        switch (serverResponse.msg_type) {
-            case "get_obc_state_response":
-                document.getElementById("OBCState").innerText = "OBC State: " + getOBCState(parseInt(serverResponse.state));
-                break;
-            // Add more callbacks here, e.g. feedback of successfully executed ros2 commands
-            default:
-                break;
-        }
-    };
-    return ws;
-    
-  }
-  
- var ws = startWebsocket();
-
-// Periodically execute this callback
-var intervalId = setInterval(function() {
-    sendCommand("get_obc_state", ws);
-  }, 500);
-
 // HTML-Button callbacks
 function sendResetTest(){
     sendCommand("send_reset_test", ws);
@@ -106,27 +67,36 @@ function sendAllClear(){
     sendCommand("send_all_clear", ws);
 }
 
-ws.addEventListener('open', function (event) {
-    console.log("Connection opened");
-    document.getElementById("isConnected").innerText = "Connected to ATOS";
-    sendCommand("get_obc_state", ws); // Get state of OBC on connection
-});
+// Websocket callbacks and reconnect functionality
+var wsConnect = function(){
+    ws = new WebSocket('ws://' + window.location.hostname + ':8082');
+    ws.addEventListener('open', function (event) {
+        console.log("Connection opened");
+        setTextAndColor("isConnected", "green", "Connected to ATOS");
+        sendCommand("get_obc_state", ws); // Get state of OBC on connection immediately
+        intervalGetOBCState = setInterval(function() { // also start a timer to get the state periodically
+            sendCommand("get_obc_state", ws);
+          }, 500);
 
-ws.addEventListener('close', function (event) {
-    console.log("Connection closed");
-    clearInterval(intervalId);
-    document.getElementById("isConnected").innerText = "Connection to ATOS lost";
-});
+    });
+    ws.addEventListener('close', function (event) {
+        console.log("Connection lost!");
+        clearInterval(intervalGetOBCState); // Stop timer
+        setTextAndColor("OBCState", "black", "OBC State: UNDEFINED")
+        setTextAndColor("isConnected", "red", "Connection to ATOS lost, retrying...");
+        setTimeout(wsConnect, 1000); // Try to reconnect websocket
+    });
+    ws.addEventListener('message', function (event) {
+        var serverResponse = JSON.parse(event.data);
+        switch (serverResponse.msg_type) {
+            case "get_obc_state_response":
+                setTextAndColor("OBCState", "black", "OBC State: " + getOBCState(parseInt(serverResponse.state)));
+                break;
+            // Add more callbacks here, e.g. feedback of successfully executed ros2 commands
+            default:
+                break;
+        }
+    });
+};
+wsConnect();
 
-// Websocket callbacks from server
-ws.addEventListener('message', function (event) {
-    var serverResponse = JSON.parse(event.data);
-    switch (serverResponse.msg_type) {
-        case "get_obc_state_response":
-            document.getElementById("OBCState").innerText = "OBC State: " + getOBCState(parseInt(serverResponse.state));
-            break;
-        // Add more callbacks here, e.g. feedback of successfully executed ros2 commands
-        default:
-            break;
-    }
-});
