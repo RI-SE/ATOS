@@ -472,7 +472,7 @@ void EsminiAdapter::getObjectStates(
 		RCLCPP_WARN(me->get_logger(), "Scenario time limit reached, stopping simulation");
 	}
 	else if (accumTime < MIN_SCENARIO_TIME + timeStep) {
-		RCLCPP_WARN(me->get_logger(), "Ran scenario for %.2f s with no movement", MIN_SCENARIO_TIME);
+		RCLCPP_WARN(me->get_logger(), "Ran scenario for the minimum time %.2f, possibly no movement in scenario", MIN_SCENARIO_TIME);
 	}
 	RCLCPP_INFO(me->get_logger(), "Finished %f s simulation", accumTime);
 }
