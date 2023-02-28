@@ -93,6 +93,9 @@ function sendConnect(){
 function sendArm(){
     sendCommand("send_arm", ws);
 }
+function sendDisarm(){
+    sendCommand("send_disarm", ws);
+}
 function sendStart(){
     sendCommand("send_start", ws);
 }

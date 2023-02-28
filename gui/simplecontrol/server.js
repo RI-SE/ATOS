@@ -63,6 +63,7 @@ rclnodejs.init().then(() => {
   const initPub = node.createPublisher('std_msgs/msg/Empty', '/atos/init');
   const connectPub = node.createPublisher('std_msgs/msg/Empty', '/atos/connect');
   const armPub = node.createPublisher('std_msgs/msg/Empty', '/atos/arm');
+  const disarmPub = node.createPublisher('std_msgs/msg/Empty', '/atos/disarm');
   const startPub = node.createPublisher('std_msgs/msg/Empty', '/atos/start');
   const abortPub = node.createPublisher('std_msgs/msg/Empty', '/atos/abort');
   const allClearPub = node.createPublisher('std_msgs/msg/Empty', '/atos/all_clear');
@@ -71,6 +72,7 @@ rclnodejs.init().then(() => {
     "send_init": initPub,
     "send_connect": connectPub,
     "send_arm": armPub,
+    "send_disarm": disarmPub,
     "send_start": startPub,
     "send_abort": abortPub,
     "send_all_clear": allClearPub
