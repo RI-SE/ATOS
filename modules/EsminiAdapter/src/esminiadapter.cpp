@@ -453,10 +453,10 @@ void EsminiAdapter::getObjectStates(
 		states[std::stoi(SE_GetObjectName(SE_GetId(j)))] = std::vector<SE_ScenarioObjectState>();
 		pushCurrentState(states, j);
 	}
-
+	constexpr double MIN_SCENARIO_TIME = 10.0;
 	constexpr double MAX_SCENARIO_TIME = 3600.0;
 	bool reachedEnd = false;
-	while (!reachedEnd && accumTime < MAX_SCENARIO_TIME) {
+	while (!(reachedEnd && accumTime > MIN_SCENARIO_TIME) && accumTime < MAX_SCENARIO_TIME) {
 		SE_StepDT(timeStep);
 		accumTime += timeStep;
 		for (int j = 0; j < SE_GetNumberOfObjects(); j++){
