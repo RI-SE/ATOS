@@ -421,8 +421,11 @@ ATOS::Trajectory EsminiAdapter::getTrajectory(
 }
 
 /*!
- * \brief Returns object states for each timestep.
+ * \brief Returns object states for each timestep by simulating the loaded scenario.
+ *  The simulation is stopped if there is no vehicle movement and at least 
+ * 	MIN_SCENARIO_TIME has passed or if more than MAX_SCENARIO_TIME has passed.
  *	Inspired by ScenarioGateway::WriteStatesToFile from esmini lib.
+ *  
  * \param timeStep Time step to use for generating the trajectories
  * \param endTime End time of the simulation
  * \param states The return map of ids mapping to the respective object states at different timesteps
@@ -451,16 +454,19 @@ void EsminiAdapter::getObjectStates(
 	}
 	constexpr double MIN_SCENARIO_TIME = 10.0;
 	constexpr double MAX_SCENARIO_TIME = 3600.0;
-	bool reachedEnd = false;
-	while (!reachedEnd) {
+	bool stopSimulation = false;
+	while (!stopSimulation) {
 		SE_StepDT(timeStep);
 		accumTime += timeStep;
 		for (int j = 0; j < SE_GetNumberOfObjects(); j++){
 			pushCurrentState(states, j);
 		}
-		reachedEnd = std::all_of(states.begin(), states.end(), [&](auto& pair) {
+		bool noMovement = std::all_of(states.begin(), states.end(), [&](auto& pair) {
 			return pair.second.back().speed < 0.1;
-		}) && accumTime > MIN_SCENARIO_TIME || accumTime > MAX_SCENARIO_TIME;
+		});
+		bool atLeastMinTimePassed = accumTime > MIN_SCENARIO_TIME;
+		bool moreThanMaxTimePassed = accumTime > MAX_SCENARIO_TIME;
+		stopSimulation = noMovement && atLeastMinTimePassed || moreThanMaxTimePassed;
 	}
 	if (accumTime > MAX_SCENARIO_TIME) {
 		RCLCPP_WARN(me->get_logger(), "Scenario time limit reached, stopping simulation");
