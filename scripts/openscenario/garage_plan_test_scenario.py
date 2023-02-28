@@ -33,7 +33,7 @@ SCENARIO_FILE_NAME = SCENARIO_NAME + ".xosc"
 # mondeo
 mondeo_speed = 15 / 3.6 # m/s
 mondeo_slow_speed = 10 / 3.6 # m/s
-mondeo_acceleration = 0.51 # m/s^2
+mondeo_acceleration = 1.0 # m/s^2
 mondeo_retardation = 2.17 # m/s^2
 mondeo_O1_point = xosc.LanePosition(16, 0, 1, 3)
 mondeo_trigger_positions = {
@@ -52,7 +52,8 @@ ufo_speed = 10 / 3.6 # m/s
 ufo_acceleration = 1.38 # m/s^2
 ufo_retardation = 1.83 # m/s^2
 ufo_O2_point = xosc.LanePosition(7.5, 0, 1, 1)
-ufo_brake_position = xosc.LanePosition(25, 0, 1, 0)
+ufo_brake_position = xosc.LanePosition(6, 0, 1, 13)
+ufo_end_point = xosc.LanePosition(20, 0, 1, 0)
 
 # virtual object
 virtual_speed = 50 / 3.6 # m/s
@@ -155,7 +156,7 @@ marker_drone_start_teleport = xosc.TeleportAction(marker_drone_O6_point)
 mondeo_set_speed = xosc.AbsoluteSpeedAction(
 	mondeo_speed,
 	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
+		xosc.DynamicsShapes.cubic,
 		xosc.DynamicsDimension.rate,
 		mondeo_acceleration
 	),
@@ -177,7 +178,8 @@ init.add_init_action(MARKER_DRONE_ID, marker_drone_start_teleport)
 times = []
 positions = [
 	ufo_O2_point,
-	ufo_brake_position
+	ufo_brake_position,
+	ufo_end_point
 ]
 polyline = xosc.Polyline(times, positions)
 trajectory = xosc.Trajectory(UFO_ID + ",start_follow_trajectory", closed=False)
@@ -471,7 +473,7 @@ mondeo_maneuver.add_event(mondeo_follow_trajectory_event)
 mondeo_slow_down = xosc.AbsoluteSpeedAction(
 	mondeo_slow_speed,
 	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
+		xosc.DynamicsShapes.cubic,
 		xosc.DynamicsDimension.rate,
 		-mondeo_retardation
 	),
@@ -495,7 +497,7 @@ mondeo_maneuver.add_event(mondeo_slow_down_event)
 mondeo_accelerate = xosc.AbsoluteSpeedAction(
 	mondeo_speed,
 	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
+		xosc.DynamicsShapes.cubic,
 		xosc.DynamicsDimension.rate,
 		mondeo_acceleration
 	),
