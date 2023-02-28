@@ -273,16 +273,14 @@ void EsminiAdapter::handleActionElementStateChange(
 	try
 	{
 		auto [objectId, action] = parseAction(name);
-		if (isStartAction(action) && state == 2)
-		{
+		if (isStartAction(action) && state == 2) {
 			RCLCPP_INFO(me->get_logger(), "Running start action for object %d", objectId);
 			ROSChannels::StartObject::message_type startObjectMsg;
 			startObjectMsg.id = objectId;
 			startObjectMsg.stamp = me->get_clock()->now(); // TODO + std::chrono::milliseconds(100);
 			me->startObjectPub.publish(startObjectMsg);
 		}
-		else if (isSendDenmAction(action) && state == 3)
-		{
+		else if (isSendDenmAction(action) && state == 3) {
 			// Get the latest Monitor message
 			RCLCPP_INFO(me->get_logger(), "Running send DENM action triggered by object %d", objectId);
 			ROSChannels::Monitor::message_type monr;
@@ -294,13 +292,11 @@ void EsminiAdapter::handleActionElementStateChange(
 			llhOffsetMeters(llh, offset);
 			me->v2xPub.publish(denmFromMonitor(monr, llh));
 		}
-		else
-		{
-			RCLCPP_WARN(me->get_logger(), "Action %s is not supported", action.c_str());
+		else {
+			RCLCPP_DEBUG(me->get_logger(), "Action %s is not supported", action.c_str());
 		}
 	}
-	catch (std::exception &e)
-	{
+	catch (std::exception &e) {
 		RCLCPP_WARN(me->get_logger(), e.what());
 		return;
 	}
@@ -456,7 +452,7 @@ void EsminiAdapter::getObjectStates(
 	constexpr double MIN_SCENARIO_TIME = 10.0;
 	constexpr double MAX_SCENARIO_TIME = 3600.0;
 	bool reachedEnd = false;
-	while (!(reachedEnd && accumTime > MIN_SCENARIO_TIME) && accumTime < MAX_SCENARIO_TIME) {
+	while (!reachedEnd) {
 		SE_StepDT(timeStep);
 		accumTime += timeStep;
 		for (int j = 0; j < SE_GetNumberOfObjects(); j++){
@@ -464,10 +460,13 @@ void EsminiAdapter::getObjectStates(
 		}
 		reachedEnd = std::all_of(states.begin(), states.end(), [&](auto& pair) {
 			return pair.second.back().speed < 0.1;
-		});
+		}) && accumTime > MIN_SCENARIO_TIME || accumTime > MAX_SCENARIO_TIME;
 	}
 	if (accumTime > MAX_SCENARIO_TIME) {
 		RCLCPP_WARN(me->get_logger(), "Scenario time limit reached, stopping simulation");
+	}
+	else if (accumTime < MIN_SCENARIO_TIME + timeStep) {
+		RCLCPP_WARN(me->get_logger(), "Ran scenario for %.2f s with no movement", MIN_SCENARIO_TIME);
 	}
 	RCLCPP_INFO(me->get_logger(), "Finished %f s simulation", accumTime);
 }
