@@ -86,7 +86,7 @@ marker_drone_O6_point = virtual_O4_point
 marker_drone_brake_position = virtual_brake_position
 
 
-denm_trigger_speed = 20 / 3.6 # m/s
+denm_trigger_speed = 10 / 3.6 # m/s
 
 
 # Preamble
