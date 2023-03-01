@@ -273,16 +273,14 @@ void EsminiAdapter::handleActionElementStateChange(
 	try
 	{
 		auto [objectId, action] = parseAction(name);
-		if (isStartAction(action) && state == 2)
-		{
+		if (isStartAction(action) && state == 2) {
 			RCLCPP_INFO(me->get_logger(), "Running start action for object %d", objectId);
 			ROSChannels::StartObject::message_type startObjectMsg;
 			startObjectMsg.id = objectId;
 			startObjectMsg.stamp = me->get_clock()->now(); // TODO + std::chrono::milliseconds(100);
 			me->startObjectPub.publish(startObjectMsg);
 		}
-		else if (isSendDenmAction(action) && state == 3)
-		{
+		else if (isSendDenmAction(action) && state == 3) {
 			// Get the latest Monitor message
 			RCLCPP_INFO(me->get_logger(), "Running send DENM action triggered by object %d", objectId);
 			ROSChannels::Monitor::message_type monr;
@@ -294,13 +292,11 @@ void EsminiAdapter::handleActionElementStateChange(
 			llhOffsetMeters(llh, offset);
 			me->v2xPub.publish(denmFromMonitor(monr, llh));
 		}
-		else
-		{
-			RCLCPP_WARN(me->get_logger(), "Action %s is not supported", action.c_str());
+		else {
+			RCLCPP_DEBUG(me->get_logger(), "Action %s is not supported", action.c_str());
 		}
 	}
-	catch (std::exception &e)
-	{
+	catch (std::exception &e) {
 		RCLCPP_WARN(me->get_logger(), e.what());
 		return;
 	}
@@ -425,8 +421,11 @@ ATOS::Trajectory EsminiAdapter::getTrajectory(
 }
 
 /*!
- * \brief Returns object states for each timestep.
+ * \brief Returns object states for each timestep by simulating the loaded scenario.
+ *  The simulation is stopped if there is no vehicle movement and at least 
+ * 	MIN_SCENARIO_TIME has passed or if more than MAX_SCENARIO_TIME has passed.
  *	Inspired by ScenarioGateway::WriteStatesToFile from esmini lib.
+ *  
  * \param timeStep Time step to use for generating the trajectories
  * \param endTime End time of the simulation
  * \param states The return map of ids mapping to the respective object states at different timesteps
@@ -453,21 +452,27 @@ void EsminiAdapter::getObjectStates(
 		states[std::stoi(SE_GetObjectName(SE_GetId(j)))] = std::vector<SE_ScenarioObjectState>();
 		pushCurrentState(states, j);
 	}
-
+	constexpr double MIN_SCENARIO_TIME = 10.0;
 	constexpr double MAX_SCENARIO_TIME = 3600.0;
-	bool reachedEnd = false;
-	while (!reachedEnd && accumTime < MAX_SCENARIO_TIME) {
+	bool stopSimulation = false;
+	while (!stopSimulation) {
 		SE_StepDT(timeStep);
 		accumTime += timeStep;
 		for (int j = 0; j < SE_GetNumberOfObjects(); j++){
 			pushCurrentState(states, j);
 		}
-		reachedEnd = std::all_of(states.begin(), states.end(), [&](auto& pair) {
+		bool noMovement = std::all_of(states.begin(), states.end(), [&](auto& pair) {
 			return pair.second.back().speed < 0.1;
 		});
+		bool atLeastMinTimePassed = accumTime > MIN_SCENARIO_TIME;
+		bool moreThanMaxTimePassed = accumTime > MAX_SCENARIO_TIME;
+		stopSimulation = noMovement && atLeastMinTimePassed || moreThanMaxTimePassed;
 	}
 	if (accumTime > MAX_SCENARIO_TIME) {
 		RCLCPP_WARN(me->get_logger(), "Scenario time limit reached, stopping simulation");
+	}
+	else if (accumTime < MIN_SCENARIO_TIME + timeStep) {
+		RCLCPP_WARN(me->get_logger(), "Ran scenario for the minimum time %.2f, possibly no movement in scenario", MIN_SCENARIO_TIME);
 	}
 	RCLCPP_INFO(me->get_logger(), "Finished %f s simulation", accumTime);
 }
