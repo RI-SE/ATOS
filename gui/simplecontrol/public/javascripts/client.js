@@ -40,6 +40,23 @@ function setTextAndColor(id, color, text) {
     document.getElementById(id).innerText = text;
     document.getElementById(id).style.color = color;
 }
+function appendText(id, text) {
+    document.getElementById(id).innerText += text + "\n";
+}
+function addCheckBox(id, objectID, objectIP) {
+    var div = document.getElementById(id);
+
+    var checkbox = document.createElement('input');
+    checkbox.type = "checkbox";
+    checkbox.value = objectIP;
+    checkbox.id = objectID;
+
+    var label = document.createElement('label');
+    label.appendChild(document.createTextNode(objectID + ": " + objectIP));
+    div.appendChild(checkbox);
+    div.appendChild(label);
+    div.appendChild(document.createElement('div'));
+}
 
 // HTML-Button callbacks
 function sendResetTest(){
@@ -47,15 +64,17 @@ function sendResetTest(){
 }
 function sendInit(){
     sendCommand("send_init", ws);
-    sendCommand("get_object_ips", ws)
+    sendCommand("get_object_ips", ws);
     
     ws.addEventListener('message', function (event) {
         var serverResponse = JSON.parse(event.data);
         switch (serverResponse.msg_type) {
             case "get_object_ips_response":
-                var id = serverResponse.id;
-                var ip = serverResponse.ip;
-                console.log(id + ": " + ip);
+                var objectID = serverResponse.id;
+                var objectIP = serverResponse.ip;
+                console.log(objectID + ": " + objectIP);
+                // appendText("objects", id + ": " + ip);
+                addCheckBox("objects", objectID,objectIP);
                 break;
             default:
                 break;
