@@ -80,9 +80,12 @@ rclnodejs.init().then(() => {
 
   // Service Clients
   const obcStateClient = node.createClient('atos_interfaces/srv/GetObjectControlState', '/atos/get_object_control_state');
+  const idClient = node.createClient('atos_interfaces/srv/GetObjectIds', '/atos/get_object_ids');
   const ipClient = node.createClient('atos_interfaces/srv/GetObjectIp', '/atos/get_object_ip');
   var commandToSrvClient = {
-    "get_obc_state": obcStateClient
+    "get_obc_state": obcStateClient,
+    "get_object_ids": idClient,
+    "get_object_ip": ipClient
   };
 
   // Start the ros2 event loop

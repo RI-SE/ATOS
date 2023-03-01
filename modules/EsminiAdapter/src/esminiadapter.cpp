@@ -26,6 +26,7 @@ using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
 using ObjectTrajectorySrv = atos_interfaces::srv::GetObjectTrajectory;
 using ObjectTriggerSrv = atos_interfaces::srv::GetObjectTriggerStart;
 using ObjectIpSrv = atos_interfaces::srv::GetObjectIp;
+using ObjectIdsSrv = atos_interfaces::srv::GetObjectIds;
 using std::placeholders::_1;
 using std::placeholders::_2;
 using namespace std::chrono_literals;
@@ -39,6 +40,7 @@ std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAd
 std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>> EsminiAdapter::objectTrajectoryService = std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>>();
 std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>> EsminiAdapter::startOnTriggerService = std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>>();
 std::shared_ptr<rclcpp::Service<ObjectIpSrv>> EsminiAdapter::objectIpService = std::shared_ptr<rclcpp::Service<ObjectIpSrv>>();
+std::shared_ptr<rclcpp::Service<ObjectIdsSrv>> EsminiAdapter::objectIdService = std::shared_ptr<rclcpp::Service<ObjectIdsSrv>>();
 std::vector<uint32_t> EsminiAdapter::delayedStartIds = std::vector<uint32_t>();
 std::shared_ptr<rclcpp::Client<TestOriginSrv>> EsminiAdapter::testOriginClient = nullptr;
 geographic_msgs::msg::GeoPose EsminiAdapter::testOrigin = geographic_msgs::msg::GeoPose();
@@ -609,6 +611,15 @@ void EsminiAdapter::onRequestObjectIP(
 	}
 }
 
+void EsminiAdapter::onRequestObjectIDs(
+	const std::shared_ptr<ObjectIdsSrv::Request> req,
+	std::shared_ptr<ObjectIdsSrv::Response> res)
+	{
+		for (auto it : me->idToIp) {
+			res->ids.push_back(it.first);
+		}
+	}
+
 
 /*!
  * \brief initializeModule Initializes this module by creating log,
@@ -629,6 +640,8 @@ int EsminiAdapter::initializeModule() {
 		std::bind(&EsminiAdapter::onRequestObjectStartOnTrigger, _1, _2));
 	me->objectIpService = me->create_service<ObjectIpSrv>(ServiceNames::getObjectIp,
 		std::bind(&EsminiAdapter::onRequestObjectIP, _1, _2));
+	me->objectIdService = me->create_service<ObjectIdsSrv>(ServiceNames::getObjectIds,
+		std::bind(&EsminiAdapter::onRequestObjectIDs, _1, _2));
 	me->objectTrajectoryService = me->create_service<ObjectTrajectorySrv>(ServiceNames::getObjectTrajectory,
 		std::bind(&EsminiAdapter::onRequestObjectTrajectory, _1, _2));
 
