@@ -85,7 +85,7 @@ rclnodejs.init().then(() => {
   var commandToSrvClient = {
     "get_obc_state": obcStateClient,
     "get_object_ids": idClient,
-    "get_object_ip": ipClient
+    "get_object_ips": ipClient
   };
 
   // Start the ros2 event loop
@@ -97,9 +97,20 @@ rclnodejs.init().then(() => {
       console.log('Service not available after waiting');
       common.wsSend(command, ws, {"success" : "false"})
     }
+    else if (command === "get_object_ips") {
+      idClient.sendRequest({}, (idClientResponse) => {
+        var ids = idClientResponse.ids;
+        for (var i in ids) {
+          var id = ids[i];
+          ipClient.sendRequest({"id": id}, (ipClientResponse) => {
+            common.wsSend(command, ws, ipClientResponse)
+          });
+        }
+      });
+    }
     else{
       // Following is async
-      obcStateClient.sendRequest({}, (response) => {
+      serviceClient.sendRequest({}, (response) => {
         // Let websocket client know that the service call is done
         common.wsSend(command, ws, response)
       });

@@ -47,6 +47,20 @@ function sendResetTest(){
 }
 function sendInit(){
     sendCommand("send_init", ws);
+    sendCommand("get_object_ips", ws)
+    
+    ws.addEventListener('message', function (event) {
+        var serverResponse = JSON.parse(event.data);
+        switch (serverResponse.msg_type) {
+            case "get_object_ips_response":
+                var id = serverResponse.id;
+                var ip = serverResponse.ip;
+                console.log(id + ": " + ip);
+                break;
+            default:
+                break;
+        }
+    });
 }
 function sendConnect(){
     sendCommand("send_connect", ws);
