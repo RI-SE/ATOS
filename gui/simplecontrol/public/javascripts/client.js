@@ -40,9 +40,6 @@ function setTextAndColor(id, color, text) {
     document.getElementById(id).innerText = text;
     document.getElementById(id).style.color = color;
 }
-function appendText(id, text) {
-    document.getElementById(id).innerText += text + "\n";
-}
 function addCheckBox(id, objectID, objectIP) {
     var div = document.getElementById(id);
 
@@ -72,8 +69,6 @@ function sendInit(){
             case "get_object_ips_response":
                 var objectID = serverResponse.id;
                 var objectIP = serverResponse.ip;
-                console.log(objectID + ": " + objectIP);
-                // appendText("objects", id + ": " + ip);
                 addCheckBox("objects", objectID,objectIP);
                 break;
             default:
