@@ -1,0 +1,94 @@
+{
+  "configById": {
+    "3D!3pzn6f1": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 58.726522473994336,
+        "phi": 45.275535940625744,
+        "thetaOffset": 3.6088447450868943,
+        "targetOffset": [
+          2.8791262986708466,
+          -1.3958853068608803,
+          3.334144783479148e-16
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {
+        "/atos/object_1/object_monitor": {
+          "visible": true,
+          "type": "arrow"
+        },
+        "/atos/object_1/path": {
+          "visible": true
+        },
+        "/atos/object_2/path": {
+          "visible": true
+        },
+        "/atos/object_3/path": {
+          "visible": true
+        },
+        "/atos/object_4/path": {
+          "visible": true
+        },
+        "/atos/object_5/path": {
+          "visible": true
+        },
+        "/atos/object_6/path": {
+          "visible": true
+        }
+      },
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      }
+    },
+    "map!2s6yzns": {
+      "center": {
+        "lat": 57.777722684128044,
+        "lon": 12.781342864036562
+      },
+      "customTileUrl": "",
+      "disabledTopics": [
+        "/atos/object_1/object_monitor"
+      ],
+      "followTopic": "/atos/object_1/gnss_fix",
+      "layer": "satellite",
+      "topicColors": {},
+      "zoomLevel": 20
+    }
+  },
+  "globalVariables": {
+    "": "lat:"
+  },
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": "3D!3pzn6f1",
+    "second": "map!2s6yzns",
+    "direction": "row"
+  }
+}
