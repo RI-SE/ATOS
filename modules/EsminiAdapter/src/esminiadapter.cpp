@@ -143,7 +143,6 @@ void EsminiAdapter::onStaticInitMessage(
 		RCLCPP_ERROR(me->get_logger(), e.what());
 		return;
 	}
-	me->InitializeEsmini();
 	auto request = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
 	me->testOriginClient->async_send_request(request, [](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
 		auto response = future.get();
@@ -152,6 +151,7 @@ void EsminiAdapter::onStaticInitMessage(
 			return; // TODO communicate failure
 		}
 		me->testOrigin = response->origin;
+		me->InitializeEsmini();
 	});
 }
 
@@ -514,6 +514,7 @@ void EsminiAdapter::InitializeEsmini()
 	me->ATOStoEsminiObjectId.clear();
 	me->idToIp.clear();
 	me->pathPublishers.clear();
+	me->geoJSONPublishers.clear();
 	SE_Close(); // Stop ScenarioEngine in case it is running
 
 	RCLCPP_INFO(me->get_logger(), "Initializing esmini with scenario file %s", me->oscFilePath.c_str());
@@ -556,8 +557,13 @@ void EsminiAdapter::InitializeEsmini()
 
 		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
 
+		// Publish the trajectory as a path and as geojson
 		me->pathPublishers.emplace(id, ROSChannels::Path::Pub(*me, id));
+		me->geoJSONPublishers.emplace(id, ROSChannels::GeoJSON::Pub(*me, id));
 		me->pathPublishers.at(id).publish(traj.toPath());
+		double llh_0[3] = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
+		me->geoJSONPublishers.at(id).publish(traj.toGeoJSON(llh_0));
+
 		// below is for dumping the trajectory points to the console
 		/*
 		for (auto& tp : traj.points){
