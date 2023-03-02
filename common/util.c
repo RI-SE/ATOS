@@ -501,7 +501,7 @@ void llhOffsetMeters(double *llh, const double *xyzOffset) {
 	const double dz = xyzOffset[2];
 
 	llh[0] = lat + (dy / EARTH_EQUATOR_RADIUS_M) * (180 / M_PI);
-	llh[1] = lon + (dx / EARTH_EQUATOR_RADIUS_M) * (180 / M_PI) / cos(lat * M_PI / 180);
+	llh[1] = lon + (dx / EARTH_EQUATOR_RADIUS_M) * (180 / M_PI) / cos(lat * M_PI / 180.0);
 	llh[2] = hgt + dz;
 }
 
