@@ -110,7 +110,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-a
 Install ros foxy for desktop and colcon
 ```
 sudo apt update
-sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs ros-foxy-geographic-msgs ros-foxy-foxglove-msgs
+sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs ros-foxy-geographic-msgs ros-foxy-foxglove-msgs ros-foxy-sensor-msgs
 ```
 
 source the setup script:
