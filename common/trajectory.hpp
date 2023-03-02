@@ -16,6 +16,7 @@
 #include <math.h>
 #include <chrono>
 #include <nav_msgs/msg/path.hpp>
+#include <foxglove_msgs/msg/geo_json.hpp>
 
 #include "loggable.hpp"
 #include "atos_interfaces/msg/cartesian_trajectory.hpp"
@@ -147,6 +148,7 @@ public:
 	std::string toString() const;
 	atos_interfaces::msg::CartesianTrajectory toCartesianTrajectory();
 	nav_msgs::msg::Path toPath() const;
+	foxglove_msgs::msg::GeoJSON toGeoJSON(double llh_0[3]) const;
 	std::size_t size() const { return points.size(); }
 
 	void saveToFile(const std::string& fileName) const;

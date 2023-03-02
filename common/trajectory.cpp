@@ -10,6 +10,7 @@
 #include <algorithm>
 #include "regexpatterns.hpp"
 #include "trajectory.hpp"
+#include "util.h" // xyz2llh
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
@@ -88,6 +89,34 @@ nav_msgs::msg::Path Trajectory::toPath() const
 		pose.header.frame_id = path.header.frame_id;
 	}
 	return path;
+}
+
+foxglove_msgs::msg::GeoJSON Trajectory::toGeoJSON(double llh_0[3]) const {
+	foxglove_msgs::msg::GeoJSON geoJSON;
+	std::string positions = "";
+	for (const auto& point : this->points){
+		double llh[3] = {llh_0[0], llh_0[1], llh_0[2]};
+		double offset[3] = {point.getXCoord(), point.getYCoord(), point.getZCoord()};
+		llhOffsetMeters(llh, offset);
+		positions += "[" + std::to_string(llh[1]) + "," + std::to_string(llh[0]) + "],"; // Flipped order
+	}
+	positions = positions.substr(0, positions.size()-1); // remove trailing ,
+
+
+	std::string geojson = 
+	R"({
+		"type": "Feature",
+		"geometry": {
+			"type": "LineString",
+			"coordinates": [)" + positions + R"(]
+		},
+		"properties": {
+			"name": ""
+		}
+	})";
+	geoJSON.geojson = geojson;
+	return geoJSON;
+
 }
 
 void Trajectory::initializeFromCartesianTrajectory(const atos_interfaces::msg::CartesianTrajectory &traj) {
