@@ -225,7 +225,7 @@ atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& monrMessage
 	if (indata.position.isPositionValid) {
 		msg.pose.pose.position.x = indata.position.xCoord_m;
 		msg.pose.pose.position.y = indata.position.yCoord_m;
-		msg.pose.pose.position.z = indata.position.zCoord_m;
+		msg.pose.pose.position.z = indata.position.isZcoordValid ? indata.position.zCoord_m : 0.0;
 	}
 	if (indata.position.isHeadingValid) {
 		tf2::Quaternion orientation;
