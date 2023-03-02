@@ -14,10 +14,13 @@
 #include <csignal>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <iostream>
+#include "util.h" // llh offset function
 
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
 static atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& data); // TODO move to somewhere central
+static sensor_msgs::msg::NavSatFix createNavSatFixMessage(const struct timeval& tv, double origin[3], const atos_interfaces::msg::Monitor &monr); // TODO move to somewhere central
 
 ObjectListener::ObjectListener(
 		ObjectControl* sh,
@@ -65,7 +68,15 @@ void ObjectListener::listen() {
 				auto objData = obj->getAsObjectData();
 				objData.MonrData = monr.second;
 				JournalRecordMonitorData(&objData);
-				obj->publishMonr(createROSMessage(monr));
+
+				// Publish a ROS monr message
+				auto rosMonr = createROSMessage(monr);
+				obj->publishMonr(rosMonr);
+
+				// Publish a NavSatFix message
+				auto origin = obj->getOrigin();
+				double llh_0[3] = {origin.latitude_deg, origin.longitude_deg, origin.altitude_m};
+				obj->publishNavSatFix(createNavSatFixMessage(monr.second.timestamp, llh_0, rosMonr));
 				
 				// Reset thread cancelling
 				pthread_setcancelstate(oldCancelState, nullptr);
@@ -244,5 +255,22 @@ atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& monrMessage
 	msg.acceleration.accel.angular.x = 0;
 	msg.acceleration.accel.angular.y = 0;
 	msg.acceleration.accel.angular.z = 0;
+	return msg;
+}
+
+sensor_msgs::msg::NavSatFix createNavSatFixMessage(const struct timeval& tv, double origin[3], const atos_interfaces::msg::Monitor &monr) {
+	sensor_msgs::msg::NavSatFix msg;
+	msg.header.stamp = monr.atos_header.header.stamp;
+
+	// Local coordinates to global coordinates
+	double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
+	llhOffsetMeters(origin,offset);
+	msg.header.frame_id = "map"; // TODO
+
+	// Fill in the rest of the message
+	msg.latitude = origin[0];
+	msg.longitude = origin[1];
+	msg.altitude = origin[2];
+	msg.status.status = sensor_msgs::msg::NavSatStatus::STATUS_FIX;
 	return msg;
 }

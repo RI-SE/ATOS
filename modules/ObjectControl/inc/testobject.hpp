@@ -97,7 +97,8 @@ class TestObject : public Loggable {
 public:
 	TestObject(rclcpp::Logger, 
 		std::shared_ptr<ROSChannels::Path::Sub>, 
-		std::shared_ptr<ROSChannels::Monitor::Pub>
+		std::shared_ptr<ROSChannels::Monitor::Pub>,
+		std::shared_ptr<ROSChannels::NavSatFix::Pub>
 	);
 	TestObject(const TestObject&) = delete;
 	TestObject(TestObject&&);
@@ -155,6 +156,7 @@ public:
 
 	void sendControlSignal(const ControlSignalPercentage::SharedPtr csp);
 	void publishMonr(const ROSChannels::Monitor::message_type);
+	void publishNavSatFix(const ROSChannels::NavSatFix::message_type);
 
 	std::chrono::milliseconds getTimeSinceLastMonitor() const {
 		if (lastMonitorTime.time_since_epoch().count() == 0) {
@@ -189,6 +191,7 @@ private:
 	Channel osiChannel;			//!< Channel for communication with object over the OSI protocol
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
 	std::shared_ptr<ROSChannels::Monitor::Pub> monrPub;
+	std::shared_ptr<ROSChannels::NavSatFix::Pub> navSatFixPub;
 	std::shared_ptr<ROSChannels::Path::Sub> pathSub;
 	std::shared_ptr<ROSChannels::Path::message_type> lastReceivedPath;
 
