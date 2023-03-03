@@ -54,6 +54,7 @@ def get_base_nodes():
             executable='mqtt_bridge',
             name='mqtt_bridge',
             # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
-            parameters=[params]
+            parameters=[params],
+            # arguments=['--ros-args', '--log-level', "debug"] # To get RCL_DEBUG prints
         ),
     ]
