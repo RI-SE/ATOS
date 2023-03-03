@@ -102,7 +102,6 @@ foxglove_msgs::msg::GeoJSON Trajectory::toGeoJSON(std::array<double,3> llh_0) co
 		double offset[3] = {point.getXCoord(), point.getYCoord(), point.getZCoord()};
 		llhOffsetMeters(llh, offset);
 		ss << "[" << llh[1] << "," << llh[0] << "],"; // Flipped order
-		//positions += "[" + std::to_string(llh[1]) + "," + std::to_string(llh[0]) + "],"; // Flipped order
 	}
 	std::string positions = ss.str();
 	positions = positions.substr(0, positions.size()-1); // remove trailing ,
