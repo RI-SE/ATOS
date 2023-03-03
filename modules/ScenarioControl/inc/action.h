@@ -14,7 +14,7 @@
 
 #include "util.h"
 #include "iso22133.h"
-#include "roschannel.hpp"
+#include "roschannels/triggeractionchannels.hpp"
 #include "loggable.hpp"
 
 namespace ATOS {

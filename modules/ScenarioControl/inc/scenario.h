@@ -13,7 +13,7 @@
 #include "action.h"
 #include "causality.h"
 #include "journal.hpp"
-#include "roschannel.hpp"
+#include "roschannels/triggeractionchannels.hpp"
 
 #include "ad-xolib/xodr.h"
 #include "ad-xolib/xosc.h"

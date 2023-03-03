@@ -6,7 +6,11 @@
 #pragma once
 
 #include "module.hpp"
-#include "roschannel.hpp"
+#include "roschannels/v2xchannel.hpp"
+#include "roschannels/commandchannels.hpp"
+#include "roschannels/pathchannel.hpp"
+#include "roschannels/monitorchannel.hpp"
+#include "roschannels/geojsonchannel.hpp"
 #include <unordered_map>
 #include <filesystem>
 #include "util.h"
@@ -49,7 +53,7 @@ private:
 
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
-	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id) override;
+	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
 	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
 	void onStartMessage(const ROSChannels::Start::message_type::SharedPtr) override;
 	void onExitMessage(const ROSChannels::Start::message_type::SharedPtr) override;

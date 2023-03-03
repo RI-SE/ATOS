@@ -5,11 +5,9 @@
  */
 #include "objectlistener.hpp"
 #include "objectcontrol.hpp"
-#include "datadictionary.h"
 #include "atosTime.h"
 #include "iso22133.h"
 #include "journal.hpp"
-#include "atos_interfaces/msg/monitor.hpp"
 #include <eigen3/Eigen/Dense>
 #include <csignal>
 #include <tf2/LinearMath/Quaternion.h>
@@ -17,6 +15,8 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <iostream>
 #include "util.h" // llh offset function
+#include "roschannels/monitorchannel.hpp"
+#include "roschannels/navsatfixchannel.hpp"
 
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
 static atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& data); // TODO move to somewhere central

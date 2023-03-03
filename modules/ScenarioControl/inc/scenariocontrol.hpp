@@ -72,7 +72,7 @@ private:
 	void onExitMessage(const ROSChannels::Exit::message_type::SharedPtr) override;
 	void onObjectsConnectedMessage(const ROSChannels::ObjectsConnected::message_type::SharedPtr) override;
 	void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr) override;
-	void onTriggerEventMessage(const ROSChannels::TriggerEventOccurred::message_type::SharedPtr) override;
+	void onTriggerEventMessage(const ROSChannels::TriggerEventOccurred::message_type::SharedPtr);
 
 	void manageTriggers();
 	int updateTriggers();

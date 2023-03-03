@@ -1,5 +1,5 @@
 #include "samplemodule.hpp"
-#include "roschannel.hpp"
+#include "roschannels/commandchannels.hpp"
 #include "rclcpp/wait_for_message.hpp"
 
 using namespace ROSChannels;

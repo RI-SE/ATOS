@@ -13,7 +13,7 @@
 #include "journal.hpp"
 #include "util.h"
 #include "atosTime.h"
-#include "roschannel.hpp"
+#include "roschannels/triggeractionchannels.hpp"
 
 using atos_interfaces::msg::ExecuteAction;
 

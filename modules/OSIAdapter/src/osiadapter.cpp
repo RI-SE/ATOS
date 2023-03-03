@@ -195,8 +195,3 @@ void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, ui
   }
   lastMonitors[id] = *msg;
 }
-
-
-void OSIAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {
-  RCLCPP_INFO(get_logger(), "Received abort message");
-}
