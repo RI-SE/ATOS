@@ -307,8 +307,8 @@ ROSChannels::V2X::message_type EsminiAdapter::denmFromMonitor(const ROSChannels:
 	denm.message_type = "DENM";
 	denm.event_id = "ATOSEvent1";
 	denm.cause_code = 12;
-	denm.latitude = static_cast<int32_t>(llh[0]*1000000); // Microdegrees
-	denm.longitude = static_cast<int32_t>(llh[1]*1000000);
+	denm.latitude = static_cast<int32_t>(llh[0]*10000000); // Microdegrees
+	denm.longitude = static_cast<int32_t>(llh[1]*10000000);
 	denm.altitude = static_cast<int32_t>(llh[2]*100);		// Centimeters
 	denm.detection_time = std::chrono::duration_cast<std::chrono::seconds>( // Time since epoch in seconds
 		std::chrono::system_clock::now().time_since_epoch()
