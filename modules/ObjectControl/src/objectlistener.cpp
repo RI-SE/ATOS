@@ -75,7 +75,7 @@ void ObjectListener::listen() {
 
 				// Publish a NavSatFix message
 				auto origin = obj->getOrigin();
-				double llh_0[3] = {origin.latitude_deg, origin.longitude_deg, origin.altitude_m};
+				std::array<double,3> llh_0 = {origin.latitude_deg, origin.longitude_deg, origin.altitude_m};
 				obj->publishNavSatFix(createNavSatFixMessage(monr.second.timestamp, llh_0, rosMonr));
 				
 				// Reset thread cancelling
