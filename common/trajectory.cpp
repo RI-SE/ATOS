@@ -11,7 +11,7 @@
 #include <iomanip>
 #include "regexpatterns.hpp"
 #include "trajectory.hpp"
-#include "util.h" // xyz2llh
+#include "util/coordinateutils.hpp" // xyz2llh
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
@@ -102,7 +102,6 @@ foxglove_msgs::msg::GeoJSON Trajectory::toGeoJSON(std::array<double,3> llh_0) co
 		double offset[3] = {point.getXCoord(), point.getYCoord(), point.getZCoord()};
 		llhOffsetMeters(llh, offset);
 		ss << "[" << llh[1] << "," << llh[0] << "],"; // Flipped order
-		//positions += "[" + std::to_string(llh[1]) + "," + std::to_string(llh[0]) + "],"; // Flipped order
 	}
 	std::string positions = ss.str();
 	positions = positions.substr(0, positions.size()-1); // remove trailing ,

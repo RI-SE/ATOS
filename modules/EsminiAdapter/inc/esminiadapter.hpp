@@ -13,7 +13,6 @@
 #include "roschannels/geojsonchannel.hpp"
 #include <unordered_map>
 #include <filesystem>
-#include "util.h"
 #include "esmini/esminiLib.hpp"
 #include "trajectory.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
@@ -43,7 +42,7 @@ private:
 	ROSChannels::Init::Sub initSub;
 	ROSChannels::Start::Sub startSub;
 	std::unordered_map<uint32_t,ROSChannels::Path::Pub> pathPublishers;
-	std::unordered_map<uint32_t,ROSChannels::GeoJSON::Pub> geoJSONPublishers;
+	std::unordered_map<uint32_t,ROSChannels::GeoJSON::Pub> gnssPathPublishers;
 
 	static std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> objectTrajectoryService;
