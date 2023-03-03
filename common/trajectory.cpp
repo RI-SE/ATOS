@@ -11,7 +11,7 @@
 #include <iomanip>
 #include "regexpatterns.hpp"
 #include "trajectory.hpp"
-#include "util.h" // xyz2llh
+#include "util/coordinateutils.hpp" // xyz2llh
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 

@@ -9,7 +9,6 @@
 #include "roschannel.hpp"
 #include <unordered_map>
 #include <filesystem>
-#include "util.h"
 #include "esmini/esminiLib.hpp"
 #include "trajectory.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
