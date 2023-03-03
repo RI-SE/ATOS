@@ -20,7 +20,7 @@
 
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
 static atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& data); // TODO move to somewhere central
-static sensor_msgs::msg::NavSatFix createNavSatFixMessage(const struct timeval& tv, double origin[3], const atos_interfaces::msg::Monitor &monr); // TODO move to somewhere central
+static sensor_msgs::msg::NavSatFix createNavSatFixMessage(const struct timeval& tv, std::array<double,3> origin, const atos_interfaces::msg::Monitor &monr); // TODO move to somewhere central
 
 ObjectListener::ObjectListener(
 		ObjectControl* sh,
@@ -264,13 +264,14 @@ sensor_msgs::msg::NavSatFix createNavSatFixMessage(const struct timeval& tv, std
 
 	// Local coordinates to global coordinates
 	double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
-	llhOffsetMeters(origin,offset);
+	double llh_0[3] = {origin[0], origin[1], origin[2]};
+	llhOffsetMeters(llh_0,offset);
 	msg.header.frame_id = "map"; // TODO
 
 	// Fill in the rest of the message
-	msg.latitude = origin[0];
-	msg.longitude = origin[1];
-	msg.altitude = origin[2];
+	msg.latitude = llh_0[0];
+	msg.longitude = llh_0[1];
+	msg.altitude = llh_0[2];
 	msg.status.status = sensor_msgs::msg::NavSatStatus::STATUS_FIX;
 	return msg;
 }
