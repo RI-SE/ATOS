@@ -9,20 +9,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include "util.h"
-#include "roschannel.hpp"
-
-#include "atos_interfaces/msg/action_configuration.hpp"
-#include "atos_interfaces/msg/execute_action.hpp"
-#include "atos_interfaces/msg/trigger_event_occurred.hpp"
-#include "atos_interfaces/msg/monitor.hpp"
-#include "atos_interfaces/msg/manoeuvre_command.hpp"
-#include "atos_interfaces/msg/object_enabled.hpp"
-#include "atos_interfaces/msg/control_signal_percentage.hpp"
-#include "atos_interfaces/msg/object_id_array.hpp"
-#include "std_msgs/msg/empty.hpp"
-#include "std_msgs/msg/int8.hpp"
-#include "std_msgs/msg/string.hpp"
-#include "std_msgs/msg/u_int8.hpp"
+#include "roschannels/commandchannels.hpp"
 
 // TODO move somewhere else
 static std::map<COMMAND, std::string> topicNames = {
@@ -116,36 +103,13 @@ class Module : public rclcpp::Node {
 	virtual void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr){};
 	virtual void onArmMessage(const ROSChannels::Arm::message_type::SharedPtr){};
 	virtual void onDisarmMessage(const ROSChannels::Disarm::message_type::SharedPtr){};
-	virtual void onRemoteControlEnableMessage(const ROSChannels::RemoteControlEnable::message_type::SharedPtr){};
-	virtual void onRemoteControlDisableMessage(const ROSChannels::RemoteControlDisable::message_type::SharedPtr){};
-	virtual void onRemoteControlManoeuvreMessage(const ROSChannels::RemoteControlManoeuvre::message_type::SharedPtr){};
-	virtual void onEnableObjectMessage(const ROSChannels::EnableObject::message_type::SharedPtr){};
 	virtual void onObjectsConnectedMessage(const ROSChannels::ObjectsConnected::message_type::SharedPtr){};
-	virtual void onDataDictMessage(const ROSChannels::DataDictionary::message_type::SharedPtr){};
-	virtual void onOSEMMessage(const ROSChannels::Init::message_type::SharedPtr){}; // TODO remove
-	virtual void onASPMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO once channel defined swap type
-	virtual void onPathMessage(const ROSChannels::Path::message_type::SharedPtr, uint32_t){};
-	virtual void onTrajectoryMessage(const ROSChannels::CartesianTrajectory::message_type::SharedPtr, uint32_t){};
-	virtual void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr, uint32_t){};
-	virtual void onTrajToSupMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO once channel defined swap type
-	virtual void onTrajFromSupMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO once channel defined swap type
 	virtual void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr){};
-	virtual void onOBCStateMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO remove
-	virtual void onVIOPMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO remove or swap type
 	virtual void onStartMessage(const ROSChannels::Start::message_type::SharedPtr){};
 	virtual void onStartObjectMessage(const ROSChannels::StartObject::message_type::SharedPtr){};
 	virtual void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr){};
 	virtual void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr){};
-	virtual void onACCMMessage(const ROSChannels::ActionConfiguration::message_type::SharedPtr){};
-	virtual void onTRCMMessage(const std_msgs::msg::Empty::SharedPtr){}; // TODO
-	virtual void onEXACMessage(const ROSChannels::ExecuteAction::message_type::SharedPtr){};
 	virtual void onReplayMessage(const ROSChannels::Replay::message_type::SharedPtr){};
-	virtual void onBackToStartMessage(const ROSChannels::BackToStart::message_type::SharedPtr){};
-	virtual void onBackToStartResponse(const ROSChannels::BackToStartResponse::message_type::SharedPtr){};
-	virtual void onDataDictResponse(const std_msgs::msg::Empty::SharedPtr){}; // TODO remove
-	virtual void onControlSignalMessage(const ROSChannels::ControlSignal::message_type::SharedPtr){};
-	virtual void onTriggerEventMessage(const ROSChannels::TriggerEventOccurred::message_type::SharedPtr){};
-
 	virtual void onExitMessage(const ROSChannels::Exit::message_type::SharedPtr);
 
 
