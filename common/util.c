@@ -485,26 +485,6 @@ void util_error(const char *message) {
 	exit(EXIT_FAILURE);
 }
 
-/**
- * @brief Returns a new latitude, longitude, height after offsetting x, y, z meters
- * 
- * @param llh The latitude, longitude, height [degrees, degrees, meters]
- * @param xyzOffset Meters offset from llh [meters, meters, meters]
- */
-void llhOffsetMeters(double *llh, const double *xyzOffset) {
-	const double lat = llh[0];
-	const double lon = llh[1];
-	const double hgt = llh[2];
-
-	const double dx = xyzOffset[0];
-	const double dy = xyzOffset[1];
-	const double dz = xyzOffset[2];
-
-	llh[0] = lat + (dy / EARTH_EQUATOR_RADIUS_M) * (180 / M_PI);
-	llh[1] = lon + (dx / EARTH_EQUATOR_RADIUS_M) * (180 / M_PI) / cos(lat * M_PI / 180.0);
-	llh[2] = hgt + dz;
-}
-
 void xyzToLlh(double x, double y, double z, double *lat, double *lon, double *height) {
 	double e2 = EARTH_FLATTENING * (2.0 - EARTH_FLATTENING);
 	double r2 = x * x + y * y;

@@ -37,6 +37,7 @@ get_target_property(ISO_22133_HEADERS ${ISO_22133_LIBRARY} INCLUDE_DIRECTORIES)
 # Built targets
 add_library(${ATOS_UTIL_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/util.c
+	${CMAKE_CURRENT_SOURCE_DIR}/util/coordinateutils.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/datadictionary.c
 )
 
@@ -92,6 +93,9 @@ ament_target_dependencies(${ATOS_COMMON_TARGET}
 # Exported headers
 set_target_properties(${ATOS_UTIL_TARGET} PROPERTIES
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/util.h
+)
+set_target_properties(${ATOS_UTIL_TARGET} PROPERTIES
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/util/coordinateutils.hpp
 )
 set_property(TARGET ${ATOS_UTIL_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/datadictionary.h
