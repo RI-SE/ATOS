@@ -258,7 +258,7 @@ atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& monrMessage
 	return msg;
 }
 
-sensor_msgs::msg::NavSatFix createNavSatFixMessage(const struct timeval& tv, double origin[3], const atos_interfaces::msg::Monitor &monr) {
+sensor_msgs::msg::NavSatFix createNavSatFixMessage(const struct timeval& tv, std::array<double,3> origin, const atos_interfaces::msg::Monitor &monr) {
 	sensor_msgs::msg::NavSatFix msg;
 	msg.header.stamp = monr.atos_header.header.stamp;
 

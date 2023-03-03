@@ -94,7 +94,7 @@ ament_target_dependencies(${ATOS_COMMON_TARGET}
 set_target_properties(${ATOS_UTIL_TARGET} PROPERTIES
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/util.h
 )
-set_target_properties(${ATOS_UTIL_TARGET} PROPERTIES
+set_property(TARGET ${ATOS_UTIL_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/util/coordinateutils.hpp
 )
 set_property(TARGET ${ATOS_UTIL_TARGET} APPEND PROPERTY
