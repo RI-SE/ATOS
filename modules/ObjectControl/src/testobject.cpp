@@ -12,13 +12,15 @@ using namespace ATOS;
 
 TestObject::TestObject(rclcpp::Logger log,
 		std::shared_ptr<ROSChannels::Path::Sub> pathSub,
-		std::shared_ptr<ROSChannels::Monitor::Pub> monrPub
+		std::shared_ptr<ROSChannels::Monitor::Pub> monrPub,
+		std::shared_ptr<ROSChannels::NavSatFix::Pub> navSatFixPub
 	) :
 	osiChannel(SOCK_STREAM, log),
 	comms(log),
 	Loggable(log),
 	pathSub(pathSub),
 	monrPub(monrPub),
+	navSatFixPub(navSatFixPub),
 	conf(log)
 	 {
 }
@@ -179,6 +181,10 @@ ObjectStateType TestObject::getState(
 
 void TestObject::publishMonr(const ROSChannels::Monitor::message_type monr){
 	monrPub->publish(monr);
+}
+
+void TestObject::publishNavSatFix(const ROSChannels::NavSatFix::message_type navSatFix){
+	navSatFixPub->publish(navSatFix);
 }
 
 std::string TestObject::toString() const {
