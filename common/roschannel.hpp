@@ -11,6 +11,8 @@
 #include <std_msgs/msg/int8.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <nav_msgs/msg/path.hpp>
+#include <sensor_msgs/msg/nav_sat_fix.hpp>
+#include <foxglove_msgs/msg/geo_json.hpp>
 #include <string>
 #include <functional>
 
@@ -477,6 +479,28 @@ namespace Monitor {
     };
 }
 
+namespace NavSatFix {
+    const std::string topicName = "gnss_fix";
+    using message_type = sensor_msgs::msg::NavSatFix;
+    const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepLast(1));
+
+    class Pub : public BasePub<message_type> {
+    public:
+        const uint32_t objectId;
+        Pub(rclcpp::Node& node, const uint32_t id, const rclcpp::QoS& qos = defaultQoS) : 
+            objectId(id),
+            BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, qos) {}
+    };
+
+    class Sub : public BaseSub<message_type> {
+    public:
+        const uint32_t objectId;
+        Sub(rclcpp::Node& node, const uint32_t id, std::function<void(const message_type::SharedPtr)> callback, const rclcpp::QoS& qos = defaultQoS) : 
+            objectId(id),
+            BaseSub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, callback, qos) {}
+    };
+}
+
 namespace ObjectsConnected {
     const std::string topicName = "objects_connected";
     using message_type = std_msgs::msg::Empty;
@@ -527,6 +551,27 @@ namespace TriggerEventOccurred {
 namespace Path {
     const std::string topicName = "path";
     using message_type = nav_msgs::msg::Path;
+
+    class Pub : public BasePub<message_type> {
+    public:
+        const uint32_t objectId;
+        Pub(rclcpp::Node& node, const uint32_t id) :
+            objectId(id),
+            BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local()) {}
+    };
+
+    class Sub : public BaseSub<message_type> {
+    public:
+        const uint32_t objectId;
+        Sub(rclcpp::Node& node, const uint32_t id, std::function<void(const message_type::SharedPtr)> callback) : 
+            objectId(id),
+            BaseSub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, callback, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local()) {}
+    };
+}
+
+namespace GeoJSON {
+    const std::string topicName = "gnss_path";
+    using message_type = foxglove_msgs::msg::GeoJSON;
 
     class Pub : public BasePub<message_type> {
     public:

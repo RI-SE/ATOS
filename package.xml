@@ -24,6 +24,10 @@
   <depend>std_srvs</depend>
   <depend>atos_interfaces</depend>
   <depend>paho-mqtt-c</depend>
+  <depend>rosbridge_server</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>foxglove_msgs</depend>
   <doc_depend>doxygen</doc_depend>
 
   <test_depend>ament_lint_auto</test_depend>
