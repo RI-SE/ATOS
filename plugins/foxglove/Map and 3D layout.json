@@ -3,13 +3,13 @@
     "3D!3pzn6f1": {
       "cameraState": {
         "perspective": true,
-        "distance": 58.726522473994336,
-        "phi": 45.275535940625744,
-        "thetaOffset": 3.6088447450868943,
+        "distance": 163.81821098970224,
+        "phi": 47.91612273768732,
+        "thetaOffset": -90.39604523046397,
         "targetOffset": [
-          2.8791262986708466,
-          -1.3958853068608803,
-          3.334144783479148e-16
+          3.4456156257864032,
+          6.763866387436219,
+          5.290823040480827e-16
         ],
         "target": [
           0,
@@ -32,25 +32,85 @@
       "topics": {
         "/atos/object_1/object_monitor": {
           "visible": true,
-          "type": "arrow"
+          "type": "arrow",
+          "color": "#6b7bff"
         },
         "/atos/object_1/path": {
-          "visible": true
+          "visible": true,
+          "gradient": [
+            "#6b7bffff",
+            "#6b7bffff"
+          ]
         },
         "/atos/object_2/path": {
-          "visible": true
+          "visible": true,
+          "gradient": [
+            "#ffffffff",
+            "#ffffffff"
+          ]
         },
         "/atos/object_3/path": {
-          "visible": true
+          "visible": true,
+          "gradient": [
+            "#dba652ff",
+            "#dba652ff"
+          ]
         },
         "/atos/object_4/path": {
-          "visible": true
+          "visible": true,
+          "gradient": [
+            "#ff6b6bff",
+            "#ff6b6bff"
+          ]
         },
         "/atos/object_5/path": {
-          "visible": true
+          "visible": true,
+          "gradient": [
+            "#86ff6bff",
+            "#86ff6bff"
+          ]
         },
         "/atos/object_6/path": {
+          "visible": true,
+          "gradient": [
+            "#fffd6bff",
+            "#fffd6bff"
+          ]
+        },
+        "/atos/object_2/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#ffffff"
+        },
+        "/atos/object_3/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#dba652"
+        },
+        "/atos/object_4/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#ff6b6b"
+        },
+        "/atos/object_5/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#86ff6b"
+        },
+        "/atos/object_6/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#fffd6b"
+        },
+        "/goal_pose": {
           "visible": true
+        },
+        "/initialpose": {
+          "visible": true
+        },
+        "/move_base_simple/goal": {
+          "visible": true,
+          "type": "arrow"
         }
       },
       "layers": {},
@@ -66,17 +126,31 @@
     },
     "map!2s6yzns": {
       "center": {
-        "lat": 57.777722684128044,
-        "lon": 12.781342864036562
+        "lat": 57.777620784520096,
+        "lon": 12.782022133469583
       },
-      "customTileUrl": "",
+      "customTileUrl": "http://10.113.148.2/tiles/asta-1/{z}/{x}/{y}.png",
       "disabledTopics": [
         "/atos/object_1/object_monitor"
       ],
-      "followTopic": "/atos/object_1/gnss_fix",
-      "layer": "satellite",
-      "topicColors": {},
-      "zoomLevel": 20
+      "followTopic": "",
+      "layer": "custom",
+      "topicColors": {
+        "/atos/object_1/gnss_fix": "#4d87ff",
+        "/atos/object_1/gnss_path": "#4d87ff",
+        "/atos/object_2/gnss_fix": "#ffffff",
+        "/atos/object_2/gnss_path": "#ffffff",
+        "/atos/object_3/gnss_fix": "#b2883f",
+        "/atos/object_3/gnss_path": "#b2883f",
+        "/atos/object_4/gnss_fix": "#ff0000",
+        "/atos/object_4/gnss_path": "#ff0000",
+        "/atos/object_5/gnss_fix": "#6ae34f",
+        "/atos/object_5/gnss_path": "#6ae34f",
+        "/atos/object_6/gnss_fix": "#e3d34f",
+        "/atos/object_6/gnss_path": "#e3d34f"
+      },
+      "zoomLevel": 20,
+      "foxglovePanelTitle": "AstaZero"
     }
   },
   "globalVariables": {
