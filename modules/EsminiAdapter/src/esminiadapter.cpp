@@ -158,8 +158,8 @@ void EsminiAdapter::onStaticInitMessage(
 		std::array<double,3> llh_0 = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
 
 		for (auto& it : me->idToTraj) {
-			me->geoJSONPublishers.emplace(it.first, ROSChannels::GeoJSON::Pub(*me, it.first));
-			me->geoJSONPublishers.at(it.first).publish(it.second.toGeoJSON(llh_0));
+			me->gnssPathPublishers.emplace(it.first, ROSChannels::GeoJSON::Pub(*me, it.first));
+			me->gnssPathPublishers.at(it.first).publish(it.second.toGeoJSON(llh_0));
 		}
 	});
 }
@@ -523,7 +523,7 @@ void EsminiAdapter::InitializeEsmini()
 	me->ATOStoEsminiObjectId.clear();
 	me->idToIp.clear();
 	me->pathPublishers.clear();
-	me->geoJSONPublishers.clear();
+	me->gnssPathPublishers.clear();
 	SE_Close(); // Stop ScenarioEngine in case it is running
 
 	RCLCPP_INFO(me->get_logger(), "Initializing esmini with scenario file %s", me->oscFilePath.c_str());
