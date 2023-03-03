@@ -148,7 +148,7 @@ public:
 	std::string toString() const;
 	atos_interfaces::msg::CartesianTrajectory toCartesianTrajectory();
 	nav_msgs::msg::Path toPath() const;
-	foxglove_msgs::msg::GeoJSON toGeoJSON(double llh_0[3]) const;
+	foxglove_msgs::msg::GeoJSON toGeoJSON(std::array<double,3> llh_0) const;
 	std::size_t size() const { return points.size(); }
 
 	void saveToFile(const std::string& fileName) const;

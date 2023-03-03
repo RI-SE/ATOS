@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <cmath>
 #include <algorithm>
+#include <iomanip>
 #include "regexpatterns.hpp"
 #include "trajectory.hpp"
 #include "util.h" // xyz2llh
@@ -91,15 +92,19 @@ nav_msgs::msg::Path Trajectory::toPath() const
 	return path;
 }
 
-foxglove_msgs::msg::GeoJSON Trajectory::toGeoJSON(double llh_0[3]) const {
+foxglove_msgs::msg::GeoJSON Trajectory::toGeoJSON(std::array<double,3> llh_0) const {
 	foxglove_msgs::msg::GeoJSON geoJSON;
-	std::string positions = "";
+	std::stringstream ss;
+	ss << std::fixed; // supress scientific notation
+	ss << std::setprecision(12);
 	for (const auto& point : this->points){
 		double llh[3] = {llh_0[0], llh_0[1], llh_0[2]};
 		double offset[3] = {point.getXCoord(), point.getYCoord(), point.getZCoord()};
 		llhOffsetMeters(llh, offset);
-		positions += "[" + std::to_string(llh[1]) + "," + std::to_string(llh[0]) + "],"; // Flipped order
+		ss << "[" << llh[1] << "," << llh[0] << "],"; // Flipped order
+		//positions += "[" + std::to_string(llh[1]) + "," + std::to_string(llh[0]) + "],"; // Flipped order
 	}
+	std::string positions = ss.str();
 	positions = positions.substr(0, positions.size()-1); // remove trailing ,
 
 
