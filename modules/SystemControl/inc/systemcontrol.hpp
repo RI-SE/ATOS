@@ -29,6 +29,8 @@
 #include "atosTime.h"
 #include "datadictionary.h"
 #include "util.h"
+#include "roschannels/commandchannels.hpp"
+#include "roschannels/remotecontrolchannels.hpp"
 
 #include <chrono>
 #include <map>
@@ -127,7 +129,7 @@ private:
 	/* callbacks */
 	void onGetStatusResponse(const ROSChannels::GetStatusResponse::message_type::SharedPtr) override;
 	void onFailureMessage(const ROSChannels::Failure::message_type::SharedPtr) override;
-	void onBackToStartResponse(const ROSChannels::BackToStartResponse::message_type::SharedPtr) override;
+	void onBackToStartResponse(const ROSChannels::BackToStartResponse::message_type::SharedPtr);
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
 
@@ -290,10 +292,8 @@ private:
 	ROSChannels::Abort::Pub abortPub;
 	ROSChannels::AllClear::Pub allClearPub;
 	ROSChannels::BackToStart::Pub backToStartPub;
-	ROSChannels::DataDictionary::Pub dataDictionaryPub;
 	ROSChannels::RemoteControlEnable::Pub remoteControlEnablePub;
 	ROSChannels::RemoteControlDisable::Pub remoteControlDisablePub;
-	ROSChannels::EnableObject::Pub enableObjectPub;
 	ROSChannels::Exit::Pub exitPub;
 	ROSChannels::GetStatus::Pub getStatusPub;
 
