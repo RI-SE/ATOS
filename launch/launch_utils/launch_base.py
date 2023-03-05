@@ -20,6 +20,8 @@ def get_base_nodes():
             name='ros_bridge',
             parameters=[
                 {"port": 9090},
+                {"certfile": "/home/victor/git/atos/plugins/foxglove/selfsigned.crt"},
+                {"keyfile": "/home/victor/git/atos/plugins/foxglove/selfsigned.key"},
                 {"retry_startup_delay": 5.0},
                 {"fragment_timeout": 600},
                 {"max_message_size": 10000000},
