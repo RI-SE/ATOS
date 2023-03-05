@@ -1,11 +1,20 @@
 # Don't launch this file directly, rather use the launch files one level up instead
 import os
 from launch_ros.actions import Node
+import subprocess
+from pathlib import Path
 from .validate_files import validate_files
 
 def get_base_nodes():
-
     files = validate_files()
+    atos_dir = os.path.join(os.path.expanduser('~'), '.astazero', 'ATOS')
+
+    #webgui logging
+    log = open(atos_dir / Path("webgui.log"), 'w')
+    # start webgui server
+    path = Path(__file__).parent.parent.parent.parent.parent.absolute() / Path("etc/simplecontrol/")
+    subprocess.Popen("/usr/bin/npm start --prefix " + str(path),shell=True, stdout=log, stderr=log)
+
     return [
         Node(
             package='atos',
