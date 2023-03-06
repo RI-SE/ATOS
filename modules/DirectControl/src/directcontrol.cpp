@@ -238,7 +238,6 @@ size_t DirectControl::handleUnknownMessage(
 int DirectControl::initializeModule() {
 	int retval = 0;
 
-	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",moduleName.c_str(), getpid());
 	if (requestDataDictInitialization()) {
 		if (DataDictionaryInitObjectData() != READ_OK) {
 			retval = -1;

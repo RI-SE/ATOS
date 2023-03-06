@@ -133,7 +133,6 @@ bool SystemControl::shouldExit(){
 }
 
 void SystemControl::initialize(){
-	RCLCPP_INFO(get_logger(), "System control task running with PID: %i", getpid());
 
 	if (requestDataDictInitialization()) {
 		// Map state and object data into memory

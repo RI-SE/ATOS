@@ -630,8 +630,6 @@ void EsminiAdapter::onRequestObjectIP(
  */
 int EsminiAdapter::initializeModule() {
 	int retval = 0;
-
-	RCLCPP_INFO(me->get_logger(), "%s task running with PID: %d",moduleName.c_str(), getpid());
 	
 	// Calling services
 	me->testOriginClient = me->nTimesWaitForService<TestOriginSrv>(3, 1s, ServiceNames::getTestOrigin);

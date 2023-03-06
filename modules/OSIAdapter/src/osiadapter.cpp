@@ -65,7 +65,6 @@ void OSIAdapter::getParameters() {
  * @param port Port
  */
 void OSIAdapter::initializeServer() {
-  RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
   server = std::make_unique<ServerFactory>(address, port, protocol);
   server->createServer();
   server->setupServer();

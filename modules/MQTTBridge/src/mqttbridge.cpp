@@ -39,7 +39,6 @@ MqttBridge::MqttBridge() : Module(MqttBridge::moduleName),
  */
 void MqttBridge::initialize()
 {
-	RCLCPP_INFO(this->get_logger(), "%s task running with PID: %d", moduleName.c_str(), getpid());
 	if (this->brokerIP.empty())
 	{
 		RCLCPP_INFO(this->get_logger(), "No Broker IP provided in configuration. Shutting down...");

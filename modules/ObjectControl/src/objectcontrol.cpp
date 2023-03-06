@@ -67,9 +67,6 @@ ObjectControl::~ObjectControl() {
 int ObjectControl::initialize() {
 	int retval = 0;
 
-	// Initialize log
-	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",get_name(), getpid());
-
 	// Create test journal
 	if (JournalInit(get_name(), get_logger()) == -1) {
 		retval = -1;

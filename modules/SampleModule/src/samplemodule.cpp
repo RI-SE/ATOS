@@ -14,7 +14,6 @@ SampleModule::SampleModule() :
 	tcpServer("0.0.0.0",TCPPort)
 {
 	tcpThread = std::make_unique<std::thread>(&SampleModule::tcpSocketProcedure, this);
-	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",moduleName.c_str(), getpid());
 }
 
 SampleModule::~SampleModule() {
