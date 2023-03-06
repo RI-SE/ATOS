@@ -3,52 +3,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
+#pragma once
+
 #include <functional>
-#include <iostream>
 #include <string>
 
 #include <rclcpp/rclcpp.hpp>
-#include "util.h"
 #include "roschannels/commandchannels.hpp"
-
-// TODO move somewhere else
-static std::map<COMMAND, std::string> topicNames = {
-	{COMM_STRT, "/start"},
-	{COMM_ARM, "/arm"},
-	{COMM_STOP, "/stop"},
-	{COMM_EXIT, "/exit"},
-	{COMM_REPLAY, "/replay"},
-	{COMM_ABORT, "/abort"},
-	{COMM_ABORT_DONE, "/all_clear"},
-	{COMM_INIT, "/init"},
-	{COMM_CONNECT, "/connect"},
-	{COMM_OBC_STATE, "/obc_state"},
-	{COMM_DISCONNECT, "/disconnect"},
-	{COMM_VIOP, "/viop"},
-	{COMM_TRAJ, "/traj"},
-	{COMM_TRAJ_TOSUP, "/traj_tosup"},
-	{COMM_TRAJ_FROMSUP, "/traj_fromsup"},
-	{COMM_ASP, "/asp"},
-	{COMM_OSEM, "/osem"},
-	{COMM_DATA_DICT, "/data_dict"},
-	{COMM_EXAC, "/execute_action"},
-	{COMM_TREO, "/event_occurred"},
-	{COMM_ACCM, "/action_configuration"},
-	{COMM_TRCM, "/trigger_configuration"},
-	{COMM_DISARM, "/disarm"},
-	{COMM_GETSTATUS, "/get_status"},
-	{COMM_GETSTATUS_OK, "/get_status_response"},
-	{COMM_BACKTOSTART_CALL, "/back_to_start"},
-	{COMM_BACKTOSTART_RESPONSE, "/back_to_start_response"},
-	{COMM_REMOTECTRL_ENABLE, "/remote_control_enable"},
-	{COMM_REMOTECTRL_DISABLE, "/remote_control_disable"},
-	{COMM_REMOTECTRL_MANOEUVRE, "/remote_control_manoeuvre"},
-	{COMM_ENABLE_OBJECT, "/enable_object"},
-	{COMM_CONTROL_SIGNAL_PERCENTAGE, "/control_signal_perc"},
-	{COMM_OBJECTS_CONNECTED, "/objects_connected"},
-	{COMM_FAILURE, "/failure"},
-	{COMM_START_OBJECT, "/start_object"}
-};
 
 namespace ServiceNames {
 const std::string initDataDict = "init_data_dictionary";
@@ -117,6 +78,7 @@ class Module : public rclcpp::Node {
 								 std::function<void()> executeIfFail,
 								 const std::string& topic,
 								 const rclcpp::Logger& logger);
+								 
 	bool requestDataDictInitialization(int maxRetries = 3);
 	
 	/*! \brief This helper function is performs a service call given a client and yields a response.
@@ -194,13 +156,5 @@ class Module : public rclcpp::Node {
 			return false;
 		}
 		return callService<Srv>(timeout, client, response);
-	}
-
-   private:
-	static void printUnhandledMessage(const std::string& topic, const std::string& message) {
-		std::cout << "Unhandled message on topic: " << topic << " (" << message << ")" << std::endl;
-	}
-	static void printUnhandledMessage(const std::string& topic) {
-		std::cout << "Unhandled empty message on topic: " << topic << std::endl;
 	}
 };
