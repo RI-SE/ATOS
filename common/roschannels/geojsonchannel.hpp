@@ -4,7 +4,7 @@
 #include "foxglove_msgs/msg/geo_json.hpp"
 
 namespace ROSChannels {
-    namespace GeoJSON {
+    namespace GNSSPath {
         const std::string topicName = "gnss_path";
         using message_type = foxglove_msgs::msg::GeoJSON;
 
