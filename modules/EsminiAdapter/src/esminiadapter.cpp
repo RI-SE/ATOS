@@ -20,6 +20,8 @@
 #include "rclcpp/wait_for_message.hpp"
 #include "trajectory.hpp"
 #include "string_utility.hpp"
+#include "util.h"
+#include "util/coordinateutils.hpp"
 
 using namespace ROSChannels;
 using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
@@ -151,7 +153,14 @@ void EsminiAdapter::onStaticInitMessage(
 			RCLCPP_ERROR(me->get_logger(), "Failed to get test origin from test origin service");
 			return; // TODO communicate failure
 		}
+		// Publish geoJSON trajectories when we receive the origin
 		me->testOrigin = response->origin;
+		std::array<double,3> llh_0 = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
+
+		for (auto& it : me->idToTraj) {
+			me->gnssPathPublishers.emplace(it.first, ROSChannels::GeoJSON::Pub(*me, it.first));
+			me->gnssPathPublishers.at(it.first).publish(it.second.toGeoJSON(llh_0));
+		}
 	});
 }
 
@@ -307,8 +316,8 @@ ROSChannels::V2X::message_type EsminiAdapter::denmFromMonitor(const ROSChannels:
 	denm.message_type = "DENM";
 	denm.event_id = "ATOSEvent1";
 	denm.cause_code = 12;
-	denm.latitude = static_cast<int32_t>(llh[0]*1000000); // Microdegrees
-	denm.longitude = static_cast<int32_t>(llh[1]*1000000);
+	denm.latitude = static_cast<int32_t>(llh[0]*10000000); // Microdegrees
+	denm.longitude = static_cast<int32_t>(llh[1]*10000000);
 	denm.altitude = static_cast<int32_t>(llh[2]*100);		// Centimeters
 	denm.detection_time = std::chrono::duration_cast<std::chrono::seconds>( // Time since epoch in seconds
 		std::chrono::system_clock::now().time_since_epoch()
@@ -514,6 +523,7 @@ void EsminiAdapter::InitializeEsmini()
 	me->ATOStoEsminiObjectId.clear();
 	me->idToIp.clear();
 	me->pathPublishers.clear();
+	me->gnssPathPublishers.clear();
 	SE_Close(); // Stop ScenarioEngine in case it is running
 
 	RCLCPP_INFO(me->get_logger(), "Initializing esmini with scenario file %s", me->oscFilePath.c_str());
@@ -556,8 +566,10 @@ void EsminiAdapter::InitializeEsmini()
 
 		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
 
+		// Publish the trajectory as a path and as geojson
 		me->pathPublishers.emplace(id, ROSChannels::Path::Pub(*me, id));
 		me->pathPublishers.at(id).publish(traj.toPath());
+
 		// below is for dumping the trajectory points to the console
 		/*
 		for (auto& tp : traj.points){

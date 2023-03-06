@@ -23,6 +23,23 @@ def get_base_nodes():
             parameters=[params]
         ),
         Node(
+            package='rosbridge_server',
+            executable='rosbridge_websocket',
+            name='ros_bridge',
+            parameters=[
+                {"port": 9090},
+                {"retry_startup_delay": 5.0},
+                {"fragment_timeout": 600},
+                {"max_message_size": 10000000},
+                {"unregister_timeout": 10.0},
+                {"use_compression": False}]
+        ),
+        Node(
+            name='rosapi',
+            package='rosapi',
+            executable='rosapi_node'
+        ),
+        Node(
             package='atos',
             namespace='atos',
             executable='system_control',
@@ -62,6 +79,7 @@ def get_base_nodes():
             executable='mqtt_bridge',
             name='mqtt_bridge',
             # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
-            parameters=[params]
+            parameters=[params],
+            # arguments=['--ros-args', '--log-level', "debug"] # To get RCL_DEBUG prints
         ),
     ]

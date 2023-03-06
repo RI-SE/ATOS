@@ -5,6 +5,7 @@
  */
 #include "mqttbridge.hpp"
 #include "mqtt.hpp"
+#include <random>
 
 using namespace ROSChannels;
 
@@ -61,8 +62,15 @@ void MqttBridge::yieldMqttClient()
 
 void MqttBridge::setupConnection()
 {
+	// Add a random number to avoid conflicting client IDs
+	std::random_device rd;
+	std::uniform_int_distribution<int> dist(10000, 99999);
+	static const std::string client_id = pubClientId + std::to_string(dist(rd));
+
+	RCLCPP_INFO(this->get_logger(), "Setting up connection with clientID: %s, and broker IP: %s", client_id.c_str(), brokerIP.c_str());
+
 	MQTTClient mqttClient = MQTT::setupConnection(brokerIP.c_str(),
-												  QoS.c_str(),
+												  client_id.c_str(),
 												  username.c_str(),
 												  password.c_str(),
 												  MQTT::clientType::publisher,
@@ -75,7 +83,7 @@ void MqttBridge::setupConnection()
 	}
 	else
 	{
-		RCLCPP_INFO(this->get_logger(), "Successfully initialized MQTT connection to broker with IP %s", brokerIP.c_str());
+		RCLCPP_DEBUG(this->get_logger(), "Successfully initialized MQTT connection to broker");
 		this->mqttClient = mqttClient;
 	}
 }

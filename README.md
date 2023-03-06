@@ -8,9 +8,9 @@ The ATOS server is a communication hub for all test objects. The server monitors
 
 
 # Table of contents
-- [ATOS](#ATOS)
+- [ATOS](#atos)
 - [Table of contents](#table-of-contents)
-- [ Building ATOS with colcon](#-building-ATOS-with-colcon)
+- [ Building ATOS with colcon](#-building-atos-with-colcon)
   - [ Dependencies \& external libraries](#-dependencies--external-libraries)
     - [ Installing OpenSimulationInterface v3.4.0](#-installing-opensimulationinterface-v340)
     - [ Installing atos-interfaces](#-installing-atos-interfaces)
@@ -19,8 +19,6 @@ The ATOS server is a communication hub for all test objects. The server monitors
   - [ Installing ROS2 and building for the first time with colcon](#-installing-ros2-and-building-for-the-first-time-with-colcon)
     - [ Ubuntu 20.04](#-ubuntu-2004)
 - [ Optional builds \& installations](#-optional-builds--installations)
-    - [ Installation via dpkg](#-installation-via-dpkg)
-  - [ Building the server with CITS module and mqtt](#-building-the-server-with-cits-module-and-mqtt)
   - [ How to build with RelativeKinematics instead of ObjectControl](#-how-to-build-with-relativekinematics-instead-of-objectcontrol)
 
 # <a name="ATOS"></a> Building ATOS with colcon
@@ -112,7 +110,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-a
 Install ros foxy for desktop and colcon
 ```
 sudo apt update
-sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs ros-foxy-geographic-msgs
+sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs ros-foxy-geographic-msgs ros-foxy-foxglove-msgs ros-foxy-sensor-msgs
 ```
 
 source the setup script:
