@@ -3,6 +3,9 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+const fs = require('fs');
+const https = require('https');
+const os = require('os');
 const WebSocket = require('ws'); // Websocket lib
 const rclnodejs = require('rclnodejs'); // ROS2 lib
 const common = require('./public/javascripts/common'); // Server/client common functions
@@ -115,8 +118,22 @@ rclnodejs.init().then(() => {
     }
   }
 
-  // Start a websocket server
-  const wss = new WebSocket.Server({ port: 8082 });
+
+  // Set up TLS, create server
+  const homeDir = os.homedir();
+  
+  const httpsServer = https.createServer({
+    cert: fs.readFileSync(homeDir + '/.astazero/ATOS/certs/selfsigned.crt', 'utf8'),
+    key: fs.readFileSync(homeDir + '/.astazero/ATOS/certs/selfsigned.key', 'utf8'),
+})
+
+  httpsServer.listen(8082);
+
+  // Start the secure websocket server
+  const wss = new WebSocket.Server({
+      perMessageDeflate: false,
+      server: httpsServer,
+  })
 
   // Wire up some logic for the connection event (when a client connects) 
   wss.on('connection', function connection(ws) {
