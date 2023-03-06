@@ -1,10 +1,15 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #pragma once
 
 #include "roschannel.hpp"
 #include "foxglove_msgs/msg/geo_json.hpp"
 
 namespace ROSChannels {
-    namespace GeoJSON {
+    namespace GNSSPath {
         const std::string topicName = "gnss_path";
         using message_type = foxglove_msgs::msg::GeoJSON;
 
