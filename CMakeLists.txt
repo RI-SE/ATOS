@@ -28,7 +28,6 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 
 # Enable or disable modules
-set(WITH_SCENARIO_CONTROL ON CACHE BOOL "Enable ScenarioControl module")
 set(WITH_SUPERVISION OFF CACHE BOOL "Enable Supervision module")
 set(WITH_VISUALIZATION OFF CACHE BOOL "Enable Visualization module")
 set(WITH_OBJECT_CONTROL ON CACHE BOOL "Enable ObjectControl module")
@@ -46,9 +45,6 @@ set(WITH_MQTT_BRIDGE ON CACHE BOOL "Enable MQTTBridge module")
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
 # Create list of all enabled modules
-if(WITH_SCENARIO_CONTROL)
-        list(APPEND ENABLED_MODULES ScenarioControl)
-endif()
 if(WITH_SUPERVISION)
         list(APPEND ENABLED_MODULES Supervision)
 endif()
