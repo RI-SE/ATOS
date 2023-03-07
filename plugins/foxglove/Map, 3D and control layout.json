@@ -1,32 +1,8 @@
 {
   "configById": {
-    "map!2s6yzns": {
-      "center": {
-        "lat": 57.777516739360564,
-        "lon": 12.78165936470032
-      },
-      "customTileUrl": "http://10.113.148.2/tiles/asta-1/{z}/{x}/{y}.png",
-      "disabledTopics": [
-        "/atos/object_1/object_monitor"
-      ],
-      "followTopic": "",
-      "layer": "custom",
-      "topicColors": {
-        "/atos/object_1/gnss_fix": "#4d87ff",
-        "/atos/object_1/gnss_path": "#4d87ff",
-        "/atos/object_2/gnss_fix": "#ffffff",
-        "/atos/object_2/gnss_path": "#ffffff",
-        "/atos/object_3/gnss_fix": "#b2883f",
-        "/atos/object_3/gnss_path": "#b2883f",
-        "/atos/object_4/gnss_fix": "#ff0000",
-        "/atos/object_4/gnss_path": "#ff0000",
-        "/atos/object_5/gnss_fix": "#6ae34f",
-        "/atos/object_5/gnss_path": "#6ae34f",
-        "/atos/object_6/gnss_fix": "#e3d34f",
-        "/atos/object_6/gnss_path": "#e3d34f"
-      },
-      "zoomLevel": 19,
-      "foxglovePanelTitle": "AstaZero"
+    "atos_simple_control.Simple Control!494eifz": {
+      "atosHostname": "localhost",
+      "atosPort": "3000"
     },
     "3D!2yjwohu": {
       "cameraState": {
@@ -129,28 +105,37 @@
           "visible": true,
           "type": "arrow",
           "color": "#fffd6b"
-        },
-        "/goal_pose": {
-          "visible": true
-        },
-        "/initialpose": {
-          "visible": true
-        },
-        "/move_base_simple/goal": {
-          "visible": true,
-          "type": "arrow"
         }
       },
-      "layers": {},
-      "publish": {
-        "type": "point",
-        "poseTopic": "/move_base_simple/goal",
-        "pointTopic": "/clicked_point",
-        "poseEstimateTopic": "/initialpose",
-        "poseEstimateXDeviation": 0.5,
-        "poseEstimateYDeviation": 0.5,
-        "poseEstimateThetaDeviation": 0.26179939
-      }
+      "layers": {}
+    },
+    "map!2s6yzns": {
+      "center": {
+        "lat": 57.77751745444859,
+        "lon": 12.78165936470032
+      },
+      "customTileUrl": "http://10.113.148.2/tiles/asta-1/{z}/{x}/{y}.png",
+      "disabledTopics": [
+        "/atos/object_1/object_monitor"
+      ],
+      "followTopic": "",
+      "layer": "custom",
+      "topicColors": {
+        "/atos/object_1/gnss_fix": "#4d87ff",
+        "/atos/object_1/gnss_path": "#4d87ff",
+        "/atos/object_2/gnss_fix": "#ffffff",
+        "/atos/object_2/gnss_path": "#ffffff",
+        "/atos/object_3/gnss_fix": "#b2883f",
+        "/atos/object_3/gnss_path": "#b2883f",
+        "/atos/object_4/gnss_fix": "#ff0000",
+        "/atos/object_4/gnss_path": "#ff0000",
+        "/atos/object_5/gnss_fix": "#6ae34f",
+        "/atos/object_5/gnss_path": "#6ae34f",
+        "/atos/object_6/gnss_fix": "#e3d34f",
+        "/atos/object_6/gnss_path": "#e3d34f"
+      },
+      "zoomLevel": 19,
+      "foxglovePanelTitle": "AstaZero"
     }
   },
   "globalVariables": {
@@ -161,7 +146,12 @@
     "speed": 1
   },
   "layout": {
-    "first": "map!2s6yzns",
+    "first": {
+      "first": "atos_simple_control.Simple Control!494eifz",
+      "second": "map!2s6yzns",
+      "direction": "column",
+      "splitPercentage": 33.04061470911087
+    },
     "second": "3D!2yjwohu",
     "direction": "row"
   }
