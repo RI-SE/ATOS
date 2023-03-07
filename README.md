@@ -52,7 +52,7 @@ sudo ldconfig
 
 ### <a name="atos-interfaces"></a> Installing atos-interfaces
 ```
-git clone https://github.com/RI-SE/atos_interfaces
+git submodule update --init
 ```
 
 ### <a name="esmini"></a> Installing esmini
@@ -113,7 +113,7 @@ mkdir -p ~/atos_ws/src
 Create symlinks to atos and atos_interfaces
 ```
 ln -s path/to/ATOS ~/atos_ws/src/atos
-ln -s path/to/atos-interfaces ~/atos_ws/src/atos_interfaces
+ln -s path/to/ATOS/atos_interfaces ~/atos_ws/src/atos_interfaces
 ```
 
 Change directory into the workspace and build
