@@ -11,7 +11,11 @@
 #include "trajectory.hpp"
 #include "objectconfig.hpp"
 #include "osi_handler.hpp"
-#include "roschannel.hpp"
+#include "roschannels/controlsignalchannel.hpp"
+#include "roschannels/navsatfixchannel.hpp"
+#include "roschannels/pathchannel.hpp"
+#include "roschannels/monitorchannel.hpp"
+
 #include "loggable.hpp"
 
 using atos_interfaces::msg::ControlSignalPercentage;

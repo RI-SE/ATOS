@@ -12,11 +12,7 @@ def validate_certs(atos_dir):
     cert = certs_dir / Path("selfsigned.crt")
     key = certs_dir / Path("selfsigned.key")
     if not os.path.exists(cert) or not os.path.exists(key):
-        cert_gen(commonName="ATOS", emailAddress="info@astazero.com"
-        ,countryName="SE", localityName="Gothenburg", stateOrProvinceName="Gothenburg"
-        ,organizationName="AstaZero", organizationUnitName="ATOS", serialNumber=0
-        ,validityStartInSeconds=0, validityEndInSeconds=10*365*24*60*60,
-        KEY_FILE = key, CERT_FILE=cert)
+        cert_gen(KEY_FILE = key, CERT_FILE=cert)
     return [cert, key]
 
 def validate_params():

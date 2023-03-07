@@ -14,7 +14,6 @@ The ATOS server is a communication hub for all test objects. The server monitors
   - [ Dependencies \& external libraries](#-dependencies--external-libraries)
     - [ Installing OpenSimulationInterface v3.4.0](#-installing-opensimulationinterface-v340)
     - [ Installing atos-interfaces](#-installing-atos-interfaces)
-    - [ Installing ad-xolib](#-installing-ad-xolib)
     - [ Installing esmini](#-installing-esmini)
   - [ Installing ROS2 and building for the first time with colcon](#-installing-ros2-and-building-for-the-first-time-with-colcon)
     - [ Ubuntu 20.04](#-ubuntu-2004)
@@ -35,7 +34,6 @@ sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev 
 Then, the following external libraries need to be installed:
 - [OpenSimulationInterface v3.4.0](https://github.com/OpenSimulationInterface/open-simulation-interface)
 - [atos-interfaces](https://github.com/RI-SE/atos-interfaces)
-- [ad-xolib](https://github.com/javedulu/ad-xolib)
 - [esmini](https://github.com/esmini/esmini)
 
 ### <a name="osi"></a> Installing OpenSimulationInterface v3.4.0
@@ -54,19 +52,7 @@ sudo ldconfig
 
 ### <a name="atos-interfaces"></a> Installing atos-interfaces
 ```
-git clone https://github.com/RI-SE/atos_interfaces
-```
-
-
-### <a name="ad-xolib"></a> Installing ad-xolib
-```
-git clone https://github.com/javedulu/ad-xolib.git
-cd ad-xolib
-git submodule update --init --recursive
-mkdir build && cd build
-cmake .. -DBUILD_EMBED_TARGETS=OFF && make
-sudo make install
-sudo ldconfig
+git submodule update --init
 ```
 
 ### <a name="esmini"></a> Installing esmini
@@ -127,7 +113,7 @@ mkdir -p ~/atos_ws/src
 Create symlinks to atos and atos_interfaces
 ```
 ln -s path/to/ATOS ~/atos_ws/src/atos
-ln -s path/to/atos-interfaces ~/atos_ws/src/atos_interfaces
+ln -s path/to/ATOS/atos_interfaces ~/atos_ws/src/atos_interfaces
 ```
 
 Change directory into the workspace and build

@@ -81,7 +81,6 @@ int main(int argc, char const* argv[]) {
 	bool sendOsemOnConnection = false;
 
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
-	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
 	// Set up signal handlers
 	if (signal(SIGINT, signalHandler) == SIG_ERR)
 		util_error("Unable to initialize signal handler");

@@ -55,10 +55,8 @@ stopPub(*this),
 abortPub(*this),
 allClearPub(*this),
 backToStartPub(*this),
-dataDictionaryPub(*this),
 remoteControlEnablePub(*this),
 remoteControlDisablePub(*this),
-enableObjectPub(*this),
 exitPub(*this),
 getStatusPub(*this),
 failureSub(*this, std::bind(&SystemControl::onFailureMessage, this, _1)),
@@ -135,7 +133,6 @@ bool SystemControl::shouldExit(){
 }
 
 void SystemControl::initialize(){
-	RCLCPP_INFO(get_logger(), "System control task running with PID: %i", getpid());
 
 	if (requestDataDictInitialization()) {
 		// Map state and object data into memory
@@ -189,9 +186,6 @@ void SystemControl::receiveUserCommand()
 		if (ClientSocket <= 0) {
 			if (SystemControlState == SERVER_STATE_UNDEFINED) {
 				//Do some initialization
-
-				//Send COMM_DATA_DICT to notify to update data from DataDictionary
-				this->dataDictionaryPub.publish(DataDictionary::message_type());
 				SystemControlState = SERVER_STATE_INITIALIZED;
 			}
 
@@ -519,8 +513,6 @@ void SystemControl::processUserCommand()
 			SystemControlSetServerParameter(SystemControlArgument[0], SystemControlArgument[1], 1);
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:",
 												ControlResponseBuffer, 0, &ClientSocket, 0);
-			//Send COMM_DATA_DICT to notify to update data from DataDictionary
-			this->dataDictionaryPub.publish(DataDictionary::message_type());
 		}
 		else {
 			RCLCPP_ERROR(get_logger(), "Wrong parameter count in SetServerParameter(Name, Value)!");
@@ -995,43 +987,6 @@ void SystemControl::processUserCommand()
 		}
 		SystemControlCommand = Idle_0;
 		SystemControlSendControlResponse(responseCode, "RemoteControlManoeuvre:",
-											ControlResponseBuffer, 0, &ClientSocket, 0);
-		break;
-	case SetObjectEnableStatus_2:
-		if (CurrentInputArgCount == CommandArgCount) {
-			if (SystemControlState == SERVER_STATE_IDLE && objectControlState != OBC_STATE_RUNNING) {
-				auto msg = EnableObject::message_type();
-				if (inet_pton(AF_INET, SystemControlArgument[0], &(msg.object_ip)) != -1) {
-					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
-					switch (atoi(SystemControlArgument[1])) {
-					case OBJECT_ENABLED:
-						msg.enabled = OBJECT_ENABLED;
-						break;
-					case OBJECT_DISABLED:
-						msg.enabled = OBJECT_DISABLED;
-						break;
-					default:
-						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
-					}
-					if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
-						this->enableObjectPub.publish(msg);
-						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
-					}
-				}
-				else {
-					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
-				}
-			}
-			else {
-				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
-			}
-		}
-		else {
-			RCLCPP_WARN(get_logger(), "SetObjectEnableStatus command parameter count error");
-			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
-		}
-		SystemControlCommand = Idle_0;
-		SystemControlSendControlResponse(responseCode, "SetObjectEnableStatus:",
 											ControlResponseBuffer, 0, &ClientSocket, 0);
 		break;
 	case GetObjectEnableStatus_1:
