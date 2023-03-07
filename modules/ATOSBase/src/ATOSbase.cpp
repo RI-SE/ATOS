@@ -27,9 +27,6 @@ ATOSBase::ATOSBase()
 	if (UtilVerifyTestDirectory(installationPath.c_str()) == -1) {
         throw std::runtime_error("Failed to verify test directory");
   	}
-
-
-	RCLCPP_INFO(get_logger(), "%s task running with PID: %d", get_name(), getpid());
 	initDataDictionaryService = create_service<SetBool>(ServiceNames::initDataDict,
 		std::bind(&ATOSBase::onInitDataDictionary, this, _1, _2));
 	getObjectIdsService = create_service<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds,

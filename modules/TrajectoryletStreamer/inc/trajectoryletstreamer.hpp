@@ -11,7 +11,7 @@
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "module.hpp"
 #include "objectconfig.hpp"
-#include "roschannel.hpp"
+#include "roschannels/commandchannels.hpp"
 #include "trajectory.hpp"
 #include "trajectorypublisher.hpp"
 

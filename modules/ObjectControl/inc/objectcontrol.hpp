@@ -14,6 +14,11 @@
 #include "state.hpp"
 #include "testobject.hpp"
 #include "objectlistener.hpp"
+#include "roschannels/commandchannels.hpp"
+#include "roschannels/monitorchannel.hpp"
+#include "roschannels/remotecontrolchannels.hpp"
+#include "roschannels/pathchannel.hpp"
+#include "roschannels/controlsignalchannel.hpp"
 #include "atos_interfaces/srv/get_object_ids.hpp"
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "atos_interfaces/srv/get_object_ip.hpp"
@@ -201,12 +206,10 @@ private:
 	void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) override;
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
-	void onACCMMessage(const ROSChannels::ActionConfiguration::message_type::SharedPtr) override;
-	void onEXACMessage(const ROSChannels::ExecuteAction::message_type::SharedPtr) override;
-	void onRemoteControlEnableMessage(const ROSChannels::RemoteControlEnable::message_type::SharedPtr) override;
-	void onRemoteControlDisableMessage(const ROSChannels::RemoteControlDisable::message_type::SharedPtr) override;
-	void onControlSignalMessage(const ROSChannels::ControlSignal::message_type::SharedPtr) override;
-	void onPathMessage(const ROSChannels::Path::message_type::SharedPtr,const uint32_t) override;
+	void onRemoteControlEnableMessage(const ROSChannels::RemoteControlEnable::message_type::SharedPtr);
+	void onRemoteControlDisableMessage(const ROSChannels::RemoteControlDisable::message_type::SharedPtr);
+	void onControlSignalMessage(const ROSChannels::ControlSignal::message_type::SharedPtr);
+	void onPathMessage(const ROSChannels::Path::message_type::SharedPtr,const uint32_t);
 	void onRequestState(const std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Request>,
 							 std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Response>);
 
@@ -234,8 +237,6 @@ private:
 	ROSChannels::AllClear::Sub scnAllClearSub;	//!< Subscriber to scenario all clear requests
 	ROSChannels::Connect::Sub scnConnectSub;	//!< Subscriber to scenario connect requests
 	ROSChannels::Disconnect::Sub scnDisconnectSub;	//!< Subscriber to scenario disconnect requests
-	ROSChannels::ExecuteAction::Sub scnActionSub;		//!< Subscriber to scenario action requests
-	ROSChannels::ActionConfiguration::Sub scnActionConfigSub;	//!< Subscriber to scenario action configuration requests
 	ROSChannels::RemoteControlEnable::Sub scnRemoteControlEnableSub;		//!< Subscriber to remote control enable requests
 	ROSChannels::RemoteControlDisable::Sub scnRemoteControlDisableSub;	//!< Subscriber to remote control disable requests
 	ROSChannels::GetStatus::Sub getStatusSub;				//!< Subscriber to scenario get status requests

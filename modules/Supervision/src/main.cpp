@@ -60,7 +60,6 @@ int main() {
     struct timeval nextSHMEMreadTime = { 0, 0 };
 
     LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
-    LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
 
     // Set up signal handlers
     if (signal(SIGINT, signalHandler) == SIG_ERR)

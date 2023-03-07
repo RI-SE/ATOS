@@ -9,7 +9,6 @@
 #include "testobject.hpp"
 #include "state.hpp"
 #include "loggable.hpp"
-#include "roschannel.hpp"
 #include <thread>
 
 class ObjectControl;

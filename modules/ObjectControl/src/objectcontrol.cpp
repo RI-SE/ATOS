@@ -38,8 +38,6 @@ ObjectControl::ObjectControl()
 	scnAllClearSub(*this, std::bind(&ObjectControl::onAllClearMessage, this, _1)),
 	scnConnectSub(*this, std::bind(&ObjectControl::onConnectMessage, this, _1)),
 	scnDisconnectSub(*this, std::bind(&ObjectControl::onDisconnectMessage, this, _1)),
-	scnActionSub(*this, std::bind(&ObjectControl::onEXACMessage, this, _1)),
-	scnActionConfigSub(*this, std::bind(&ObjectControl::onACCMMessage, this, _1)),
 	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, _1)),
 	scnRemoteControlEnableSub(*this, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1)),
 	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
@@ -68,9 +66,6 @@ ObjectControl::~ObjectControl() {
 
 int ObjectControl::initialize() {
 	int retval = 0;
-
-	// Initialize log
-	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",get_name(), getpid());
 
 	// Create test journal
 	if (JournalInit(get_name(), get_logger()) == -1) {
@@ -207,34 +202,6 @@ void ObjectControl::onAllClearMessage(const AllClear::message_type::SharedPtr){
 	auto f_try = [&]() { this->state->allClearRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, AllClear::topicName, get_logger());
-}
-
-void ObjectControl::onACCMMessage(const ActionConfiguration::message_type::SharedPtr accm){
-	COMMAND cmd = COMM_ACCM;
-	auto f_try = [&]() {
-		if (accm->action_type == ACTION_TEST_SCENARIO_COMMAND) {
-			ObjectControl::TestScenarioCommandAction cmdAction;
-			cmdAction.command = static_cast<ActionTypeParameter_t>(accm->action_type_parameter1);
-			cmdAction.actionID = accm->action_id;
-			cmdAction.objectID = getVehicleIDByIP(accm->ip);
-			handleActionConfigurationCommand(cmdAction);
-		}
-	};
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, ActionConfiguration::topicName, get_logger());
-}
-
-void ObjectControl::onEXACMessage(const ExecuteAction::message_type::SharedPtr exac){
-	COMMAND cmd = COMM_EXAC;
-	auto f_try = [&]() {
-		using namespace std::chrono;
-		quartermilliseconds qmsow(exac->executiontime_qmsow);
-		auto now = to_timeval(system_clock::now().time_since_epoch());
-		auto startOfWeek = system_clock::time_point(weeks(TimeGetAsGPSweek(&now)));
-		handleExecuteActionCommand(exac->action_id, startOfWeek+qmsow);	
-	};
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, ExecuteAction::topicName, get_logger());
 }
 
 void ObjectControl::onRemoteControlEnableMessage(const RemoteControlEnable::message_type::SharedPtr){

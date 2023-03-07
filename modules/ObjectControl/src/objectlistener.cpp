@@ -5,17 +5,17 @@
  */
 #include "objectlistener.hpp"
 #include "objectcontrol.hpp"
-#include "datadictionary.h"
 #include "atosTime.h"
 #include "iso22133.h"
 #include "journal.hpp"
-#include "atos_interfaces/msg/monitor.hpp"
 #include <eigen3/Eigen/Dense>
 #include <csignal>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <iostream>
+#include "roschannels/monitorchannel.hpp"
+#include "roschannels/navsatfixchannel.hpp"
 #include "util/coordinateutils.hpp"// xyz2llh
 
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
