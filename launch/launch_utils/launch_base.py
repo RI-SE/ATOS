@@ -1,18 +1,18 @@
 # Don't launch this file directly, rather use the launch files one level up instead
 import os
 from launch_ros.actions import Node
+from .validate_files import validate_files
 
 def get_base_nodes():
-    atos_dir = os.path.join(os.path.expanduser('~'), '.astazero', 'ATOS')
-    params = os.path.join(atos_dir, 'conf', 'params.yaml')
 
+    files = validate_files()
     return [
         Node(
             package='atos',
             namespace='atos',
             executable='atos_base',
             name='atos_base',
-            parameters=[params]
+            parameters=[files["params"]]
         ),
         Node(
             package='rosbridge_server',
@@ -21,6 +21,8 @@ def get_base_nodes():
             parameters=[
                 {"port": 9090},
                 {"retry_startup_delay": 5.0},
+                {"certfile": str(files["cert"])},
+                {"keyfile": str(files["key"])},
                 {"fragment_timeout": 600},
                 {"max_message_size": 10000000},
                 {"unregister_timeout": 10.0},
@@ -42,7 +44,7 @@ def get_base_nodes():
             namespace='atos',
             executable='object_control',
             name='object_control',
-            parameters=[params]
+            parameters=[files["params"]]
             # ,prefix="xterm -e gdb --args" #Useful for debugging
         ),
         Node(
@@ -56,14 +58,14 @@ def get_base_nodes():
             namespace='atos',
             executable='osi_adapter',
             name='osi_adapter',
-            parameters=[params]
+            parameters=[files["params"]]
         ),
         Node(
             package='atos',
             namespace='atos',
             executable='esmini_adapter',
             name='esmini_adapter',
-            parameters=[params]
+            parameters=[files["params"]]
         ),
         Node(
             package='atos',
@@ -71,7 +73,7 @@ def get_base_nodes():
             executable='mqtt_bridge',
             name='mqtt_bridge',
             # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
-            parameters=[params],
+            parameters=[files["params"]],
             # arguments=['--ros-args', '--log-level', "debug"] # To get RCL_DEBUG prints
         ),
     ]
