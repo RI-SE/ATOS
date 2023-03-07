@@ -69,7 +69,15 @@ function sendAllClear(){
 
 // Websocket callbacks and reconnect functionality
 var wsConnect = function(){
-    ws = new WebSocket('wss://' + window.location.hostname + ':8082');
+
+    // Depending on the connection type, open different websockets.
+    const currentUrl = new URL(window.location.href);
+    if (currentUrl.protocol == "https:"){
+        ws = new WebSocket('wss://' + currentUrl.hostname + ':8082');
+    }
+    else{
+        ws = new WebSocket('ws://' + currentUrl.hostname + ':8081');
+    }
     ws.addEventListener('open', function (event) {
         console.log("Connection opened");
         setTextAndColor("isConnected", "green", "Connected to ATOS");
