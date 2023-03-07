@@ -118,8 +118,24 @@ rclnodejs.init().then(() => {
     }
   }
 
+  function wsInit(wss){
+    // Wire up some logic for the connection event (when a client connects) 
+    wss.on('connection', function connection(ws) {
 
-  // Set up TLS, create server
+      // Wire up logic for the message event (when a client sends something)
+      ws.on('message', function incoming(message) {
+        var clientCommand = JSON.parse(message).msg_type;
+        executeCommand(clientCommand,ws);
+      });
+    });
+  };
+
+
+  // Set up a websocket server
+  const ws = new WebSocket.Server({ port: 8081 });
+
+
+  // Set up TLS, create secure websocket server
   const homeDir = os.homedir();
   
   const httpsServer = https.createServer({
@@ -130,22 +146,12 @@ rclnodejs.init().then(() => {
   httpsServer.listen(8082);
 
   // Start the secure websocket server
-  const wss = new WebSocket.Server({
+  const wsSecure = new WebSocket.Server({
       perMessageDeflate: false,
       server: httpsServer,
   })
 
-  // Wire up some logic for the connection event (when a client connects) 
-  wss.on('connection', function connection(ws) {
-
-    // Wire up logic for the message event (when a client sends something)
-    ws.on('message', function incoming(message) {
-      var clientCommand = JSON.parse(message).msg_type;
-      executeCommand(clientCommand,ws);
-    });
-
-  });
+  wsInit(ws); // start the insecure websocket server
+  wsInit(wsSecure); // start the secure websocket server
+  
 });
-
-
-
