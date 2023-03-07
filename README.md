@@ -1,7 +1,7 @@
 # ATOS 
 <img align="left" width="100" height="100" src="./doc/ATOS_icon.svg">
 
-The ATOS server is a communication hub for all test objects. The server monitors and controls the test objects and is also responsible for creating logfiles. To build ATOS follow the guide below.
+ATOS, the communication hub for all test objects, controls and monitors iso22133-compliant vehicles and equipment. To build ATOS follow the guide below.
 
 <br />
 <br />
@@ -10,6 +10,7 @@ The ATOS server is a communication hub for all test objects. The server monitors
 # Table of contents
 - [ATOS](#atos)
 - [Table of contents](#table-of-contents)
+- [ Using ATOS with a Graphical User Interface (GUI)](#-using-atos-with-a-graphical-user-interface-gui)
 - [ Building ATOS with colcon](#-building-atos-with-colcon)
   - [ Dependencies \& external libraries](#-dependencies--external-libraries)
     - [ Installing OpenSimulationInterface v3.4.0](#-installing-opensimulationinterface-v340)
@@ -19,6 +20,9 @@ The ATOS server is a communication hub for all test objects. The server monitors
     - [ Ubuntu 20.04](#-ubuntu-2004)
 - [ Optional builds \& installations](#-optional-builds--installations)
   - [ How to build with RelativeKinematics instead of ObjectControl](#-how-to-build-with-relativekinematics-instead-of-objectcontrol)
+
+# <a name="usage"></a> Using ATOS with a Graphical User Interface (GUI)
+Please click [here](https://github.com/RI-SE/atos/tree/dev/gui/simplecontrol/README.md) for instructions on how to use ATOS with a GUI.
 
 # <a name="ATOS"></a> Building ATOS with colcon
 Below are the steps for building ATOS for the first time with colcon.
