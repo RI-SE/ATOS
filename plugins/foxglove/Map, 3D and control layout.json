@@ -105,16 +105,6 @@
           "visible": true,
           "type": "arrow",
           "color": "#fffd6b"
-        },
-        "/goal_pose": {
-          "visible": true
-        },
-        "/initialpose": {
-          "visible": true
-        },
-        "/move_base_simple/goal": {
-          "visible": true,
-          "type": "arrow"
         }
       },
       "layers": {},
