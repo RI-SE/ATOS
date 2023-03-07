@@ -45,12 +45,6 @@ def get_base_nodes():
         Node(
             package='atos',
             namespace='atos',
-            executable='system_control',
-            name='system_control'
-        ),
-        Node(
-            package='atos',
-            namespace='atos',
             executable='object_control',
             name='object_control',
             parameters=[files["params"]]
