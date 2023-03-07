@@ -36,8 +36,6 @@ const int64_t TimeControl::getQueueEmptyPollPeriod() const {
 
 void TimeControl::initialize(TimeType * GPSTime, GSDType * GSD)
 {
-	RCLCPP_INFO(get_logger(), "Time control task running with PID: %i", getpid());
-
 	if (JournalInit(module_name.c_str(), get_logger())) {
 		util_error("Unable to open journal");
 	}
