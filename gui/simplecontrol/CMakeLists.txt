@@ -1,0 +1,12 @@
+
+project(atos_gui)
+
+add_custom_target(${PROJECT_NAME} ALL)
+add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
+	COMMAND	${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+)
+add_custom_command(TARGET ${PROJECT_NAME}
+	COMMAND npm install
+	COMMAND npm rebuild
+)
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
