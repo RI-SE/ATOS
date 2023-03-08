@@ -8,7 +8,6 @@ from scenariogeneration import xosc
 MONDEO_ID = "1"
 UFO_ID = "2"
 CARRIER_ID = "3"
-VIRTUAL_ID = "4"
 CAMERA_DRONE_ID = "5"
 MARKER_DRONE_ID = "6"
 
@@ -19,7 +18,6 @@ CONTROLLER_CATALOG_NAME = "ControllerCatalog"
 MONDEO_CATALOG_NAME = "mondeo"
 UFO_CATALOG_NAME = "humanetics"
 CARRIER_CATALOG_NAME = "flexible_target_carrier"
-VIRTUAL_CATALOG_NAME = "virtual_object"
 CAMERA_DRONE_CATALOG_NAME = "camera_drone"
 MARKER_DRONE_CATALOG_NAME = "marker_drone"
 
@@ -37,9 +35,8 @@ mondeo_starting_point = xosc.LanePosition(15, 0, -1, 2)
 mondeo_trigger_positions = {
 	UFO_ID: xosc.LanePosition(35.0, 0, -1, 2),
 	CARRIER_ID: xosc.LanePosition(50.0, 0, -1, 2),
-	VIRTUAL_ID: xosc.LanePosition(60.0, 0, -1, 2),
 	CAMERA_DRONE_ID: xosc.LanePosition(28.0, 0, -1, 2),
-	MARKER_DRONE_ID: xosc.LanePosition(60.0, 0, -1, 2)
+	MARKER_DRONE_ID: xosc.LanePosition(50.0, 0, -1, 2)
 }
 mondeo_slow_down_position = xosc.LanePosition(66.55, 0, -1, 2)
 mondeo_accelerate_position = xosc.LanePosition(55.31, 0, 1, 0)
@@ -60,13 +57,6 @@ carrier_starting_point = xosc.LanePosition(25.0, 0, -1, 0)
 carrier_brake_position = xosc.LanePosition(10.0, 0, -1, 1)
 carrier_limit_position = xosc.LanePosition(95.0, 0, -1, 1)
 
-virtual_speed = 30 / 3.6 # m/s
-virtual_acceleration = 3.53 # m/s^2
-virtual_retardation = 10.32 # m/s^2
-virtual_starting_point = xosc.LanePosition(5.0, 0, 1, 0)
-virtual_brake_position = xosc.LanePosition(50.0, 0, 1, 0)
-virtual_limit_position = xosc.LanePosition(95.0, 0, 1, 1)
-
 camera_drone_speed = 25 / 3.6 # m/s
 camera_drone_acceleration = 1.76 # m/s^2
 camera_drone_retardation = 1.96 # m/s^2
@@ -74,12 +64,12 @@ camera_drone_starting_point = xosc.LanePosition(15, 0, 1, 2)
 camera_drone_brake_position = xosc.LanePosition(35, 0, -1, 0)
 camera_drone_limit_position = xosc.LanePosition(0.5, 0, -1, 0)
 
-marker_drone_speed = virtual_speed # m/s
-marker_drone_acceleration = virtual_acceleration # m/s^2
-marker_drone_retardation = virtual_retardation # m/s^2
-marker_drone_starting_point = virtual_starting_point
-marker_drone_brake_position = virtual_brake_position
-marker_drone_limit_position = virtual_limit_position
+marker_drone_speed = carrier_speed # m/s
+marker_drone_acceleration = carrier_acceleration # m/s^2
+marker_drone_retardation = carrier_retardation # m/s^2
+marker_drone_starting_point = carrier_starting_point
+marker_drone_brake_position = carrier_brake_position
+marker_drone_limit_position = carrier_limit_position
 
 denm_trigger_speed = 20 / 3.6 # m/s
 
@@ -104,9 +94,6 @@ ufo_maneuver_group.add_actor(UFO_ID)
 carrier_maneuver_group = xosc.ManeuverGroup(CARRIER_ID + ",maneuver_group")
 carrier_maneuver = xosc.Maneuver(CARRIER_ID + ",maneuver")
 carrier_maneuver_group.add_actor(CARRIER_ID)
-virtual_maneuver_group = xosc.ManeuverGroup(VIRTUAL_ID + ",maneuver_group")
-virtual_maneuver = xosc.Maneuver(VIRTUAL_ID + ",maneuver")
-virtual_maneuver_group.add_actor(VIRTUAL_ID)
 camera_drone_maneuver_group = xosc.ManeuverGroup(CAMERA_DRONE_ID + ",maneuver_group")
 camera_drone_maneuver = xosc.Maneuver(CAMERA_DRONE_ID + ",maneuver")
 camera_drone_maneuver_group.add_actor(CAMERA_DRONE_ID)
@@ -124,9 +111,6 @@ osc_entities.add_scenario_object(UFO_ID,
 	xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"))
 osc_entities.add_scenario_object(CARRIER_ID,
 	xosc.CatalogReference(CATALOG_NAME, CARRIER_CATALOG_NAME),
-	xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"))
-osc_entities.add_scenario_object(VIRTUAL_ID,
-	xosc.CatalogReference(CATALOG_NAME, VIRTUAL_CATALOG_NAME),
 	xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"))
 osc_entities.add_scenario_object(CAMERA_DRONE_ID,
 	xosc.CatalogReference(CATALOG_NAME, CAMERA_DRONE_CATALOG_NAME),
@@ -146,7 +130,6 @@ mondeo_set_speed = xosc.AbsoluteSpeedAction(
 )
 ufo_start_teleport = xosc.TeleportAction(ufo_starting_point)
 carrier_start_teleport = xosc.TeleportAction(carrier_starting_point)
-virtual_start_teleport = xosc.TeleportAction(virtual_starting_point)
 camera_drone_start_teleport = xosc.TeleportAction(camera_drone_starting_point)
 marker_drone_start_teleport = xosc.TeleportAction(marker_drone_starting_point)
 
@@ -154,7 +137,6 @@ init.add_init_action(MONDEO_ID, mondeo_start_teleport)
 init.add_init_action(MONDEO_ID, mondeo_set_speed)
 init.add_init_action(UFO_ID, ufo_start_teleport)
 init.add_init_action(CARRIER_ID, carrier_start_teleport)
-init.add_init_action(VIRTUAL_ID, virtual_start_teleport)
 init.add_init_action(CAMERA_DRONE_ID, camera_drone_start_teleport)
 init.add_init_action(MARKER_DRONE_ID, marker_drone_start_teleport)
 
@@ -395,58 +377,6 @@ carrier_brake_event.add_action(CARRIER_ID + ",brake_to_stop", carrier_brake)
 carrier_maneuver.add_event(carrier_brake_event)
 
 
-# Virtual movement profile:
-# accelerate to top speed,
-# follow a trajectory,
-# then decelerate to a stop
-times = []
-positions = [
-    virtual_starting_point,
-    virtual_brake_position,
-    virtual_limit_position
-]
-polyline = xosc.Polyline(times, positions)
-virtual_trajectory = xosc.Trajectory(VIRTUAL_ID + ",start_follow_trajectory", closed=False)
-virtual_trajectory.add_shape(polyline)
-virtual_follow_trajectory = xosc.FollowTrajectoryAction(
-	virtual_trajectory,
-	xosc.FollowingMode.position,
-	xosc.ReferenceContext.relative,
-	1,
-	0
-)
-virtual_set_speed = xosc.AbsoluteSpeedAction(
-	virtual_speed,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		virtual_acceleration
-	),
-)
-virtual_brake = xosc.AbsoluteSpeedAction(
-	0,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		-virtual_retardation
-	),
-)
-virtual_reach_stop_position = xosc.EntityTrigger(
-	name=VIRTUAL_ID + ",reach_stop_position",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(virtual_brake_position, 1),
-	triggerentity=VIRTUAL_ID
-)
-virtual_brake_event = xosc.Event(
-	VIRTUAL_ID + ",brake_event",
-	xosc.Priority.parallel
-)
-virtual_brake_event.add_trigger(virtual_reach_stop_position)
-virtual_brake_event.add_action(VIRTUAL_ID + ",brake_to_stop", virtual_brake)
-virtual_maneuver.add_event(virtual_brake_event)
-
-
 # Camera drone movement profile:
 # accelerate to top speed,
 # follow a trajectory,
@@ -522,7 +452,7 @@ camera_drone_maneuver.add_event(camera_drone_brake_event)
 # accelerate to top speed,
 # follow a trajectory,
 # then decelerate to a stop
-marker_drone_follow_trajectory = virtual_follow_trajectory
+marker_drone_follow_trajectory = carrier_follow_trajectory
 marker_drone_follow_trajectory.trajectory.name = MARKER_DRONE_ID + ",start_follow_trajectory"
 marker_drone_set_speed = xosc.AbsoluteSpeedAction(
 	marker_drone_speed,
@@ -594,25 +524,6 @@ carrier_move_event.add_action(CARRIER_ID + ",set_speed", carrier_set_speed)
 carrier_maneuver.add_event(carrier_move_event)
 
 
-# Mondeo triggers virtual
-mondeo_reached_virtual_trigger_position = xosc.EntityTrigger(
-	name=MONDEO_ID + ",reached_virtual_trigger_position",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(mondeo_trigger_positions[VIRTUAL_ID], 1),
-	triggerentity=MONDEO_ID
-)
-
-virtual_move_event = xosc.Event(
-	VIRTUAL_ID + ",start_move_event",
-	xosc.Priority.parallel
-)
-virtual_move_event.add_trigger(mondeo_reached_virtual_trigger_position)
-virtual_move_event.add_action(VIRTUAL_ID + ",start_follow_trajectory", virtual_follow_trajectory)
-virtual_move_event.add_action(VIRTUAL_ID + ",set_speed", virtual_set_speed)
-virtual_maneuver.add_event(virtual_move_event)
-
-
 # Mondeo triggers camera drone
 mondeo_reached_camera_drone_trigger_position = xosc.EntityTrigger(
 	name=MONDEO_ID + ",reached_camera_drone_trigger_position",
@@ -678,14 +589,12 @@ mondeo_maneuver.add_event(denm_osc_event)
 mondeo_maneuver_group.add_maneuver(mondeo_maneuver)
 ufo_maneuver_group.add_maneuver(ufo_maneuver)
 carrier_maneuver_group.add_maneuver(carrier_maneuver)
-virtual_maneuver_group.add_maneuver(virtual_maneuver)
 camera_drone_maneuver_group.add_maneuver(camera_drone_maneuver)
 marker_drone_maneuver_group.add_maneuver(marker_drone_maneuver)
 
 osc_act.add_maneuver_group(mondeo_maneuver_group)
 osc_act.add_maneuver_group(ufo_maneuver_group)
 osc_act.add_maneuver_group(carrier_maneuver_group)
-osc_act.add_maneuver_group(virtual_maneuver_group)
 osc_act.add_maneuver_group(camera_drone_maneuver_group)
 osc_act.add_maneuver_group(marker_drone_maneuver_group)
 
