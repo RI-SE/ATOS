@@ -49,9 +49,9 @@ mondeo_limit_position = xosc.LanePosition(0.5, 0, 1, 0)
 ufo_speed = 10 / 3.6 # m/s
 ufo_acceleration = 1.38 # m/s^2
 ufo_retardation = 1.83 # m/s^2
-ufo_starting_point = xosc.LanePosition(30.0, 1.5, 1, 1)
-ufo_brake_position = xosc.LanePosition(55.42, 1.5, 1, 0)
-ufo_limit_position = xosc.LanePosition(0.5, 1.5, 1, 0)
+ufo_starting_point = xosc.LanePosition(30.0, 2, 1, 1)
+ufo_brake_position = xosc.LanePosition(55.42, 2, 1, 0)
+ufo_limit_position = xosc.LanePosition(0.5, 2, 1, 0)
 
 carrier_speed = 15 / 3.6 # m/s
 carrier_acceleration = 1.12 # m/s^2
