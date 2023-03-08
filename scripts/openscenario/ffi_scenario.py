@@ -36,7 +36,7 @@ mondeo_trigger_positions = {
 	UFO_ID: xosc.LanePosition(35.0, 0, -1, 2),
 	CARRIER_ID: xosc.LanePosition(50.0, 0, -1, 2),
 	CAMERA_DRONE_ID: xosc.LanePosition(28.0, 0, -1, 2),
-	MARKER_DRONE_ID: xosc.LanePosition(50.0, 0, -1, 2)
+	MARKER_DRONE_ID: xosc.LanePosition(60.0, 0, -1, 2)
 }
 mondeo_slow_down_position = xosc.LanePosition(66.55, 0, -1, 2)
 mondeo_accelerate_position = xosc.LanePosition(55.31, 0, 1, 0)
@@ -377,83 +377,6 @@ carrier_brake_event.add_action(CARRIER_ID + ",brake_to_stop", carrier_brake)
 carrier_maneuver.add_event(carrier_brake_event)
 
 
-<<<<<<< HEAD
-=======
-# Virtual movement profile:
-# accelerate to top speed,
-# follow a trajectory,
-# then decelerate to a stop
-times = []
-positions = [
-    virtual_starting_point,
-    virtual_brake_position,
-    virtual_limit_position
-]
-polyline = xosc.Polyline(times, positions)
-virtual_trajectory = xosc.Trajectory(VIRTUAL_ID + ",start_follow_trajectory", closed=False)
-virtual_trajectory.add_shape(polyline)
-virtual_follow_trajectory = xosc.FollowTrajectoryAction(
-	virtual_trajectory,
-	xosc.FollowingMode.position,
-	xosc.ReferenceContext.relative,
-	1,
-	0
-)
-virtual_set_speed = xosc.AbsoluteSpeedAction(
-	virtual_speed,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		virtual_acceleration
-	),
-)
-virtual_brake = xosc.AbsoluteSpeedAction(
-	0,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		-virtual_retardation
-	),
-)
-virtual_reach_stop_position = xosc.EntityTrigger(
-	name=VIRTUAL_ID + ",reach_stop_position",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(virtual_brake_position, 1),
-	triggerentity=VIRTUAL_ID
-)
-virtual_brake_event = xosc.Event(
-	VIRTUAL_ID + ",brake_event",
-	xosc.Priority.parallel
-)
-virtual_brake_event.add_trigger(virtual_reach_stop_position)
-virtual_brake_event.add_action(VIRTUAL_ID + ",brake_to_stop", virtual_brake)
-virtual_maneuver.add_event(virtual_brake_event)
-
-# Virtual object triggers DENM warning
-
-### DENM Action ###
-virtual_high_speed_detected = xosc.EntityTrigger(
-	name=VIRTUAL_ID + ",high_speed_detected",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.SpeedCondition(denm_trigger_speed, xosc.Rule.greaterThan),
-	triggerentity=VIRTUAL_ID)
-
-virtual_denm_action = xosc.VisibilityAction(graphics=True, traffic=True, sensors=True)
-
-denm_osc_event = xosc.Event(
-	VIRTUAL_ID + ",high_speed_event",
-	xosc.Priority.parallel,
-)
-
-denm_osc_event.add_trigger(virtual_high_speed_detected)
-denm_osc_event.add_action(VIRTUAL_ID + ",send_denm",
-							virtual_denm_action)
-virtual_maneuver.add_event(denm_osc_event)
-
-
->>>>>>> feature_slowerCameraDrone
 # Camera drone movement profile:
 # accelerate to top speed,
 # follow a trajectory,
