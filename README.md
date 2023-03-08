@@ -32,7 +32,7 @@ Prerequisites: C/C++ compiler, CMake (minimum version 3.10.2)
 ## <a name="dependencies"></a> Dependencies & external libraries
 In order to build ATOS, dependencies and exernal libraries need to be installed. First install the necessary development packages:
 ```
-sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev ros-foxy-paho-mqtt-c nlohmann-json3-dev nodejs npm
+sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev ros-foxy-paho-mqtt-c nlohmann-json3-dev nodejs npm ros-foxy-foxglove-msgs ros-foxy-sensor-msgs
 ```
 
 Then, the following external libraries need to be installed:
