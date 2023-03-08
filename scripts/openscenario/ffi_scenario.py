@@ -36,7 +36,7 @@ mondeo_trigger_positions = {
 	UFO_ID: xosc.LanePosition(35.0, 0, -1, 2),
 	CARRIER_ID: xosc.LanePosition(50.0, 0, -1, 2),
 	CAMERA_DRONE_ID: xosc.LanePosition(28.0, 0, -1, 2),
-	MARKER_DRONE_ID: xosc.LanePosition(50.0, 0, -1, 2)
+	MARKER_DRONE_ID: xosc.LanePosition(60.0, 0, -1, 2)
 }
 mondeo_slow_down_position = xosc.LanePosition(66.55, 0, -1, 2)
 mondeo_accelerate_position = xosc.LanePosition(55.31, 0, 1, 0)
@@ -57,7 +57,7 @@ carrier_starting_point = xosc.LanePosition(25.0, 0, -1, 0)
 carrier_brake_position = xosc.LanePosition(10.0, 0, -1, 1)
 carrier_limit_position = xosc.LanePosition(95.0, 0, -1, 1)
 
-camera_drone_speed = 25 / 3.6 # m/s
+camera_drone_speed = 15 / 3.6 # m/s
 camera_drone_acceleration = 1.76 # m/s^2
 camera_drone_retardation = 1.96 # m/s^2
 camera_drone_starting_point = xosc.LanePosition(15, 0, 1, 2)
@@ -560,29 +560,6 @@ marker_drone_move_event.add_trigger(mondeo_reached_marker_drone_trigger_position
 marker_drone_move_event.add_action(MARKER_DRONE_ID + ",start_follow_trajectory", marker_drone_follow_trajectory)
 marker_drone_move_event.add_action(MARKER_DRONE_ID + ",set_speed", marker_drone_set_speed)
 marker_drone_maneuver.add_event(marker_drone_move_event)
-
-
-# Mondeo object triggers DENM warning
-
-### DENM Action ###
-mondeo_high_speed_detected = xosc.EntityTrigger(
-	name=MONDEO_ID + ",high_speed_detected",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.SpeedCondition(denm_trigger_speed, xosc.Rule.greaterThan),
-	triggerentity=MONDEO_ID)
-
-mondeo_denm_action = xosc.VisibilityAction(graphics=True, traffic=True, sensors=True)
-
-denm_osc_event = xosc.Event(
-	MONDEO_ID + ",high_speed_event",
-	xosc.Priority.parallel,
-)
-
-denm_osc_event.add_trigger(mondeo_high_speed_detected)
-denm_osc_event.add_action(MONDEO_ID + ",send_denm",
-							mondeo_denm_action)
-mondeo_maneuver.add_event(denm_osc_event)
 
 
 # Collect into a scenario and write to file

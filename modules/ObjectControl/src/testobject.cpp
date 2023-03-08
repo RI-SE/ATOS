@@ -349,7 +349,7 @@ void TestObject::sendSettings() {
 	objSettings.heabTimeout.tv_usec = 20000;
 	objSettings.heabTimeout.tv_sec = 0;
 
-	objSettings.rate.heab = 100;
+	objSettings.rate.heab = 10;
 	objSettings.rate.monr = 100;
 	objSettings.rate.monr2 = 1;
 
