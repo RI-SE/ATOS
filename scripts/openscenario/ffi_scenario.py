@@ -46,9 +46,9 @@ mondeo_limit_position = xosc.LanePosition(0.5, 0, 1, 0)
 ufo_speed = 10 / 3.6 # m/s
 ufo_acceleration = 1.38 # m/s^2
 ufo_retardation = 1.83 # m/s^2
-ufo_starting_point = xosc.LanePosition(30.0, 1.5, 1, 1)
-ufo_brake_position = xosc.LanePosition(55.42, 1.5, 1, 0)
-ufo_limit_position = xosc.LanePosition(0.5, 1.5, 1, 0)
+ufo_starting_point = xosc.LanePosition(30.0, 2, 1, 1)
+ufo_brake_position = xosc.LanePosition(55.42, 2, 1, 0)
+ufo_limit_position = xosc.LanePosition(0.5, 2, 1, 0)
 
 carrier_speed = 15 / 3.6 # m/s
 carrier_acceleration = 1.12 # m/s^2
@@ -57,7 +57,7 @@ carrier_starting_point = xosc.LanePosition(25.0, 0, -1, 0)
 carrier_brake_position = xosc.LanePosition(10.0, 0, -1, 1)
 carrier_limit_position = xosc.LanePosition(95.0, 0, -1, 1)
 
-camera_drone_speed = 25 / 3.6 # m/s
+camera_drone_speed = 15 / 3.6 # m/s
 camera_drone_acceleration = 1.76 # m/s^2
 camera_drone_retardation = 1.96 # m/s^2
 camera_drone_starting_point = xosc.LanePosition(15, 0, 1, 2)
@@ -377,6 +377,83 @@ carrier_brake_event.add_action(CARRIER_ID + ",brake_to_stop", carrier_brake)
 carrier_maneuver.add_event(carrier_brake_event)
 
 
+<<<<<<< HEAD
+=======
+# Virtual movement profile:
+# accelerate to top speed,
+# follow a trajectory,
+# then decelerate to a stop
+times = []
+positions = [
+    virtual_starting_point,
+    virtual_brake_position,
+    virtual_limit_position
+]
+polyline = xosc.Polyline(times, positions)
+virtual_trajectory = xosc.Trajectory(VIRTUAL_ID + ",start_follow_trajectory", closed=False)
+virtual_trajectory.add_shape(polyline)
+virtual_follow_trajectory = xosc.FollowTrajectoryAction(
+	virtual_trajectory,
+	xosc.FollowingMode.position,
+	xosc.ReferenceContext.relative,
+	1,
+	0
+)
+virtual_set_speed = xosc.AbsoluteSpeedAction(
+	virtual_speed,
+	xosc.TransitionDynamics(
+		xosc.DynamicsShapes.linear,
+		xosc.DynamicsDimension.rate,
+		virtual_acceleration
+	),
+)
+virtual_brake = xosc.AbsoluteSpeedAction(
+	0,
+	xosc.TransitionDynamics(
+		xosc.DynamicsShapes.linear,
+		xosc.DynamicsDimension.rate,
+		-virtual_retardation
+	),
+)
+virtual_reach_stop_position = xosc.EntityTrigger(
+	name=VIRTUAL_ID + ",reach_stop_position",
+	delay=0,
+	conditionedge=xosc.ConditionEdge.none,
+	entitycondition=xosc.ReachPositionCondition(virtual_brake_position, 1),
+	triggerentity=VIRTUAL_ID
+)
+virtual_brake_event = xosc.Event(
+	VIRTUAL_ID + ",brake_event",
+	xosc.Priority.parallel
+)
+virtual_brake_event.add_trigger(virtual_reach_stop_position)
+virtual_brake_event.add_action(VIRTUAL_ID + ",brake_to_stop", virtual_brake)
+virtual_maneuver.add_event(virtual_brake_event)
+
+# Virtual object triggers DENM warning
+
+### DENM Action ###
+virtual_high_speed_detected = xosc.EntityTrigger(
+	name=VIRTUAL_ID + ",high_speed_detected",
+	delay=0,
+	conditionedge=xosc.ConditionEdge.none,
+	entitycondition=xosc.SpeedCondition(denm_trigger_speed, xosc.Rule.greaterThan),
+	triggerentity=VIRTUAL_ID)
+
+virtual_denm_action = xosc.VisibilityAction(graphics=True, traffic=True, sensors=True)
+
+denm_osc_event = xosc.Event(
+	VIRTUAL_ID + ",high_speed_event",
+	xosc.Priority.parallel,
+)
+
+denm_osc_event.add_trigger(virtual_high_speed_detected)
+denm_osc_event.add_action(VIRTUAL_ID + ",send_denm",
+							virtual_denm_action)
+virtual_maneuver.add_event(denm_osc_event)
+
+
+>>>>>>> feature_slowerCameraDrone
 # Camera drone movement profile:
 # accelerate to top speed,
 # follow a trajectory,
@@ -560,29 +637,6 @@ marker_drone_move_event.add_trigger(mondeo_reached_marker_drone_trigger_position
 marker_drone_move_event.add_action(MARKER_DRONE_ID + ",start_follow_trajectory", marker_drone_follow_trajectory)
 marker_drone_move_event.add_action(MARKER_DRONE_ID + ",set_speed", marker_drone_set_speed)
 marker_drone_maneuver.add_event(marker_drone_move_event)
-
-
-# Mondeo object triggers DENM warning
-
-### DENM Action ###
-mondeo_high_speed_detected = xosc.EntityTrigger(
-	name=MONDEO_ID + ",high_speed_detected",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.SpeedCondition(denm_trigger_speed, xosc.Rule.greaterThan),
-	triggerentity=MONDEO_ID)
-
-mondeo_denm_action = xosc.VisibilityAction(graphics=True, traffic=True, sensors=True)
-
-denm_osc_event = xosc.Event(
-	MONDEO_ID + ",high_speed_event",
-	xosc.Priority.parallel,
-)
-
-denm_osc_event.add_trigger(mondeo_high_speed_detected)
-denm_osc_event.add_action(MONDEO_ID + ",send_denm",
-							mondeo_denm_action)
-mondeo_maneuver.add_event(denm_osc_event)
 
 
 # Collect into a scenario and write to file
