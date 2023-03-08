@@ -446,6 +446,28 @@ virtual_brake_event.add_trigger(virtual_reach_stop_position)
 virtual_brake_event.add_action(VIRTUAL_ID + ",brake_to_stop", virtual_brake)
 virtual_maneuver.add_event(virtual_brake_event)
 
+# Virtual object triggers DENM warning
+
+### DENM Action ###
+virtual_high_speed_detected = xosc.EntityTrigger(
+	name=VIRTUAL_ID + ",high_speed_detected",
+	delay=0,
+	conditionedge=xosc.ConditionEdge.none,
+	entitycondition=xosc.SpeedCondition(denm_trigger_speed, xosc.Rule.greaterThan),
+	triggerentity=VIRTUAL_ID)
+
+virtual_denm_action = xosc.VisibilityAction(graphics=True, traffic=True, sensors=True)
+
+denm_osc_event = xosc.Event(
+	VIRTUAL_ID + ",high_speed_event",
+	xosc.Priority.parallel,
+)
+
+denm_osc_event.add_trigger(virtual_high_speed_detected)
+denm_osc_event.add_action(VIRTUAL_ID + ",send_denm",
+							virtual_denm_action)
+virtual_maneuver.add_event(denm_osc_event)
+
 
 # Camera drone movement profile:
 # accelerate to top speed,
@@ -649,29 +671,6 @@ marker_drone_move_event.add_trigger(mondeo_reached_marker_drone_trigger_position
 marker_drone_move_event.add_action(MARKER_DRONE_ID + ",start_follow_trajectory", marker_drone_follow_trajectory)
 marker_drone_move_event.add_action(MARKER_DRONE_ID + ",set_speed", marker_drone_set_speed)
 marker_drone_maneuver.add_event(marker_drone_move_event)
-
-
-# Mondeo object triggers DENM warning
-
-### DENM Action ###
-mondeo_high_speed_detected = xosc.EntityTrigger(
-	name=MONDEO_ID + ",high_speed_detected",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.SpeedCondition(denm_trigger_speed, xosc.Rule.greaterThan),
-	triggerentity=MONDEO_ID)
-
-mondeo_denm_action = xosc.VisibilityAction(graphics=True, traffic=True, sensors=True)
-
-denm_osc_event = xosc.Event(
-	MONDEO_ID + ",high_speed_event",
-	xosc.Priority.parallel,
-)
-
-denm_osc_event.add_trigger(mondeo_high_speed_detected)
-denm_osc_event.add_action(MONDEO_ID + ",send_denm",
-							mondeo_denm_action)
-mondeo_maneuver.add_event(denm_osc_event)
 
 
 # Collect into a scenario and write to file
