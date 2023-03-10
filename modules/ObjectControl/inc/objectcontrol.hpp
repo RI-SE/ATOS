@@ -178,6 +178,8 @@ public:
 	//! \brief Get last known ISO state of test participants.
 	std::map<uint32_t,ObjectStateType> getObjectStates() const;
 
+	//! \brief Check if all objects fulfill a predicate.
+	bool areAllObjects(std::function<bool(const std::shared_ptr<TestObject>&)> pred) const;
 	//! \brief Check if any test participant is in the specified state.
 	//!			The method does not wait for the next MONR to arrive.
 	bool isAnyObjectIn(const ObjectStateType state);

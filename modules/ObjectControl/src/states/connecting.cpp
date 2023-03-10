@@ -33,7 +33,10 @@ void AbstractKinematics::Connecting::abortRequest(
 void AbstractKinematics::Connecting::connectedToObject(
 		ObjectControl& handler,
 		uint32_t id) {
-	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
+	auto inDisarmedOrArmed = [](const std::shared_ptr<TestObject>& obj) {
+		return obj->getState() == OBJECT_STATE_DISARMED || obj->getState() == OBJECT_STATE_ARMED;
+	};
+	if (handler.areAllObjects(inDisarmedOrArmed)) {
 		this->allObjectsConnected(handler);
 	}
 }
