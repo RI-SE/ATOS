@@ -8,6 +8,8 @@
 #include <future>
 #include <set>
 #include <chrono>
+#include <mutex>
+#include <memory>
 
 #include "module.hpp"
 #include "atosTime.h"
@@ -198,6 +200,7 @@ public:
 	void stopControlSignalSubscriber();
 
 private:
+	std::mutex stateMutex;
 	static inline std::string const moduleName = "object_control";
 	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
 	void onConnectMessage(const ROSChannels::Connect::message_type::SharedPtr) override;
