@@ -5,7 +5,11 @@
  */
 
 #include "pointcloudpublisher.hpp"
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/filters/voxel_grid.h>
 #include <chrono>
+
+
 using namespace std::chrono_literals;
 
 PointcloudPublisher::PointcloudPublisher() : Module(PointcloudPublisher::moduleName) {
@@ -22,8 +26,8 @@ PointcloudPublisher::~PointcloudPublisher() {}
 
 void PointcloudPublisher::initialize() {
   getPointcloudFile();
-  createPointcloudMessage();
   loadPointCloud();
+  createPointcloudMessage();
 }
 
 void PointcloudPublisher::getPointcloudFile() {
@@ -34,13 +38,21 @@ void PointcloudPublisher::getPointcloudFile() {
 }
 
 void PointcloudPublisher::loadPointCloud() {
-  
+  pointcloud = std::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
+  if (pcl::io::loadPCDFile<pcl::PointXYZRGB> (pointcloudFile, *pointcloud) == -1) {
+      RCLCPP_ERROR(get_logger(), "Could not read file %s", pointcloudFile.c_str());
+      // throw exception here
+  }
+  RCLCPP_INFO(get_logger(), "POINT CLOUD: width %d height %d", pointcloud->width, pointcloud->height);
 }
 
 
 void PointcloudPublisher::createPointcloudMessage() {
+  pcl::toROSMsg(*pointcloud, msg);
+
   msg.header.frame_id = "map";
   msg.header.stamp = this->get_clock()->now();
+  
 }
 
 

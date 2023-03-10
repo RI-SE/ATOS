@@ -14,6 +14,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
+find_package(PCL 1.2 REQUIRED)
 
 # Define target names
 set(POINTCLOUD_PUBLISHER_TARGET ${PROJECT_NAME})
@@ -23,6 +24,10 @@ get_target_property(COMMON_HEADERS ${ATOS_COMMON_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
 # Create project main executable target
 add_executable(${POINTCLOUD_PUBLISHER_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
@@ -31,6 +36,7 @@ add_executable(${POINTCLOUD_PUBLISHER_TARGET}
 # Link project executable to util libraries
 target_link_libraries(${POINTCLOUD_PUBLISHER_TARGET} 
 	${ATOS_COMMON_LIBRARY}
+  ${PCL_LIBRARIES}
 )
 
 # ROS specific settings
