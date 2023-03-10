@@ -707,7 +707,6 @@ void ObjectControl::disarmObjects() {
 			objects.at(id)->disconnect();
 		}
 	}
-	this->state->allObjectsDisarmed(*this); // TODO add a check on object states as well
 }
 
 void ObjectControl::startScenario() {
