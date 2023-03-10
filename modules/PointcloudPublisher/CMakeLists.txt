@@ -12,6 +12,7 @@ project(pointcloud_publisher)
 
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
 
 # Define target names
@@ -36,6 +37,7 @@ target_link_libraries(${POINTCLOUD_PUBLISHER_TARGET}
 ament_target_dependencies(${POINTCLOUD_PUBLISHER_TARGET}
   rclcpp
   std_msgs
+  sensor_msgs
   atos_interfaces
 )
 
