@@ -84,8 +84,10 @@ void RelativeKinematics::Disarming::connectedToObject(
 }
 
 void RelativeKinematics::Disarming::disconnectedFromObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& handler,
+		uint32_t id) {
+		AbstractKinematics::Disarming::disconnectedFromObject(handler,id);
+		setState(handler, new RelativeKinematics::Connecting);
 	// TODO
 }
 
@@ -149,9 +151,10 @@ void AbsoluteKinematics::Disarming::connectedToObject(
 }
 
 void AbsoluteKinematics::Disarming::disconnectedFromObject(
-		ObjectControl&,
-		uint32_t) {
-	// TODO
+		ObjectControl& handler,
+		uint32_t id) {
+	AbstractKinematics::Disarming::disconnectedFromObject(handler,id);
+	setState(handler, new AbsoluteKinematics::Connecting);
 }
 
 void AbsoluteKinematics::Disarming::connectedToArmedObject(
