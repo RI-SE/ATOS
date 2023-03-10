@@ -173,7 +173,7 @@ void AbsoluteKinematics::Disarming::connectedToLiveObject(
 void AbsoluteKinematics::Disarming::allObjectsDisarmed(
 		ObjectControl& handler) {
 	AbstractKinematics::Disarming::allObjectsDisarmed(handler);
-	setState(handler, new AbsoluteKinematics::Connecting);
+	setState(handler, new AbsoluteKinematics::Ready);
 }
 
 void AbsoluteKinematics::Disarming::objectArmed(
@@ -187,8 +187,14 @@ void AbsoluteKinematics::Disarming::objectDisarmed(
 		ObjectControl& handler,
 		uint32_t id) {
 	AbstractKinematics::Disarming::objectDisarmed(handler,id);
+	auto disarmedOrDisconnected = [](std::pair<uint32_t,const std::shared_ptr<TestObject>> obj){
+		return obj.second->getState() == OBJECT_STATE_DISARMED || !obj.second->isConnected();
+	};
 	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
 		AbsoluteKinematics::Disarming::allObjectsDisarmed(handler);
+	} 
+	else if (handler.areAllObjects(disarmedOrDisconnected)) { // Some objects are disconnected, try to reconnect
+		setState(handler, new AbsoluteKinematics::Connecting);
 	}
 }
 
