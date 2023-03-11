@@ -735,10 +735,12 @@ void ObjectControl::startObject(
 }
 
 void ObjectControl::allClearObjects() {
+	// Send allClear to all connected objects
 	for (auto& id : getVehicleIDs()) {
-		objects.at(id)->sendAllClear();
+		if (objects.at(id)->isConnected()) {
+			objects.at(id)->sendAllClear();
+		}
 	}
-	this->state->allObjectsAbortDisarmed(*this); // TODO wait for all objects really are disarmed
 }
 
 bool ObjectControl::areAllObjects(std::function<bool(std::pair<uint32_t,const std::shared_ptr<TestObject>>)> predicate) const {

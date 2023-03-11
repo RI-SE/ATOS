@@ -15,7 +15,7 @@ void AbstractKinematics::Aborting::onExit(
 
 void AbstractKinematics::Aborting::allClearRequest(
 		ObjectControl& handler) {
-		handler.allClearObjects();
+	// TODO
 }
 
 void AbstractKinematics::Aborting::connectedToObject(
@@ -25,9 +25,9 @@ void AbstractKinematics::Aborting::connectedToObject(
 }
 
 void AbstractKinematics::Aborting::disconnectedFromObject(
-		ObjectControl&,
-		uint32_t) {
-	// TODO
+		ObjectControl& handler,
+		uint32_t id) {
+	RCLCPP_WARN(handler.get_logger(), "Object %d disconnected while CC in aborting state!", id);
 }
 
 void AbstractKinematics::Aborting::connectedToLiveObject(
@@ -64,7 +64,6 @@ void AbstractKinematics::Aborting::objectDisarmed(
 void AbstractKinematics::Aborting::objectArmed(
 		ObjectControl& handler,
 		uint32_t id) {
-	RCLCPP_WARN(handler.get_logger(), "Object armed while expecting abort");
 	handler.disconnectObject(id); // TODO just stop sending HEAB to keep tracking available
 }
 
@@ -80,8 +79,7 @@ void AbstractKinematics::Aborting::allObjectsAbortDisarmed(
  */
 void RelativeKinematics::Aborting::allClearRequest(
 		ObjectControl& handler) {
-	AbstractKinematics::Aborting::allClearRequest(handler);
-	setState(handler, new RelativeKinematics::Ready);
+	setState(handler, new RelativeKinematics::Clearing);
 }
 
 void RelativeKinematics::Aborting::connectedToObject(
@@ -91,9 +89,9 @@ void RelativeKinematics::Aborting::connectedToObject(
 }
 
 void RelativeKinematics::Aborting::disconnectedFromObject(
-		ObjectControl&,
-		uint32_t) {
-	// TODO
+		ObjectControl& handler,
+		uint32_t id) {
+	AbstractKinematics::Aborting::disconnectedFromObject(handler, id);
 }
 
 void RelativeKinematics::Aborting::connectedToLiveObject(
@@ -134,8 +132,7 @@ void RelativeKinematics::Aborting::allObjectsAbortDisarmed(
  */
 void AbsoluteKinematics::Aborting::allClearRequest(
 		ObjectControl& handler) {
-	AbstractKinematics::Aborting::allClearRequest(handler);
-	setState(handler, new AbsoluteKinematics::Ready);
+	setState(handler, new AbsoluteKinematics::Clearing);
 }
 
 void AbsoluteKinematics::Aborting::connectedToObject(
@@ -145,9 +142,9 @@ void AbsoluteKinematics::Aborting::connectedToObject(
 }
 
 void AbsoluteKinematics::Aborting::disconnectedFromObject(
-		ObjectControl&,
-		uint32_t) {
-	// TODO
+		ObjectControl& handler,
+		uint32_t id) {
+	AbstractKinematics::Aborting::disconnectedFromObject(handler, id);
 }
 
 void AbsoluteKinematics::Aborting::connectedToLiveObject(
