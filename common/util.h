@@ -368,7 +368,8 @@ typedef enum {
     OBC_STATE_RUNNING,
 	  OBC_STATE_REMOTECTRL,
     OBC_STATE_ERROR,
-    OBC_STATE_ABORTING
+    OBC_STATE_ABORTING,
+    OBC_STATE_CLEARING
 } OBCState_t;
 
 typedef struct
