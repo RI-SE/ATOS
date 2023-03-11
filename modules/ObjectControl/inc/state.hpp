@@ -259,7 +259,7 @@ public:
 	void disableRemoteControlRequest(ObjectControl&) override {}
 
 	OBCState_t asNumber() const override { return OBC_STATE_CLEARING; }
-	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_INIT; }
+	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_READY; }
 };
 
 class TestLive : public ObjectControlState {
