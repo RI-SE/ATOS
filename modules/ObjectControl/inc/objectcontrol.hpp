@@ -185,6 +185,8 @@ public:
 	//! \brief Get last known ISO state of test participants.
 	std::map<uint32_t,ObjectStateType> getObjectStates() const;
 
+	//! \brief Chneck if any object fulfill a predicate.
+	bool isAnyObject(std::function<bool(std::pair<uint32_t,const std::shared_ptr<TestObject>>)> predicate) const;
 	//! \brief Check if all objects fulfill a predicate.
 	bool areAllObjects(std::function<bool(std::pair<uint32_t,const std::shared_ptr<TestObject>>)> predicate) const;
 	//! \brief Check if any test participant is in the specified state.
