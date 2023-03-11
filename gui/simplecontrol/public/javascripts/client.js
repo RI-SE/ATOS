@@ -18,12 +18,14 @@ function getOBCState(intState){
         case 4:
             return "ARMED";
         case 5:
-            return "RUNNING";
+            return "DISARMED";
         case 6:
-            return "REMOTECTRL";
+            return "RUNNING";
         case 7:
-            return "ERROR";
+            return "REMOTECTRL";
         case 8:
+            return "ERROR";
+        case 9:
             return "ABORTING";
         default:
             return "UNDEFINED";
