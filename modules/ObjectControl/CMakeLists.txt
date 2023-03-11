@@ -49,6 +49,7 @@ add_executable(${OBJECT_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/connecting.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/ready.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/aborting.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/states/clearing.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/testlive.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/disarming.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/armed.cpp
