@@ -7,6 +7,7 @@
 #include "objectcontrol.hpp"
 #include "atosTime.h"
 #include "iso22133.h"
+#include "state.hpp"
 #include "journal.hpp"
 #include <eigen3/Eigen/Dense>
 #include <csignal>
