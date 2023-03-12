@@ -296,7 +296,7 @@ public:
 	//
 
 	// TODO integrate this state into the enum variable
-	OBCState_t asNumber() const override { return OBC_STATE_DISARMED; }
+	OBCState_t asNumber() const override { return OBC_STATE_DISARMING; }
 	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_RUNNING; } // TODO
 };
 
