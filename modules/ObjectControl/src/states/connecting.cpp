@@ -33,12 +33,7 @@ void AbstractKinematics::Connecting::abortRequest(
 void AbstractKinematics::Connecting::connectedToObject(
 		ObjectControl& handler,
 		uint32_t id) {
-	auto inDisarmedOrArmed = [](std::pair<uint32_t,const std::shared_ptr<TestObject>&> obj) {
-		return obj.second->getState() == OBJECT_STATE_DISARMED || obj.second->getState() == OBJECT_STATE_ARMED;
-	};
-	if (handler.areAllObjects(inDisarmedOrArmed)) {
-		this->allObjectsConnected(handler);
-	}
+	// TODO
 }
 
 void AbstractKinematics::Connecting::disconnectedFromObject(
@@ -104,6 +99,12 @@ void RelativeKinematics::Connecting::connectedToObject(
 		ObjectControl& handler,
 		uint32_t id) {
 	AbstractKinematics::Connecting::connectedToObject(handler, id);
+	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)){
+		this->allObjectsConnected(handler);
+	}
+	else if (handler.isAnyObjectIn(OBJECT_STATE_ARMED)) {
+		setState(handler, new RelativeKinematics::Disarming);
+	}
 }
 
 void RelativeKinematics::Connecting::disconnectedFromObject(
@@ -173,6 +174,12 @@ void AbsoluteKinematics::Connecting::connectedToObject(
 		ObjectControl& handler,
 		uint32_t id) {
 	AbstractKinematics::Connecting::connectedToObject(handler, id);
+	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)){
+		this->allObjectsConnected(handler);
+	}
+	else if (handler.isAnyObjectIn(OBJECT_STATE_ARMED)) {
+		setState(handler, new AbsoluteKinematics::Disarming);
+	}
 }
 
 void AbsoluteKinematics::Connecting::disconnectedFromObject(
