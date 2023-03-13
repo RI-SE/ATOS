@@ -18,7 +18,7 @@ function getOBCState(intState){
         case 4:
             return "ARMED";
         case 5:
-            return "DISARMED";
+            return "DISARMING";
         case 6:
             return "RUNNING";
         case 7:

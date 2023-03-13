@@ -41,6 +41,8 @@ private:
 	ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;
 	ROSChannels::Init::Sub initSub;
 	ROSChannels::Start::Sub startSub;
+	ROSChannels::Abort::Sub abortSub;
+	ROSChannels::Exit::Sub exitSub;
 	std::unordered_map<uint32_t,ROSChannels::Path::Pub> pathPublishers;
 	std::unordered_map<uint32_t,ROSChannels::GNSSPath::Pub> gnssPathPublishers;
 
@@ -50,15 +52,12 @@ private:
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectIp>> objectIpService;
 
 
-	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
-	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
 	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
-	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
-	void onStartMessage(const ROSChannels::Start::message_type::SharedPtr) override;
-	void onExitMessage(const ROSChannels::Start::message_type::SharedPtr) override;
 	// Below is a quickfix, fix properly later
 	static void onStaticInitMessage(const ROSChannels::Init::message_type::SharedPtr);
 	static void onStaticStartMessage(const ROSChannels::Start::message_type::SharedPtr);
+	static void onStaticAbortMessage(const ROSChannels::Abort::message_type::SharedPtr);
+	static void onStaticExitMessage(const ROSChannels::Exit::message_type::SharedPtr);
 
 	static void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
 	static void reportObjectPosition(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);

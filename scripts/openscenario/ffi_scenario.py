@@ -67,7 +67,7 @@ virtual_starting_point = xosc.LanePosition(5.0, 0, 1, 0)
 virtual_brake_position = xosc.LanePosition(50.0, 0, 1, 0)
 virtual_limit_position = xosc.LanePosition(95.0, 0, 1, 1)
 
-camera_drone_speed = 25 / 3.6 # m/s
+camera_drone_speed = 15 / 3.6 # m/s
 camera_drone_acceleration = 1.76 # m/s^2
 camera_drone_retardation = 1.96 # m/s^2
 camera_drone_starting_point = xosc.LanePosition(15, 0, 1, 2)

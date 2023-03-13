@@ -66,7 +66,7 @@ void RelativeKinematics::Armed::disconnectedFromObject(
 		ObjectControl& handler,
 		uint32_t id) {
 	AbstractKinematics::Armed::disconnectedFromObject(handler, id);
-	setState(handler, new RelativeKinematics::Connecting); // Disconnect in armed state, try to reconnect objects
+	setState(handler, new RelativeKinematics::Disarming); // Disconnect in armed state, disarm objects before trying to reconnect
 }
 
 void RelativeKinematics::Armed::objectArmed(
@@ -111,7 +111,7 @@ void AbsoluteKinematics::Armed::disconnectedFromObject(
 		ObjectControl& handler,
 		uint32_t id) {
 	AbstractKinematics::Armed::disconnectedFromObject(handler, id);
-	setState(handler, new AbsoluteKinematics::Connecting); // Disconnect in armed state, try to reconnect objects
+	setState(handler, new AbsoluteKinematics::Disarming); // Disconnect in armed state, disarm objects before trying to reconnect
 }
 
 void AbsoluteKinematics::Armed::objectArmed(

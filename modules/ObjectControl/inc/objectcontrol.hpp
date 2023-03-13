@@ -188,7 +188,7 @@ public:
 	//! \brief Chneck if any object fulfill a predicate.
 	bool isAnyObject(std::function<bool(std::pair<uint32_t,const std::shared_ptr<TestObject>>)> predicate) const;
 	//! \brief Check if all objects fulfill a predicate.
-	bool areAllObjects(std::function<bool(std::pair<uint32_t,const std::shared_ptr<TestObject>>)> predicate) const;
+	bool areAllObjects(std::function<bool(const std::shared_ptr<TestObject>)> predicate) const;
 	//! \brief Check if any test participant is in the specified state.
 	//!			The method does not wait for the next MONR to arrive.
 	bool isAnyObjectIn(const ObjectStateType state);
