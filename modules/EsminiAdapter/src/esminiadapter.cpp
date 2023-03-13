@@ -50,6 +50,8 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	v2xPub(*this),
 	initSub(*this, &EsminiAdapter::onStaticInitMessage),
 	startSub(*this, &EsminiAdapter::onStaticStartMessage),
+	abortSub(*this, &EsminiAdapter::onStaticAbortMessage),
+	exitSub(*this, &EsminiAdapter::onStaticExitMessage),
 	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage)
  {
 	declare_parameter("open_scenario_file");
@@ -102,6 +104,8 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 		me->connectedObjectIdsSub = ROSChannels::ConnectedObjectIds::Sub(*me,&EsminiAdapter::onConnectedObjectIdsMessage);
 		me->initSub = ROSChannels::Init::Sub(*me,&EsminiAdapter::onStaticInitMessage);
 		me->startSub = ROSChannels::Start::Sub(*me,&EsminiAdapter::onStaticStartMessage);
+		me->abortSub = ROSChannels::Abort::Sub(*me,&EsminiAdapter::onStaticAbortMessage);
+		me->exitSub = ROSChannels::Exit::Sub(*me,&EsminiAdapter::onStaticExitMessage);
 		// Start V2X publisher
 		me->v2xPub = ROSChannels::V2X::Pub(*me);
 		
@@ -123,17 +127,10 @@ void EsminiAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::messag
 
 //! Message queue callbacks
 
-void EsminiAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {
+void EsminiAdapter::onStaticAbortMessage(const Abort::message_type::SharedPtr) {
 	SE_Close();
+	RCLCPP_INFO(me->get_logger(), "Esmini ScenarioEngine stopped due to Abort");
 }
-
-void EsminiAdapter::onInitMessage(const Init::message_type::SharedPtr) {
-}
-
-void EsminiAdapter::onStartMessage(const Start::message_type::SharedPtr) {
-}
-
-void EsminiAdapter::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 
 void EsminiAdapter::onStaticInitMessage(
 	const Init::message_type::SharedPtr)
@@ -164,7 +161,7 @@ void EsminiAdapter::onStaticInitMessage(
 	});
 }
 
-void EsminiAdapter::onExitMessage(
+void EsminiAdapter::onStaticExitMessage(
 	const Exit::message_type::SharedPtr)
 {
 	SE_Close();
@@ -172,6 +169,7 @@ void EsminiAdapter::onExitMessage(
 	rclcpp::shutdown();
 }
 
+// !!TODO!!: Make sure that we are in the correct OBC state before starting ScenarioEngine
 void EsminiAdapter::onStaticStartMessage(
 	const Start::message_type::SharedPtr)
 {
