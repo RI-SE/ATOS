@@ -12,6 +12,10 @@
 
 using namespace std::chrono_literals;
 
+/**
+ * @brief PointcloudPublisher constructor.
+ * 
+ */
 PointcloudPublisher::PointcloudPublisher() : Module(PointcloudPublisher::moduleName) {
   initialize();
   publisher = this->create_publisher<sensor_msgs::msg::PointCloud2>("/atos/pointcloud", 1);
@@ -19,15 +23,29 @@ PointcloudPublisher::PointcloudPublisher() : Module(PointcloudPublisher::moduleN
 
 }
 
+
+/**
+ * @brief PointcloudPublisher destructor.
+ * 
+ */
 PointcloudPublisher::~PointcloudPublisher() {}
 
 
+/**
+ * @brief Get pointcloud-file, load pointcloud-file, create a pointcloud-message.
+ * 
+ */
 void PointcloudPublisher::initialize() {
   getPointcloudFile();
   loadPointCloud();
   createPointcloudMessage();
 }
 
+
+/**
+ * @brief Get the path to the pointcloud-file.
+ * 
+ */
 void PointcloudPublisher::getPointcloudFile() {
   declare_parameter("pointcloud_file");
   get_parameter("pointcloud_file", pointcloudFile);
@@ -35,6 +53,11 @@ void PointcloudPublisher::getPointcloudFile() {
   pointcloudFile = homeDir + "/.astazero/ATOS/pointclouds/" + pointcloudFile;
 }
 
+
+/**
+ * @brief Load the pointcloud-file, throws std::runtime_error if can't find file.
+ * 
+ */
 void PointcloudPublisher::loadPointCloud() {
   pointcloud = std::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
   if (pcl::io::loadPCDFile<pcl::PointXYZRGB> (pointcloudFile, *pointcloud) == -1) {
@@ -45,6 +68,10 @@ void PointcloudPublisher::loadPointCloud() {
 }
 
 
+/**
+ * @brief Creates a sensor_msgs::msg::PointCloud2 message and fills it with data.
+ * 
+ */
 void PointcloudPublisher::createPointcloudMessage() {
   pcl::toROSMsg(*pointcloud, msg);
   msg.header.frame_id = "map";
@@ -53,6 +80,10 @@ void PointcloudPublisher::createPointcloudMessage() {
 }
 
 
+/**
+ * @brief Publish pointcloud.
+ * 
+ */
 void PointcloudPublisher::publishPointcloud() {
   publisher->publish(msg);
 }
