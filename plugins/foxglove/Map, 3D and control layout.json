@@ -73,7 +73,7 @@
           "lineWidth": 1
         },
         "/atos/object_4/path": {
-          "visible": false,
+          "visible": true,
           "gradient": [
             "#ff6b6bff",
             "#ff6b6bff"
@@ -96,7 +96,7 @@
           "lineWidth": 1
         },
         "/atos/object_2/object_monitor": {
-          "visible": false,
+          "visible": true,
           "type": "arrow",
           "color": "#fb00ffff",
           "arrowScale": [
@@ -106,7 +106,7 @@
           ]
         },
         "/atos/object_3/object_monitor": {
-          "visible": false,
+          "visible": true,
           "type": "arrow",
           "color": "#dba652",
           "arrowScale": [
@@ -116,7 +116,7 @@
           ]
         },
         "/atos/object_4/object_monitor": {
-          "visible": false,
+          "visible": true,
           "type": "arrow",
           "color": "#ff6b6b",
           "arrowScale": [
@@ -126,7 +126,7 @@
           ]
         },
         "/atos/object_5/object_monitor": {
-          "visible": false,
+          "visible": true,
           "type": "arrow",
           "color": "#86ff6b",
           "arrowScale": [
