@@ -41,9 +41,9 @@ void PointcloudPublisher::loadPointCloud() {
   pointcloud = std::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
   if (pcl::io::loadPCDFile<pcl::PointXYZRGB> (pointcloudFile, *pointcloud) == -1) {
       RCLCPP_ERROR(get_logger(), "Could not read file %s", pointcloudFile.c_str());
-      // throw exception here
+      throw std::runtime_error("Could not open file");
   }
-  RCLCPP_INFO(get_logger(), "POINT CLOUD: width %d height %d", pointcloud->width, pointcloud->height);
+  RCLCPP_INFO(get_logger(), "Loaded pointcloud with %d points", pointcloud->width * pointcloud->height);
 }
 
 
