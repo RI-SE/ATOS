@@ -14,7 +14,6 @@ using namespace std::chrono_literals;
 
 PointcloudPublisher::PointcloudPublisher() : Module(PointcloudPublisher::moduleName) {
   initialize();
-  RCLCPP_INFO(get_logger(), "POINTCLOUD FILE: %s", pointcloudFile.c_str());
 
   publisher = this->create_publisher<sensor_msgs::msg::PointCloud2>("/atos/pointcloud", 1);
   timer = this->create_wall_timer(500ms, std::bind(&PointcloudPublisher::publishPointcloud, this));
