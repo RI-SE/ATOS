@@ -36,6 +36,7 @@ add_executable(${POINTCLOUD_PUBLISHER_TARGET}
 # Link project executable to util libraries
 target_link_libraries(${POINTCLOUD_PUBLISHER_TARGET} 
 	${ATOS_COMMON_LIBRARY}
+	${COMMON_HEADERS}
   ${PCL_LIBRARIES}
 )
 

@@ -10,17 +10,15 @@
 #include <chrono>
 
 
-using namespace std::chrono_literals;
-
 /**
  * @brief PointcloudPublisher constructor.
  * 
  */
-PointcloudPublisher::PointcloudPublisher() : Module(PointcloudPublisher::moduleName) {
+PointcloudPublisher::PointcloudPublisher() : Module(PointcloudPublisher::moduleName),
+  initSub(*this, std::bind(&PointcloudPublisher::onInitMessage, this, std::placeholders::_1)),
+  pointcloudPub(*this)
+{
   initialize();
-  publisher = this->create_publisher<sensor_msgs::msg::PointCloud2>("/atos/pointcloud", 1);
-  timer = this->create_wall_timer(500ms, std::bind(&PointcloudPublisher::publishPointcloud, this));
-
 }
 
 
@@ -81,9 +79,12 @@ void PointcloudPublisher::createPointcloudMessage() {
 
 
 /**
- * @brief Publish pointcloud.
+ * @brief Publish pointcloud on init message
  * 
  */
-void PointcloudPublisher::publishPointcloud() {
-  publisher->publish(msg);
+void PointcloudPublisher::onInitMessage(const ROSChannels::Init::message_type::SharedPtr) {
+  pointcloudPub.publish(msg);
 }
+
+// TODO::
+// iterate over input files, publish several pointclouds
