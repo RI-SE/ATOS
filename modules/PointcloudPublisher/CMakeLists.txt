@@ -14,7 +14,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
-find_package(PCL 1.2 REQUIRED)
+find_package(PCL 1.10 REQUIRED)
 
 # Define target names
 set(POINTCLOUD_PUBLISHER_TARGET ${PROJECT_NAME})
