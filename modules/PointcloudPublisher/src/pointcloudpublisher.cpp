@@ -17,7 +17,7 @@
 PointcloudPublisher::PointcloudPublisher() : Module(PointcloudPublisher::moduleName),
   initSub(*this, std::bind(&PointcloudPublisher::onInitMessage, this, std::placeholders::_1))
 {
-  initialize();
+  declare_parameter("pointcloud_files");
 }
 
 
@@ -33,6 +33,10 @@ PointcloudPublisher::~PointcloudPublisher() {}
  * 
  */
 void PointcloudPublisher::initialize() {
+  pointclouds.clear();
+  pointcloudFiles.clear();
+  pointcloudPubs.clear();
+
   getPointcloudFiles();
   loadPointClouds();
   createPublishers();
@@ -44,7 +48,6 @@ void PointcloudPublisher::initialize() {
  * 
  */
 void PointcloudPublisher::getPointcloudFiles() {
-  declare_parameter("pointcloud_files");
   get_parameter("pointcloud_files", pointcloudFiles);
   const std::string homeDir = getenv("HOME");
   for (auto& pointcloudFile : pointcloudFiles) {
@@ -62,10 +65,11 @@ void PointcloudPublisher::loadPointClouds() {
     auto pointcloud = std::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
     if (pcl::io::loadPCDFile<pcl::PointXYZRGB> (pointcloudFile, *pointcloud) == -1) {
         RCLCPP_ERROR(get_logger(), "Could not read file %s", pointcloudFile.c_str());
-        throw std::runtime_error("Could not open file");
     }
-    pointclouds[pointcloudFile] = pointcloud;
-    RCLCPP_INFO(get_logger(), "Loaded pointcloud %s with %d points", pointcloudFile.c_str(), pointcloud->width * pointcloud->height);
+    else {
+      pointclouds[pointcloudFile] = pointcloud;
+      RCLCPP_INFO(get_logger(), "Loaded pointcloud %s with %d points", pointcloudFile.c_str(), pointcloud->width * pointcloud->height);
+    }
   }
 }
 
@@ -89,6 +93,8 @@ std::string PointcloudPublisher::getPublisherTopicName(const std::string fileNam
  * 
  */
 void PointcloudPublisher::onInitMessage(const ROSChannels::Init::message_type::SharedPtr) {
+  initialize();
+
   for (auto& pointcloudFile : pointcloudFiles) {
     sensor_msgs::msg::PointCloud2 msg;
 
