@@ -74,6 +74,10 @@ void PointcloudPublisher::loadPointClouds() {
 }
 
 
+/**
+ * @brief Create pointcloud publishers
+ * 
+ */
 void PointcloudPublisher::createPublishers() {
   for (auto& pointcloudFile : pointcloudFiles) {
     auto pointcloudPub = std::make_shared<ROSChannels::Pointcloud::Pub>(*this, getPublisherTopicName(pointcloudFile));
@@ -82,8 +86,14 @@ void PointcloudPublisher::createPublishers() {
 }
 
 
-std::string PointcloudPublisher::getPublisherTopicName(const std::string fileName) {
-  auto str = fileName.substr(fileName.rfind('/') + 1); 
+/**
+ * @brief Returns the topic name from a path
+ * 
+ * @param path Path to make topicn ame from
+ * @return std::string The topic name
+ */
+std::string PointcloudPublisher::getPublisherTopicName(const std::string& path) {
+  auto str = path.substr(path.rfind('/') + 1); 
   return str.substr(0, str.length() - 4);
 }
 
