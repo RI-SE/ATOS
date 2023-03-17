@@ -36,7 +36,7 @@ add_executable(${POINTCLOUD_PUBLISHER_TARGET}
 # Link project executable to util libraries
 target_link_libraries(${POINTCLOUD_PUBLISHER_TARGET} 
 	${ATOS_COMMON_LIBRARY}
-	${COMMON_HEADERS}
+	${ATOS_COMMON_LIBRARY}
   ${PCL_LIBRARIES}
 )
 
@@ -50,6 +50,7 @@ ament_target_dependencies(${POINTCLOUD_PUBLISHER_TARGET}
 
 target_include_directories(${POINTCLOUD_PUBLISHER_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
+	${COMMON_HEADERS}
 )
 
 # Installation rules
