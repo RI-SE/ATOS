@@ -163,7 +163,7 @@ void AbsoluteKinematics::Disarming::disconnectedFromObject(
 			return obj->getState() == OBJECT_STATE_DISARMED || !obj->isConnected();
 		};
 		if (handler.areAllObjects(disarmedOrDisconnected)) {
-			setState(handler, new AbsoluteKinematics::Connecting);
+			AbsoluteKinematics::Disarming::allObjectsDisarmed(handler);
 		}
 		// Otherwise, remain in disarming state
 }
