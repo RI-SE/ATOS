@@ -84,8 +84,9 @@ void RelativeKinematics::Disarming::connectedToObject(
 }
 
 void RelativeKinematics::Disarming::disconnectedFromObject(
-		ObjectControl& handler,
-		uint32_t id) {
+	ObjectControl& handler,
+	uint32_t id)
+{
 		AbstractKinematics::Disarming::disconnectedFromObject(handler,id);	
 		auto disarmedOrDisconnected = [](const std::shared_ptr<TestObject> obj) {
 			return obj->getState() == OBJECT_STATE_DISARMED || !obj->isConnected();
