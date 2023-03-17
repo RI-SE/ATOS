@@ -23,19 +23,16 @@ class PointcloudPublisher : public Module {
   private:
     static inline std::string const moduleName = "pointcloud_publisher";
     ROSChannels::Init::Sub initSub;
-		ROSChannels::Pointcloud::Pub pointcloudPub;
+    std::map<std::string, std::shared_ptr<ROSChannels::Pointcloud::Pub>> pointcloudPubs;
 
-    std::string pointcloudFile;
-    sensor_msgs::msg::PointCloud2 msg;
-    std::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB>> pointcloud;
-
-    // std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>> publisher;
-    std::shared_ptr<rclcpp::TimerBase> timer;
+    std::vector<std::string> pointcloudFiles;
+    std::map<std::string, std::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB>>> pointclouds;
 
 		void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
     void initialize();
-    void getPointcloudFile();
-    void loadPointCloud();
-    void createPointcloudMessage();
+    void getPointcloudFiles();
+    void loadPointClouds();
+    void createPublishers();
+    std::string getPublisherTopicName(const std::string fileName);
 
 };

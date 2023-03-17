@@ -15,14 +15,16 @@ namespace ROSChannels {
     
     class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) :
-          BasePub<message_type>(node, "pointcloud/" + topicName, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local()) {}
+        const std::string fileName;
+        Pub(rclcpp::Node& node, const std::string fileName) :
+          BasePub<message_type>(node, topicName + "/" + fileName, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local()) {}
     };
 
     class Sub : public BaseSub<message_type> {
     public:
-      Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : 
-          BaseSub<message_type>(node, "pointcloud/" + topicName, callback, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local()) {}
+      const std::string fileName;
+      Sub(rclcpp::Node& node, const std::string fileName, std::function<void(const message_type::SharedPtr)> callback) : 
+          BaseSub<message_type>(node, topicName + "/" + fileName, callback, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local()) {}
     };
   }
 }
