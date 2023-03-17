@@ -201,11 +201,8 @@ void AbsoluteKinematics::Disarming::objectDisarmed(
 	auto disarmedOrDisconnected = [](std::shared_ptr<TestObject> obj){
 		return obj->getState() == OBJECT_STATE_DISARMED || !obj->isConnected();
 	};
-	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
+	if (handler.areAllObjects(disarmedOrDisconnected)) {
 		AbsoluteKinematics::Disarming::allObjectsDisarmed(handler);
-	} 
-	else if (handler.areAllObjects(disarmedOrDisconnected)) { // Some objects are disconnected, try to reconnect
-		setState(handler, new AbsoluteKinematics::Connecting);
 	}
 }
 
