@@ -2,7 +2,7 @@
 
 namespace Util {
 
-  int verifyTestDirectory(const std::string& installationPath) {
+  void verifyTestDirectory(const std::string& installationPath) {
     const std::filesystem::path homeDir = getenv("HOME");
     const std::filesystem::path atosDir = homeDir / std::filesystem::path(".astazero/ATOS");
 
@@ -26,8 +26,6 @@ namespace Util {
 				std::filesystem::copy(sysconfFile, filePath);
 			}
 		}
-
-		return 0;
   }
 
 

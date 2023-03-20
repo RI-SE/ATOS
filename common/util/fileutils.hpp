@@ -21,14 +21,8 @@ namespace Util {
     "params.yaml"
   };
 
+  void verifyTestDirectory(const std::string& installationPath);
 
-
-  int verifyTestDirectory(const std::string& installationPath);
-
-
-  // int copyFile(const std::string& source, const std::string& destination);
-  // void getDirectoryPath(const std::string& path);
-  // int deleteFiles(const std::string& path);
 
 } // namespace Util
 
@@ -43,8 +37,6 @@ namespace Util {
 
 
 // // File system functions
-// int UtilVerifyTestDirectory(const char* installationPath);
-// int UtilCopyFile(const char* source, const size_t sourceLen, const char* dest, const size_t destLen);
 // void UtilGetTestDirectoryPath(char* path, size_t pathLen);
 // void UtilGetJournalDirectoryPath(char* path, size_t pathLen);
 // void UtilGetConfDirectoryPath(char* path, size_t pathLen);

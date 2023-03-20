@@ -25,9 +25,8 @@ ATOSBase::ATOSBase()
 	declare_parameter("test_origin_rot");
 
 	std::string installationPath = ament_index_cpp::get_package_prefix("atos");
-		if (Util::verifyTestDirectory(installationPath) == -1) {
-        throw std::runtime_error("Failed to verify test directory");
-  	}
+	Util::verifyTestDirectory(installationPath);
+
 	initDataDictionaryService = create_service<SetBool>(ServiceNames::initDataDict,
 		std::bind(&ATOSBase::onInitDataDictionary, this, _1, _2));
 	getObjectIdsService = create_service<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds,
