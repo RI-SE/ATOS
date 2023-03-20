@@ -22,7 +22,7 @@ namespace Util {
   };
 
   void verifyTestDirectory(const std::string& installationPath);
-
+  std::string getDirectoryPath(const std::string& directoryName);
 
 } // namespace Util
 
@@ -37,15 +37,6 @@ namespace Util {
 
 
 // // File system functions
-// void UtilGetTestDirectoryPath(char* path, size_t pathLen);
-// void UtilGetJournalDirectoryPath(char* path, size_t pathLen);
-// void UtilGetConfDirectoryPath(char* path, size_t pathLen);
-// void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
-// void UtilGetOdrDirectoryPath(char* path, size_t pathLen);
-// void UtilGetOscDirectoryPath(char* path, size_t pathLen);
-// void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
-// void UtilGetObjectDirectoryPath(char* path, size_t pathLen);
-
 // int UtilDeleteTrajectoryFiles(void);
 // int UtilDeleteGeofenceFiles(void);
 // int UtilDeleteObjectFiles(void);

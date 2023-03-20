@@ -2,6 +2,11 @@
 
 namespace Util {
 
+	/**
+	 * @brief Checks so that all the required directories exist and that all configuration files exists.
+	 * 
+	 * @param installationPath Path to the installation directory.
+	 */
   void verifyTestDirectory(const std::string& installationPath) {
     const std::filesystem::path homeDir = getenv("HOME");
     const std::filesystem::path atosDir = homeDir / std::filesystem::path(".astazero/ATOS");
@@ -29,6 +34,15 @@ namespace Util {
   }
 
 
-
-
+	/**
+	 * @brief Fetches the absolute path to where a directory is stored, ending with a forward slash.
+	 * 
+	 * @param directoryName The name of the directory to fetch.
+	 * @return std::string Absolute path to the directory.
+	 */
+  std::string getDirectoryPath(const std::string& directoryName) {
+		const std::string homeDir = getenv("HOME");
+		const std::string atosDir = homeDir + "/.astazero/ATOS";
+		return atosDir + "/" + directoryName + "/";
+	}
 } // namespace Utils
