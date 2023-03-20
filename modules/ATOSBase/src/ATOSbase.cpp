@@ -6,6 +6,7 @@
 #include "ATOSbase.hpp"
 #include "datadictionary.h"
 #include "objectconfig.hpp"
+#include "util/fileutils.hpp"
 #include <functional>
 
 #include <ament_index_cpp/get_package_prefix.hpp>
@@ -24,7 +25,7 @@ ATOSBase::ATOSBase()
 	declare_parameter("test_origin_rot");
 
 	std::string installationPath = ament_index_cpp::get_package_prefix("atos");
-	if (UtilVerifyTestDirectory(installationPath.c_str()) == -1) {
+		if (Util::verifyTestDirectory(installationPath) == -1) {
         throw std::runtime_error("Failed to verify test directory");
   	}
 	initDataDictionaryService = create_service<SetBool>(ServiceNames::initDataDict,
