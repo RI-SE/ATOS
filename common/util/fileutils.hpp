@@ -16,6 +16,11 @@ namespace Util {
     "osc"
   };
 
+  const std::vector<std::string> expectedFiles = {
+    "test.conf",
+    "params.yaml"
+  };
+
 
 
   int verifyTestDirectory(const std::string& installationPath);

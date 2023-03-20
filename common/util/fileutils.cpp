@@ -18,6 +18,14 @@ namespace Util {
 			}
 		}
 
+		// check that that all expected files exists
+		for (auto expectedFile : expectedFiles) {
+			auto sysconfFile = std::filesystem::path(installationPath + "/etc/" + expectedFile);
+			auto filePath = atosDir / std::filesystem::path("conf/" + expectedFile);
+			if (!std::filesystem::exists(filePath)) {
+				std::filesystem::copy(sysconfFile, filePath);
+			}
+		}
 
 		return 0;
   }
