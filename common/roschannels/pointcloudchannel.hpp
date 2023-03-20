@@ -10,7 +10,7 @@
 
 namespace ROSChannels {
   namespace Pointcloud {
-    const std::string topicName = "pointcloud";
+    const std::string topicName = "site_scan";
     using message_type = sensor_msgs::msg::PointCloud2;
     
     class Pub : public BasePub<message_type> {
