@@ -6,7 +6,7 @@
 #pragma once
 
 #include "roschannel.hpp"
-#include "sensor_msgs/msg/point_cloud2.hpp"
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 namespace ROSChannels {
   namespace Pointcloud {

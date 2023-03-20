@@ -13,7 +13,6 @@
 #include <pcl/point_types.h>
 
 
-
 class PointcloudPublisher : public Module {
 
   public:
@@ -28,7 +27,7 @@ class PointcloudPublisher : public Module {
     std::vector<std::string> pointcloudFiles;
     std::map<std::string, std::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB>>> pointclouds;
 
-		void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
+    void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
     void initialize();
     void getPointcloudFiles();
     void loadPointClouds();
