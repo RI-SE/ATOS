@@ -91,7 +91,7 @@ void PointcloudPublisher::createPublishers() {
  * @param path Path to make topicn ame from
  * @return std::string The topic name
  */
-std::string PointcloudPublisher::getPublisherTopicName(const std::string& path) {
+std::string PointcloudPublisher::getPublisherTopicName(const std::string& path) const {
   auto str = path.substr(path.rfind('/') + 1); 
   return str.substr(0, str.length() - 4);
 }
