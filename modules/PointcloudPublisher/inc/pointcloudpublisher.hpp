@@ -8,7 +8,6 @@
 #include "module.hpp"
 #include "roschannels/pointcloudchannel.hpp"
 #include "roschannels/commandchannels.hpp"
-#include <sensor_msgs/msg/point_cloud2.hpp>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 
