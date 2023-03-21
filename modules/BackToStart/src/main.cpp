@@ -148,7 +148,7 @@ void backToStart() {
 
 	}
 
-	if (UtilDeleteTrajectoryFiles() == FAILED_DELETE) {
+	if (Util::deleteFiles("traj") == -1)
 		LogMessage(LOG_LEVEL_ERROR, "Failed to remove trajectory files");
 		return;
 	}

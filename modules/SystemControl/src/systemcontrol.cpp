@@ -2093,7 +2093,7 @@ I32 SystemControl::SystemControlCheckFileDirectoryExist(char * ParameterName, ch
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE
  */
 char SystemControl::SystemControlDeleteTrajectory(const char * trajectoryName, const size_t nameLen) {
-	return UtilDeleteTrajectoryFile(trajectoryName, nameLen) ? FAILED_DELETE : SUCCEEDED_DELETE;
+	return Util::deleteFile(std::string(trajectoryName), "traj") ? FAILED_DELETE : SUCCEEDED_DELETE;
 }
 
 /*!
@@ -2103,7 +2103,7 @@ char SystemControl::SystemControlDeleteTrajectory(const char * trajectoryName, c
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE
  */
 char SystemControl::SystemControlDeleteGeofence(const char * geofenceName, const size_t nameLen) {
-	return UtilDeleteGeofenceFile(geofenceName, nameLen) ? FAILED_DELETE : SUCCEEDED_DELETE;
+	return Util::deleteFile(std::string(geofenceName), "geofence") ? FAILED_DELETE : SUCCEEDED_DELETE;
 }
 
 /*!
@@ -2113,7 +2113,7 @@ char SystemControl::SystemControlDeleteGeofence(const char * geofenceName, const
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE
  */
 char SystemControl::SystemControlDeleteGenericFile(const char * filePath, const size_t nameLen) {
-	return UtilDeleteGenericFile(filePath, nameLen) ? FAILED_DELETE : SUCCEEDED_DELETE;
+	return Util::deleteFile(std::string(filePath)) ? FAILED_DELETE : SUCCEEDED_DELETE;
 }
 
 /*!
@@ -2121,7 +2121,7 @@ char SystemControl::SystemControlDeleteGenericFile(const char * filePath, const 
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
 char SystemControl::SystemControlClearTrajectories(void) {
-	if (UtilDeleteTrajectoryFiles() != 0) {
+	if (Util::deleteFiles("traj") != 0) {
 		return FAILED_DELETE;
 	}
 	return SUCCEEDED_DELETE;
@@ -2132,7 +2132,7 @@ char SystemControl::SystemControlClearTrajectories(void) {
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
 char SystemControl::SystemControlClearGeofences(void) {
-	if (UtilDeleteGeofenceFiles() != 0) {
+	if (Util::deleteFiles("geofence") != 0) {
 		return FAILED_DELETE;
 	}
 	return SUCCEEDED_DELETE;
@@ -2143,7 +2143,7 @@ char SystemControl::SystemControlClearGeofences(void) {
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
 char SystemControl::SystemControlClearObjects(void) {
-	if (UtilDeleteObjectFiles() != 0) {
+	if (Util::deleteFiles("objects") != 0) {
 		return FAILED_DELETE;
 	}
 	return SUCCEEDED_DELETE;
