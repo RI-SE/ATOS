@@ -6,8 +6,7 @@
 #include <iostream>
 #include "pointcloudpublisher.hpp"
 
-
-int main(int argc, char** argv) {
+int main(int argc, char **argv){
 
   rclcpp::init(argc, argv);
   auto pointcloudPublisherNode = std::make_shared<PointcloudPublisher>();
