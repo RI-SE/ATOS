@@ -441,6 +441,7 @@ class Connecting : public AbstractKinematics::Connecting {
 };
 
 class Ready : public AbstractKinematics::Ready {
+	void onEnter(ObjectControl&) override;
 	void armRequest(ObjectControl&) override;
 	void disconnectRequest(ObjectControl&) override;
 	void disconnectedFromObject(ObjectControl&, uint32_t) override;
@@ -536,6 +537,7 @@ class Connecting : public AbstractKinematics::Connecting {
 };
 
 class Ready : public AbstractKinematics::Ready {
+	void onEnter(ObjectControl&) override;
 	void armRequest(ObjectControl&) override;
 	void disconnectRequest(ObjectControl&) override;
 	void disconnectedFromObject(ObjectControl&, uint32_t) override;

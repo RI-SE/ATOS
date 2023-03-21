@@ -11,7 +11,7 @@ AbstractKinematics::Ready::Ready() {
 
 void AbstractKinematics::Ready::onEnter(
 		ObjectControl& handler) {
-	handler.startSafetyThread();
+	// TODO
 }
 
 void AbstractKinematics::Ready::armRequest(
@@ -56,6 +56,21 @@ void AbstractKinematics::Ready::enableRemoteControlRequest(
  * \section RelativeKinematics
  *  ******************************************************
  */
+
+void RelativeKinematics::Ready::onEnter(
+		ObjectControl& handler) {
+	if (handler.isAnyObjectIn(OBJECT_STATE_ABORTING)) {
+		setState(handler, new RelativeKinematics::Aborting); // Any Object in aborting -> abort test
+		return;
+	}
+	else if (!handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
+		setState(handler, new RelativeKinematics::Connecting); // Not all objects were connected and disarmed
+	}
+	else{
+		handler.startSafetyThread(); // Start safety thread only if all objects are disarmed and connected
+	}
+}
+
 void RelativeKinematics::Ready::armRequest(
 		ObjectControl& handler) {
 	AbstractKinematics::Ready::armRequest(handler);
@@ -107,6 +122,21 @@ void RelativeKinematics::Ready::enableRemoteControlRequest(
  * \section AbsoluteKinematics
  *  ******************************************************
  */
+
+void AbsoluteKinematics::Ready::onEnter(
+		ObjectControl& handler) {
+	if (handler.isAnyObjectIn(OBJECT_STATE_ABORTING)) {
+		setState(handler, new AbsoluteKinematics::Aborting); // Any Object in aborting -> abort test
+		return;
+	}
+	else if (!handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
+		setState(handler, new AbsoluteKinematics::Connecting); // Not all objects were connected and disarmed
+	}
+	else{
+		handler.startSafetyThread(); // Start safety thread only if all objects are disarmed and connected
+	}
+}
+
 void AbsoluteKinematics::Ready::armRequest(
 		ObjectControl& handler) {
 	AbstractKinematics::Ready::armRequest(handler);
