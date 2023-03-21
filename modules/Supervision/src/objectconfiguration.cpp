@@ -5,6 +5,7 @@
  */
 #include "objectconfiguration.hpp"
 #include "util.h"
+#include "util/fileutils.hpp"
 #include <exception>
 #include <fstream>
 
@@ -19,11 +20,10 @@ void ObjectConfiguration::initializeFromFile(
 		const std::string &fileName) {
 
 	using namespace std;
-	char objectDirPath[PATH_MAX];
 	char objectSetting[100];
 	int result = 0;
 
-	UtilGetObjectDirectoryPath(objectDirPath, sizeof (objectDirPath));
+	auto objectDirPath = Util::getDirectoryPath("objects");
 	string objectFilePath(objectDirPath);
 	objectFilePath += fileName;
 

@@ -22,6 +22,7 @@
 #include "string_utility.hpp"
 #include "util.h"
 #include "util/coordinateutils.hpp"
+#include "util/fileutils.hpp"
 
 using namespace ROSChannels;
 using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
@@ -74,9 +75,8 @@ std::filesystem::path EsminiAdapter::getOpenScenarioFileParameter()
 		return result;
 	}
 	else {
-		char path[MAX_FILE_PATH];
-		UtilGetOscDirectoryPath(path, MAX_FILE_PATH);
-		return std::string(path) + result;
+		auto path = Util::getDirectoryPath("osc");
+		return path + result;
 	}
 }
 

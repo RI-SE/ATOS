@@ -45,4 +45,16 @@ namespace Util {
 		const std::string atosDir = homeDir + "/.astazero/ATOS";
 		return atosDir + "/" + directoryName + "/";
 	}
+
+
+	/**
+	 * @brief Fetches the absolute path to the test directory, ending with a forward slash.
+	 * 
+	 * @return std::string Absolute path of the test directory.
+	 */
+	std::string getTestDirectoryPath() {
+		const std::string homeDir = getenv("HOME");
+		const std::string atosDir = homeDir + "/.astazero/ATOS/";
+		return atosDir;
+	}
 } // namespace Utils

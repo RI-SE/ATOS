@@ -84,11 +84,10 @@ void ATOSBase::onRequestObjectIDs(
 	const std::shared_ptr<atos_interfaces::srv::GetObjectIds::Request> req,
 	std::shared_ptr<atos_interfaces::srv::GetObjectIds::Response> res)
 {
-	char path[PATH_MAX];
 	std::vector<std::invalid_argument> errors;
 	RCLCPP_INFO(get_logger(), "Received object ID information request");
 
-	UtilGetObjectDirectoryPath(path, sizeof (path));
+	auto path = Util::getDirectoryPath("objects");
 	fs::path objectDir(path);
 	if (!fs::exists(objectDir)) {
 		throw std::ios_base::failure("Object directory does not exist");

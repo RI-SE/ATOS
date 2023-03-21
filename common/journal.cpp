@@ -5,6 +5,7 @@
  */
 #include "journal.hpp"
 #include "util.h"
+#include "util/fileutils.hpp"
 
 #include <linux/limits.h>
 #include <sys/stat.h>
@@ -138,7 +139,6 @@ int JournalRecordMonitorData(const ObjectDataType* objectData) {
 
 int reinitializeJournal() {
 	char dateStr[FILENAME_DATESTR_MAX_LENGTH];
-	char journalDirPath[PATH_MAX];
 	std::string printout;
 	char * cptr;
 	struct stat sb;
@@ -151,13 +151,13 @@ int reinitializeJournal() {
 	std::strftime(dateStr, FILENAME_DATESTR_MAX_LENGTH, FILENAME_DATESTR_FORMAT, &now_tm);
 
 	// Form base filename from path and label
-	UtilGetJournalDirectoryPath(journalDirPath, sizeof (journalDirPath));
+	auto journalDirPath = Util::getDirectoryPath("journal");
 	journalPath = journalDirPath + journalLabel + "-" + dateStr + JOURNAL_FILE_ENDING;
 
 	// Check if log directory exists
-	if(stat(journalDirPath, &sb)) {
+	if(stat(journalDirPath.c_str(), &sb)) {
 		// Create directory if not
-		if (mkdir(journalDirPath, 0775) != -1) {
+		if (mkdir(journalDirPath.c_str(), 0775) != -1) {
 			RCLCPP_INFO(rclcpp::get_logger(logName), "Created directory %s", journalDirPath);
 		}
 		else {

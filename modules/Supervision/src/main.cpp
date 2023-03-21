@@ -19,6 +19,7 @@
 #include "datadictionary.h"
 #include "atosTime.h"
 #include "util.h"
+#include "util/fileutils.hpp"
 
 #define MODULE_NAME "Supervision"
 #define MAX_GEOFENCE_NAME_LEN 256
@@ -208,8 +209,7 @@ void loadObjectData(std::vector<ObjectConfiguration>& objectData) {
     struct dirent *ent;
     DIR *dir;
     unsigned int n = 0;
-	char objectPathDir[MAX_FILE_PATH];
-	UtilGetObjectDirectoryPath(objectPathDir, sizeof (objectPathDir));
+    auto objectPathDir = Util::getDirectoryPath("objects");
     LogMessage(LOG_LEVEL_DEBUG, "Loading trajectories");
 
 	dir = opendir(objectPathDir);
@@ -271,8 +271,7 @@ void loadGeofenceFiles(std::vector<Geofence> &geofences) {
     DIR *pDir;
     char *ext;
     unsigned int n = 0;
-    char geofencePathDir[MAX_FILE_PATH];
-    UtilGetGeofenceDirectoryPath(geofencePathDir, sizeof (geofencePathDir));
+    auto geofencePathDir = Util::getDirectoryPath("geofence");
     LogMessage(LOG_LEVEL_DEBUG, "Loading geofences");
 
     pDir = opendir(geofencePathDir);

@@ -28,6 +28,7 @@
 #include "trajfilehandler.hpp"
 #include "udphandler.hpp"
 #include "util.h"
+#include "util/fileutil.hpp"
 
 #if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
 #include <filesystem>
@@ -246,11 +247,10 @@ int awaitConnection(TCPHandler& tcpPort, UDPHandler& udpPort, enum COMMAND& rece
 
 
 int transmitTrajectories(TCPHandler& tcpPort) {
-	std::vector<char> trajPath(PATH_MAX, '\0');
 	std::vector<char> transmitBuffer;
 	int retval = 0, rc;
 
-	UtilGetTrajDirectoryPath(trajPath.data(), trajPath.size());
+	auto trajPath = Util::getDirectoryPath("traj");
 
 	for (const auto& entry : fs::directory_iterator(trajPath.data())) {
 		/* TO DO:

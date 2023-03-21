@@ -7,6 +7,7 @@
 #include <algorithm>
 #include "datadictionary.h"
 #include "util.h"
+#include "util/fileutils.hpp"
 #include "objectconfig.hpp"
 #include "trajectory.hpp"
 
@@ -168,10 +169,9 @@ void backToStart() {
 
 void loadObjectFiles() {
 	objects.clear();
-	char path[MAX_FILE_PATH];
 	std::vector<std::invalid_argument> errors;
 
-	UtilGetObjectDirectoryPath(path, sizeof (path));
+	auto path = Util::getDirectoryPath("objects");
 	fs::path objectDir(path);
 	if (!fs::exists(objectDir)) {
 		throw std::ios_base::failure("Object directory does not exist");

@@ -5,6 +5,7 @@
  */
 #include "objectconfig.hpp"
 #include "util.h"
+#include "util/fileutils.hpp"
 #include <iomanip>
 
 ObjectConfig::ObjectConfig(rclcpp::Logger lg) : Loggable(lg), trajectory(lg) {
@@ -51,13 +52,10 @@ void ObjectConfig::parseConfigurationFile(
 
 	char setting[100];
 	int result;
-	char trajDirPath[MAX_FILE_PATH];
-	char odrDirPath[MAX_FILE_PATH];
-	char oscDirPath[MAX_FILE_PATH];
 
-	UtilGetTrajDirectoryPath(trajDirPath, sizeof (trajDirPath));
-	UtilGetOdrDirectoryPath(odrDirPath, sizeof (odrDirPath));
-	UtilGetOscDirectoryPath(oscDirPath, sizeof (oscDirPath));
+	auto trajDirPath = Util::getDirectoryPath("traj");
+	auto odrDirPath = Util::getDirectoryPath("odr");
+	auto oscDirPath = Util::getDirectoryPath("osc");
 
 
 	// Get IP setting

@@ -7,6 +7,7 @@
 
 #include "geofence.hpp"
 #include "util.h"
+#include "util/fileutils.hpp"
 #include "regexpatterns.hpp"
 
 const std::regex Geofence::fileHeaderPattern("GEOFENCE;([a-zA-Z0-9]+);(" + RegexPatterns::intPattern
@@ -31,7 +32,6 @@ Geofence::Geofence(const Geofence& other) {
 void Geofence::initializeFromFile(const std::string &fileName) {
 
 	using namespace std;
-	char geofenceDirPath[PATH_MAX];
 	ifstream file;
 	smatch match;
 	string line;
@@ -40,7 +40,7 @@ void Geofence::initializeFromFile(const std::string &fileName) {
 	bool isHeaderParsedSuccessfully = false;
 	unsigned long nPoints = 0;
 
-	UtilGetGeofenceDirectoryPath(geofenceDirPath, sizeof (geofenceDirPath));
+	auto geofenceDirPath = Util::getDirectoryPath("geofence");
 	string geofenceFilePath(geofenceDirPath);
 	geofenceFilePath += fileName;
 

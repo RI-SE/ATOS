@@ -23,6 +23,7 @@ namespace Util {
 
   void verifyTestDirectory(const std::string& installationPath);
   std::string getDirectoryPath(const std::string& directoryName);
+  std::string getTestDirectoryPath();
 
 } // namespace Util
 

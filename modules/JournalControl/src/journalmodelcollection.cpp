@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iterator>
 #include <algorithm>
+#include "util/fileutils.hpp"
 
 
 #define DATE_STRING_MAX_LEN 20
@@ -141,15 +142,14 @@ int JournalModelCollection::dumpToFile() {
 
 	int retval = 0;
 	char scenarioName[PATH_MAX] = {'\0'};
-	char journalDir[PATH_MAX] = {'\0'};
 
 	// Construct output file name and path
 	if (DataDictionaryGetScenarioName(scenarioName, sizeof (scenarioName)) != READ_OK) {
 		RCLCPP_ERROR(get_logger(), "Unable to get scenario name parameter to generate output file");
 		return -1;
 	}
-	UtilGetJournalDirectoryPath(journalDir, sizeof (journalDir));
-	fs::path journalDirPath(std::string(journalDir) + std::string(scenarioName) + JOURNAL_FILE_ENDING);
+	auto journalDir = Util::getDirectoryPath("journal");
+	fs::path journalDirPath(journalDir + std::string(scenarioName) + JOURNAL_FILE_ENDING);
 
 	std::ofstream ostrm(journalDirPath);
 	if (!ostrm.is_open()) {
@@ -275,9 +275,6 @@ int JournalModelCollection::dumpToFile() {
 
 
 int JournalModelCollection::printJournalHeaderTo(std::ofstream &ostrm) {
-	std::vector<char> trajectoryDirectory(PATH_MAX, '\0');
-	std::vector<char> configurationDirectory(PATH_MAX, '\0');
-	std::vector<char> objectDirectory(PATH_MAX, '\0');
 	std::ifstream istrm;
 	fs::path fileDirectory;
 
@@ -285,7 +282,7 @@ int JournalModelCollection::printJournalHeaderTo(std::ofstream &ostrm) {
 	ostrm << "Whole object files" << std::endl;
 	ostrm << "------------------------------------------" << std::endl;
 
-	UtilGetObjectDirectoryPath(objectDirectory.data(), objectDirectory.size());
+	auto objectDirectory = Util::getDirectoryPath("objects");
 	objectDirectory.erase(std::find(objectDirectory.begin(), objectDirectory.end(), '\0'),
 							  objectDirectory.end());
 	std::remove(std::find(objectDirectory.begin(), objectDirectory.end(), '\0'),
@@ -298,7 +295,7 @@ int JournalModelCollection::printJournalHeaderTo(std::ofstream &ostrm) {
 	ostrm << "Whole trajectory files" << std::endl;
 	ostrm << "------------------------------------------" << std::endl;
 
-	UtilGetTrajDirectoryPath(trajectoryDirectory.data(), trajectoryDirectory.size());
+	auto trajectoryDirectory = Util::getDirectoryPath("traj");
 	trajectoryDirectory.erase(std::find(trajectoryDirectory.begin(), trajectoryDirectory.end(), '\0'),
 							  trajectoryDirectory.end());
 	std::remove(std::find(trajectoryDirectory.begin(), trajectoryDirectory.end(), '\0'),
@@ -311,7 +308,7 @@ int JournalModelCollection::printJournalHeaderTo(std::ofstream &ostrm) {
 	ostrm << "Whole configuration files" << std::endl;
 	ostrm << "------------------------------------------" << std::endl;
 
-	UtilGetConfDirectoryPath(configurationDirectory.data(), configurationDirectory.size());
+	auto configurationDirectory = Util::getDirectoryPath("conf");
 	configurationDirectory.erase(std::find(configurationDirectory.begin(), configurationDirectory.end(), '\0'),
 								 configurationDirectory.end());
 	std::remove(std::find(configurationDirectory.begin(), configurationDirectory.end(), '\0'),
@@ -355,9 +352,8 @@ std::string JournalModelCollection::getDateAsString(const std::chrono::system_cl
  */
 std::vector<fs::path> JournalModelCollection::getJournalFilesFrom(const std::chrono::system_clock::time_point &date) {
 	std::vector<fs::path> journalsFromDate;
-	std::vector<char> buffer(PATH_MAX, '\0');
 
-	UtilGetJournalDirectoryPath(buffer.data(), buffer.size());
+	auto buffer = Util::getDirectoryPath("journal");
 	buffer.erase(std::find(buffer.begin(), buffer.end(), '\0'),
 								 buffer.end());
 	fs::path journalDirPath(buffer.begin(), buffer.end());

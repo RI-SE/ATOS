@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "systemcontrol.hpp"
+#include "util/fileutils.hpp"
 #include <cstdio>
 #include <fcntl.h>
 
@@ -714,14 +715,12 @@ void SystemControl::processUserCommand()
 					UtilCreateDirContent((uint8_t*) SystemControlArgument[0], (uint8_t*) "dir.info");
 				}
 
-				char TestDirectoryPath[MAX_PATH_LENGTH];
-				memset(TestDirectoryPath, 0,MAX_PATH_LENGTH);
 				char CompletePath[MAX_PATH_LENGTH];
 				memset(CompletePath, 0, MAX_PATH_LENGTH);
 				char InPath[MAX_PATH_LENGTH];
 				memset(InPath, 0, MAX_PATH_LENGTH);
 
-				UtilGetTestDirectoryPath(TestDirectoryPath, sizeof (TestDirectoryPath));
+				auto TestDirectoryPath = Util::getTestDirectoryPath();
 				strcat(CompletePath, TestDirectoryPath);
 				strcat(CompletePath,"dir.info");
 				int rows = UtilCountFileRowsInPath(CompletePath, strlen(CompletePath));
@@ -1991,10 +1990,9 @@ I32 SystemControl::SystemControlReadServerParameterList(char * ParameterList, U8
 	char *line = NULL;
 	size_t len = 0;
 	FILE *fd;
-	char confPathDir[MAX_FILE_PATH];
 	ssize_t read;
 
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
+	auto confPathDir = Util::getDirectoryPath("conf");
 	strcat(confPathDir, CONF_FILE_NAME);
 
 	fd = fopen(confPathDir, "r");
@@ -2022,11 +2020,10 @@ I32 SystemControl::SystemControlReadServerParameterList(char * ParameterList, U8
 
 I32 SystemControl::SystemControlBuildFileContentInfo(const char * Path, U8 Debug) {
 	struct stat st;
-	char CompletePath[MAX_FILE_PATH];
 	bzero(CompletePath, MAX_FILE_PATH);
 	if (SystemControlDirectoryInfo.exist)
 		return -1;
-	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+	auto CompletePath = Util::getTestDirectoryPath();
 	strcat(CompletePath, Path);
 	stat(CompletePath, &st);
 	printf("CompletePath = %s\n", CompletePath);
@@ -2041,13 +2038,12 @@ I32 SystemControl::SystemControlBuildFileContentInfo(const char * Path, U8 Debug
 }
 
 I32 SystemControl::SystemControlDestroyFileContentInfo(const char * Path, U8 RemoveFile) {
-	char CompletePath[MAX_FILE_PATH];
 	struct stat st;
 
 	if (!SystemControlDirectoryInfo.exist){
 		return -1;
 	}
-	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+	auto CompletePath = Util::getTestDirectoryPath();
 	strcat(CompletePath, Path);
 	munmap(SystemControlDirectoryInfo.info_buffer, SystemControlDirectoryInfo.size);
 	close(SystemControlDirectoryInfo.fd);
@@ -2062,10 +2058,9 @@ I32 SystemControl::SystemControlCheckFileDirectoryExist(char * ParameterName, ch
 
 	DIR *pDir;
 	FILE *fd;
-	char CompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
-	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+	auto CompletePath = Util::getTestDirectoryPath();
 	strcat(CompletePath, ParameterName);
 
 	*ReturnValue = PATH_INVALID_MISSING;
@@ -2158,10 +2153,9 @@ I32 SystemControl::SystemControlDeleteFileDirectory(const char * Path, char * Re
 
 	DIR *pDir;
 	FILE *fd;
-	char CompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
-	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+	auto CompletePath = Util::getTestDirectoryPath();
 	strcat(CompletePath, Path);
 
 	*ReturnValue = PATH_INVALID_MISSING;
@@ -2205,10 +2199,9 @@ I32 SystemControl::SystemControlCreateDirectory(const char * Path, char * Return
 
 	DIR *pDir;
 	FILE *fd;
-	char CompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
-	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+	auto CompletePath = Util::getTestDirectoryPath();
 	strcat(CompletePath, Path);
 
 	*ReturnValue = PATH_INVALID_MISSING;
@@ -2249,9 +2242,7 @@ I32 SystemControl::SystemControlUploadFile(const char * Filename, const char * F
 							char * CompleteFilePath, U8 Debug) {
 
 	FILE *fd;
-	char CompletePath[MAX_FILE_PATH];
-
-	memset(CompletePath, 0, sizeof (CompletePath));
+	std::string CompletePath;
 	//GetCurrentDir(CompletePath, MAX_FILE_PATH);
 	//strcat(CompletePath, Filename);
 	if (Filename == NULL || FileSize == NULL || PacketSize == NULL || FileType == NULL || ReturnValue == NULL) {
@@ -2261,24 +2252,24 @@ I32 SystemControl::SystemControlUploadFile(const char * Filename, const char * F
 
 	switch (atoi(FileType)) {
 	case ATOS_GENERIC_FILE_TYPE:
-		UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+		CompletePath = Util::getTestDirectoryPath();
 		break;
 	case ATOS_TRAJ_FILE_TYPE:
-		UtilGetTrajDirectoryPath(CompletePath, sizeof (CompletePath));
+		CompletePath = Util::getDirectoryPath("traj");
 		break;
 	case ATOS_CONF_FILE_TYPE:
-		UtilGetConfDirectoryPath(CompletePath, sizeof (CompletePath));
+		CompletePath = Util::getDirectoryPath("conf");
 		break;
 	case ATOS_GEOFENCE_FILE_TYPE:
-		UtilGetGeofenceDirectoryPath(CompletePath, sizeof (CompletePath));
+		CompletePath = Util::getDirectoryPath("geofence");
 		break;
 	case ATOS_OBJECT_FILE_TYPE:
-		UtilGetObjectDirectoryPath(CompletePath, sizeof (CompletePath));
+		CompletePath = Util::getDirectoryPath("objects");
 		break;
 	default:
 		RCLCPP_ERROR(get_logger(), "Received invalid file type upload request");
 		//Create temporary file for handling data anyway
-		UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+		CompletePath = Util::getTestDirectoryPath();
 		strcat(CompletePath, "/file.tmp");
 		fd = fopen(CompletePath, "r");
 		if (fd != NULL) {
@@ -2322,8 +2313,7 @@ I32 SystemControl::SystemControlUploadFile(const char * Filename, const char * F
 	}
 	else {
 		//Failed to open path create temporary file
-		UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
-		strcat(CompletePath, "/file.tmp");
+		CompletePath = Util::getTestDirectoryPath();		strcat(CompletePath, "/file.tmp");
 		fd = fopen(CompletePath, "r");
 		if (fd != NULL) {
 			fclose(fd);
@@ -2347,7 +2337,6 @@ I32 SystemControl::SystemControlReceiveRxData(I32 * sockfd, const char * Path, c
 	char CompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
-	//UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
 	U32 FileSizeU32 = atoi(FileSize);
 	U16 PacketSizeU16 = atoi(PacketSize);
@@ -2433,10 +2422,8 @@ I32 SystemControl::SystemControlReceiveRxData(I32 * sockfd, const char * Path, c
 I32 SystemControl::SystemControlSendFileContent(I32 * sockfd, const char * Path, const char * PacketSize, char * ReturnValue, U8 Remove,
 								 U8 Debug) {
 	FILE *fd;
-	char CompletePath[MAX_FILE_PATH];
 
-	bzero(CompletePath, MAX_FILE_PATH);
-	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+	auto CompletePath = Util::getTestDirectoryPath();
 	strcat(CompletePath, Path);
 	U32 FileSizeU32 = 0;
 	U16 PacketSizeU16 = atoi(PacketSize);

@@ -12,6 +12,7 @@
 #include "regexpatterns.hpp"
 #include "trajectory.hpp"
 #include "util/coordinateutils.hpp" // xyz2llh
+#include "util/fileutils.hpp"
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
@@ -150,14 +151,13 @@ void Trajectory::initializeFromCartesianTrajectory(const atos_interfaces::msg::C
 void Trajectory::initializeFromFile(const std::string &fileName) {
 
 	using namespace std;
-	char trajDirPath[PATH_MAX];
 	string errMsg;
 	smatch match;
 	ifstream file;
 	bool isHeaderParsedSuccessfully = false;
 	unsigned long nPoints = 0;
 
-	UtilGetTrajDirectoryPath(trajDirPath, sizeof (trajDirPath));
+	auto trajDirPath = Util::getDirectoryPath("traj");
 	string trajFilePath(trajDirPath);
 	trajFilePath += fileName;
 
@@ -685,9 +685,8 @@ Trajectory Trajectory::reversed() const {
  */
 void Trajectory::saveToFile(const std::string& fileName) const {
 	using std::string, std::smatch, std::ofstream;
-	char trajDirPath[PATH_MAX];
 
-	UtilGetTrajDirectoryPath(trajDirPath, sizeof (trajDirPath));
+	auto trajDirPath = Util::getDirectoryPath("traj");
 	string trajFilePath(trajDirPath);
 	trajFilePath += fileName;
 
