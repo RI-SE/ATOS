@@ -34,4 +34,4 @@ atos:
       chunk_duration: 2.0
   pointcloud_publisher:
     ros__parameters:
-      pointcloud_file: [""]
+      pointcloud_files: [""]
