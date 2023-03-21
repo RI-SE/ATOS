@@ -28,7 +28,7 @@ class PointcloudPublisher : public Module {
 
     void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
     void initialize();
-    void getPointcloudFiles();
+    void readPointcloudParams();
     void loadPointClouds();
     void createPublishers();
     std::string getPublisherTopicName(const std::string& path) const;

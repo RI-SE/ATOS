@@ -36,7 +36,7 @@ void PointcloudPublisher::initialize() {
   pointcloudFiles.clear();
   pointcloudPubs.clear();
 
-  getPointcloudFiles();
+  readPointcloudParams();
   loadPointClouds();
   createPublishers();
 }
@@ -46,7 +46,7 @@ void PointcloudPublisher::initialize() {
  * @brief Get the path to the pointcloud-file.
  * 
  */
-void PointcloudPublisher::getPointcloudFiles() {
+void PointcloudPublisher::readPointcloudParams() {
   get_parameter("pointcloud_files", pointcloudFiles);
   const std::string homeDir = getenv("HOME");
   for (auto& pointcloudFile : pointcloudFiles) {
