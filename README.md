@@ -10,19 +10,22 @@ ATOS, the communication hub for all test objects, controls and monitors iso22133
 # Table of contents
 - [ATOS](#atos)
 - [Table of contents](#table-of-contents)
-- [ Using ATOS with a Graphical User Interface (GUI)](#-using-atos-with-a-graphical-user-interface-gui)
 - [ Building ATOS with colcon](#-building-atos-with-colcon)
-  - [ Dependencies \& external libraries](#-dependencies--external-libraries)
-    - [ Installing OpenSimulationInterface v3.4.0](#-installing-opensimulationinterface-v340)
-    - [ Installing atos-interfaces](#-installing-atos-interfaces)
-    - [ Installing esmini](#-installing-esmini)
-  - [ Installing ROS2 and building for the first time with colcon](#-installing-ros2-and-building-for-the-first-time-with-colcon)
-    - [ Ubuntu 20.04](#-ubuntu-2004)
+	- [ Dependencies \& external libraries](#-dependencies--external-libraries)
+		- [ Installing OpenSimulationInterface v3.4.0](#-installing-opensimulationinterface-v340)
+		- [ Installing atos-interfaces](#-installing-atos-interfaces)
+		- [ Installing esmini](#-installing-esmini)
+	- [ Installing ROS2 and building for the first time with colcon](#-installing-ros2-and-building-for-the-first-time-with-colcon)
+		- [ Ubuntu 20.04](#-ubuntu-2004)
 - [ Optional builds \& installations](#-optional-builds--installations)
-  - [ How to build with RelativeKinematics instead of ObjectControl](#-how-to-build-with-relativekinematics-instead-of-objectcontrol)
-
-# <a name="usage"></a> Using ATOS with a Graphical User Interface (GUI)
-Please click [here](https://github.com/RI-SE/atos/tree/dev/gui/simplecontrol/README.md) for instructions on how to use ATOS with a GUI.
+	- [ How to build with RelativeKinematics instead of ObjectControl](#-how-to-build-with-relativekinematics-instead-of-objectcontrol)
+- [User manual](#user-manual)
+	- [Getting started](#getting-started)
+		- [The test directory](#the-test-directory)
+		- [Changing ROS parameters](#changing-ros-parameters)
+	- [Using ATOS with a Graphical User Interface (GUI)](#using-atos-with-a-graphical-user-interface-gui)
+		- [Simple Control](#simple-control)
+		- [Foxglove Studio](#foxglove-studio)
 
 # <a name="ATOS"></a> Building ATOS with colcon
 Below are the steps for building ATOS for the first time with colcon.
@@ -151,3 +154,59 @@ To include ObjectControl in the build again run the same command with OFF, as fo
 colcon build --cmake-args -DWITH_RELATIVE_KINEMATICS=OFF
 ```
 
+# User manual
+## Getting started
+Below are some information to get started with ATOS.
+
+### The test directory
+After starting ATOS the first time, you will find the test directory in `~/.astazero/ATOS`. This directory will contain all test settings and will contain the following directories:
+- Catalogs
+  - Explanation here: 
+  - Supported file types:
+- certs
+  - Explanation here: 
+  - Supported file types:
+- conf
+  - Explanation here: 
+  - Supported file types:
+- geofence
+  - Explanation here: 
+  - Supported file types:
+- journal
+  - Explanation here: 
+  - Supported file types:
+- objects
+  - Explanation here: 
+  - Supported file types:
+- odr
+  - Explanation here: 
+  - Supported file types:
+- osc
+  - Explanation here: 
+  - Supported file types:
+- pointclouds
+  - Explanation here: 
+  - Supported file types:
+- traj
+  - Explanation here: 
+  - Supported file types:
+
+
+### Changing ROS parameters
+In the `conf`-directory, `params.yaml` is located and sets ROS-parameters for the ATOS modules, which are read when launching ATOS. The parameters are described in their respective module:
+- ATOSBase
+- EsminiAdapter
+- MQTTBridge
+- ObjectControl
+- OSIAdapter
+- [PointcloudPublisher](./modules/PointcloudPublisher/README.md)
+- SystemControl
+- TrajectoryletStreamer
+
+
+## Using ATOS with a Graphical User Interface (GUI)
+### Simple Control
+Explaining the setup steps and what the buttons do.
+
+### Foxglove Studio
+Explaining the setup steps and how to set up layout, tile-server etc.
