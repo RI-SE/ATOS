@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "journal.hpp"
-#include "util.h"
 #include "util/fileutils.hpp"
 
 #include <linux/limits.h>
@@ -158,10 +157,10 @@ int reinitializeJournal() {
 	if(stat(journalDirPath.c_str(), &sb)) {
 		// Create directory if not
 		if (mkdir(journalDirPath.c_str(), 0775) != -1) {
-			RCLCPP_INFO(rclcpp::get_logger(logName), "Created directory %s", journalDirPath);
+			RCLCPP_INFO(rclcpp::get_logger(logName), "Created directory %s", journalDirPath.c_str());
 		}
 		else {
-			RCLCPP_ERROR(rclcpp::get_logger(logName), "Unable to create directory <%s>", journalDirPath);
+			RCLCPP_ERROR(rclcpp::get_logger(logName), "Unable to create directory <%s>", journalDirPath.c_str());
 			return -1;
 		}
 	}
