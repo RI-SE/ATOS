@@ -16,6 +16,7 @@
   <author email="oscar.johansson@astazero.com">Oscar Johansson</author>
   <author email="frida.reichenberg@astazero.com">Frida Reichenberg</author>
   <author email="victor.jarlow@astazero.com">Victor Jarlow</author>
+  <author email="samuel.thoren@astazero.com">Samuel Thorén</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>rclcpp</depend>
