@@ -18,7 +18,6 @@
 extern "C" {
 #endif
 
-#include "util.h"
 
 #ifdef __cplusplus
 }

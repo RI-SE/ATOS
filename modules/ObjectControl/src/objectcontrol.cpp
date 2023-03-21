@@ -15,7 +15,6 @@
 #include <exception>
 
 #include "state.hpp"
-#include "util.h"
 #include "util/fileutils.hpp"
 #include "journal.hpp"
 #include "datadictionary.h"

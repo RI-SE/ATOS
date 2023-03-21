@@ -20,7 +20,6 @@
 #include "rclcpp/wait_for_message.hpp"
 #include "trajectory.hpp"
 #include "string_utility.hpp"
-#include "util.h"
 #include "util/coordinateutils.hpp"
 #include "util/fileutils.hpp"
 

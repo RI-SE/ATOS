@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "objectconfig.hpp"
-#include "util.h"
 #include "util/fileutils.hpp"
 #include <iomanip>
 
