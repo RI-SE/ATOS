@@ -29,20 +29,3 @@ namespace Util {
   int deleteFiles(const std::string& directory);
 
 } // namespace Util
-
-
-
-
-
-
-
-
-
-
-
-
-// // File parsing functions
-// int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
-// int UtilParseTrajectoryFileHeader(char *headerLine, TrajectoryFileHeader * header);
-// int UtilParseTrajectoryFileFooter(char *footerLine);
-// int UtilParseTrajectoryFileLine(char *fileLine, TrajectoryFileLine * line);
