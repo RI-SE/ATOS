@@ -39,6 +39,7 @@ set(WITH_TRAJECTORYLET_STREAMER ON CACHE BOOL "Enable TrajectoryletStreamer modu
 set(WITH_OSI_ADAPTER ON CACHE BOOL "Enable OSIAdapter module")
 set(WITH_ESMINI_ADAPTER ON CACHE BOOL "Enable EsminiAdapter module")
 set(WITH_MQTT_BRIDGE ON CACHE BOOL "Enable MQTTBridge module")
+set(WITH_POINTCLOUD_PUBLISHER ON CACHE BOOL "Enable Pointcloud Publisher module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -75,6 +76,9 @@ if(WITH_ESMINI_ADAPTER)
 endif()
 if(WITH_MQTT_BRIDGE)
         list(APPEND ENABLED_MODULES MQTTBridge)
+endif()
+if(WITH_POINTCLOUD_PUBLISHER)
+        list(APPEND ENABLED_MODULES PointcloudPublisher)
 endif()
 
 # Add corresponding subprojects

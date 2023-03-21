@@ -20,6 +20,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
 
 set(TIME_LIBRARY ATOSTime)
@@ -87,6 +88,7 @@ ament_target_dependencies(${ATOS_COMMON_TARGET}
   std_msgs
   std_srvs
   nav_msgs
+	sensor_msgs
   atos_interfaces
 )
 

@@ -79,4 +79,11 @@ def get_base_nodes():
             parameters=[files["params"]],
             # arguments=['--ros-args', '--log-level', "debug"] # To get RCL_DEBUG prints
         ),
+        Node(
+            package='atos',
+            namespace='atos',
+            executable='pointcloud_publisher',
+            name='pointcloud_publisher',
+            parameters=[files["params"]]
+        )
     ]
