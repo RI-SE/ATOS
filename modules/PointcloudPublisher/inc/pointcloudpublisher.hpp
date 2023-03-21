@@ -31,6 +31,6 @@ class PointcloudPublisher : public Module {
     void getPointcloudFiles();
     void loadPointClouds();
     void createPublishers();
-    std::string getPublisherTopicName(const std::string& path);
+    std::string getPublisherTopicName(const std::string& path) const;
 
 };
