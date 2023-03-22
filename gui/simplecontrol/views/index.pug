@@ -17,8 +17,10 @@ body(style="padding-bottom:10rem;")
       +button("info", "small", onClick='sendInit()') Init 
       +button("info", "small", onClick='sendConnect()') Connect 
       +button("info", "small", onClick='sendArm()') Arm 
-      +button("success", "small", onClick='sendStart()') Start 
+      +button("success", "small", onClick='sendStart()') Start
+    .d-grid(class="gap-1 d-sm-block")
       +button("secondary", "small", onClick='sendResetTest()') Reset Test 
+      +button("secondary", "small", onClick='sendAllClear()') All Clear
       +button("warning", "small", onClick='sendDisarm()') Disarm
       +button("danger", "small", onClick='sendAbort()') Abort 
     +p("OBC State: Undefined", "OBCState")
