@@ -26,6 +26,8 @@ ATOS, the communication hub for all test objects, controls and monitors iso22133
     - [Simple Control](#simple-control)
     - [Foxglove Studio](#foxglove-studio)
       - [Connect to ATOS](#connect-to-atos)
+      - [Changing layout](#changing-layout)
+      - [Panels in Foxglove Studio](#panels-in-foxglove-studio)
 
 # <a name="ATOS"></a> Building ATOS with colcon
 Below are the steps for building ATOS for the first time with colcon.
@@ -221,6 +223,13 @@ When opening Simple Control there will be a set of buttons, [ObjectControl](./mo
 If you want to run ATOS with more visualisation you can use [Foxglove Studio](https://github.com/foxglove/studio). To get started visit [studio.foxglove.dev](https://studio.foxglove.dev).
 
 #### Connect to ATOS
-Aa
+In order to connect to ATOS in Foxglove Studio, ATOS first needs to be running. Then, in Foxglove Studio, go to `Data source -> New connection -> Open connection -> Rosbridge` and enter `wss://ATOS_host_address:9090`.
+
+#### Changing layout
+The premade layouts for ATOS are located [here](./plugins/foxglove/). To add a layout in Foxglove Studio, go to `Layouts -> Import layout` and select one of the layouts for ATOS.
+
+#### Panels in Foxglove Studio
+
+
 
 <!-- Explaining the setup steps and how to set up layout, tile-server etc. -->
