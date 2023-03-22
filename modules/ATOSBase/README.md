@@ -1,18 +1,25 @@
-## Dummy module
-This module is an example for how to build a ATOS-external module and connect it via message bus. It is also written in C++ so can serve as an example for how to import ATOS C code and connect to message bus using another code language.
+# About the module
+Short description what the module does and what to use it for.
 
-### Build process
-1) Ensure your util repo is up to date
-2) Navigate to this README.md file
-3) Create the build directory: ```mkdir build```
-4) Enter the build directory: ```cd build```
-5) Generate necessary cmake files: ```cmake ..```
-6) Build the module: ```make```
+# ROS parameters
+The following ROS parameters can be set for `ATOSBase`:
+- `test_origin_latitude` - The test origin's latitude in decimal degrees.
+- `test_origin_longitude` - The test origin's longitude in decimal degrees.
+- `test_origin_altitude` - The test origin's altitude in meters.
+- `test_origin_rot` - The test origin's rotation in degrees.
 
-### Run the module
-1) Ensure you have built the module
-2) Navigate to the build directory
-3) Run the module: ```./dummy```
-4) Run ATOS
+## Examples
+### Example 1
+Setting the test origin at AstaZero's office in Gothenburg, with no rotation.
+- `test_origin_latitude: 57.7072583357822`
+- `test_origin_longitude: 11.940293773902779`
+- `test_origin_altitude: 1.0`
+- `test_origin_rot: 0.0`
 
-Note: steps 3 and 4 can be replaced with running the runServer.sh script in the top directory of this repository
+
+### Example 2
+Setting the test origin at AstaZero's test track outside of Gothenburg, with 90 degrees rotation.
+- `test_origin_latitude: 57.77907816522942`
+- `test_origin_longitude: 12.779735711698871`
+- `test_origin_altitude: 193.0`
+- `test_origin_rot: 90.0`

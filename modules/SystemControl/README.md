@@ -1,14 +1,15 @@
-## System control module
-TODO
+# About the module
+Short description what the module does and what to use it for.
 
-### Dependencies
-#### TODO
+# ROS parameters
+The following ROS parameters can be set for `SystemControl`:
+- `gui_update_rate` - Description
 
-### Build process
-TODO
 
-### Run the module
-1) Ensure you have built the module
-2) Navigate to the build directory
-3) Ensure ROSCore is running
-3) Run the module: ```./SystemControl```
+## Examples
+### Example 1
+Example here
+
+
+### Example 2
+Another example here if possible
