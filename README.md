@@ -221,13 +221,13 @@ When opening Simple Control there will be a set of buttons, [ObjectControl](./mo
 
 
 ### Foxglove Studio
-If you want to run ATOS with more visualisation you can use [Foxglove Studio](https://github.com/foxglove/studio). To get started visit [studio.foxglove.dev](https://studio.foxglove.dev).
+If you want to run ATOS with more visualisation you can use [Foxglove Studio](https://github.com/foxglove/studio). To get started, visit [studio.foxglove.dev](https://studio.foxglove.dev).
 
 #### Connect to ATOS
 In order to connect to ATOS in Foxglove Studio, ATOS first needs to be running. Then, in Foxglove Studio, go to `Data source -> New connection -> Open connection -> Rosbridge` and enter `wss://ATOS_host_address:9090`.
 
 #### Extensions
-In order for everything to be displayed correctly, some extensions needs to be added. The extensions for ATOS are found [here](./plugins/foxglove/) and have the file type `.foxe`. In Foxglove Studio, go to `Extensions` and then drag and drop the extensions.
+In order for everything to be displayed correctly, some extensions needs to be added. The extensions for ATOS are found [here](./plugins/foxglove/) with the file type `.foxe`. In Foxglove Studio, go to `Extensions` and then drag and drop the extensions.
 
 #### Changing layout
 The premade layouts for ATOS are located [here](./plugins/foxglove/). To add a layout in Foxglove Studio, go to `Layouts -> Import layout` and select one of the layouts for ATOS.
