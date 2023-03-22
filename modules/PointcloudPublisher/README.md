@@ -5,8 +5,8 @@ The follwing ROS parameters can be set for `PointcloudPublisher`:
 # Examples
 ## Example 1
 Load a single pointcloud:
-- pointcloud_files: ["Pointcloud.pcd"]
+- `pointcloud_files: ["Pointcloud.pcd"]`
 
 ## Example 2
 Load multiple pointcloud files:
-- pointcloud_files: ["Pointcloud1.pcd", "Pointcloud2.pcd"]
+- `pointcloud_files: ["Pointcloud1.pcd", "Pointcloud2.pcd"]`
