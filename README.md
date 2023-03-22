@@ -196,12 +196,12 @@ After starting ATOS the first time, you will find the test directory in `~/.asta
 In the `conf`-directory, `params.yaml` is located and sets ROS-parameters for the ATOS modules, which are read when launching ATOS. The parameters are described in their respective module:
 - [ATOSBase](./modules/ATOSBase/README.md)
 - [EsminiAdapter](./modules/EsminiAdapter/README.md)
-- MQTTBridge
-- ObjectControl
+- [MQTTBridge](./modules/MQTTBridge/README.md)
+- [ObjectControl](./modules/ObjectControl/README.md)
 - [OSIAdapter](./modules/OSIAdapter/README.md)
 - [PointcloudPublisher](./modules/PointcloudPublisher/README.md)
-- SystemControl
-- TrajectoryletStreamer
+- [SystemControl](./modules/SystemControl/README.md)
+- [TrajectoryletStreamer](./modules/TrajectoryletStreamer/README.md)
 
 
 ## Using ATOS with a Graphical User Interface (GUI)

@@ -1,5 +1,5 @@
 # ROS parameters
-The follwing ROS parameters can be set for `OSIAdapter`:
+The following ROS parameters can be set for `OSIAdapter`:
 - `address` - IP address for client to connect to.
 - `port` - Port for client to connect to.
 - `protocol` - Which protocol to use, use `"tcp"` or `"udp"`.

@@ -1,5 +1,5 @@
 # ROS parameters
-The follwing ROS parameters can be set for `EsminiAdapter`:
+The following ROS parameters can be set for `EsminiAdapter`:
 - `open_scenario_file` - Name of the OpenSCENARIO-file. The file must end in `.xosc` and be located in the `osc`-directory.
 
 

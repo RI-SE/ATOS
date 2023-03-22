@@ -1,6 +1,6 @@
 # ROS parameters
-The following ROS parameters can be set for `SystemControl`:
-- `gui_update_rate` - Description
+The following ROS parameters can be set for `TrajectoryletStreamer`:
+- `chunk_duration` - Description
 
 
 # Examples

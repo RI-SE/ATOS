@@ -1,5 +1,5 @@
 # ROS parameters
-The follwing ROS parameters can be set for `ATOSBase`:
+The following ROS parameters can be set for `ATOSBase`:
 - `test_origin_latitude` - The test origin's latitude in decimal degrees.
 - `test_origin_longitude` - The test origin's longitude in decimal degrees.
 - `test_origin_altitude` - The test origin's altitude in meters.
