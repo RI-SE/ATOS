@@ -20,12 +20,12 @@ ATOS, the communication hub for all test objects, controls and monitors iso22133
 - [ Optional builds \& installations](#-optional-builds--installations)
   - [ How to build with RelativeKinematics instead of ObjectControl](#-how-to-build-with-relativekinematics-instead-of-objectcontrol)
 - [User manual](#user-manual)
-  - [Getting started](#getting-started)
-    - [The test directory](#the-test-directory)
-    - [Changing ROS parameters](#changing-ros-parameters)
+  - [The test directory](#the-test-directory)
+  - [Changing ROS parameters](#changing-ros-parameters)
   - [Using ATOS with a Graphical User Interface (GUI)](#using-atos-with-a-graphical-user-interface-gui)
     - [Simple Control](#simple-control)
     - [Foxglove Studio](#foxglove-studio)
+      - [Connect to ATOS](#connect-to-atos)
 
 # <a name="ATOS"></a> Building ATOS with colcon
 Below are the steps for building ATOS for the first time with colcon.
@@ -155,44 +155,42 @@ colcon build --cmake-args -DWITH_RELATIVE_KINEMATICS=OFF
 ```
 
 # User manual
-## Getting started
-Below are some information to get started with ATOS.
 
-### The test directory
+## The test directory
 After starting ATOS the first time, you will find the test directory in `~/.astazero/ATOS`. This directory will contain all test settings and will contain the following directories:
-- Catalogs
+- **Catalogs**
   - Explanation here: 
   - Supported file types:
-- certs
+- **certs**
   - Explanation here: 
   - Supported file types:
-- conf
+- **conf**
   - Explanation here: 
   - Supported file types:
-- geofence
+- **geofence**
   - Explanation here: 
   - Supported file types:
-- journal
+- **journal**
   - Explanation here: 
   - Supported file types:
-- objects
+- **objects**
   - Explanation here: Directory containing all objects that should be used in a test.
   - Supported file types: `.opro`
-- odr
+- **odr**
   - Explanation here: Directory containing OpenDRIVE-files.
   - Supported file types: `.xodr`
-- osc
+- **osc**
   - Explanation here: Directory containing the OpenSCENARIO-files.
   - Supported file types: `.xosc`
-- pointclouds
+- **pointclouds**
   - Explanation here: Directory containing site scans as pointclouds.
   - Supported file types: `.pcd`
-- traj
+- **traj**
   - Explanation here: 
   - Supported file types:
 
 
-### Changing ROS parameters
+## Changing ROS parameters
 In the `conf`-directory, `params.yaml` is located and sets ROS-parameters for the ATOS modules, which are read when launching ATOS. The parameters are described in their respective module:
 - [ATOSBase](./modules/ATOSBase/README.md)
 - [EsminiAdapter](./modules/EsminiAdapter/README.md)
@@ -206,7 +204,23 @@ In the `conf`-directory, `params.yaml` is located and sets ROS-parameters for th
 
 ## Using ATOS with a Graphical User Interface (GUI)
 ### Simple Control
-Explaining the setup steps and what the buttons do.
+Simple Control is used to run ATOS without any further visualisation. In order to start Simple Control, start ATOS and then open your web browser and go to `ATOS_host_address:3000`, where `ATOS_host_address` is the address to the server that ATOS is hosted on. If you run ATOS on your own computer and want to use Simple Control on the same computer, you would go to `localhost:3000`.
+
+When opening Simple Control there will be a set of buttons, [ObjectControl](./modules/ObjectControl/README.md) state, and connection status to ATOS. The buttons are:
+- **Reset Test** - Reset the loaded test
+- **Init** - Initialise a test, loads things such as the scenario and which objects to use.
+- **Connect** - Connects to the objects that were initialised.
+- **Arm** - Arms the objects, meaning that they are ready to start the test.
+- **Disarm** - Disarms the objects, meaning that they are no longer ready to start the test.
+- **Start** - Starts the test.
+- **Abort** - Stops the test, for instance if something goes wrong or the test needs to be stopped for some reason.
+- **All clear** - Clears the test.
+
 
 ### Foxglove Studio
-Explaining the setup steps and how to set up layout, tile-server etc.
+If you want to run ATOS with more visualisation you can use [Foxglove Studio](https://github.com/foxglove/studio). To get started visit [studio.foxglove.dev](https://studio.foxglove.dev).
+
+#### Connect to ATOS
+Aa
+
+<!-- Explaining the setup steps and how to set up layout, tile-server etc. -->
