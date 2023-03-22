@@ -18,6 +18,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
+    "myst_parser"
 ]
 
 intersphinx_mapping = {
@@ -28,8 +29,7 @@ intersphinx_disabled_domains = ['std']
 
 templates_path = ['_templates']
 
-# -- For markdown support
-extensions = ["myst_parser"]
+source_suffix = ['.rst', '.md']
 
 # -- Options for HTML output
 
