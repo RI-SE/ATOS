@@ -176,17 +176,17 @@ After starting ATOS the first time, you will find the test directory in `~/.asta
   - Explanation here: 
   - Supported file types:
 - objects
-  - Explanation here: 
-  - Supported file types:
+  - Explanation here: Directory containing all objects that should be used in a test.
+  - Supported file types: `.opro`
 - odr
-  - Explanation here: 
-  - Supported file types:
+  - Explanation here: Directory containing OpenDRIVE-files.
+  - Supported file types: `.xodr`
 - osc
-  - Explanation here: 
-  - Supported file types:
+  - Explanation here: Directory containing the OpenSCENARIO-files.
+  - Supported file types: `.xosc`
 - pointclouds
-  - Explanation here: 
-  - Supported file types:
+  - Explanation here: Directory containing site scans as pointclouds.
+  - Supported file types: `.pcd`
 - traj
   - Explanation here: 
   - Supported file types:
