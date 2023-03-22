@@ -1,5 +1,5 @@
 # About the module
-Short description what the module does and what to use it for.
+`PointcloudPublisher` is used to publish site scans. This module supports pointclouds that have the file type `.pcd`. If you have a very large pointcloud, it is recommended to downsample it before inputting it into the module.
 
 # ROS parameters
 The follwing ROS parameters can be set for `PointcloudPublisher`:
