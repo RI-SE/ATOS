@@ -49,6 +49,9 @@ app.get('/public/javascripts/client.js', function(req, res) {
   res.sendFile(path.join(__dirname + '/client.js'));
 });
 
+// Display favicon
+app.use('/favicon.ico', express.static('public/images/favicon.ico'));
+
 module.exports = app;
 
 /* End of boilerplate */
