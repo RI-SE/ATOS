@@ -24,7 +24,7 @@ ATOSBase::ATOSBase()
 	declare_parameter("test_origin_altitude");
 	declare_parameter("test_origin_rot");
 
-	std::string installationPath = ament_index_cpp::get_package_prefix("atos");
+	auto installationPath = std::filesystem::path(ament_index_cpp::get_package_prefix("atos"));
 	Util::verifyTestDirectory(installationPath);
 
 	initDataDictionaryService = create_service<SetBool>(ServiceNames::initDataDict,

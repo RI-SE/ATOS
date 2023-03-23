@@ -32,7 +32,7 @@ namespace Util {
 	 * 
 	 * @param installationPath Path to the installation directory.
 	 */
-  void verifyTestDirectory(const std::string& installationPath) {
+  void verifyTestDirectory(const std::filesystem::path& installationPath) {
 		const auto atosDir = getTestDirectoryPath();
 
 		// check that all expected directories exists
@@ -49,7 +49,7 @@ namespace Util {
 
 		// check that that all expected files exists
 		for (const auto& [key, expectedFile] : expectedFiles) {
-			auto sysconfFile = std::filesystem::path(installationPath + "/etc/" + expectedFile);
+			auto sysconfFile = installationPath / std::filesystem::path("etc/" + expectedFile);
 			auto filePath = atosDir / std::filesystem::path("conf/" + expectedFile);
 			if (!std::filesystem::exists(filePath)) {
 				std::filesystem::copy(sysconfFile, filePath);
