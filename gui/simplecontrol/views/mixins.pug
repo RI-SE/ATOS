@@ -4,8 +4,9 @@ mixin p(text, id)
 //- Button mixin
 mixin button(style, size, onClick)
   - var style = (typeof style === 'undefined') ? "default" : style
+  - var size = (typeof size === 'undefined') ? "sm" : size
   - var onClick = (typeof onClick === 'undefined') ? "return false" : onClick
-  button( class=["btn", "btn-" + style], type="button", onclick=onClick )
+  button( class=["btn", "btn-" + style, "btn-" + size], type="button", onclick=onClick )
     block
 
 mixin statusIcon(status, text, options = {})
