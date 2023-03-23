@@ -250,7 +250,7 @@ int transmitTrajectories(TCPHandler& tcpPort) {
 	std::vector<char> transmitBuffer;
 	int retval = 0, rc;
 
-	auto trajPath = Util::getDirectoryPath("traj");
+	auto trajPath = Util::getDirectoryPath(Util::TRAJ_DIR_NAME);
 
 	for (const auto& entry : fs::directory_iterator(trajPath.data())) {
 		/* TO DO:

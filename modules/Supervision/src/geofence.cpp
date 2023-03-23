@@ -40,8 +40,8 @@ void Geofence::initializeFromFile(const std::string &fileName) {
 	bool isHeaderParsedSuccessfully = false;
 	unsigned long nPoints = 0;
 
-	auto geofenceDirPath = Util::getDirectoryPath("geofence");
-	string geofenceFilePath(geofenceDirPath);
+	auto geofenceDirPath = Util::getDirectoryPath(Util::GEOFENCE_DIR_NAME);
+	std::string geofenceFilePath = geofenceDirPath.string();
 	geofenceFilePath += fileName;
 
 	file.open(geofenceFilePath);

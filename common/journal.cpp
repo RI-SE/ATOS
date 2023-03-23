@@ -150,8 +150,8 @@ int reinitializeJournal() {
 	std::strftime(dateStr, FILENAME_DATESTR_MAX_LENGTH, FILENAME_DATESTR_FORMAT, &now_tm);
 
 	// Form base filename from path and label
-	auto journalDirPath = Util::getDirectoryPath("journal");
-	journalPath = journalDirPath + journalLabel + "-" + dateStr + JOURNAL_FILE_ENDING;
+	auto journalDirPath = Util::getDirectoryPath(Util::JOURNAL_DIR_NAME);
+	journalPath = journalDirPath.string() + "/" + journalLabel + "-" + dateStr + JOURNAL_FILE_ENDING;
 
 	// Check if log directory exists
 	if(stat(journalDirPath.c_str(), &sb)) {

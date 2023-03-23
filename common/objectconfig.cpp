@@ -52,9 +52,9 @@ void ObjectConfig::parseConfigurationFile(
 	char setting[100];
 	int result;
 
-	auto trajDirPath = Util::getDirectoryPath("traj");
-	auto odrDirPath = Util::getDirectoryPath("odr");
-	auto oscDirPath = Util::getDirectoryPath("osc");
+	auto trajDirPath = Util::getDirectoryPath(Util::TRAJ_DIR_NAME);
+	auto odrDirPath = Util::getDirectoryPath(Util::ODR_DIR_NAME);
+	auto oscDirPath = Util::getDirectoryPath(Util::OSC_DIR_NAME);
 
 
 	// Get IP setting

@@ -74,8 +74,8 @@ std::filesystem::path EsminiAdapter::getOpenScenarioFileParameter()
 		return result;
 	}
 	else {
-		auto path = Util::getDirectoryPath("osc");
-		return path + result;
+		auto path = Util::getDirectoryPath(Util::OSC_DIR_NAME);
+		return path.string() + result;
 	}
 }
 

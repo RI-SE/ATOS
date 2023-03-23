@@ -209,7 +209,7 @@ void loadObjectData(std::vector<ObjectConfiguration>& objectData) {
     struct dirent *ent;
     DIR *dir;
     unsigned int n = 0;
-    auto objectPathDir = Util::getDirectoryPath("objects");
+    auto objectPathDir = Util::getDirectoryPath(Util::OBJECTS_DIR_NAME).string();
     LogMessage(LOG_LEVEL_DEBUG, "Loading trajectories");
 
 	dir = opendir(objectPathDir);
@@ -271,7 +271,7 @@ void loadGeofenceFiles(std::vector<Geofence> &geofences) {
     DIR *pDir;
     char *ext;
     unsigned int n = 0;
-    auto geofencePathDir = Util::getDirectoryPath("geofence");
+    auto geofencePathDir = Util::getDirectoryPath(Util::GEOFENCE_DIR_NAME).string();
     LogMessage(LOG_LEVEL_DEBUG, "Loading geofences");
 
     pDir = opendir(geofencePathDir);

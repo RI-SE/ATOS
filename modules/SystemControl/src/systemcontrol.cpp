@@ -1992,7 +1992,7 @@ I32 SystemControl::SystemControlReadServerParameterList(char * ParameterList, U8
 	FILE *fd;
 	ssize_t read;
 
-	auto confPathDir = Util::getDirectoryPath("conf");
+	auto confPathDir = Util::getDirectoryPath(Util::CONF_DIR_NAME).string();
 	strcat(confPathDir, CONF_FILE_NAME);
 
 	fd = fopen(confPathDir, "r");
@@ -2255,16 +2255,16 @@ I32 SystemControl::SystemControlUploadFile(const char * Filename, const char * F
 		CompletePath = Util::getTestDirectoryPath();
 		break;
 	case ATOS_TRAJ_FILE_TYPE:
-		CompletePath = Util::getDirectoryPath("traj");
+		CompletePath = Util::getDirectoryPath(Util::TRAJ_DIR_NAME).string();
 		break;
 	case ATOS_CONF_FILE_TYPE:
-		CompletePath = Util::getDirectoryPath("conf");
+		CompletePath = Util::getDirectoryPath(Util::CONF_DIR_NAME).string();
 		break;
 	case ATOS_GEOFENCE_FILE_TYPE:
-		CompletePath = Util::getDirectoryPath("geofence");
+		CompletePath = Util::getDirectoryPath(Util::GEOFENCE_DIR_NAME).string();
 		break;
 	case ATOS_OBJECT_FILE_TYPE:
-		CompletePath = Util::getDirectoryPath("objects");
+		CompletePath = Util::getDirectoryPath(Util::GEOFENCE_DIR_NAME).string();
 		break;
 	default:
 		RCLCPP_ERROR(get_logger(), "Received invalid file type upload request");

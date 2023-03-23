@@ -4,6 +4,30 @@
 namespace Util {
 
 	/**
+	 * @brief Map for expected directories
+	 * 
+	 */
+	std::map<DirectoryPath, std::string> expectedDirs = {
+    {CONF_DIR_NAME, "conf"},
+    {GEOFENCE_DIR_NAME, "geofence"},
+    {JOURNAL_DIR_NAME, "journal"},
+    {TRAJ_DIR_NAME, "traj"},
+    {OBJECTS_DIR_NAME, "objects"},
+    {ODR_DIR_NAME, "odr"},
+    {OSC_DIR_NAME, "osc"}
+  };
+
+	/**
+	 * @brief Map for expected file names
+	 * 
+	 */
+  std::map<FilePath, std::string> expectedFiles = {
+    {TEST_FILE_NAME, "test.conf"},
+    {PARAMS_YAML_FILE_NAME, "params.yaml"}
+  };
+
+
+	/**
 	 * @brief Checks so that all the required directories exist and that all configuration files exists.
 	 * 
 	 * @param installationPath Path to the installation directory.

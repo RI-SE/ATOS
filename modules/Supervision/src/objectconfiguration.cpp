@@ -23,8 +23,8 @@ void ObjectConfiguration::initializeFromFile(
 	char objectSetting[100];
 	int result = 0;
 
-	auto objectDirPath = Util::getDirectoryPath("objects");
-	string objectFilePath(objectDirPath);
+	auto objectDirPath = Util::getDirectoryPath(Util::OBJECTS_DIR_NAME);
+	std::string objectFilePath = objectDirPath.string();
 	objectFilePath += fileName;
 
 	ifstream file(objectFilePath);

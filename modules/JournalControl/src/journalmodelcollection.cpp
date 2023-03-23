@@ -148,8 +148,8 @@ int JournalModelCollection::dumpToFile() {
 		RCLCPP_ERROR(get_logger(), "Unable to get scenario name parameter to generate output file");
 		return -1;
 	}
-	auto journalDir = Util::getDirectoryPath("journal");
-	fs::path journalDirPath(journalDir + std::string(scenarioName) + JOURNAL_FILE_ENDING);
+	auto journalDir = Util::getDirectoryPath(Util::JOURNAL_DIR_NAME);
+	auto journalDirPath = journalDir / fs::path(std::string(scenarioName) + JOURNAL_FILE_ENDING);
 
 	std::ofstream ostrm(journalDirPath);
 	if (!ostrm.is_open()) {
@@ -282,7 +282,7 @@ int JournalModelCollection::printJournalHeaderTo(std::ofstream &ostrm) {
 	ostrm << "Whole object files" << std::endl;
 	ostrm << "------------------------------------------" << std::endl;
 
-	auto objectDirectory = Util::getDirectoryPath("objects");
+	auto objectDirectory = Util::getDirectoryPath(Util::OBJECTS_DIR_NAME).string() + "/";
 	objectDirectory.erase(std::find(objectDirectory.begin(), objectDirectory.end(), '\0'),
 							  objectDirectory.end());
 	std::remove(std::find(objectDirectory.begin(), objectDirectory.end(), '\0'),
@@ -295,7 +295,7 @@ int JournalModelCollection::printJournalHeaderTo(std::ofstream &ostrm) {
 	ostrm << "Whole trajectory files" << std::endl;
 	ostrm << "------------------------------------------" << std::endl;
 
-	auto trajectoryDirectory = Util::getDirectoryPath("traj");
+	auto trajectoryDirectory = Util::getDirectoryPath(Util::TRAJ_DIR_NAME).string() + "/";
 	trajectoryDirectory.erase(std::find(trajectoryDirectory.begin(), trajectoryDirectory.end(), '\0'),
 							  trajectoryDirectory.end());
 	std::remove(std::find(trajectoryDirectory.begin(), trajectoryDirectory.end(), '\0'),
@@ -308,7 +308,7 @@ int JournalModelCollection::printJournalHeaderTo(std::ofstream &ostrm) {
 	ostrm << "Whole configuration files" << std::endl;
 	ostrm << "------------------------------------------" << std::endl;
 
-	auto configurationDirectory = Util::getDirectoryPath("conf");
+	auto configurationDirectory = Util::getDirectoryPath(Util::CONF_DIR_NAME).string() + "/";
 	configurationDirectory.erase(std::find(configurationDirectory.begin(), configurationDirectory.end(), '\0'),
 								 configurationDirectory.end());
 	std::remove(std::find(configurationDirectory.begin(), configurationDirectory.end(), '\0'),
@@ -353,7 +353,7 @@ std::string JournalModelCollection::getDateAsString(const std::chrono::system_cl
 std::vector<fs::path> JournalModelCollection::getJournalFilesFrom(const std::chrono::system_clock::time_point &date) {
 	std::vector<fs::path> journalsFromDate;
 
-	auto buffer = Util::getDirectoryPath("journal");
+	auto buffer = Util::getDirectoryPath(Util::JOURNAL_DIR_NAME).string() + "/";
 	buffer.erase(std::find(buffer.begin(), buffer.end(), '\0'),
 								 buffer.end());
 	fs::path journalDirPath(buffer.begin(), buffer.end());

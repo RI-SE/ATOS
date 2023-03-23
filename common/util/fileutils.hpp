@@ -8,33 +8,18 @@
 namespace Util {
 
   enum DirectoryPath {
-    CONF,
-    GEOFENCE,
-    JOURNAL,
-    TRAJ,
-    OBJECTS,
-    ODR,
-    OSC
+    CONF_DIR_NAME,
+    GEOFENCE_DIR_NAME,
+    JOURNAL_DIR_NAME,
+    TRAJ_DIR_NAME,
+    OBJECTS_DIR_NAME,
+    ODR_DIR_NAME,
+    OSC_DIR_NAME
   };
 
   enum FilePath {
-    TEST,
-    PARAMS
-  };
-
-  std::map<DirectoryPath, std::string> expectedDirs = {
-    {CONF, "conf"},
-    {GEOFENCE, "geofence"},
-    {JOURNAL, "journal"},
-    {TRAJ, "traj"},
-    {OBJECTS, "objects"},
-    {ODR, "odr"},
-    {OSC, "osc"}
-  };
-
-  std::map<FilePath, std::string> expectedFiles = {
-    {TEST, "test.conf"},
-    {PARAMS, "params.yaml"}
+    TEST_FILE_NAME,
+    PARAMS_YAML_FILE_NAME
   };
 
 

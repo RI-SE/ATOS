@@ -157,7 +157,7 @@ void Trajectory::initializeFromFile(const std::string &fileName) {
 	bool isHeaderParsedSuccessfully = false;
 	unsigned long nPoints = 0;
 
-	auto trajDirPath = Util::getDirectoryPath("traj");
+	auto trajDirPath = Util::getDirectoryPath(Util::TRAJ_DIR_NAME);
 	string trajFilePath(trajDirPath);
 	trajFilePath += fileName;
 
@@ -686,7 +686,7 @@ Trajectory Trajectory::reversed() const {
 void Trajectory::saveToFile(const std::string& fileName) const {
 	using std::string, std::smatch, std::ofstream;
 
-	auto trajDirPath = Util::getDirectoryPath("traj");
+	auto trajDirPath = Util::getDirectoryPath(Util::TRAJ_DIR_NAME);
 	string trajFilePath(trajDirPath);
 	trajFilePath += fileName;
 

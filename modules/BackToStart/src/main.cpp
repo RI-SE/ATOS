@@ -171,7 +171,7 @@ void loadObjectFiles() {
 	objects.clear();
 	std::vector<std::invalid_argument> errors;
 
-	auto path = Util::getDirectoryPath("objects");
+	auto path = Util::getDirectoryPath(Util::OBJECTS_DIR_NAME);
 	fs::path objectDir(path);
 	if (!fs::exists(objectDir)) {
 		throw std::ios_base::failure("Object directory does not exist");
