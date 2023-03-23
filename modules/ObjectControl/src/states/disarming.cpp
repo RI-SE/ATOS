@@ -88,11 +88,12 @@ void RelativeKinematics::Disarming::connectedToObject(
 }
 
 void RelativeKinematics::Disarming::disconnectedFromObject(
-		ObjectControl& handler,
-		uint32_t id) {
+	ObjectControl& handler,
+	uint32_t id)
+{
 		AbstractKinematics::Disarming::disconnectedFromObject(handler,id);	
 		if (handler.areAllObjects(disarmedOrDisconnected)) {
-			setState(handler, new RelativeKinematics::Connecting);
+			AbsoluteKinematics::Disarming::allObjectsDisarmed(handler);
 		}
 }
 
@@ -160,7 +161,7 @@ void AbsoluteKinematics::Disarming::disconnectedFromObject(
 		uint32_t id) {
 		AbstractKinematics::Disarming::disconnectedFromObject(handler,id);	
 		if (handler.areAllObjects(disarmedOrDisconnected)) {
-			setState(handler, new AbsoluteKinematics::Connecting);
+			AbsoluteKinematics::Disarming::allObjectsDisarmed(handler);
 		}
 		// Otherwise, remain in disarming state
 }
@@ -195,11 +196,11 @@ void AbsoluteKinematics::Disarming::objectDisarmed(
 		ObjectControl& handler,
 		uint32_t id) {
 	AbstractKinematics::Disarming::objectDisarmed(handler,id);
-	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
+	auto disarmedOrDisconnected = [](std::shared_ptr<TestObject> obj){
+		return obj->getState() == OBJECT_STATE_DISARMED || !obj->isConnected();
+	};
+	if (handler.areAllObjects(disarmedOrDisconnected)) {
 		AbsoluteKinematics::Disarming::allObjectsDisarmed(handler);
-	} 
-	else if (handler.areAllObjects(disarmedOrDisconnected)) { // Some objects are disconnected, try to reconnect
-		setState(handler, new AbsoluteKinematics::Connecting);
 	}
 }
 

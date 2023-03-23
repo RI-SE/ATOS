@@ -6,31 +6,29 @@
 #pragma once
 
 #include "module.hpp"
-#include <sensor_msgs/msg/point_cloud2.hpp>
+#include "roschannels/pointcloudchannel.hpp"
+#include "roschannels/commandchannels.hpp"
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 
-
-
 class PointcloudPublisher : public Module {
 
-  public:
-    PointcloudPublisher();
-    ~PointcloudPublisher();
+public:
+  PointcloudPublisher();
+  ~PointcloudPublisher();
 
-  private:
-    static inline std::string const moduleName = "pointcloud_publisher";
-    std::string pointcloudFile;
-    sensor_msgs::msg::PointCloud2 msg;
-    std::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB>> pointcloud;
+private:
+  static inline std::string const moduleName = "pointcloud_publisher";
+  ROSChannels::Init::Sub initSub;
+  std::map<std::string, std::shared_ptr<ROSChannels::Pointcloud::Pub>> pointcloudPubs;
 
-    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>> publisher;
-    std::shared_ptr<rclcpp::TimerBase> timer;
+  std::vector<std::string> pointcloudFiles;
+  std::map<std::string, std::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB>>> pointclouds;
 
-
-    void initialize();
-    void getPointcloudFile();
-    void loadPointCloud();
-    void createPointcloudMessage();
-    void publishPointcloud();
+  void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
+  void initialize();
+  void readPointcloudParams();
+  void loadPointClouds();
+  void createPublishers();
+  std::string getPublisherTopicName(const std::string &path) const;
 };

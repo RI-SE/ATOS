@@ -61,6 +61,7 @@
 #define OBJECT_DIR_NAME "objects"
 #define OPENDRIVE_DIR_NAME "odr"
 #define OPENSCENARIO_DIR_NAME "osc"
+#define POINTCLOUD_DIR_NAME "pointclouds"
 
 /* Message priorities on message queue */
 // Abort message
@@ -2034,7 +2035,8 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		TRAJECTORY_DIR_NAME,
 		OBJECT_DIR_NAME,
 		OPENDRIVE_DIR_NAME,
-		OPENSCENARIO_DIR_NAME
+		OPENSCENARIO_DIR_NAME,
+		POINTCLOUD_DIR_NAME
 	};
 	char *envVar;
 	int result;

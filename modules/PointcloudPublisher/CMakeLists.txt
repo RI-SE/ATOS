@@ -14,7 +14,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
-find_package(PCL 1.2 REQUIRED)
+find_package(PCL 1.10 REQUIRED)
 
 # Define target names
 set(POINTCLOUD_PUBLISHER_TARGET ${PROJECT_NAME})
@@ -36,6 +36,7 @@ add_executable(${POINTCLOUD_PUBLISHER_TARGET}
 # Link project executable to util libraries
 target_link_libraries(${POINTCLOUD_PUBLISHER_TARGET} 
 	${ATOS_COMMON_LIBRARY}
+	${ATOS_COMMON_LIBRARY}
   ${PCL_LIBRARIES}
 )
 
@@ -49,6 +50,7 @@ ament_target_dependencies(${POINTCLOUD_PUBLISHER_TARGET}
 
 target_include_directories(${POINTCLOUD_PUBLISHER_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
+	${COMMON_HEADERS}
 )
 
 # Installation rules

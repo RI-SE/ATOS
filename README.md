@@ -32,7 +32,7 @@ Prerequisites: C/C++ compiler, CMake (minimum version 3.10.2)
 ## <a name="dependencies"></a> Dependencies & external libraries
 In order to build ATOS, dependencies and exernal libraries need to be installed. First install the necessary development packages:
 ```
-sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev ros-foxy-paho-mqtt-c nlohmann-json3-dev npm nodejs
+sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev ros-foxy-paho-mqtt-c nlohmann-json3-dev npm nodejs libpcl-dev
 ```
 
 Then, the following external libraries need to be installed:
@@ -100,7 +100,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-a
 Install ros foxy for desktop and colcon
 ```
 sudo apt update
-sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs ros-foxy-geographic-msgs ros-foxy-foxglove-msgs ros-foxy-sensor-msgs  ros-foxy-rosbridge-suite
+sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs ros-foxy-geographic-msgs ros-foxy-foxglove-msgs ros-foxy-sensor-msgs  ros-foxy-rosbridge-suite ros-foxy-pcl-conversions
 ```
 
 source the setup script:

@@ -105,6 +105,9 @@ void RelativeKinematics::Connecting::connectedToObject(
 	else if (handler.isAnyObjectIn(OBJECT_STATE_ARMED)) {
 		setState(handler, new RelativeKinematics::Disarming);
 	}
+	else if (handler.isAnyObjectIn(OBJECT_STATE_RUNNING)) {
+		setState(handler, new RelativeKinematics::Aborting);
+	}
 }
 
 void RelativeKinematics::Connecting::disconnectedFromObject(
@@ -179,6 +182,9 @@ void AbsoluteKinematics::Connecting::connectedToObject(
 	}
 	else if (handler.isAnyObjectIn(OBJECT_STATE_ARMED)) {
 		setState(handler, new AbsoluteKinematics::Disarming);
+	}
+	else if (handler.isAnyObjectIn(OBJECT_STATE_RUNNING)) {
+		setState(handler, new AbsoluteKinematics::Aborting);
 	}
 }
 
