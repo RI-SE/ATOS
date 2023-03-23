@@ -1,8 +1,8 @@
 Docs generated with mkdocs hosted on Read The Docs
 
-Do edit locally, install deps with 
-"pip install -r requirements.txt" 
+When editing locally, install deps with 
+"pip install -r requirements.txt"
 
-in this folder
+Then run "mkdocs serve" from the ATOS root folder.
 
-Then run "mkdocs serve" from the ATOS root folder. 
+When adding python deps, add these to requirements.in and then run the "pip-compile" from pip-tools https://pip-tools.readthedocs.io/en/latest/
