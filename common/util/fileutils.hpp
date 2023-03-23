@@ -14,7 +14,8 @@ namespace Util {
     TRAJ_DIR_NAME,
     OBJECTS_DIR_NAME,
     ODR_DIR_NAME,
-    OSC_DIR_NAME
+    OSC_DIR_NAME,
+    POINTCLOUDS_DIR_NAME
   };
 
   enum FilePath {

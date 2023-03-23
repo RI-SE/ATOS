@@ -13,7 +13,8 @@ namespace Util {
     {TRAJ_DIR_NAME, "traj"},
     {OBJECTS_DIR_NAME, "objects"},
     {ODR_DIR_NAME, "odr"},
-    {OSC_DIR_NAME, "osc"}
+    {OSC_DIR_NAME, "osc"},
+		{POINTCLOUDS_DIR_NAME, "pointclouds"}
   };
 
 
