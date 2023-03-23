@@ -36,6 +36,7 @@ function sendCommand(command, ws){
     ws.send(JSON.stringify(clientCommand));
 }
 
+// Functions relating to visual stuff, move into own .js file. 
 function setOBCStatusText(new_text){
     const obcStateText = document.getElementById('OBCState');
     obcStateText.innerHTML = new_text;
