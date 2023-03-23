@@ -1,7 +1,9 @@
-# About the module
+# PointCloudPublisher
+
+## About the module
 `PointcloudPublisher` is used to publish site scans. This module supports pointclouds that have the file type `.pcd`. If you have a very large pointcloud, it is recommended to downsample it before inputting it into the module.
 
-# ROS parameters
+## ROS parameters
 The follwing ROS parameters can be set for `PointcloudPublisher`:
 - `pointcloud_files` - A list of all file names of pointclouds to load, the pointcloud must be a `.pcd`-file and be located in the `pointclouds`-directory.
 

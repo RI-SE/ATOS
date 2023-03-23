@@ -1,4 +1,6 @@
-# About the module
+# SampleModule
+
+## About the module
 This is a sample module to be used as template for creating new modules.
 
 ## Features

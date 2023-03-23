@@ -1,2 +1,4 @@
-# About the module
+# DirectControl
+
+## About the module
 Short description what the module does and what to use it for.

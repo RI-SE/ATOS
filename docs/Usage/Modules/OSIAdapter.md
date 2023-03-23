@@ -1,4 +1,6 @@
-# About the module
+# OSIAdapter
+
+## About the module
 `OSIAdapter` is used to translate `MONR`-data into OSI-data, and then send it over either `tcp` or `udp` for all objects used in a test. The following data is currently sent for each object:
 - `Object ID`
 - `Position: x, y, z`
@@ -6,7 +8,7 @@
 - `Acceleration, x, y, z`
 - `Orientation: yaw`
 
-# ROS parameters
+## ROS parameters
 The following ROS parameters can be set for `OSIAdapter`:
 - `address` - IP address for client to connect to.
 - `port` - Port for client to connect to.

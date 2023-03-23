@@ -1,7 +1,9 @@
-# About the module
+# MQTTBridge
+
+## About the module
 Short description what the module does and what to use it for.
 
-# ROS parameters
+## ROS parameters
 The following ROS parameters can be set for `MQTTBridge`:
 - `broker_ip` - Description
 - `pub_client_id` - Description
