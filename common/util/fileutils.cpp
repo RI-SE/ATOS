@@ -16,7 +16,7 @@ namespace Util {
       std::filesystem::create_directories(atosDir);
     }
 
-		for (auto expectedDir : excpectedDirs) {
+		for (const auto& [key, expectedDir] : expectedDirs) {
 			auto dir = atosDir / std::filesystem::path(expectedDir);
 			if (!std::filesystem::is_directory(dir)) {
 				std::filesystem::create_directories(dir);
@@ -24,7 +24,7 @@ namespace Util {
 		}
 
 		// check that that all expected files exists
-		for (auto expectedFile : expectedFiles) {
+		for (const auto& [key, expectedFile] : expectedFiles) {
 			auto sysconfFile = std::filesystem::path(installationPath + "/etc/" + expectedFile);
 			auto filePath = atosDir / std::filesystem::path("conf/" + expectedFile);
 			if (!std::filesystem::exists(filePath)) {
@@ -40,9 +40,9 @@ namespace Util {
 	 * @param directoryName The name of the directory to fetch.
 	 * @return std::filesystem::path Absolute path to the directory.
 	 */
-  std::filesystem::path getDirectoryPath(const std::string& directoryName) {
+  std::filesystem::path getDirectoryPath(const enum DirectoryPath directoryName) {
 		const auto atosDir = getTestDirectoryPath();
-		return atosDir / std::filesystem::path(directoryName);
+		return atosDir / std::filesystem::path(expectedDirs[directoryName]);
 	}
 
 
@@ -88,7 +88,7 @@ namespace Util {
 	 * @param directory The name of the directory of which the file is located.
 	 * @return int 0 if successful, -1 otherwise.
 	 */
-	int deleteFile(const std::string& fileName, const std::string& directory) {
+	int deleteFile(const std::string& fileName, const enum DirectoryPath directory) {
 		if (fileName == "") {
 			std::cerr << "Attempt to call delete on unspecified file name\n";
 			return -1;
@@ -110,7 +110,7 @@ namespace Util {
 	 * 
 	 * @param directory The files in the directory to delete.
 	 */
-	int deleteFiles(const std::string& directory) {
+	int deleteFiles(const enum DirectoryPath directory) {
 		auto dirPath = std::filesystem::path(getDirectoryPath(directory));
 		for (auto& file : std::filesystem::directory_iterator(dirPath)) {
 			try {

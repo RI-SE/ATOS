@@ -2,30 +2,47 @@
 
 #include <filesystem>
 #include <vector>
+#include <map>
 
 
 namespace Util {
 
-  const std::vector<std::string> excpectedDirs = {
-    "conf",
-    "geofence",
-    "journal",
-    "traj",
-    "objects",
-    "odr",
-    "osc"
+  enum DirectoryPath {
+    CONF,
+    GEOFENCE,
+    JOURNAL,
+    TRAJ,
+    OBJECTS,
+    ODR,
+    OSC
   };
 
-  const std::vector<std::string> expectedFiles = {
-    "test.conf",
-    "params.yaml"
+  enum FilePath {
+    TEST,
+    PARAMS
   };
+
+  std::map<DirectoryPath, std::string> expectedDirs = {
+    {CONF, "conf"},
+    {GEOFENCE, "geofence"},
+    {JOURNAL, "journal"},
+    {TRAJ, "traj"},
+    {OBJECTS, "objects"},
+    {ODR, "odr"},
+    {OSC, "osc"}
+  };
+
+  std::map<FilePath, std::string> expectedFiles = {
+    {TEST, "test.conf"},
+    {PARAMS, "params.yaml"}
+  };
+
 
   void verifyTestDirectory(const std::string& installationPath);
-  std::filesystem::path getDirectoryPath(const std::string& directoryName);
+  std::filesystem::path getDirectoryPath(const enum DirectoryPath directoryName);
   std::filesystem::path getTestDirectoryPath();
   int deleteFile(const std::string& filePath);
-  int deleteFile(const std::string& fileName, const std::string& directory);
-  int deleteFiles(const std::string& directory);
+  int deleteFile(const std::string& fileName, const enum DirectoryPath directory);
+  int deleteFiles(const enum DirectoryPath directory);
 
 } // namespace Util
