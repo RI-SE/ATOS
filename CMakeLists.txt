@@ -28,18 +28,14 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 
 # Enable or disable modules
-set(WITH_SUPERVISION OFF CACHE BOOL "Enable Supervision module")
-set(WITH_VISUALIZATION OFF CACHE BOOL "Enable Visualization module")
 set(WITH_OBJECT_CONTROL ON CACHE BOOL "Enable ObjectControl module")
 set(WITH_DIRECT_CONTROL OFF CACHE BOOL "Enable DirectControl module")
-set(WITH_BACK_TO_START OFF CACHE BOOL "Enable BackToStart module")
-set(WITH_TIME_CONTROL OFF CACHE BOOL "Enable TimeControl module")
 set(WITH_JOURNAL_CONTROL ON CACHE BOOL "Enable JournalControl module")
-set(WITH_TRAJECTORYLET_STREAMER ON CACHE BOOL "Enable TrajectoryletStreamer module")
+set(WITH_TRAJECTORYLET_STREAMER ON CACHE BOOL "Enable TrajectoryletStreamer module") 
 set(WITH_OSI_ADAPTER ON CACHE BOOL "Enable OSIAdapter module")
 set(WITH_ESMINI_ADAPTER ON CACHE BOOL "Enable EsminiAdapter module")
 set(WITH_MQTT_BRIDGE ON CACHE BOOL "Enable MQTTBridge module")
-set(WITH_POINTCLOUD_PUBLISHER ON CACHE BOOL "Enable Pointcloud Publisher module")
+set(WITH_POINTCLOUD_PUBLISHER ON CACHE BOOL "Enable PointcloudPublisher module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
