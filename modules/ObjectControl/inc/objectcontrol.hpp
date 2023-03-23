@@ -8,6 +8,8 @@
 #include <future>
 #include <set>
 #include <chrono>
+#include <mutex>
+#include <memory>
 
 #include "module.hpp"
 #include "atosTime.h"
@@ -178,6 +180,8 @@ public:
 	//! \brief Get last known ISO state of test participants.
 	std::map<uint32_t,ObjectStateType> getObjectStates() const;
 
+	//! \brief Check if all objects fulfill a predicate.
+	bool areAllObjects(std::function<bool(const std::shared_ptr<TestObject>)> predicate) const;
 	//! \brief Check if any test participant is in the specified state.
 	//!			The method does not wait for the next MONR to arrive.
 	bool isAnyObjectIn(const ObjectStateType state);
@@ -196,10 +200,12 @@ public:
 	void stopControlSignalSubscriber();
 
 private:
+	std::mutex stateMutex;
 	static inline std::string const moduleName = "object_control";
 	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
 	void onConnectMessage(const ROSChannels::Connect::message_type::SharedPtr) override;
 	void onArmMessage(const ROSChannels::Arm::message_type::SharedPtr) override;
+	void onDisarmMessage(const ROSChannels::Arm::message_type::SharedPtr) override;
 	void onStartMessage(const ROSChannels::Start::message_type::SharedPtr) override;
 	void onStartObjectMessage(const ROSChannels::StartObject::message_type::SharedPtr) override;
 	void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr) override;
@@ -232,6 +238,7 @@ private:
 	ROSChannels::Start::Sub scnStartSub;		//!< Subscriber to scenario start requests
 	ROSChannels::StartObject::Sub objectStartSub;	//!< Subscriber to scenario start requests
 	ROSChannels::Arm::Sub scnArmSub;			//!< Subscriber to scenario arm requests
+	ROSChannels::Disarm::Sub scnDisarmSub;			//!< Subscriber to scenario arm requests
 	ROSChannels::Stop::Sub scnStopSub;			//!< Subscriber to scenario stop requests
 	ROSChannels::Abort::Sub scnAbortSub;		//!< Subscriber to scenario abort requests
 	ROSChannels::AllClear::Sub scnAllClearSub;	//!< Subscriber to scenario all clear requests
