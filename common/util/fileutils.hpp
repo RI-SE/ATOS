@@ -28,6 +28,6 @@ namespace Util {
   std::filesystem::path getTestDirectoryPath();
   void deleteFile(const std::string& filePath);
   void deleteFile(const std::string& fileName, const enum DirectoryPath directory);
-  void deleteFiles(const enum DirectoryPath directory);
+  void deleteAllFilesInDirectory(const enum DirectoryPath directory);
 
 } // namespace Util

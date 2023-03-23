@@ -148,7 +148,10 @@ void backToStart() {
 
 	}
 
-	if (Util::deleteFiles("traj") == -1)
+	try {
+		Util::deleteAllFilesInDirectory(Util::TRAJ_DIR_NAME);
+	}
+	catch (std::filesystem::filesystem_error& e) {
 		LogMessage(LOG_LEVEL_ERROR, "Failed to remove trajectory files");
 		return;
 	}

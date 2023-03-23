@@ -2121,7 +2121,10 @@ char SystemControl::SystemControlDeleteGenericFile(const char * filePath, const 
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
 char SystemControl::SystemControlClearTrajectories(void) {
-	if (Util::deleteFiles("traj") != 0) {
+	try {
+		Util::deleteAllFilesInDirectory(Util::TRAJ_DIR_NAME);
+	}
+	catch (std::filesystem::filesystem_error& e) {
 		return FAILED_DELETE;
 	}
 	return SUCCEEDED_DELETE;
@@ -2132,7 +2135,10 @@ char SystemControl::SystemControlClearTrajectories(void) {
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
 char SystemControl::SystemControlClearGeofences(void) {
-	if (Util::deleteFiles("geofence") != 0) {
+	try {
+		Util::deleteAllFilesInDirectory(Util::GEOFENCE_DIR_NAME);
+	}
+	catch (std::filesystem::filesystem_error& e) {
 		return FAILED_DELETE;
 	}
 	return SUCCEEDED_DELETE;
@@ -2143,7 +2149,10 @@ char SystemControl::SystemControlClearGeofences(void) {
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
 char SystemControl::SystemControlClearObjects(void) {
-	if (Util::deleteFiles("objects") != 0) {
+	try {
+		Util::deleteAllFilesInDirectory(Util::OBJECTS_DIR_NAME);
+	}
+	catch (std::filesystem::filesystem_error& e) {
 		return FAILED_DELETE;
 	}
 	return SUCCEEDED_DELETE;

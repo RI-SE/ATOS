@@ -4,7 +4,7 @@
 namespace Util {
 
 	/**
-	 * @brief Map for expected directories
+	 * @brief Map for expected directories.
 	 * 
 	 */
 	std::map<DirectoryPath, std::string> expectedDirs = {
@@ -18,7 +18,7 @@ namespace Util {
   };
 
 	/**
-	 * @brief Map for expected file names
+	 * @brief Map for expected file names.
 	 * 
 	 */
   std::map<FilePath, std::string> expectedFiles = {
@@ -86,7 +86,6 @@ namespace Util {
 	 * @brief Deletes a file from the specified file path relative to the ATOS directory.
 	 * 
 	 * @param filePath The file path to the file to delete.
-	 * @return int 0 if successful, -1 otherwise.
 	 */
 	void deleteFile(const std::string& filePath) {
 		if (filePath == "") {
@@ -107,7 +106,6 @@ namespace Util {
 	 * 
 	 * @param fileName The name of the file to delete.
 	 * @param directory The name of the directory of which the file is located.
-	 * @return int 0 if successful, -1 otherwise.
 	 */
 	void deleteFile(const std::string& fileName, const enum DirectoryPath directory) {
 		if (fileName == "") {
@@ -128,8 +126,8 @@ namespace Util {
 	 * 
 	 * @param directory The files in the directory to delete.
 	 */
-	void deleteFiles(const enum DirectoryPath directory) {
-		auto dirPath = std::filesystem::path(getDirectoryPath(directory));
+	void deleteAllFilesInDirectory(const enum DirectoryPath directory) {
+		auto dirPath = getDirectoryPath(directory);
 		for (auto& file : std::filesystem::directory_iterator(dirPath)) {
 				std::filesystem::remove(file);
 		}
