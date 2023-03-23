@@ -1,0 +1,32 @@
+mixin p(text, id)
+  p(id=id) #{text}
+
+//- Button mixin
+mixin button(style, size, onClick)
+  - var style = (typeof style === 'undefined') ? "default" : style
+  - var size = (typeof size === 'undefined') ? "sm" : size
+  - var onClick = (typeof onClick === 'undefined') ? "return false" : onClick
+  button( class=["btn", "btn-" + style, "btn-" + size], type="button", onclick=onClick )
+    block
+
+mixin statusIcon(status, text, options = {})
+  - var iconSize = options.iconSize || '1em'
+  - var fontSize = options.fontSize || '14px'
+  - var defaultColor = options.defaultColor || 'gray'
+  - var activeColor = options.activeColor || 'green'
+  - var inactiveColor = options.inactiveColor || 'red'
+  - var showGlow = options.showGlow || false
+  
+  .status-icon(class=`status-icon--${status} ${showGlow ? 'status-icon--glow' : ''}`)
+    span.status-icon__icon(
+      style={
+        'width': iconSize,
+        'height': iconSize,
+        'background-color': defaultColor,
+        'box-shadow': showGlow ? `0 0 3px rgba(0, 0, 0, 0.2)` : ''
+      }
+    )
+    span.status-icon__text(
+      style={'font-size': fontSize, 'color': defaultColor},
+      class=`status-icon__text--${status}`
+    ) #{text}

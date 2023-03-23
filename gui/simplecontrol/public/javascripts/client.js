@@ -38,10 +38,34 @@ function sendCommand(command, ws){
     ws.send(JSON.stringify(clientCommand));
 }
 
-function setTextAndColor(id, color, text) {
-    document.getElementById(id).innerText = text;
-    document.getElementById(id).style.color = color;
+// Functions relating to visual stuff, move into own .js file. 
+function setOBCStatusText(new_text){
+    const obcStateText = document.getElementById('OBCState');
+    obcStateText.innerHTML = new_text;
 }
+
+function updateATOSStatusIcon(status, new_text) {
+    const statusIcon = document.querySelector('.status-icon');
+    const icon = statusIcon.querySelector('.status-icon__icon');
+    const text = statusIcon.querySelector('.status-icon__text');
+    text.textContent = new_text;
+    switch (status) {
+      case 'pending':
+        icon.style.backgroundColor = 'gray';
+        text.style.color = 'gray';
+        break;
+      case 'active':
+        icon.style.backgroundColor = 'green';
+        text.style.color = 'green';
+        break;
+      case 'inactive':
+        icon.style.backgroundColor = 'red';
+        text.style.color = 'red';
+        break;
+      default:
+        break;
+    }
+  }
 
 // HTML-Button callbacks
 function sendResetTest(){
@@ -82,7 +106,7 @@ var wsConnect = function(){
     }
     ws.addEventListener('open', function (event) {
         console.log("Connection opened");
-        setTextAndColor("isConnected", "green", "Connected to ATOS");
+        updateATOSStatusIcon("active", "Connected to ATOS");
         sendCommand("get_obc_state", ws); // Get state of OBC on connection immediately
         intervalGetOBCState = setInterval(function() { // also start a timer to get the state periodically
             sendCommand("get_obc_state", ws);
@@ -92,15 +116,15 @@ var wsConnect = function(){
     ws.addEventListener('close', function (event) {
         console.log("Connection lost!");
         clearInterval(intervalGetOBCState); // Stop timer
-        setTextAndColor("OBCState", "black", "OBC State: UNDEFINED")
-        setTextAndColor("isConnected", "red", "Connection to ATOS lost, retrying...");
+        setOBCStatusText("OBC State: UNDEFINED");
+        updateATOSStatusIcon("inactive", "Connection to ATOS lost, retrying...");
         setTimeout(wsConnect, 1000); // Try to reconnect websocket
     });
     ws.addEventListener('message', function (event) {
         var serverResponse = JSON.parse(event.data);
         switch (serverResponse.msg_type) {
             case "get_obc_state_response":
-                setTextAndColor("OBCState", "black", "OBC State: " + getOBCState(parseInt(serverResponse.state)));
+                setOBCStatusText("OBC State: " + getOBCState(parseInt(serverResponse.state)));
                 break;
             // Add more callbacks here, e.g. feedback of successfully executed ros2 commands
             default:
