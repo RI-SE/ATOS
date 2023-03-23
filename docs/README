@@ -1,0 +1,8 @@
+Docs generated with mkdocs hosted on Read The Docs
+
+Do edit locally, install deps with 
+"pip install -r requirements.txt" 
+
+in this folder
+
+Then run "mkdocs serve" from the ATOS root folder. 
