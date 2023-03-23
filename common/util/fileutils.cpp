@@ -9,8 +9,7 @@ namespace Util {
 	 * @param installationPath Path to the installation directory.
 	 */
   void verifyTestDirectory(const std::string& installationPath) {
-    const std::filesystem::path homeDir = getenv("HOME");
-    const std::filesystem::path atosDir = homeDir / std::filesystem::path(".astazero/ATOS");
+		const auto atosDir = getTestDirectoryPath();
 
 		// check that all expected directories exists
     if (!std::filesystem::is_directory(atosDir)) {
@@ -39,24 +38,23 @@ namespace Util {
 	 * @brief Fetches the absolute path to where a directory is stored, ending with a forward slash.
 	 * 
 	 * @param directoryName The name of the directory to fetch.
-	 * @return std::string Absolute path to the directory.
+	 * @return std::filesystem::path Absolute path to the directory.
 	 */
-  std::string getDirectoryPath(const std::string& directoryName) {
-		const std::string homeDir = getenv("HOME");
-		const std::string atosDir = homeDir + "/.astazero/ATOS";
-		return atosDir + "/" + directoryName + "/";
+  std::filesystem::path getDirectoryPath(const std::string& directoryName) {
+		const auto atosDir = getTestDirectoryPath();
+		return atosDir / std::filesystem::path(directoryName);
 	}
 
 
 	/**
-	 * @brief Fetches the absolute path to the test directory, ending with a forward slash.
+	 * @brief Fetches the absolute path to the test directory.
 	 * 
-	 * @return std::string Absolute path of the test directory.
+	 * @return std::filesystem::path Absolute path of the test directory.
 	 */
-	std::string getTestDirectoryPath() {
+	std::filesystem::path getTestDirectoryPath() {
 		const std::string homeDir = getenv("HOME");
-		const std::string atosDir = homeDir + "/.astazero/ATOS/";
-		return atosDir;
+		const std::string atosDir = homeDir + "/.astazero/ATOS";
+		return std::filesystem::path(atosDir);
 	}
 
 
@@ -76,7 +74,7 @@ namespace Util {
 		}
 
 		auto dirPath = getTestDirectoryPath();
-		auto file = std::filesystem::path(dirPath + filePath);
+		auto file = dirPath / std::filesystem::path(filePath);
 		std::filesystem::remove(file);
 
 		return 0;
@@ -100,7 +98,7 @@ namespace Util {
 		}
 
 		auto dirPath = getDirectoryPath(directory);
-		auto file = std::filesystem::path(dirPath + fileName);
+		auto file = dirPath / std::filesystem::path(fileName);
 		std::filesystem::remove(file);
 
 		return 0;
