@@ -2,7 +2,6 @@
 #include "fileutils.hpp"
 
 namespace Util {
-
 	/**
 	 * @brief Map for expected directories.
 	 * 
@@ -16,6 +15,7 @@ namespace Util {
     {ODR_DIR_NAME, "odr"},
     {OSC_DIR_NAME, "osc"}
   };
+
 
 	/**
 	 * @brief Map for expected file names.
