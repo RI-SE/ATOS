@@ -1,4 +1,4 @@
-# Installation instructions
+# Instructions
 Below are the steps for building ATOS for the first time with colcon.
 
 Prerequisites: C/C++ compiler, CMake (minimum version 3.10.2)

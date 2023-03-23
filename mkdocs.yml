@@ -1,5 +1,4 @@
-site_name: My Docs
+site_name: ATOS Docs
 theme:
     name: readthedocs
     logo: res/ATOS_icon.png
-    favicon: res/ATOS_icon.png
