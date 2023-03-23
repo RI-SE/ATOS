@@ -41,8 +41,8 @@ namespace Util {
   void verifyTestDirectory(const std::string& installationPath);
   std::filesystem::path getDirectoryPath(const enum DirectoryPath directoryName);
   std::filesystem::path getTestDirectoryPath();
-  int deleteFile(const std::string& filePath);
-  int deleteFile(const std::string& fileName, const enum DirectoryPath directory);
-  int deleteFiles(const enum DirectoryPath directory);
+  void deleteFile(const std::string& filePath);
+  void deleteFile(const std::string& fileName, const enum DirectoryPath directory);
+  void deleteFiles(const enum DirectoryPath directory);
 
 } // namespace Util

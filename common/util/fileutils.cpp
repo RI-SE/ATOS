@@ -64,20 +64,17 @@ namespace Util {
 	 * @param filePath The file path to the file to delete.
 	 * @return int 0 if successful, -1 otherwise.
 	 */
-	int deleteFile(const std::string& filePath) {
+	void deleteFile(const std::string& filePath) {
 		if (filePath == "") {
-			std::cerr << "Attempt to call delete on unspecified file name\n";
-			return -1;
+			throw std::invalid_argument("Attempt to call delete on unspecified file name");
 		}
 		else if (filePath == "..") {
-			std::cerr << "Attempt to call delete on file and navigate out of directory\n";
+			throw std::invalid_argument("Attempt to call delete on file and navigate out of directory");
 		}
 
 		auto dirPath = getTestDirectoryPath();
 		auto file = dirPath / std::filesystem::path(filePath);
 		std::filesystem::remove(file);
-
-		return 0;
 	}
 
 
@@ -88,20 +85,17 @@ namespace Util {
 	 * @param directory The name of the directory of which the file is located.
 	 * @return int 0 if successful, -1 otherwise.
 	 */
-	int deleteFile(const std::string& fileName, const enum DirectoryPath directory) {
+	void deleteFile(const std::string& fileName, const enum DirectoryPath directory) {
 		if (fileName == "") {
-			std::cerr << "Attempt to call delete on unspecified file name\n";
-			return -1;
+			throw std::invalid_argument("Attempt to call delete on unspecified file name");
 		}
 		else if (fileName == "..") {
-			std::cerr << "Attempt to call delete on file and navigate out of directory\n";
+			throw std::invalid_argument("Attempt to call delete on file and navigate out of directory");
 		}
 
 		auto dirPath = getDirectoryPath(directory);
 		auto file = dirPath / std::filesystem::path(fileName);
 		std::filesystem::remove(file);
-
-		return 0;
 	}
 
 
@@ -110,16 +104,10 @@ namespace Util {
 	 * 
 	 * @param directory The files in the directory to delete.
 	 */
-	int deleteFiles(const enum DirectoryPath directory) {
+	void deleteFiles(const enum DirectoryPath directory) {
 		auto dirPath = std::filesystem::path(getDirectoryPath(directory));
 		for (auto& file : std::filesystem::directory_iterator(dirPath)) {
-			try {
 				std::filesystem::remove(file);
-			}
-			catch (std::filesystem::filesystem_error& e) {
-				return -1;
-			}
 		}
-		return 0;
 	}
 } // namespace Utils
