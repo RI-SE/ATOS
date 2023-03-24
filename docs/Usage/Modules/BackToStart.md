@@ -1,4 +1,4 @@
 # BackToStart
 
 ## About the module
-Short description what the module does and what to use it for.
+This module is currently in development and documentation for this module will be released later.
