@@ -39,8 +39,9 @@ ObjectListener::ObjectListener(
 ObjectListener::~ObjectListener() {
 	this->quit = true;
 	RCLCPP_DEBUG(get_logger(), "Awaiting thread exit");
-	pthread_cancel(listener.native_handle());
-	listener.join(); // TODO this blocks if MONR timeout (still?)
+	// Interrupt socket to unblock readMonitorMessage, and allow thread to exit gracefully
+	obj->interruptSocket();
+	listener.join();
 	RCLCPP_DEBUG(get_logger(), "Thread exited");
 }
 
@@ -124,6 +125,8 @@ void ObjectListener::listen() {
 		}
 	} catch (std::invalid_argument& e) {
 		RCLCPP_ERROR(get_logger(), e.what());
+	} catch (std::range_error& e){
+		RCLCPP_DEBUG(get_logger(), e.what()); // Socket was interrupted intentionally
 	} catch (std::runtime_error& e) {
 		RCLCPP_ERROR(get_logger(), e.what());
 		obj->disconnect();
