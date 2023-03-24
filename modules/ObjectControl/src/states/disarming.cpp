@@ -92,7 +92,7 @@ void RelativeKinematics::Disarming::disconnectedFromObject(
 			return obj->getState() == OBJECT_STATE_DISARMED || !obj->isConnected();
 		};
 		if (handler.areAllObjects(disarmedOrDisconnected)) {
-			AbsoluteKinematics::Disarming::allObjectsDisarmed(handler);
+			RelativeKinematics::Disarming::allObjectsDisarmed(handler);
 		}
 }
 
