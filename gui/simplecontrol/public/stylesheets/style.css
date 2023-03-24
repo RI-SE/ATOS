@@ -1,8 +1,61 @@
+.btn {
+  display: block;
+  margin: 2px;
+  padding: 2px;
+  cursor: pointer;
+}
+
 body {
-  padding: 50px;
+  padding: 25px;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
 }
 
-a {
-  color: #00B7FF;
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.status-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.status-icon__icon {
+  display: inline-block;
+  border-radius: 50%;
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+.status-icon--glow .status-icon__icon {
+  box-shadow: 0 0 5px rgba(0, 255, 0, 0.4);
+}
+
+.status-icon--pending .status-icon__icon {
+  background-color: gray;
+}
+
+.status-icon--active .status-icon__icon {
+  background-color: green;
+}
+
+.status-icon--inactive .status-icon__icon {
+  background-color: red;
+}
+
+.status-icon__text {
+  margin-left: 0.5em;
+}
+
+.status-icon__text--pending {
+  color: gray;
+}
+
+.status-icon__text--active {
+  color: green;
+}
+
+.status-icon__text--inactive {
+  color: red;
 }
