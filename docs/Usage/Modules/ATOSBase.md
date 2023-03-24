@@ -1,7 +1,7 @@
 # ATOSBase
 
 ## About the module
-Short description what the module does and what to use it for.
+`ATOSBase` is a base node for ATOS and is responsible for initialising everything needed to run ATOS.
 
 # ROS parameters
 The following ROS parameters can be set for `ATOSBase`: 
