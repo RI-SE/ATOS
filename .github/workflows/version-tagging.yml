@@ -1,0 +1,47 @@
+name: Auto version tag 
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - dev
+      - master
+
+concurrency: production # Only allow sequential builds
+jobs:
+  Patch:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: '0'
+    - name: Dry run versioning
+      id: AutoTaggerDryRun
+      uses: anothrNick/github-tag-action@1.61.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        WITH_V: true
+        DEFAULT_BRANCH: dev
+        DRY_RUN: true
+
+    - name: echo new tag
+      run: |
+        echo "The next tag version will be: ${{ steps.taggerDryRun.outputs.new_tag }}"
+    - name: echo tag
+      run: |
+        echo "The current tag is: ${{ steps.taggerDryRun.outputs.tag }}"
+    - name: echo part
+      run: |
+        echo "The version increment was: ${{ steps.taggerDryRun.outputs.part }}"
+
+    # DO BUILDS HERE WHEN ADDING VERSION NUMBERS TO SOURCE CODE
+    # WE DO THIS SO THAT IN CASE OF BUILD FAILURE, THE ACTUAL TAGGING WILL NOT RUN. 
+    
+    - name: Actual versioning
+      id: AutoTaggerActual
+      uses: anothrNick/github-tag-action@1.61.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        WITH_V: true
+        DEFAULT_BRANCH: dev
