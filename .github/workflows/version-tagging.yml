@@ -23,6 +23,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         WITH_V: true
         DEFAULT_BRANCH: dev
+        INITIAL_VERSION: "0.4.1"
         DRY_RUN: true
 
     - name: echo new tag
@@ -45,3 +46,4 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         WITH_V: true
         DEFAULT_BRANCH: dev
+        INITIAL_VERSION: "0.4.1"
