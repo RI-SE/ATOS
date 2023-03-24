@@ -7,4 +7,4 @@ add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
 	COMMAND npm install
 	COMMAND npx generate-ros-messages #this command does not work in CMAKE_CURRENT_BINARY_DIR for some reason..
 )
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} DESTINATION ${CMAKE_INSTALL_PREFIX})
