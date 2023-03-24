@@ -3,6 +3,7 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var favicon = require('serve-favicon');
 const fs = require('fs');
 const https = require('https');
 const os = require('os');
@@ -21,6 +22,8 @@ process.on('SIGINT', () => process.exit(1));
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
+// Display favicon
+app.use(favicon(path.join(__dirname,'public','images','favicon.ico')));
 
 app.use(logger('dev'));
 app.use(express.json());
@@ -49,8 +52,6 @@ app.get('/public/javascripts/client.js', function(req, res) {
   res.sendFile(path.join(__dirname + '/client.js'));
 });
 
-// Display favicon
-app.use('/favicon.ico', express.static('public/images/favicon.ico'));
 
 module.exports = app;
 
