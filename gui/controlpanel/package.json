@@ -1,5 +1,5 @@
 {
-  "name": "simplecontrol",
+  "name": "controlpanel",
   "version": "0.0.1",
   "private": true,
   "description": "A simple webgui to issue commands to ATOS using ROS2 messages",
