@@ -28,22 +28,37 @@ jobs:
 
     - name: echo new tag
       run: |
-        echo "The next tag version will be: ${{ steps.taggerDryRun.outputs.new_tag }}"
+        echo "The next tag version will be: ${{ steps.AutoTaggerDryRun.outputs.new_tag }}"
     - name: echo tag
       run: |
-        echo "The current tag is: ${{ steps.taggerDryRun.outputs.tag }}"
+        echo "The current tag is: ${{ steps.AutoTaggerDryRun.outputs.tag }}"
     - name: echo part
       run: |
-        echo "The version increment was: ${{ steps.taggerDryRun.outputs.part }}"
+        echo "The version increment was: ${{ steps.AutoTaggerDryRun.outputs.part }}"
 
     # DO BUILDS HERE WHEN ADDING VERSION NUMBERS TO SOURCE CODE
     # WE DO THIS SO THAT IN CASE OF BUILD FAILURE, THE ACTUAL TAGGING WILL NOT RUN. 
     
-    - name: Actual versioning
-      id: AutoTaggerActual
+    - name: Update Version File
+      run: echo ${{ steps.AutoTaggerDryRun.outputs.new_tag }} > .VERSION
+
+    - name: Commit Version File
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git commit --amend --no-edit .VERSION
+
+    - name: Push Changes
+      uses: ad-m/github-push-action@v0.6.0
+      with:
+        branch: ${{ github.base_ref }}
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        force: true
+
+    - name: Do the actual tagging
+      id: Create_tag
       uses: anothrNick/github-tag-action@1.61.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         WITH_V: true
-        DEFAULT_BRANCH: dev
-        INITIAL_VERSION: "0.4.1"
+        DEFAULT_BUMP: patch
