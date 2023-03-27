@@ -40,8 +40,10 @@ ObjectListener::ObjectListener(
 ObjectListener::~ObjectListener() {
 	this->quit = true;
 	RCLCPP_DEBUG(get_logger(), "Awaiting thread exit");
-	pthread_cancel(listener.native_handle());
-	listener.join(); // TODO this blocks if MONR timeout (still?)
+
+	// Interrupt socket to unblock readMonitorMessage, and allow thread to exit gracefully
+	obj->interruptSocket();
+	listener.join();
 	RCLCPP_DEBUG(get_logger(), "Thread exited");
 }
 
@@ -58,14 +60,7 @@ void ObjectListener::listen() {
 					monr.second = transformCoordinate(monr.second, handler->getLastAnchorData(), true);
 				}
 
-				// Disable thread cancelling while accessing shared memory and journals
-				int oldCancelState;
-				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldCancelState);
-				// Save to memory
-				// TODO disabled in preparation of removing
-				// will be replaced by ROS message
-				// if not disabled, will cause error printouts
-				//DataDictionarySetMonitorData(monr.first, &monr.second, &currentTime);
+				// Publish monitor data to journal
 				auto objData = obj->getAsObjectData();
 				objData.MonrData = monr.second;
 				JournalRecordMonitorData(&objData);
@@ -78,9 +73,6 @@ void ObjectListener::listen() {
 				auto origin = obj->getOrigin();
 				std::array<double,3> llh_0 = {origin.latitude_deg, origin.longitude_deg, origin.altitude_m};
 				obj->publishNavSatFix(createNavSatFixMessage(monr.second.timestamp, llh_0, rosMonr));
-				
-				// Reset thread cancelling
-				pthread_setcancelstate(oldCancelState, nullptr);
 
 				// Check if state has changed
 				if (obj->getState() != prevObjState) {
@@ -125,6 +117,8 @@ void ObjectListener::listen() {
 		}
 	} catch (std::invalid_argument& e) {
 		RCLCPP_ERROR(get_logger(), e.what());
+	} catch (std::range_error& e){
+		RCLCPP_DEBUG(get_logger(), e.what()); // Socket was interrupted intentionally, exit gracefully
 	} catch (std::runtime_error& e) {
 		RCLCPP_ERROR(get_logger(), e.what());
 		obj->disconnect();
