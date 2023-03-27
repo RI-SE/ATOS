@@ -116,7 +116,7 @@ var wsConnect = function(){
     ws.addEventListener('close', function (event) {
         console.log("Connection lost!");
         clearInterval(intervalGetOBCState); // Stop timer
-        setOBCStatusText("OBC State: UNDEFINED");
+        setOBCStatusText("State: UNDEFINED");
         updateATOSStatusIcon("inactive", "Connection to ATOS lost, retrying...");
         setTimeout(wsConnect, 1000); // Try to reconnect websocket
     });
@@ -124,7 +124,7 @@ var wsConnect = function(){
         var serverResponse = JSON.parse(event.data);
         switch (serverResponse.msg_type) {
             case "get_obc_state_response":
-                setOBCStatusText("OBC State: " + getOBCState(parseInt(serverResponse.state)));
+                setOBCStatusText("State: " + getOBCState(parseInt(serverResponse.state)));
                 break;
             // Add more callbacks here, e.g. feedback of successfully executed ros2 commands
             default:

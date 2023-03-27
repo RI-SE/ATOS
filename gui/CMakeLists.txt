@@ -1,1 +1,1 @@
-add_subdirectory(simplecontrol)
+add_subdirectory(controlpanel)
