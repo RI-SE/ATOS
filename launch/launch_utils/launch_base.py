@@ -14,7 +14,7 @@ def get_base_nodes():
     # control-gui logging
     control_gui_log = open(atos_conf_dir / Path("webgui.log"), 'w')
     # start control-gui server
-    control_gui_dir = Path(atos_install_dir) / Path("simplecontrol/")
+    control_gui_dir = Path(atos_install_dir) / Path("controlpanel/")
     subprocess.Popen("/usr/bin/npm start --prefix " + str(control_gui_dir),shell=True, stdout=control_gui_log, stderr=control_gui_log)
 
     return [
