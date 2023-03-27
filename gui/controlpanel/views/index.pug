@@ -13,7 +13,7 @@ body(style="padding-bottom:10rem;")
   script(type='text/javascript' src='/javascripts/client.js')
   .container-fluid
     +statusIcon("pending", "ATOS Not connected")
-    .d-grid(class="gap-1 d-xl-block")
+    .d-grid(class="gap-1 d-sm-block")
       +button("danger", "xl", onClick='sendAbort()') Abort
     .d-grid(class="gap-1 d-sm-block")
       +button("info", "sm", onClick='sendInit()') Init
