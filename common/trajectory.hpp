@@ -120,7 +120,7 @@ public:
 		template<typename T, int rows>
 		Eigen::Matrix<T, rows, 1> zeroNaNs(
 				const Eigen::Matrix<T, rows, 1>& v) const {
-			static_assert(v.SizeAtCompileTime != 0, "Zero size matrix passed to zeroNaNs");
+			assert(v.SizeAtCompileTime != 0 && "Zero size matrix passed to zeroNaNs");
 			Eigen::Matrix<T, rows, 1> ret(v);
 			for (int i = 0; i < ret.SizeAtCompileTime; ++i) {
 				ret[i] = isnan(ret[i]) ? 0.0 : ret[i];

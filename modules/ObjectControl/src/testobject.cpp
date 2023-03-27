@@ -323,6 +323,8 @@ bool ObjectConnection::isValid() const {
 void ObjectConnection::disconnect() {
 	this->cmd.disconnect();
 	this->mntr.disconnect();
+	close(this->interruptionPipeFds[0]);
+	close(this->interruptionPipeFds[1]);
 }
 
 void TestObject::sendHeartbeat(
@@ -443,15 +445,20 @@ ISOMessageID ObjectConnection::pendingMessageType(bool awaitNext) {
 		}
 		fd_set fds;
 		FD_ZERO(&fds);
+		FD_SET(interruptionPipeFds[0], &fds);
 		FD_SET(mntr.socket, &fds);
 		FD_SET(cmd.socket, &fds);
-		auto result = select(std::max(mntr.socket,cmd.socket)+1,
+		auto result = select(std::max({mntr.socket,cmd.socket,interruptionPipeFds[0]})+1,
 							 &fds, nullptr, nullptr, nullptr);
 		if (result < 0) {
 			throw std::runtime_error(std::string("Failed socket operation (select: ") + strerror(errno) + ")"); // TODO clearer
 		}
 		else if (!isValid()) {
 			throw std::invalid_argument("Connection invalidated during select call");
+		}
+		else if (FD_ISSET(interruptionPipeFds[0], &fds)){
+			close(interruptionPipeFds[0]);
+			throw std::range_error("Select call was interrupted");
 		}
 		else if (FD_ISSET(mntr.socket, &fds)) {
 			return this->mntr.pendingMessageType();
