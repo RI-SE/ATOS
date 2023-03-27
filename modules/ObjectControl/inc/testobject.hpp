@@ -86,7 +86,9 @@ public:
 	ObjectConnection(rclcpp::Logger log)
 		: cmd(SOCK_STREAM, log),
 		mntr(SOCK_DGRAM, log),
-		Loggable(log) {}
+		Loggable(log) {
+			pipe(interruptionPipeFds);
+		}
 
 	bool isValid() const;
 	bool isConnected() const;
@@ -94,6 +96,13 @@ public:
 				 const std::chrono::milliseconds retryPeriod);
 	void disconnect();
 	ISOMessageID pendingMessageType(bool awaitNext = false);
+	void interruptSocket() {
+		int i = 1;
+		write(interruptionPipeFds[1], &i, sizeof(i));
+		close(interruptionPipeFds[1]);
+	}
+private:
+	int interruptionPipeFds[2];
 };
 
 class TestObject : public Loggable {
@@ -131,6 +140,7 @@ public:
 	void setObjectConfig(ObjectConfig& newObjectConfig);
 	void setTriggerStart(const bool startOnTrigger = true);
 	void setOrigin(const GeographicPositionType&);
+	void interruptSocket() { comms.interruptSocket();}
 	
 	bool isAnchor() const { return conf.isAnchor(); }
 	bool isOsiCompatible() const { return conf.isOSI(); }
