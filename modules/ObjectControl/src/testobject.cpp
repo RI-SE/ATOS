@@ -323,6 +323,8 @@ bool ObjectConnection::isValid() const {
 void ObjectConnection::disconnect() {
 	this->cmd.disconnect();
 	this->mntr.disconnect();
+	close(this->interruptionPipeFds[0]);
+	close(this->interruptionPipeFds[1]);
 }
 
 void TestObject::sendHeartbeat(
