@@ -457,6 +457,7 @@ ISOMessageID ObjectConnection::pendingMessageType(bool awaitNext) {
 			throw std::invalid_argument("Connection invalidated during select call");
 		}
 		else if (FD_ISSET(interruptionPipeFds[0], &fds)){
+			close(interruptionPipeFds[0]);
 			throw std::range_error("Select call was interrupted");
 		}
 		else if (FD_ISSET(mntr.socket, &fds)) {

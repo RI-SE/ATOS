@@ -96,7 +96,11 @@ public:
 				 const std::chrono::milliseconds retryPeriod);
 	void disconnect();
 	ISOMessageID pendingMessageType(bool awaitNext = false);
-	void interruptSocket() {int i = 1; write(interruptionPipeFds[1], &i, sizeof(i));}
+	void interruptSocket() {
+		int i = 1;
+		write(interruptionPipeFds[1], &i, sizeof(i));
+		close(interruptionPipeFds[1]);
+	}
 private:
 	int interruptionPipeFds[2];
 };
