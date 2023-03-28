@@ -49,20 +49,17 @@ In order to build ATOS, dependencies and exernal libraries need to be installed.
 
 clone ATOS in your git folder, and make sure that all submodules are present and up to date:
 ```bash
-git clone https://github.com/RI-SE/ATOS.git
+git clone git@github.com:RI-SE/ATOS.git
 cd ATOS
 git submodule update --init --recursive
 ```
 
+Install the dependencies:
 ```bash
 sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler \
 libeigen3-dev ros-foxy-paho-mqtt-c nlohmann-json3-dev npm nodejs libpcl-dev
 ```
 
-Then fetch the submodules [iso22133](https://github.com/RI-SE/iso22133) and [atos-interfaces](https://github.com/RI-SE/atos_interfaces):
-```bash
-git submodule update --init --recursive
-```
 
 Lastly, the following external libraries need to be installed:
 
@@ -103,7 +100,7 @@ cp ../EnvironmentSimulator/Libraries/esminiRMLib/esminiRMLib.hpp /usr/local/incl
 sudo ldconfig
 ```
 
-## <a name="atos"></a> Installing ATOS
+## <a name="installing"></a> Installing ATOS
 
 Create a workspace:
 ```bash
@@ -128,6 +125,7 @@ source ~/atos_ws/install/setup.bash
 ```
 Also add the above line to ~/.bashrc or similar.
 
+## <a name="running"></a> Running ATOS
 Launch ATOS
 ```bash
 ros2 launch atos launch_basic.py
