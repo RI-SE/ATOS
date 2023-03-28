@@ -12,7 +12,7 @@ def get_base_nodes():
     atos_conf_dir = os.path.join(os.path.expanduser('~'), '.astazero', 'ATOS')
     atos_install_dir = get_package_prefix('atos')
 
-    # Print ATOS version
+def print_version():
     version_file = open(atos_install_dir / Path(".VERSION"), 'r')
     logging.get_logger('launch').info("ATOS version: " + version_file.read())
 
