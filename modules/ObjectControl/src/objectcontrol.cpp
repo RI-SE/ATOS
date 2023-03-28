@@ -33,6 +33,7 @@ ObjectControl::ObjectControl()
 	scnStartSub(*this, std::bind(&ObjectControl::onStartMessage, this, _1)),
 	objectStartSub(*this, std::bind(&ObjectControl::onStartObjectMessage, this, _1)),
 	scnArmSub(*this, std::bind(&ObjectControl::onArmMessage, this, _1)),
+	scnDisarmSub(*this, std::bind(&ObjectControl::onDisarmMessage, this, _1)),
 	scnStopSub(*this, std::bind(&ObjectControl::onStopMessage, this, _1)),
 	scnAbortSub(*this, std::bind(&ObjectControl::onAbortMessage, this, _1)),
 	scnAllClearSub(*this, std::bind(&ObjectControl::onAllClearMessage, this, _1)),
@@ -158,6 +159,13 @@ void ObjectControl::onArmMessage(const Arm::message_type::SharedPtr){
 	auto f_try = [&]() { this->state->armRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Arm::topicName, get_logger());
+}
+
+void ObjectControl::onDisarmMessage(const Disarm::message_type::SharedPtr){	
+	COMMAND cmd = COMM_DISARM;
+	auto f_try = [&]() { this->state->disarmRequest(*this); };
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch, Disarm::topicName, get_logger());
 }
 
 void ObjectControl::onStartMessage(const Start::message_type::SharedPtr){	
@@ -699,7 +707,6 @@ void ObjectControl::disarmObjects() {
 			objects.at(id)->disconnect();
 		}
 	}
-	this->state->allObjectsDisarmed(*this); // TODO add a check on object states as well
 }
 
 void ObjectControl::startScenario() {
@@ -732,6 +739,12 @@ void ObjectControl::allClearObjects() {
 		objects.at(id)->sendAllClear();
 	}
 	this->state->allObjectsAbortDisarmed(*this); // TODO wait for all objects really are disarmed
+}
+
+bool ObjectControl::areAllObjects(std::function<bool(const std::shared_ptr<TestObject>)> predicate) const {
+	return std::all_of(objects.cbegin(), objects.cend(), [predicate](const std::pair<const uint32_t,std::shared_ptr<TestObject>>& obj) {
+		return predicate(obj.second);
+	});
 }
 
 bool ObjectControl::isAnyObjectIn(

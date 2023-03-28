@@ -84,9 +84,16 @@ void RelativeKinematics::Disarming::connectedToObject(
 }
 
 void RelativeKinematics::Disarming::disconnectedFromObject(
-		ObjectControl&,
-		uint32_t) {
-	// TODO
+	ObjectControl& handler,
+	uint32_t id)
+{
+		AbstractKinematics::Disarming::disconnectedFromObject(handler,id);	
+		auto disarmedOrDisconnected = [](const std::shared_ptr<TestObject> obj) {
+			return obj->getState() == OBJECT_STATE_DISARMED || !obj->isConnected();
+		};
+		if (handler.areAllObjects(disarmedOrDisconnected)) {
+			RelativeKinematics::Disarming::allObjectsDisarmed(handler);
+		}
 }
 
 void RelativeKinematics::Disarming::connectedToArmedObject(
@@ -149,9 +156,16 @@ void AbsoluteKinematics::Disarming::connectedToObject(
 }
 
 void AbsoluteKinematics::Disarming::disconnectedFromObject(
-		ObjectControl&,
-		uint32_t) {
-	// TODO
+		ObjectControl& handler,
+		uint32_t id) {
+		AbstractKinematics::Disarming::disconnectedFromObject(handler,id);	
+		auto disarmedOrDisconnected = [](const std::shared_ptr<TestObject> obj) {
+			return obj->getState() == OBJECT_STATE_DISARMED || !obj->isConnected();
+		};
+		if (handler.areAllObjects(disarmedOrDisconnected)) {
+			AbsoluteKinematics::Disarming::allObjectsDisarmed(handler);
+		}
+		// Otherwise, remain in disarming state
 }
 
 void AbsoluteKinematics::Disarming::connectedToArmedObject(
@@ -170,7 +184,7 @@ void AbsoluteKinematics::Disarming::connectedToLiveObject(
 void AbsoluteKinematics::Disarming::allObjectsDisarmed(
 		ObjectControl& handler) {
 	AbstractKinematics::Disarming::allObjectsDisarmed(handler);
-	setState(handler, new AbsoluteKinematics::Connecting);
+	setState(handler, new AbsoluteKinematics::Ready);
 }
 
 void AbsoluteKinematics::Disarming::objectArmed(
@@ -184,7 +198,10 @@ void AbsoluteKinematics::Disarming::objectDisarmed(
 		ObjectControl& handler,
 		uint32_t id) {
 	AbstractKinematics::Disarming::objectDisarmed(handler,id);
-	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
+	auto disarmedOrDisconnected = [](std::shared_ptr<TestObject> obj){
+		return obj->getState() == OBJECT_STATE_DISARMED || !obj->isConnected();
+	};
+	if (handler.areAllObjects(disarmedOrDisconnected)) {
 		AbsoluteKinematics::Disarming::allObjectsDisarmed(handler);
 	}
 }
