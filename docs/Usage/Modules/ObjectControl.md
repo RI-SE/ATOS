@@ -1,7 +1,15 @@
 # ObjectControl
-
+A module for controlling test objects according to the ISO 22133 standard.
 ## About the module
-Short description what the module does and what to use it for.
+This module has many responsibilities:
+- Establishes and tracks connections with all test objects
+- Keeps track of test object states
+- Collects position data from objects, and record that data
+- Transmit safety heartbeats to the objects
+- Configures objects with trajectories and other settings
+- Convert input from other modules into or from the ISO 22133 protocol
+- Hold the ATOS system state (ISO 22133 control center status)
+- Convert positional data into VUT-relative coordinates, if desired
 
 ## ROS parameters
 The following ROS parameters can be set for `ObjectControl`:
