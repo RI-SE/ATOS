@@ -17,4 +17,5 @@ def generate_launch_description():
         executable='rviz2',
         name='rviz2'
     ))
+    launch_base.print_version()
     return LaunchDescription(base_nodes)
