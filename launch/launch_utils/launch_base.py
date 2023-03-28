@@ -7,14 +7,15 @@ from pathlib import Path
 from .validate_files import validate_files
 import rclpy.logging as logging
 
+def print_version():
+    atos_install_dir = get_package_prefix('atos')
+    version_file = open(atos_install_dir / Path(".VERSION"), 'r')
+    logging.get_logger('launch').info("ATOS version: " + version_file.read())
+
 def get_base_nodes():
     files = validate_files()
     atos_conf_dir = os.path.join(os.path.expanduser('~'), '.astazero', 'ATOS')
     atos_install_dir = get_package_prefix('atos')
-
-def print_version():
-    version_file = open(atos_install_dir / Path(".VERSION"), 'r')
-    logging.get_logger('launch').info("ATOS version: " + version_file.read())
 
     # control-gui logging
     control_gui_log = open(atos_conf_dir / Path("webgui.log"), 'w')
