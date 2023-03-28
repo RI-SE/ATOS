@@ -19,7 +19,7 @@ atos:
   object_control:
     ros__parameters:
       max_missing_heartbeats: 1     # The number of position update (MONR) message periods that are allowed to pass since the last received message before an abort signal is sent to all objects. 
-      transmitter_id: 110     # The ISO 22133 transmitted id to be used for ATOS.
+      transmitter_id: 110           # The ISO 22133 transmitted id to be used for ATOS.
 ```
 
 ## Examples
