@@ -749,9 +749,10 @@ bool ObjectControl::areAllObjects(std::function<bool(const std::shared_ptr<TestO
 	});
 }
 
-bool ObjectControl::isAnyObject(
-		std::function<bool(std::pair<uint32_t,const std::shared_ptr<TestObject>>)> predicate) const {
-	return std::any_of(objects.cbegin(), objects.cend(), predicate);
+bool ObjectControl::isAnyObject(std::function<bool(const std::shared_ptr<TestObject>)> predicate) const {
+	return std::any_of(objects.cbegin(), objects.cend(), [predicate](const std::pair<const uint32_t,std::shared_ptr<TestObject>>& obj) {
+		return predicate(obj.second);
+	});
 }
 
 bool ObjectControl::isAnyObjectIn(
