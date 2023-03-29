@@ -58,7 +58,7 @@ void AbstractKinematics::Clearing::connectedToLiveObject(
 void RelativeKinematics::Clearing::changeStateIfAllOK(
         ObjectControl& handler
         ) {
-    auto disconnected = [](std::shared_ptr<TestObject> obj) {
+	auto disconnected = [](std::shared_ptr<TestObject> obj) {
 		return !obj->isConnected();
 	};
 	if (handler.areAllObjectsIn(std::set({OBJECT_STATE_DISARMED, OBJECT_STATE_ARMED}))) {
