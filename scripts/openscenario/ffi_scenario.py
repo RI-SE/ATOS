@@ -37,9 +37,9 @@ mondeo_starting_point = xosc.LanePosition(15, 0, -1, 2)
 mondeo_trigger_positions = {
 	UFO_ID: xosc.LanePosition(35.0, 0, -1, 2),
 	CARRIER_ID: xosc.LanePosition(50.0, 0, -1, 2),
-	VIRTUAL_ID: xosc.LanePosition(60.0, 0, -1, 2),
+	VIRTUAL_ID: xosc.LanePosition(62.5, 0, -1, 2),
 	CAMERA_DRONE_ID: xosc.LanePosition(28.0, 0, -1, 2),
-	MARKER_DRONE_ID: xosc.LanePosition(60.0, 0, -1, 2)
+	MARKER_DRONE_ID: xosc.LanePosition(65.0, 0, -1, 2)
 }
 mondeo_slow_down_position = xosc.LanePosition(66.55, 0, -1, 2)
 mondeo_accelerate_position = xosc.LanePosition(55.31, 0, 1, 0)

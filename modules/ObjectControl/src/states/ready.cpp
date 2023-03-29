@@ -11,7 +11,7 @@ AbstractKinematics::Ready::Ready() {
 
 void AbstractKinematics::Ready::onEnter(
 		ObjectControl& handler) {
-	handler.startSafetyThread();
+	// TODO
 }
 
 void AbstractKinematics::Ready::armRequest(
@@ -56,6 +56,22 @@ void AbstractKinematics::Ready::enableRemoteControlRequest(
  * \section RelativeKinematics
  *  ******************************************************
  */
+
+void RelativeKinematics::Ready::onEnter(
+		ObjectControl& handler) {
+	handler.startSafetyThread();
+	auto disconnected = []( std::shared_ptr<TestObject> obj ){ return obj->isConnected(); };
+	if (handler.isAnyObjectIn(std::set({OBJECT_STATE_ABORTING,OBJECT_STATE_RUNNING}))) {
+		setState(handler, new RelativeKinematics::Aborting); // Any Object in aborting -> abort test
+	}
+	else if (handler.isAnyObject(disconnected)) {
+		setState(handler, new RelativeKinematics::Connecting); // Not all objects were connected and disarmed
+	}
+	else if (handler.isAnyObjectIn(OBJECT_STATE_ARMED)){
+		setState(handler, new RelativeKinematics::Disarming); // Not all objects were connected and disarmed
+	}
+}
+
 void RelativeKinematics::Ready::armRequest(
 		ObjectControl& handler) {
 	AbstractKinematics::Ready::armRequest(handler);
@@ -107,6 +123,22 @@ void RelativeKinematics::Ready::enableRemoteControlRequest(
  * \section AbsoluteKinematics
  *  ******************************************************
  */
+
+void AbsoluteKinematics::Ready::onEnter(
+		ObjectControl& handler) {
+	handler.startSafetyThread();
+	auto disconnected = []( std::shared_ptr<TestObject> obj ){ return obj->isConnected(); };
+	if (handler.isAnyObjectIn(std::set({OBJECT_STATE_ABORTING,OBJECT_STATE_RUNNING}))) {
+		setState(handler, new AbsoluteKinematics::Aborting); // Any Object in aborting -> abort test
+	}
+	else if (handler.isAnyObject(disconnected)) {
+		setState(handler, new AbsoluteKinematics::Connecting); // Not all objects were connected and disarmed
+	}
+	else if (handler.isAnyObjectIn(OBJECT_STATE_ARMED)){
+		setState(handler, new AbsoluteKinematics::Disarming); // Not all objects were connected and disarmed
+	}
+}
+
 void AbsoluteKinematics::Ready::armRequest(
 		ObjectControl& handler) {
 	AbstractKinematics::Ready::armRequest(handler);

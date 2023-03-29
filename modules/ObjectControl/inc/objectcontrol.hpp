@@ -13,7 +13,6 @@
 
 #include "module.hpp"
 #include "atosTime.h"
-#include "state.hpp"
 #include "testobject.hpp"
 #include "objectlistener.hpp"
 #include "roschannels/commandchannels.hpp"
@@ -38,6 +37,7 @@ namespace AbstractKinematics {
 	class Connecting;
 	class Ready;
 	class Aborting;
+	class Clearing;
 	class Armed;
 	class TestLive;
 	class Disarming;
@@ -50,6 +50,7 @@ namespace RelativeKinematics {
 	class Connecting;
 	class Ready;
 	class Aborting;
+	class Clearing;
 	class Armed;
 	class TestLive;
 	class Disarming;
@@ -62,6 +63,7 @@ namespace AbsoluteKinematics {
 	class Connecting;
 	class Ready;
 	class Aborting;
+	class Clearing;
 	class Armed;
 	class TestLive;
 	class Disarming;
@@ -83,6 +85,7 @@ class ObjectControl : public Module
 	friend class AbstractKinematics::Connecting;
 	friend class AbstractKinematics::Ready;
 	friend class AbstractKinematics::Aborting;
+	friend class AbstractKinematics::Clearing;
 	friend class AbstractKinematics::Armed;
 	friend class AbstractKinematics::TestLive;
 	friend class AbstractKinematics::Disarming;
@@ -92,6 +95,7 @@ class ObjectControl : public Module
 	friend class RelativeKinematics::Connecting;
 	friend class RelativeKinematics::Ready;
 	friend class RelativeKinematics::Aborting;
+	friend class RelativeKinematics::Clearing;
 	friend class RelativeKinematics::Armed;
 	friend class RelativeKinematics::TestLive;
 	friend class RelativeKinematics::Disarming;
@@ -101,6 +105,7 @@ class ObjectControl : public Module
 	friend class AbsoluteKinematics::Connecting;
 	friend class AbsoluteKinematics::Ready;
 	friend class AbsoluteKinematics::Aborting;
+	friend class AbsoluteKinematics::Clearing;
 	friend class AbsoluteKinematics::Armed;
 	friend class AbsoluteKinematics::TestLive;
 	friend class AbsoluteKinematics::Disarming;
@@ -180,6 +185,8 @@ public:
 	//! \brief Get last known ISO state of test participants.
 	std::map<uint32_t,ObjectStateType> getObjectStates() const;
 
+	//! \brief Chneck if any object fulfill a predicate.
+	bool isAnyObject(std::function<bool(const std::shared_ptr<TestObject>)> predicate) const;
 	//! \brief Check if all objects fulfill a predicate.
 	bool areAllObjects(std::function<bool(const std::shared_ptr<TestObject>)> predicate) const;
 	//! \brief Check if any test participant is in the specified state.

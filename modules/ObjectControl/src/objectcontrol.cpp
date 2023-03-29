@@ -735,14 +735,22 @@ void ObjectControl::startObject(
 }
 
 void ObjectControl::allClearObjects() {
+	// Send allClear to all connected objects
 	for (auto& id : getVehicleIDs()) {
-		objects.at(id)->sendAllClear();
+		if (objects.at(id)->isConnected()) {
+			objects.at(id)->sendAllClear();
+		}
 	}
-	this->state->allObjectsAbortDisarmed(*this); // TODO wait for all objects really are disarmed
 }
 
 bool ObjectControl::areAllObjects(std::function<bool(const std::shared_ptr<TestObject>)> predicate) const {
 	return std::all_of(objects.cbegin(), objects.cend(), [predicate](const std::pair<const uint32_t,std::shared_ptr<TestObject>>& obj) {
+		return predicate(obj.second);
+	});
+}
+
+bool ObjectControl::isAnyObject(std::function<bool(const std::shared_ptr<TestObject>)> predicate) const {
+	return std::any_of(objects.cbegin(), objects.cend(), [predicate](const std::pair<const uint32_t,std::shared_ptr<TestObject>>& obj) {
 		return predicate(obj.second);
 	});
 }
