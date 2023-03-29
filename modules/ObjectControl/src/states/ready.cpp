@@ -59,15 +59,16 @@ void AbstractKinematics::Ready::enableRemoteControlRequest(
 
 void RelativeKinematics::Ready::onEnter(
 		ObjectControl& handler) {
-	if (handler.isAnyObjectIn(OBJECT_STATE_ABORTING)) {
+	handler.startSafetyThread();
+	auto disconnected = []( std::shared_ptr<TestObject> obj ){ return obj->isConnected(); };
+	if (handler.isAnyObjectIn(std::set({OBJECT_STATE_ABORTING,OBJECT_STATE_RUNNING}))) {
 		setState(handler, new RelativeKinematics::Aborting); // Any Object in aborting -> abort test
-		return;
 	}
-	else if (!handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
+	else if (handler.isAnyObject(disconnected)) {
 		setState(handler, new RelativeKinematics::Connecting); // Not all objects were connected and disarmed
 	}
-	else{
-		handler.startSafetyThread(); // Start safety thread only if all objects are disarmed and connected
+	else if (handler.isAnyObjectIn(OBJECT_STATE_ARMED)){
+		setState(handler, new RelativeKinematics::Disarming); // Not all objects were connected and disarmed
 	}
 }
 
@@ -125,15 +126,16 @@ void RelativeKinematics::Ready::enableRemoteControlRequest(
 
 void AbsoluteKinematics::Ready::onEnter(
 		ObjectControl& handler) {
-	if (handler.isAnyObjectIn(OBJECT_STATE_ABORTING)) {
+	handler.startSafetyThread();
+	auto disconnected = []( std::shared_ptr<TestObject> obj ){ return obj->isConnected(); };
+	if (handler.isAnyObjectIn(std::set({OBJECT_STATE_ABORTING,OBJECT_STATE_RUNNING}))) {
 		setState(handler, new AbsoluteKinematics::Aborting); // Any Object in aborting -> abort test
-		return;
 	}
-	else if (!handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
+	else if (handler.isAnyObject(disconnected)) {
 		setState(handler, new AbsoluteKinematics::Connecting); // Not all objects were connected and disarmed
 	}
-	else{
-		handler.startSafetyThread(); // Start safety thread only if all objects are disarmed and connected
+	else if (handler.isAnyObjectIn(OBJECT_STATE_ARMED)){
+		setState(handler, new AbsoluteKinematics::Disarming); // Not all objects were connected and disarmed
 	}
 }
 
