@@ -240,12 +240,12 @@ public:
 	virtual void objectArmed(ObjectControl&, uint32_t) override;
 	virtual void objectAbortDisarmed(ObjectControl&,uint32_t) override;
 	virtual void disconnectedFromObject(ObjectControl&, uint32_t) override;
+	virtual void connectedToLiveObject(ObjectControl&, uint32_t) override;
+	virtual void connectedToArmedObject(ObjectControl&, uint32_t) override;
 
 	//! Ignore other commands
 	void allClearRequest(ObjectControl&) override {};
 	void connectedToObject(ObjectControl&, uint32_t) override {};
-	void connectedToLiveObject(ObjectControl&, uint32_t) override {};
-	void connectedToArmedObject(ObjectControl&, uint32_t) override {};
 	void objectAborting(ObjectControl&,uint32_t) override {};
 	void initializeRequest(ObjectControl&) override {}
 	void disconnectRequest(ObjectControl&) override {}
@@ -468,6 +468,8 @@ class Clearing : public AbstractKinematics::Clearing {
 	void objectDisarmed(ObjectControl&, uint32_t) override;
 	void objectAbortDisarmed(ObjectControl&, uint32_t) override;
 	void disconnectedFromObject(ObjectControl&, uint32_t) override;
+	void connectedToLiveObject(ObjectControl&, uint32_t) override;
+	void connectedToArmedObject(ObjectControl&, uint32_t) override;
 
 };
 
@@ -564,6 +566,8 @@ class Clearing : public AbstractKinematics::Clearing {
 	void objectDisarmed(ObjectControl&, uint32_t) override;
 	void objectAbortDisarmed(ObjectControl&, uint32_t) override;
 	void disconnectedFromObject(ObjectControl&, uint32_t) override;
+	void connectedToLiveObject(ObjectControl&, uint32_t) override;
+	void connectedToArmedObject(ObjectControl&, uint32_t) override;
 };
 
 class TestLive : public AbstractKinematics::TestLive {

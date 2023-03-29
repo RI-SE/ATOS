@@ -38,6 +38,18 @@ void AbstractKinematics::Clearing::disconnectedFromObject(
     // TODO
 }
 
+void AbstractKinematics::Clearing::connectedToArmedObject(
+        ObjectControl& handler,
+        uint32_t) {
+    // TODO
+}
+
+void AbstractKinematics::Clearing::connectedToLiveObject(
+        ObjectControl& handler,
+        uint32_t) {
+    // TODO
+}
+
 
 /*! ******************************************************
  * \section RelativeKinematics
@@ -46,8 +58,8 @@ void AbstractKinematics::Clearing::disconnectedFromObject(
 void RelativeKinematics::Clearing::changeStateIfAllOK(
         ObjectControl& handler
         ) {
-    auto disconnected = [](std::pair<uint32_t, std::shared_ptr<TestObject>> obj) {
-		return !obj.second->isConnected();
+    auto disconnected = [](std::shared_ptr<TestObject> obj) {
+		return !obj->isConnected();
 	};
 	if (handler.areAllObjectsIn(std::set({OBJECT_STATE_DISARMED, OBJECT_STATE_ARMED}))) {
 		setState(handler, new RelativeKinematics::Ready); // All objects are disarmed/armed, so we can go back to ready
@@ -60,7 +72,9 @@ void RelativeKinematics::Clearing::changeStateIfAllOK(
 void RelativeKinematics::Clearing::objectArmed(
         ObjectControl& handler,
         uint32_t id) {
-    changeStateIfAllOK(handler);
+     // Object became armed while clearing abort, disarm all objects
+     RCLCPP_WARN(handler.get_logger(), "Object %d armed while CC in clearing state!", id);
+     setState(handler, new RelativeKinematics::Disarming);
 }
 
 void RelativeKinematics::Clearing::objectDisarmed(
@@ -82,6 +96,22 @@ void RelativeKinematics::Clearing::disconnectedFromObject(
     changeStateIfAllOK(handler);
 }
 
+void RelativeKinematics::Clearing::connectedToArmedObject(
+        ObjectControl& handler,
+        uint32_t id) {
+    // Connected to an armed object, respond by disarming all objects
+    RCLCPP_WARN(handler.get_logger(), "Connected to armed object %d while CC in clearing state!", id);
+    setState(handler, new RelativeKinematics::Disarming);
+}
+
+void RelativeKinematics::Clearing::connectedToLiveObject(
+        ObjectControl& handler,
+        uint32_t id) {
+    // Object became armed while clearing abort, disarm all objects
+    RCLCPP_WARN(handler.get_logger(), "Connected to live object %d while CC in clearing state!", id);
+    setState(handler, new RelativeKinematics::Aborting);
+}
+
 
 /*! ******************************************************
  * \section AbsoluteKinematics
@@ -96,7 +126,7 @@ void AbsoluteKinematics::Clearing::changeStateIfAllOK(
                 obj->getState() == OBJECT_STATE_ARMED ||
                 !obj->isConnected();
 	};
-	if (handler.areAllObjectsIn(std::set({OBJECT_STATE_DISARMED, OBJECT_STATE_ARMED}))) {
+	if (handler.areAllObjects(disarmedOrDisconnected)) {
 		setState(handler, new AbsoluteKinematics::Ready); // All objects are disarmed/armed, so we can go back to ready
 	}
 	else if (handler.areAllObjects(readyOrDisconnected)) {
@@ -107,7 +137,9 @@ void AbsoluteKinematics::Clearing::changeStateIfAllOK(
 void AbsoluteKinematics::Clearing::objectArmed(
         ObjectControl& handler,
         uint32_t id) {
-    changeStateIfAllOK(handler);
+    // Object became armed while clearing abort, disarm all objects
+    RCLCPP_WARN(handler.get_logger(), "Object %d armed while CC in clearing state!", id);
+    setState(handler, new AbsoluteKinematics::Disarming);
 }
 
 void AbsoluteKinematics::Clearing::objectDisarmed(
@@ -127,4 +159,20 @@ void AbsoluteKinematics::Clearing::disconnectedFromObject(
 		uint32_t id) {
 	RCLCPP_WARN(handler.get_logger(), "Object %d disconnected while CC in clearing state!", id);
     changeStateIfAllOK(handler);
+}
+
+void AbsoluteKinematics::Clearing::connectedToArmedObject(
+        ObjectControl& handler,
+        uint32_t id) {
+    // Connected to an armed object, respond by disarming all objects
+    RCLCPP_WARN(handler.get_logger(), "Connected to armed object %d while CC in clearing state!", id);
+    setState(handler, new AbsoluteKinematics::Disarming);
+}
+
+void AbsoluteKinematics::Clearing::connectedToLiveObject(
+        ObjectControl& handler,
+        uint32_t id) {
+    // Object became armed while clearing abort, disarm all objects
+    RCLCPP_WARN(handler.get_logger(), "Connected to live object %d while CC in clearing state!", id);
+    setState(handler, new AbsoluteKinematics::Aborting);
 }
