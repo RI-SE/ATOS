@@ -145,7 +145,7 @@ void AbsoluteKinematics::Clearing::objectArmed(
 void AbsoluteKinematics::Clearing::objectDisarmed(
         ObjectControl& handler,
         uint32_t id) {
-    changeStateIfAllOK(handler);
+	changeStateIfAllOK(handler);
 }
 
 void AbsoluteKinematics::Clearing::objectAbortDisarmed(
