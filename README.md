@@ -136,18 +136,3 @@ Launch ATOS
 ```
 ros2 launch atos launch_basic.py
 ```
-
-# <a name="optional-builds--installations"></a> Optional builds & installations
-ATOS can be installed in alternative ways, and built with support for various optional modules, described here.
-
-## <a name="relativekinematics"></a> How to build with RelativeKinematics instead of ObjectControl
-
-The server will build the ObjectControl with AbsolutKinematics by default. It's possible to build with RelativeKinematics support by rebuilding with the argument -DWITH_RELATIVE_KINEMATICS=ON, see following command
-```sh
-colcon build --cmake-args -DWITH_RELATIVE_KINEMATICS=ON
-```
-To include ObjectControl in the build again run the same command with OFF, as follows
-```sh
-colcon build --cmake-args -DWITH_RELATIVE_KINEMATICS=OFF
-```
-
