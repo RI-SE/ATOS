@@ -1,22 +1,26 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 cmake_minimum_required(VERSION 3.1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(BackToStart)
+project(back_to_start)
 
 # Define target names
 set(BACK_TO_START ${PROJECT_NAME})
 
-set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(COREUTILS_LIBRARY ATOSCoreUtil)
 set(ISO_22133_LIBRARY MaestroISO22133)
 set(POSITIONING_LIBRARY MaestroPositioning)
-set(TIME_LIBRARY MaestroTime)
-set(MAESTRO_COMMON_LIBRARY MaestroCommon)
+set(TIME_LIBRARY ATOSTime)
+set(ATOS_COMMON_LIBRARY ATOSCommon)
 set(LOGGING_LIBRARY MaestroLogging)
 set(MESSAGE_BUS_LIBRARY MaestroMQ)
-set(MAESTRO_COMMON_LIBRARY MaestroCommon)
+set(ATOS_COMMON_LIBRARY ATOSCommon)
 
 include(GNUInstallDirs)
 
@@ -30,7 +34,7 @@ target_link_libraries(${BACK_TO_START} LINK_PUBLIC
 	${COREUTILS_LIBRARY}
 	${LOGGING_LIBRARY}
         ${FILESYSTEM_LIBRARY}
-        ${MAESTRO_COMMON_LIBRARY}
+        ${ATOS_COMMON_LIBRARY}
 )
 target_include_directories(${BACK_TO_START} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
@@ -45,7 +49,4 @@ install(TARGETS ${BACK_TO_START}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-
-# Ensure linkage is reloaded after install
-install(CODE "execute_process(COMMAND ldconfig)")
 

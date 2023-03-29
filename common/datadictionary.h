@@ -1,6 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 /*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2019 CHRONOS II project
-  ------------------------------------------------------------------------------
   -- File        : datadictionary.h
   -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS II
@@ -10,7 +13,7 @@
 #ifndef __DATADICTIONARY_H_INCLUDED__
 #define __DATADICTIONARY_H_INCLUDED__
 
-#define SHARED_MEMORY_PATH "/dev/shm/maestro/"
+#define SHARED_MEMORY_PATH "/dev/shm/ATOS/"
 #define MISC_DATA_MAX_SIZE 1024
 
 #include "util.h"
@@ -147,8 +150,8 @@ ReadWriteAccess_t DataDictionarySetObjectProperties(const uint32_t transmitterID
 ReadWriteAccess_t DataDictionaryGetObjectProperties(const uint32_t transmitterID, ObjectPropertiesType* objectProperties);
 ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitterID);
 
-ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosition * origin);
-ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t* transmitterID, const GeoPosition * origin);
+ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPositionType * origin);
+ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t* transmitterID, const GeoPositionType * origin);
 ReadWriteAccess_t DataDictionaryInitOrigin();
 
 ReadWriteAccess_t DataDictionarySetRequestedControlAction(const uint32_t transmitterID, const RequestControlActionType* reqCtrlAction);

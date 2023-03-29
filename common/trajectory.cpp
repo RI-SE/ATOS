@@ -1,12 +1,21 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include <fstream>
 #include <iostream>
 #include <iomanip>
 #include <cmath>
 #include <algorithm>
+#include <iomanip>
 #include "regexpatterns.hpp"
-#include "logging.h"
 #include "trajectory.hpp"
+#include "util/coordinateutils.hpp" // xyz2llh
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+
+namespace ATOS{
 const std::regex Trajectory::fileHeaderPattern("TRAJECTORY;(" + RegexPatterns::intPattern + ");("
 											   + RegexPatterns::namePattern + ");" + RegexPatterns::versionPattern + ";("
 											   + RegexPatterns::intPattern + ");");
@@ -18,11 +27,124 @@ const std::regex Trajectory::fileLinePattern("LINE;(" + RegexPatterns::floatPatt
 											 + RegexPatterns::floatPattern + ");(" + RegexPatterns::intPattern + ");ENDLINE;");
 const std::regex Trajectory::fileFooterPattern("ENDTRAJECTORY;");
 
-Trajectory::Trajectory(const Trajectory& other) {
+Trajectory::Trajectory(const Trajectory& other) : Loggable(other.get_logger()) {
 	this->id = other.id;
 	this->name = other.name;
 	this->version = other.version;
 	this->points = std::vector<TrajectoryPoint>(other.points);
+}
+
+atos_interfaces::msg::CartesianTrajectory Trajectory::toCartesianTrajectory(){
+	atos_interfaces::msg::CartesianTrajectory trajMsg;
+	for (const auto& point : this->points){
+		atos_interfaces::msg::CartesianTrajectoryPoint pointMsg;
+		// Time
+		auto millis = point.getTime().count();
+		pointMsg.time_from_start.sec = millis/1000;
+		pointMsg.time_from_start.nanosec = (millis%1000)*1000000;
+
+		// Position
+		pointMsg.pose.position.x = point.getPosition().x();
+		pointMsg.pose.position.y = point.getPosition().y();
+		pointMsg.pose.position.z = point.getPosition().z();
+
+		// Rotation
+		tf2::Quaternion q;
+		q.setRPY(0, 0, point.getHeading());
+		tf2::convert(q, pointMsg.pose.orientation);
+		
+		// Velocity TODO convert longitudinal / lateral into xyz coordinate system
+		pointMsg.twist.linear.x = point.getLongitudinalVelocity();
+		pointMsg.twist.linear.y = point.getLateralVelocity();
+		pointMsg.twist.linear.z = 0; // TODO: Support for drones etc..
+
+		// Acceleration TODO convert longitudinal / lateral into xyz coordinate system
+		pointMsg.acceleration.linear.x = point.getLongitudinalAcceleration();
+		pointMsg.acceleration.linear.y = point.getLateralAcceleration();
+		pointMsg.acceleration.linear.z = 0; // TODO: Support for drones etc..
+
+		trajMsg.points.push_back(pointMsg);
+	}
+	return trajMsg;
+}
+
+nav_msgs::msg::Path Trajectory::toPath() const
+{
+	nav_msgs::msg::Path path;
+	path.header.frame_id = "map";
+	path.header.stamp = rclcpp::Time(0);
+	auto rosTimeOffset = rclcpp::Time(std::chrono::system_clock::now().time_since_epoch().count());
+	for (const auto& point : this->points){
+		geometry_msgs::msg::PoseStamped pose;
+		pose.header.stamp = rosTimeOffset + rclcpp::Duration(point.getTime());
+		pose.pose.position.x = point.getPosition().x();
+		pose.pose.position.y = point.getPosition().y();
+		pose.pose.position.z = point.getPosition().z();
+		tf2::Quaternion q;
+		q.setRPY(0, 0, point.getHeading());
+		tf2::convert(q, pose.pose.orientation);
+		path.poses.push_back(pose);
+	}
+	// Force same coordinate frame as header
+	for (auto& pose : path.poses) {
+		pose.header.frame_id = path.header.frame_id;
+	}
+	return path;
+}
+
+foxglove_msgs::msg::GeoJSON Trajectory::toGeoJSON(std::array<double,3> llh_0) const {
+	foxglove_msgs::msg::GeoJSON geoJSON;
+	std::stringstream ss;
+	ss << std::fixed; // supress scientific notation
+	ss << std::setprecision(12);
+	for (const auto& point : this->points){
+		double llh[3] = {llh_0[0], llh_0[1], llh_0[2]};
+		double offset[3] = {point.getXCoord(), point.getYCoord(), point.getZCoord()};
+		llhOffsetMeters(llh, offset);
+		ss << "[" << llh[1] << "," << llh[0] << "],"; // Flipped order
+	}
+	std::string positions = ss.str();
+	positions = positions.substr(0, positions.size()-1); // remove trailing ,
+
+
+	std::string geojson = 
+	R"({
+		"type": "Feature",
+		"geometry": {
+			"type": "LineString",
+			"coordinates": [)" + positions + R"(]
+		},
+		"properties": {
+			"name": ""
+		}
+	})";
+	geoJSON.geojson = geojson;
+	return geoJSON;
+
+}
+
+void Trajectory::initializeFromCartesianTrajectory(const atos_interfaces::msg::CartesianTrajectory &traj) {
+	using namespace std::chrono;
+	// TODO: add name to traj
+	
+	for (const auto &tp : traj.points){
+		TrajectoryPoint point(logger);
+		point.setTime(duration_cast<milliseconds>(seconds{tp.time_from_start.sec} + nanoseconds{tp.time_from_start.nanosec}));
+		point.setXCoord(tp.pose.position.x);
+		point.setYCoord(tp.pose.position.y);
+		point.setZCoord(tp.pose.position.z);
+		tf2::Matrix3x3 m(tf2::Quaternion(tp.pose.orientation.x, tp.pose.orientation.y, tp.pose.orientation.z, tp.pose.orientation.w));
+		double roll, pitch, yaw = 0;
+		m.getRPY(roll, pitch, yaw);
+		point.setHeading(yaw);
+		point.setLongitudinalVelocity(tp.twist.linear.x);
+		point.setLateralVelocity(tp.twist.linear.y);
+		point.setLongitudinalAcceleration(tp.acceleration.linear.x);
+		point.setLateralAcceleration(tp.acceleration.linear.y);
+		point.setCurvature(0); // TODO: Support
+		point.setMode(ATOS::Trajectory::TrajectoryPoint::ModeType::CONTROLLED_BY_DRIVE_FILE); //TODO: Support
+		this->points.push_back(point);
+	}
 }
 
 void Trajectory::initializeFromFile(const std::string &fileName) {
@@ -73,7 +195,7 @@ void Trajectory::initializeFromFile(const std::string &fileName) {
 		else if (lineCount == nPoints + 1) {
 			if (regex_search(line, match, fileFooterPattern)) {
 				file.close();
-				LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", trajFilePath.c_str());
+				RCLCPP_DEBUG(get_logger(), "Closed <%s>", trajFilePath.c_str());
 				return;
 			}
 			else {
@@ -83,7 +205,7 @@ void Trajectory::initializeFromFile(const std::string &fileName) {
 		}
 		else {
 			if (regex_search(line, match, fileLinePattern)) {
-				TrajectoryPoint point;
+				TrajectoryPoint point(get_logger());
 				point.setTime(stod(match[1]));
 				point.setXCoord(stod(match[2]));
 				point.setYCoord(stod(match[3]));
@@ -110,7 +232,7 @@ void Trajectory::initializeFromFile(const std::string &fileName) {
 		}
 	}
 	file.close();
-	LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", trajFilePath.c_str());
+	RCLCPP_DEBUG(get_logger(), "Closed <%s>", trajFilePath.c_str());
 	throw invalid_argument(errMsg);
 }
 
@@ -122,7 +244,7 @@ CartesianPosition Trajectory::TrajectoryPoint::getISOPosition() const {
 	try {
 		retval.zCoord_m = this->getZCoord();
 	} catch (std::out_of_range e) {
-		LogMessage(LOG_LEVEL_WARNING, "Casting trajectory point to cartesian position: optional z value assumed to be 0");
+		RCLCPP_WARN(get_logger(), "Casting trajectory point to cartesian position: optional z value assumed to be 0");
 		retval.zCoord_m = 0.0;
 	}
 	retval.heading_rad = this->getHeading();
@@ -178,7 +300,7 @@ Trajectory::TrajectoryPoint Trajectory::TrajectoryPoint::relativeTo(
 		const TrajectoryPoint &other) const {
 
 	using namespace Eigen;
-	TrajectoryPoint relative;
+	TrajectoryPoint relative(get_logger());
 
 	relative.setTime(this->getTime());
 	relative.setHeading(this->getHeading() - other.getHeading());
@@ -222,7 +344,7 @@ Trajectory Trajectory::relativeTo(
 									"for two trajectories with differing versions");
 	}
 
-	Trajectory relative;
+	Trajectory relative(get_logger());
 	relative.id = this->id;
 	relative.name = this->name + "_rel_" + other.name;
 	relative.version = this->version;
@@ -341,7 +463,7 @@ Trajectory Trajectory::rescaledToVelocity(
 	Eigen::Vector2d maxVel_m_s = std::max_element(newTrajectory.points.begin(), newTrajectory.points.end(), [](const TrajectoryPoint& pt1, const TrajectoryPoint& pt2)
 	{ return pt1.getVelocity().norm() < pt2.getVelocity().norm(); }).base()->getVelocity();
 	if (vel_m_s > maxVel_m_s.norm()) {
-		LogMessage(LOG_LEVEL_DEBUG, "Requested max velocity is larger than current max velocity");
+		RCLCPP_DEBUG(get_logger(), "Requested max velocity is larger than current max velocity");
 		return newTrajectory;
 	}
 	double scaleFactor = vel_m_s / maxVel_m_s.norm();
@@ -481,7 +603,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	//create trajectory points
 	std::vector<TrajectoryPoint> tempVector;
 	for(int i = 0; i < calculatedNoOfPoints; i++) {
-		TrajectoryPoint tempPoint;
+		TrajectoryPoint tempPoint(startPoint.get_logger());
 		tempPoint.setTime(timeArray[i]+startTime);
 		tempPoint.setXCoord(resM(0,i));
 		tempPoint.setYCoord(resM(1,i));
@@ -497,7 +619,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 		tempVector.push_back(tempPoint);
 	}
 
-	Trajectory retval;
+	Trajectory retval(startPoint.get_logger());
 	retval.points = tempVector;
 	retval.name = "Williamson_x" + std::to_string(startPoint.getXCoord())
 			+ "_y" + std::to_string(startPoint.getYCoord())
@@ -530,19 +652,19 @@ Trajectory Trajectory::reversed() const {
 			point.setLateralVelocity(point.getLateralVelocity()*-1);
 		}
 		catch (std::out_of_range) {
-			LogMessage(LOG_LEVEL_DEBUG, "Ignoring uninitialized lateral velocity");
+			RCLCPP_DEBUG(get_logger(), "Ignoring uninitialized lateral velocity");
 		}
 		try {
 			point.setLateralAcceleration(point.getLateralAcceleration()*-1);
 		}
 		catch (std::out_of_range) {
-			LogMessage(LOG_LEVEL_DEBUG, "Ignoring uninitialized lateral acceleration");
+			RCLCPP_DEBUG(get_logger(), "Ignoring uninitialized lateral acceleration");
 		}
 		try {
 			point.setLongitudinalAcceleration(point.getLongitudinalAcceleration()*-1);
 		}
 		catch (std::out_of_range) {
-			LogMessage(LOG_LEVEL_DEBUG, "Ignoring uninitialized longitudinal acceleration");
+			RCLCPP_DEBUG(get_logger(), "Ignoring uninitialized longitudinal acceleration");
 		}
 	}
 
@@ -570,10 +692,10 @@ void Trajectory::saveToFile(const std::string& fileName) const {
 	trajFilePath += fileName;
 
 	ofstream outputTraj;
-	LogMessage(LOG_LEVEL_DEBUG, "Opening file %s", trajFilePath.c_str());
+	RCLCPP_DEBUG(get_logger(), "Opening file %s", trajFilePath.c_str());
 	try {
 		outputTraj.open(trajFilePath);
-		LogMessage(LOG_LEVEL_DEBUG, "Outputting trajectory to file");
+		RCLCPP_DEBUG(get_logger(), "Outputting trajectory to file");
 		outputTraj << "TRAJECTORY;" << this->id <<";" << this->name << ";" << this->version << ";" << this->points.size() << ";" <<  "\n";
 		for (const auto& point : points) {
 			outputTraj << "LINE;"
@@ -592,10 +714,10 @@ void Trajectory::saveToFile(const std::string& fileName) const {
 		}
 		outputTraj << "ENDTRAJECTORY;" <<  "\n";
 		outputTraj.close();
-		LogMessage(LOG_LEVEL_DEBUG, "Closed file %s", trajFilePath.c_str());
+		RCLCPP_DEBUG(get_logger(), "Closed file %s", trajFilePath.c_str());
 	}
 	catch (const ofstream::failure& e) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed when writing to file %s", trajFilePath.c_str());
+		RCLCPP_ERROR(get_logger(), "Failed when writing to file %s", trajFilePath.c_str());
 	}
 }
 
@@ -608,3 +730,4 @@ bool Trajectory::areTimestampsIncreasing() const {
 		return p1.getTime() < p2.getTime();
 	});
 }
+} // namespace ATOS

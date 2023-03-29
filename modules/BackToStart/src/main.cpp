@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include <map>
 #include <algorithm>
 #include "datadictionary.h"
@@ -23,7 +28,6 @@ int main()
 	struct timespec remTime;
 
 	LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
-	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
 
 	// Initialize message bus connection
 	while (iCommInit()) {
@@ -51,7 +55,8 @@ int main()
 				loadObjectFiles();
 			} catch (std::invalid_argument& e) {
 				LogMessage(LOG_LEVEL_ERROR, "Loading of object files failed - %s", e.what());
-				iCommSend(COMM_FAILURE, nullptr, 0);
+				LogMessage(LOG_LEVEL_ERROR, "Unimplemented response COMM_FAILURE");
+				//iCommSend(COMM_FAILURE, nullptr, 0);
 			}
 			break;
 
@@ -134,7 +139,8 @@ void backToStart() {
 			memset(btsResponseBuffer, 0, sizeof (btsResponseBuffer));
 			BTSResponse btsResponse = BTS_FAIL;
 			memcpy(btsResponseBuffer, &btsResponse, sizeof (btsResponse));
-			iCommSend(COMM_BACKTOSTART_RESPONSE, btsResponseBuffer, sizeof (btsResponse));
+			LogMessage(LOG_LEVEL_ERROR, "Unimplemented response COMM_BACKTOSTART_RESPONSE");
+			//iCommSend(COMM_BACKTOSTART_RESPONSE, btsResponseBuffer, sizeof (btsResponse));
 			return;
 		}
 		b2sTrajectories.push_back(b2sTraj);
@@ -155,7 +161,8 @@ void backToStart() {
 	memset(btsResponseBuffer, 0, sizeof (btsResponseBuffer));
 	BTSResponse btsResponse = BTS_PASS;
 	memcpy(btsResponseBuffer, &btsResponse, sizeof (btsResponse));
-	iCommSend(COMM_BACKTOSTART_RESPONSE, btsResponseBuffer, sizeof (btsResponse));
+	LogMessage(LOG_LEVEL_ERROR, "Unimplemented response COMM_BACKTOSTART_RESPONSE");
+	//iCommSend(COMM_BACKTOSTART_RESPONSE, btsResponseBuffer, sizeof (btsResponse));
 
 }
 

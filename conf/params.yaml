@@ -1,0 +1,37 @@
+atos:
+  atos_base:
+    ros__parameters:
+      test_origin_latitude: 0.0
+      test_origin_longitude: 0.0
+      test_origin_altitude: 0.0
+      test_origin_rot: 0.0
+  esmini_adapter:
+    ros__parameters:
+      open_scenario_file: ""
+  object_control:
+    ros__parameters:
+      max_missing_heartbeats: 100
+      transmitter_id: 15
+  system_control:
+    ros__parameters:
+      gui_update_rate: 20
+  osi_adapter:
+    ros__parameters:
+      address: "0.0.0.0"
+      port: 55555
+      protocol: "tcp"
+      frequency: 100
+  mqtt_bridge:
+    ros__parameters:
+      broker_ip: ""
+      pub_client_id: ""
+      username: ""
+      password: ""
+      topic: ""
+      quality_of_service: ""
+  trajectorylet_streamer:
+    ros__parameters:
+      chunk_duration: 2.0
+  pointcloud_publisher:
+    ros__parameters:
+      pointcloud_files: [""]

@@ -43,7 +43,16 @@
 build*/
 .vscode*/
 PlaygroundPlatform*/
+.cache*/
+CMakeFiles*/
 
 # Autosave files
 *.save
 *.autosave
+
+# CMake
+CMakeCache.txt
+
+# Generated files
+scripts/*.xosc
+scripts/openscenario/*.xosc
