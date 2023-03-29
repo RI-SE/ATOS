@@ -121,10 +121,10 @@ void RelativeKinematics::Clearing::connectedToLiveObject(
 void AbsoluteKinematics::Clearing::changeStateIfAllOK(
         ObjectControl& handler
         ) {
-    auto readyOrDisconnected = [](std::shared_ptr<TestObject> obj) {
+	auto readyOrDisconnected = [](std::shared_ptr<TestObject> obj) {
 		return obj->getState() == OBJECT_STATE_DISARMED ||
-                obj->getState() == OBJECT_STATE_ARMED ||
-                !obj->isConnected();
+		obj->getState() == OBJECT_STATE_ARMED ||
+		!obj->isConnected();
 	};
 	if (handler.areAllObjects(disarmedOrDisconnected)) {
 		setState(handler, new AbsoluteKinematics::Ready); // All objects are disarmed/armed, so we can go back to ready
