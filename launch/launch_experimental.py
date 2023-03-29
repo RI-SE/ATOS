@@ -17,5 +17,4 @@ def generate_launch_description():
         executable='trajectorylet_streamer',
         name='trajectorylet_streamer'
     ))
-    launch_base.print_version()
     return LaunchDescription(base_nodes)

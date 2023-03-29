@@ -9,5 +9,4 @@ from launch import LaunchDescription
 
 def generate_launch_description():
     base_nodes = launch_base.get_base_nodes()
-    launch_base.print_version()
     return LaunchDescription(base_nodes)

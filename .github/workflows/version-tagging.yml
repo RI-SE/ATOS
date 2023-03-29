@@ -38,22 +38,6 @@ jobs:
 
     # DO BUILDS HERE WHEN ADDING VERSION NUMBERS TO SOURCE CODE
     # WE DO THIS SO THAT IN CASE OF BUILD FAILURE, THE ACTUAL TAGGING WILL NOT RUN. 
-    
-    - name: Update Version File
-      run: echo ${{ steps.AutoTaggerDryRun.outputs.new_tag }} > .VERSION
-
-    - name: Commit Version File
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git commit --amend --no-edit .VERSION
-
-    - name: Push Changes
-      uses: ad-m/github-push-action@v0.6.0
-      with:
-        branch: ${{ github.base_ref }}
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        force: true
 
     - name: Do the actual tagging
       id: Create_tag
