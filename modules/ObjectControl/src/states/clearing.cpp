@@ -11,7 +11,7 @@ AbstractKinematics::Clearing::Clearing() {
 
 void AbstractKinematics::Clearing::onEnter(
 		ObjectControl& handler) {
-		handler.allClearObjects();
+	handler.allClearObjects();
 }
 
 void AbstractKinematics::Clearing::objectArmed(
