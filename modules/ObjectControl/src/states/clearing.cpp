@@ -93,7 +93,7 @@ void RelativeKinematics::Clearing::disconnectedFromObject(
 		ObjectControl& handler,
 		uint32_t id) {
 	RCLCPP_WARN(handler.get_logger(), "Object %d disconnected while CC in clearing state!", id);
-    changeStateIfAllOK(handler);
+	changeStateIfAllOK(handler);
 }
 
 void RelativeKinematics::Clearing::connectedToArmedObject(
