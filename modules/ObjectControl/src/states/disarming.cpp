@@ -5,10 +5,6 @@
  */
 #include "state.hpp"
 
-static bool disarmedOrDisconnected(const std::shared_ptr<TestObject> obj) {
-	return obj->getState() == OBJECT_STATE_DISARMED || !obj->isConnected();
-}
-
 AbstractKinematics::Disarming::Disarming() {
 
 }
