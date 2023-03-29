@@ -126,6 +126,9 @@ void AbsoluteKinematics::Clearing::changeStateIfAllOK(
 		obj->getState() == OBJECT_STATE_ARMED ||
 		!obj->isConnected();
 	};
+    auto disarmedOrDisconnected = [](const std::shared_ptr<TestObject> obj) {
+		return obj->getState() == OBJECT_STATE_DISARMED || !obj->isConnected();
+	};
 	if (handler.areAllObjects(disarmedOrDisconnected)) {
 		setState(handler, new AbsoluteKinematics::Ready); // All objects are disarmed/armed, so we can go back to ready
 	}
