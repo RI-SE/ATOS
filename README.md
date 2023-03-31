@@ -1,4 +1,4 @@
-# ATOS - Automated Testing Operating System
+# ATOS - AV Test Operating System
 <img align="left" width="100" height="100" src="./docs/res/ATOS_icon.svg">
 <img align="right" width="400" height="300" src="https://user-images.githubusercontent.com/15685739/227924215-d5ff67f8-1e03-45d0-ae20-8e60819b2ff7.png">
 
