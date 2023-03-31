@@ -4,20 +4,17 @@
 After starting ATOS the first time, you will find the test directory in `~/.astazero/ATOS`. This directory will contain all test settings and will contain the following directories:
 
 - **Catalogs**
-    - Explanation here: 
-    - Supported file types:
+    - Explanation here: Catalog directory containing various OpenSCENARIO-files with settings and parameters used by esmini. 
+    - Supported file types: `.xosc`
 - **certs**
-    - Explanation here: 
-    - Supported file types:
+    - Explanation here: Directory containing the certificates used by e.g. the web-gui.
+    - Supported file types: `.pem`
 - **conf**
-    - Explanation here: 
-    - Supported file types:
-- **geofence**
-    - Explanation here: 
-    - Supported file types:
+    - Explanation here:  Directory containing the configuration files used to configure ATOS, i.e. the ROS parameters located in the file params.yaml.
+    - Supported file types: `.yaml`
 - **journal**
-    - Explanation here: 
-    - Supported file types:
+    - Explanation here: Directory containing the journal files, i.e. recorded configuration/state/position of each object for the duration of a test.
+    - Supported file types: `.jnl`
 - **objects**
     - Explanation here: Directory containing all objects that should be used in a test.
     - Supported file types: `.opro`
@@ -31,8 +28,8 @@ After starting ATOS the first time, you will find the test directory in `~/.asta
     - Explanation here: Directory containing site scans as pointclouds.
     - Supported file types: `.pcd`
 - **traj**
-    - Explanation here: 
-    - Supported file types:
+    - Explanation here: Legacy directory containing trajectory files.
+    - Supported file types: `.traj`
 
 
 ## Changing ROS parameters
