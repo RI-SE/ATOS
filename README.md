@@ -134,3 +134,6 @@ Launch ATOS
 ```
 ros2 launch atos launch_basic.py
 ```
+# Funded by
+This project has partly been funded by the below organisations. The herein expressed views of the contributors do not necessarily reflect the views of the organisations.
+![Vinnova_green_payoff_ENG_RGB](https://user-images.githubusercontent.com/15685739/229119880-8c0a30eb-f805-4da4-a6d7-544ed7dbea87.png)
