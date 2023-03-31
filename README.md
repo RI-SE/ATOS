@@ -134,5 +134,3 @@ Launch ATOS
 ```
 ros2 launch atos launch_basic.py
 ```
-
-

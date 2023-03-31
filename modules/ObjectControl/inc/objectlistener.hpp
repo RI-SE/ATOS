@@ -7,7 +7,6 @@
 #include "positioning.h"
 #include "objectcontrol.hpp"
 #include "testobject.hpp"
-#include "state.hpp"
 #include "loggable.hpp"
 #include <thread>
 
