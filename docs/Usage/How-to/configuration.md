@@ -41,5 +41,4 @@ In the `conf`-directory, `params.yaml` is located and sets ROS-parameters for th
 - [ObjectControl](../Modules/ObjectControl.md)
 - [OSIAdapter](../Modules/OSIAdapter.md)
 - [PointcloudPublisher](../Modules/PointcloudPublisher.md)
-- [SystemControl](../Modules/SystemControl.md)
 - [TrajectoryletStreamer](../Modules/TrajectoryletStreamer.md)
