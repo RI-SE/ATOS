@@ -20,7 +20,7 @@ To build ATOS follow the guide below.
     - [ Ubuntu 20.04](#-ubuntu-2004)
 
 # <a name="usage"></a> Using ATOS with a Graphical User Interface (GUI)
-Please click [here](https://github.com/RI-SE/atos/tree/dev/gui/simplecontrol/README.md) for instructions on how to use ATOS with a GUI.
+Please click [here](https://github.com/RI-SE/atos/tree/dev/gui/controlpanel/README.md) for instructions on how to use ATOS with a GUI.
 
 # <a name="ATOS"></a> Building ATOS with colcon
 Below are the steps for building ATOS for the first time with colcon.
