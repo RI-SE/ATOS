@@ -1,7 +1,10 @@
 #EsminiAdapter
-
+Module for interfacing with the [esmini](https://github.com/esmini/esmini) ScenarioEngine.
 ## About the module
-Short description what the module does and what to use it for.
+This module has the following responsibilities:
+    * Load an OpenSCENARIO-file and extract static trajectories from it.
+    * Dynamically, while the test is running, execute actions based on triggers specified in the OpenSCENARIO-file.
+Note: some refactoring is needed to divide the responsibilities of this module into two separate modules.
 
 ## ROS parameters
 The following ROS parameters can be set for `EsminiAdapter`:
