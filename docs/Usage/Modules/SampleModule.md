@@ -1,5 +1,8 @@
-# Sample module
+# SampleModule
+
+## About the module
 This is a sample module to be used as template for creating new modules.
+
 ## Features
 The sample module is a ros2 node that features some basic publishers and subscribers to various topics.
 It also features a TCPServer running in a separate thread. 
