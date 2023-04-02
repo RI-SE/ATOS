@@ -71,11 +71,18 @@ def get_base_nodes():
             name='osi_adapter',
             parameters=[files["params"]]
         ),
+        #Node(
+        #    package='atos',
+        #    namespace='atos',
+        #    executable='esmini_adapter',
+        #    name='esmini_adapter',
+        #    parameters=[files["params"]]
+        #),
         Node(
             package='atos',
             namespace='atos',
-            executable='esmini_adapter',
-            name='esmini_adapter',
+            executable='drone_control',
+            name='drone_control',
             parameters=[files["params"]]
         ),
         Node(
