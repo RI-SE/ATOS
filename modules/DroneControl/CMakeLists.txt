@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(DRONE_CONTROL)
+project(drone_control)
 find_package(atos_interfaces REQUIRED)
 
 # Define target names
