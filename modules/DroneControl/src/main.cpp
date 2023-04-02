@@ -4,8 +4,8 @@
 
 int main(int argc, char** argv) {
 	rclcpp::init(argc,argv);
-	auto sm = std::make_shared<DroneControl>();
-	rclcpp::spin(sm);
+	auto dc = std::make_shared<DroneControl>();
+	rclcpp::spin(dc);
 	rclcpp::shutdown();
 	return 0;
 }
