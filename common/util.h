@@ -364,10 +364,12 @@ typedef enum {
     OBC_STATE_INITIALIZED,
     OBC_STATE_CONNECTED,
     OBC_STATE_ARMED,
+    OBC_STATE_DISARMING,
     OBC_STATE_RUNNING,
 	  OBC_STATE_REMOTECTRL,
     OBC_STATE_ERROR,
-    OBC_STATE_ABORTING
+    OBC_STATE_ABORTING,
+    OBC_STATE_CLEARING
 } OBCState_t;
 
 typedef struct
@@ -698,7 +700,6 @@ int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP);
 
-void llhOffsetMeters(double *llh, const double *xyzOffset);
 void llhToXyz(double lat, double lon, double height, double *x, double *y, double *z);
 void enuToLlh(const double *iLlh, const double *xyz, double *llh);
 void createEnuMatrix(double lat, double lon, double *enuMat);

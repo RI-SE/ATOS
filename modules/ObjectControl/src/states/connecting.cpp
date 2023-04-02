@@ -33,9 +33,7 @@ void AbstractKinematics::Connecting::abortRequest(
 void AbstractKinematics::Connecting::connectedToObject(
 		ObjectControl& handler,
 		uint32_t id) {
-	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
-		this->allObjectsConnected(handler);
-	}
+	// TODO
 }
 
 void AbstractKinematics::Connecting::disconnectedFromObject(
@@ -101,6 +99,15 @@ void RelativeKinematics::Connecting::connectedToObject(
 		ObjectControl& handler,
 		uint32_t id) {
 	AbstractKinematics::Connecting::connectedToObject(handler, id);
+	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)){
+		this->allObjectsConnected(handler);
+	}
+	else if (handler.isAnyObjectIn(OBJECT_STATE_ARMED)) {
+		setState(handler, new RelativeKinematics::Disarming);
+	}
+	else if (handler.isAnyObjectIn(OBJECT_STATE_RUNNING)) {
+		setState(handler, new RelativeKinematics::Aborting);
+	}
 }
 
 void RelativeKinematics::Connecting::disconnectedFromObject(
@@ -170,6 +177,15 @@ void AbsoluteKinematics::Connecting::connectedToObject(
 		ObjectControl& handler,
 		uint32_t id) {
 	AbstractKinematics::Connecting::connectedToObject(handler, id);
+	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)){
+		this->allObjectsConnected(handler);
+	}
+	else if (handler.isAnyObjectIn(OBJECT_STATE_ARMED)) {
+		setState(handler, new AbsoluteKinematics::Disarming);
+	}
+	else if (handler.isAnyObjectIn(OBJECT_STATE_RUNNING)) {
+		setState(handler, new AbsoluteKinematics::Aborting);
+	}
 }
 
 void AbsoluteKinematics::Connecting::disconnectedFromObject(

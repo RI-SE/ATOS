@@ -28,7 +28,6 @@ int main()
 	struct timespec remTime;
 
 	LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
-	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
 
 	// Initialize message bus connection
 	while (iCommInit()) {

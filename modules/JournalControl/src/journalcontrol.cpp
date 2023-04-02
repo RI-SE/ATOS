@@ -56,7 +56,6 @@ JournalControl::JournalControl()
 void JournalControl::initialize()
 {
 	int retval = 0;
-	RCLCPP_INFO(get_logger(), "%s task running with PID: %d", get_name(), getpid());
 
 	if (std::signal(SIGINT, signalHandler) == SIG_ERR) {
 		throw std::runtime_error("Failed to register signal handler");

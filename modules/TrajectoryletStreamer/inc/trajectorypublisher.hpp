@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "objectconfig.hpp"
-#include "roschannel.hpp"
+#include "roschannels/pathchannel.hpp"
 #include <memory>
 #include <thread>
 #include <mutex>

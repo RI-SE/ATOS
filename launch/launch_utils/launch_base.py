@@ -1,10 +1,27 @@
 # Don't launch this file directly, rather use the launch files one level up instead
 import os
 from launch_ros.actions import Node
+from ament_index_python.packages import get_package_prefix
+import subprocess
+from pathlib import Path
+from .validate_files import validate_files
+import rclpy.logging as logging
+
+def print_version():
+    atos_install_dir = get_package_prefix('atos')
+    version_file = open(atos_install_dir / Path(".VERSION"), 'r')
+    logging.get_logger('launch').info("ATOS version: " + version_file.read())
 
 def get_base_nodes():
-    atos_dir = os.path.join(os.path.expanduser('~'), '.astazero', 'ATOS')
-    params = os.path.join(atos_dir, 'conf', 'params.yaml')
+    files = validate_files()
+    atos_conf_dir = os.path.join(os.path.expanduser('~'), '.astazero', 'ATOS')
+    atos_install_dir = get_package_prefix('atos')
+
+    # control-gui logging
+    control_gui_log = open(atos_conf_dir / Path("webgui.log"), 'w')
+    # start control-gui server
+    control_gui_dir = Path(atos_install_dir) / Path("controlpanel/")
+    subprocess.Popen("/usr/bin/npm start --prefix " + str(control_gui_dir),shell=True, stdout=control_gui_log, stderr=control_gui_log)
 
     return [
         Node(
@@ -12,20 +29,33 @@ def get_base_nodes():
             namespace='atos',
             executable='atos_base',
             name='atos_base',
-            parameters=[params]
+            parameters=[files["params"]]
         ),
         Node(
-            package='atos',
-            namespace='atos',
-            executable='system_control',
-            name='system_control'
+            package='rosbridge_server',
+            executable='rosbridge_websocket',
+            name='ros_bridge',
+            parameters=[
+                {"port": 9090},
+                {"retry_startup_delay": 5.0},
+                {"certfile": str(files["cert"])},
+                {"keyfile": str(files["key"])},
+                {"fragment_timeout": 600},
+                {"max_message_size": 10000000},
+                {"unregister_timeout": 10.0},
+                {"use_compression": False}]
+        ),
+        Node(
+            name='rosapi',
+            package='rosapi',
+            executable='rosapi_node'
         ),
         Node(
             package='atos',
             namespace='atos',
             executable='object_control',
             name='object_control',
-            parameters=[params]
+            parameters=[files["params"]]
             # ,prefix="xterm -e gdb --args" #Useful for debugging
         ),
         Node(
@@ -39,14 +69,14 @@ def get_base_nodes():
             namespace='atos',
             executable='osi_adapter',
             name='osi_adapter',
-            parameters=[params]
+            parameters=[files["params"]]
         ),
         Node(
             package='atos',
             namespace='atos',
             executable='esmini_adapter',
             name='esmini_adapter',
-            parameters=[params]
+            parameters=[files["params"]]
         ),
         Node(
             package='atos',
@@ -54,6 +84,14 @@ def get_base_nodes():
             executable='mqtt_bridge',
             name='mqtt_bridge',
             # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
-            parameters=[params]
+            parameters=[files["params"]],
+            # arguments=['--ros-args', '--log-level', "debug"] # To get RCL_DEBUG prints
         ),
+        Node(
+            package='atos',
+            namespace='atos',
+            executable='pointcloud_publisher',
+            name='pointcloud_publisher',
+            parameters=[files["params"]]
+        )
     ]

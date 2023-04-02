@@ -15,6 +15,8 @@ project(object_control)
 find_package(rclcpp REQUIRED)
 find_package(atos_interfaces REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2 REQUIRED)
@@ -47,6 +49,7 @@ add_executable(${OBJECT_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/connecting.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/ready.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/aborting.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/states/clearing.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/testlive.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/disarming.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/armed.cpp
@@ -70,6 +73,8 @@ ament_target_dependencies(${OBJECT_CONTROL_TARGET}
   rclcpp
   std_msgs
   nav_msgs
+  geometry_msgs
+  sensor_msgs
   tf2_geometry_msgs
   atos_interfaces
   tf2

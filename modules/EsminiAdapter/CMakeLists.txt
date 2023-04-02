@@ -12,6 +12,7 @@ project(esmini_adapter)
 find_package(atos_interfaces REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(esminiLib REQUIRED)
+find_package(foxglove_msgs REQUIRED)
 
 # Define target names
 set(ESMINI_ADAPTER_TARGET ${PROJECT_NAME})
@@ -45,6 +46,7 @@ ament_target_dependencies(${ESMINI_ADAPTER_TARGET}
   rclcpp
   std_msgs
   atos_interfaces
+  foxglove_msgs
   tf2
 )
 

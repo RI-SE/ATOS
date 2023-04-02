@@ -11,7 +11,9 @@
 void ObjectControlState::setState(
 		ObjectControl& handler,
 		ObjectControlState *st) {
-	// TODO mutex on state modification
+	// Lock stateMutex to prevent data races when ObjectListener threads execute handler methods
+	std::lock_guard<std::mutex> lock(handler.stateMutex);
+
 	// Before replacing state, execute any exit behaviour
 	handler.state->onExit(handler);
 	RCLCPP_INFO(handler.get_logger(), "Transitioning to state %s", type(*st).c_str());

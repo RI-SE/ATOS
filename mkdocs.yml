@@ -1,0 +1,4 @@
+site_name: ATOS Docs
+theme:
+    name: readthedocs
+    logo: res/ATOS_icon.png

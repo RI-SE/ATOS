@@ -65,7 +65,6 @@ void OSIAdapter::getParameters() {
  * @param port Port
  */
 void OSIAdapter::initializeServer() {
-  RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
   server = std::make_unique<ServerFactory>(address, port, protocol);
   server->createServer();
   server->setupServer();
@@ -194,9 +193,4 @@ void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, ui
     lastMonitorTimes[id] = duration_cast<TimeUnit>(newTime-oldTime);
   }
   lastMonitors[id] = *msg;
-}
-
-
-void OSIAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {
-  RCLCPP_INFO(get_logger(), "Received abort message");
 }

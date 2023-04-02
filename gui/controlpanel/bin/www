@@ -1,0 +1,108 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../server');
+var fs = require('fs');
+var debug = require('debug')('simplecontrol:server');
+var http = require('http');
+var https = require('https');
+const homeDir = require('os').homedir();
+var options = {
+  cert: fs.readFileSync(homeDir + '/.astazero/ATOS/certs/selfsigned.crt', 'utf8'),
+  key: fs.readFileSync(homeDir + '/.astazero/ATOS/certs/selfsigned.key', 'utf8'),
+};
+
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var httpPort = normalizePort(process.env.PORT || '3000');
+var httpsPort = normalizePort(process.env.PORT || '3443');
+
+/**
+ * Create HTTP server.
+ */
+
+var httpServer = http.createServer(app);
+var httpsServer = https.createServer(options,app);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+httpServer.listen(httpPort);
+httpServer.on('error', onError);
+httpServer.on('listening', onListening);
+
+httpsServer.listen(httpsPort);
+httpsServer.on('error', onError);
+httpsServer.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof httpPort === 'string'
+    ? 'Pipe ' + httpPort
+    : 'Port ' + httpPort;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = httpServer.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+  addr = httpsServer.address();
+  bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}

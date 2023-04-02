@@ -11,7 +11,11 @@
 #include "trajectory.hpp"
 #include "objectconfig.hpp"
 #include "osi_handler.hpp"
-#include "roschannel.hpp"
+#include "roschannels/controlsignalchannel.hpp"
+#include "roschannels/navsatfixchannel.hpp"
+#include "roschannels/pathchannel.hpp"
+#include "roschannels/monitorchannel.hpp"
+
 #include "loggable.hpp"
 
 using atos_interfaces::msg::ControlSignalPercentage;
@@ -82,7 +86,9 @@ public:
 	ObjectConnection(rclcpp::Logger log)
 		: cmd(SOCK_STREAM, log),
 		mntr(SOCK_DGRAM, log),
-		Loggable(log) {}
+		Loggable(log) {
+			pipe(interruptionPipeFds);
+		}
 
 	bool isValid() const;
 	bool isConnected() const;
@@ -90,6 +96,13 @@ public:
 				 const std::chrono::milliseconds retryPeriod);
 	void disconnect();
 	ISOMessageID pendingMessageType(bool awaitNext = false);
+	void interruptSocket() {
+		int i = 1;
+		write(interruptionPipeFds[1], &i, sizeof(i));
+		close(interruptionPipeFds[1]);
+	}
+private:
+	int interruptionPipeFds[2];
 };
 
 class TestObject : public Loggable {
@@ -97,7 +110,8 @@ class TestObject : public Loggable {
 public:
 	TestObject(rclcpp::Logger, 
 		std::shared_ptr<ROSChannels::Path::Sub>, 
-		std::shared_ptr<ROSChannels::Monitor::Pub>
+		std::shared_ptr<ROSChannels::Monitor::Pub>,
+		std::shared_ptr<ROSChannels::NavSatFix::Pub>
 	);
 	TestObject(const TestObject&) = delete;
 	TestObject(TestObject&&);
@@ -126,6 +140,7 @@ public:
 	void setObjectConfig(ObjectConfig& newObjectConfig);
 	void setTriggerStart(const bool startOnTrigger = true);
 	void setOrigin(const GeographicPositionType&);
+	void interruptSocket() { comms.interruptSocket();}
 	
 	bool isAnchor() const { return conf.isAnchor(); }
 	bool isOsiCompatible() const { return conf.isOSI(); }
@@ -155,6 +170,7 @@ public:
 
 	void sendControlSignal(const ControlSignalPercentage::SharedPtr csp);
 	void publishMonr(const ROSChannels::Monitor::message_type);
+	void publishNavSatFix(const ROSChannels::NavSatFix::message_type);
 
 	std::chrono::milliseconds getTimeSinceLastMonitor() const {
 		if (lastMonitorTime.time_since_epoch().count() == 0) {
@@ -189,6 +205,7 @@ private:
 	Channel osiChannel;			//!< Channel for communication with object over the OSI protocol
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
 	std::shared_ptr<ROSChannels::Monitor::Pub> monrPub;
+	std::shared_ptr<ROSChannels::NavSatFix::Pub> navSatFixPub;
 	std::shared_ptr<ROSChannels::Path::Sub> pathSub;
 	std::shared_ptr<ROSChannels::Path::message_type> lastReceivedPath;
 

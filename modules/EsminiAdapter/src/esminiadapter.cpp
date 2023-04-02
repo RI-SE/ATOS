@@ -20,6 +20,8 @@
 #include "rclcpp/wait_for_message.hpp"
 #include "trajectory.hpp"
 #include "string_utility.hpp"
+#include "util.h"
+#include "util/coordinateutils.hpp"
 
 using namespace ROSChannels;
 using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
@@ -48,6 +50,8 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	v2xPub(*this),
 	initSub(*this, &EsminiAdapter::onStaticInitMessage),
 	startSub(*this, &EsminiAdapter::onStaticStartMessage),
+	abortSub(*this, &EsminiAdapter::onStaticAbortMessage),
+	exitSub(*this, &EsminiAdapter::onStaticExitMessage),
 	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage)
  {
 	declare_parameter("open_scenario_file");
@@ -100,6 +104,8 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 		me->connectedObjectIdsSub = ROSChannels::ConnectedObjectIds::Sub(*me,&EsminiAdapter::onConnectedObjectIdsMessage);
 		me->initSub = ROSChannels::Init::Sub(*me,&EsminiAdapter::onStaticInitMessage);
 		me->startSub = ROSChannels::Start::Sub(*me,&EsminiAdapter::onStaticStartMessage);
+		me->abortSub = ROSChannels::Abort::Sub(*me,&EsminiAdapter::onStaticAbortMessage);
+		me->exitSub = ROSChannels::Exit::Sub(*me,&EsminiAdapter::onStaticExitMessage);
 		// Start V2X publisher
 		me->v2xPub = ROSChannels::V2X::Pub(*me);
 		
@@ -121,17 +127,10 @@ void EsminiAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::messag
 
 //! Message queue callbacks
 
-void EsminiAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {
+void EsminiAdapter::onStaticAbortMessage(const Abort::message_type::SharedPtr) {
 	SE_Close();
+	RCLCPP_INFO(me->get_logger(), "Esmini ScenarioEngine stopped due to Abort");
 }
-
-void EsminiAdapter::onInitMessage(const Init::message_type::SharedPtr) {
-}
-
-void EsminiAdapter::onStartMessage(const Start::message_type::SharedPtr) {
-}
-
-void EsminiAdapter::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 
 void EsminiAdapter::onStaticInitMessage(
 	const Init::message_type::SharedPtr)
@@ -151,11 +150,18 @@ void EsminiAdapter::onStaticInitMessage(
 			RCLCPP_ERROR(me->get_logger(), "Failed to get test origin from test origin service");
 			return; // TODO communicate failure
 		}
+		// Publish GNSSPath trajectories when we receive the origin
 		me->testOrigin = response->origin;
+		std::array<double,3> llh_0 = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
+
+		for (auto& it : me->idToTraj) {
+			me->gnssPathPublishers.emplace(it.first, ROSChannels::GNSSPath::Pub(*me, it.first));
+			me->gnssPathPublishers.at(it.first).publish(it.second.toGeoJSON(llh_0));
+		}
 	});
 }
 
-void EsminiAdapter::onExitMessage(
+void EsminiAdapter::onStaticExitMessage(
 	const Exit::message_type::SharedPtr)
 {
 	SE_Close();
@@ -163,6 +169,7 @@ void EsminiAdapter::onExitMessage(
 	rclcpp::shutdown();
 }
 
+// !!TODO!!: Make sure that we are in the correct OBC state before starting ScenarioEngine
 void EsminiAdapter::onStaticStartMessage(
 	const Start::message_type::SharedPtr)
 {
@@ -307,8 +314,8 @@ ROSChannels::V2X::message_type EsminiAdapter::denmFromMonitor(const ROSChannels:
 	denm.message_type = "DENM";
 	denm.event_id = "ATOSEvent1";
 	denm.cause_code = 12;
-	denm.latitude = static_cast<int32_t>(llh[0]*1000000); // Microdegrees
-	denm.longitude = static_cast<int32_t>(llh[1]*1000000);
+	denm.latitude = static_cast<int32_t>(llh[0]*10000000); // Microdegrees
+	denm.longitude = static_cast<int32_t>(llh[1]*10000000);
 	denm.altitude = static_cast<int32_t>(llh[2]*100);		// Centimeters
 	denm.detection_time = std::chrono::duration_cast<std::chrono::seconds>( // Time since epoch in seconds
 		std::chrono::system_clock::now().time_since_epoch()
@@ -514,6 +521,7 @@ void EsminiAdapter::InitializeEsmini()
 	me->ATOStoEsminiObjectId.clear();
 	me->idToIp.clear();
 	me->pathPublishers.clear();
+	me->gnssPathPublishers.clear();
 	SE_Close(); // Stop ScenarioEngine in case it is running
 
 	RCLCPP_INFO(me->get_logger(), "Initializing esmini with scenario file %s", me->oscFilePath.c_str());
@@ -556,8 +564,10 @@ void EsminiAdapter::InitializeEsmini()
 
 		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
 
+		// Publish the trajectory as a path
 		me->pathPublishers.emplace(id, ROSChannels::Path::Pub(*me, id));
 		me->pathPublishers.at(id).publish(traj.toPath());
+
 		// below is for dumping the trajectory points to the console
 		/*
 		for (auto& tp : traj.points){
@@ -618,8 +628,6 @@ void EsminiAdapter::onRequestObjectIP(
  */
 int EsminiAdapter::initializeModule() {
 	int retval = 0;
-
-	RCLCPP_INFO(me->get_logger(), "%s task running with PID: %d",moduleName.c_str(), getpid());
 	
 	// Calling services
 	me->testOriginClient = me->nTimesWaitForService<TestOriginSrv>(3, 1s, ServiceNames::getTestOrigin);

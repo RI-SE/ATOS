@@ -20,6 +20,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
 
 set(TIME_LIBRARY ATOSTime)
@@ -37,6 +38,7 @@ get_target_property(ISO_22133_HEADERS ${ISO_22133_LIBRARY} INCLUDE_DIRECTORIES)
 # Built targets
 add_library(${ATOS_UTIL_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/util.c
+	${CMAKE_CURRENT_SOURCE_DIR}/util/coordinateutils.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/datadictionary.c
 )
 
@@ -86,12 +88,16 @@ ament_target_dependencies(${ATOS_COMMON_TARGET}
   std_msgs
   std_srvs
   nav_msgs
+	sensor_msgs
   atos_interfaces
 )
 
 # Exported headers
 set_target_properties(${ATOS_UTIL_TARGET} PROPERTIES
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/util.h
+)
+set_property(TARGET ${ATOS_UTIL_TARGET} APPEND PROPERTY
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/util/coordinateutils.hpp
 )
 set_property(TARGET ${ATOS_UTIL_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/datadictionary.h

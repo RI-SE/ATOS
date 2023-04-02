@@ -1,0 +1,231 @@
+{
+  "configById": {
+    "atos_simple_control.Simple Control!4517da9": {
+      "atosHostname": "localhost",
+      "atosPort": "3443",
+      "atosProtocol": "https"
+    },
+    "3D!34vcsbn": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 72.10076346609907,
+        "phi": 54.732098470274536,
+        "thetaOffset": 170.85251903773042,
+        "targetOffset": [
+          -48.40704389856253,
+          37.79137635803709,
+          7.518198565911182e-15
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {
+        "enableStats": false,
+        "backgroundColor": "#ffffff"
+      },
+      "transforms": {},
+      "topics": {
+        "/atos/object_1/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#6b7bff",
+          "arrowScale": [
+            4,
+            1.65,
+            1.65
+          ]
+        },
+        "/atos/object_1/path": {
+          "visible": true,
+          "gradient": [
+            "#6b7bffff",
+            "#6b7bffff"
+          ],
+          "lineWidth": 1
+        },
+        "/atos/object_2/path": {
+          "visible": true,
+          "gradient": [
+            "#fb00ffff",
+            "#fb00ff"
+          ],
+          "lineWidth": 1
+        },
+        "/atos/object_3/path": {
+          "visible": true,
+          "gradient": [
+            "#dba652ff",
+            "#dba652ff"
+          ],
+          "lineWidth": 1
+        },
+        "/atos/object_4/path": {
+          "visible": true,
+          "gradient": [
+            "#ff6b6bff",
+            "#ff6b6bff"
+          ]
+        },
+        "/atos/object_5/path": {
+          "visible": true,
+          "gradient": [
+            "#86ff6bff",
+            "#86ff6bff"
+          ],
+          "lineWidth": 1
+        },
+        "/atos/object_6/path": {
+          "visible": true,
+          "gradient": [
+            "#fffd6bff",
+            "#fffd6bff"
+          ],
+          "lineWidth": 1
+        },
+        "/atos/object_2/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#fb00ffff",
+          "arrowScale": [
+            4,
+            1.65,
+            1.65
+          ]
+        },
+        "/atos/object_3/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#dba652",
+          "arrowScale": [
+            4,
+            1.65,
+            1.65
+          ]
+        },
+        "/atos/object_4/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#ff6b6b",
+          "arrowScale": [
+            4,
+            1.65,
+            1.65
+          ]
+        },
+        "/atos/object_5/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#86ff6b",
+          "arrowScale": [
+            4,
+            1.65,
+            1.65
+          ]
+        },
+        "/atos/object_6/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#fffd6b",
+          "arrowScale": [
+            4,
+            1.65,
+            1.65
+          ]
+        },
+        "/initialpose": {
+          "visible": false
+        },
+        "/move_base_simple/goal": {
+          "visible": false
+        },
+        "/atos/pointcloud": {
+          "visible": true,
+          "colorField": "z",
+          "colorMode": "flat",
+          "colorMap": "rainbow",
+          "flatColor": "#303030",
+          "stixelsEnabled": false,
+          "pointSize": 1.5,
+          "decayTime": 0,
+          "pointShape": "square",
+          "explicitAlpha": 1,
+          "minValue": 0,
+          "gradient": [
+            "#000000",
+            "#646464"
+          ]
+        }
+      },
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      }
+    },
+    "map!2s6yzns": {
+      "center": {
+        "lat": 57.77318090032495,
+        "lon": 12.770818967512213
+      },
+      "customTileUrl": "http://10.113.148.2/tiles/flexzone_tiles/{z}/{x}/{y}.png",
+      "disabledTopics": [
+        "/atos/object_1/object_monitor"
+      ],
+      "followTopic": "",
+      "layer": "custom",
+      "topicColors": {
+        "/atos/object_1/gnss_fix": "#4d87ff",
+        "/atos/object_1/gnss_path": "#4d87ff",
+        "/atos/object_2/gnss_fix": "#c800ff",
+        "/atos/object_2/gnss_path": "#c800ff",
+        "/atos/object_3/gnss_fix": "#b2883f",
+        "/atos/object_3/gnss_path": "#b2883f",
+        "/atos/object_4/gnss_fix": "#ff0000",
+        "/atos/object_4/gnss_path": "#ff0000",
+        "/atos/object_5/gnss_fix": "#6ae34f",
+        "/atos/object_5/gnss_path": "#6ae34f",
+        "/atos/object_6/gnss_fix": "#e3d34f",
+        "/atos/object_6/gnss_path": "#e3d34f"
+      },
+      "zoomLevel": 19,
+      "foxglovePanelTitle": "AstaZero",
+      "topicMarkerSizes": {}
+    }
+  },
+  "globalVariables": {
+    "": "lat:"
+  },
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "first": "atos_simple_control.Simple Control!4517da9",
+      "second": "3D!34vcsbn",
+      "direction": "column",
+      "splitPercentage": 22.242817423540316
+    },
+    "second": "map!2s6yzns",
+    "direction": "row",
+    "splitPercentage": 48.740554156171285
+  }
+}

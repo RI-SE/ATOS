@@ -6,6 +6,7 @@
 #pragma once
 
 #include "module.hpp"
+#include "roschannels/v2xchannel.hpp"
 #include "MQTTClient.h"
 #include <nlohmann/json.hpp>
 #include <chrono>
