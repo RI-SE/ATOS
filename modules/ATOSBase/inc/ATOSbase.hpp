@@ -10,6 +10,7 @@
 #include <std_srvs/srv/set_bool.hpp>
 #include "atos_interfaces/srv/get_object_ids.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
+#include "atos_interfaces/srv/get_object_ip.hpp"
 #include "module.hpp"
 
 class ATOSBase : public Module {
@@ -21,6 +22,7 @@ class ATOSBase : public Module {
 	static inline std::string const moduleName = "atos_base";
 	rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr initDataDictionaryService;
 	rclcpp::Service<atos_interfaces::srv::GetObjectIds>::SharedPtr getObjectIdsService;
+	rclcpp::Service<atos_interfaces::srv::GetObjectIp>::SharedPtr getObjectIpService;
 	rclcpp::Service<atos_interfaces::srv::GetTestOrigin>::SharedPtr getTestOriginService;
 
 	void onExitMessage(const ROSChannels::Exit::message_type::SharedPtr) override;
@@ -31,10 +33,13 @@ class ATOSBase : public Module {
 							  std::shared_ptr<std_srvs::srv::SetBool::Response>);
 	void onRequestObjectIDs(const std::shared_ptr<atos_interfaces::srv::GetObjectIds::Request>,
 							std::shared_ptr<atos_interfaces::srv::GetObjectIds::Response>);
+	void onRequestObjectIP(const std::shared_ptr<atos_interfaces::srv::GetObjectIp::Request>,
+							std::shared_ptr<atos_interfaces::srv::GetObjectIp::Response>);
 	void onRequestTestOrigin(const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,
 							 std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response>);
 	bool isInitialized = false;
 	ROSChannels::Exit::Sub exitSub;
-};
+	std::map<uint32_t,uint32_t> getObjectsInfo();
+	};
 
 #endif

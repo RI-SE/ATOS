@@ -31,6 +31,8 @@ ATOSBase::ATOSBase()
 		std::bind(&ATOSBase::onInitDataDictionary, this, _1, _2));
 	getObjectIdsService = create_service<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds,
 		std::bind(&ATOSBase::onRequestObjectIDs, this, _1, _2));
+	getObjectIpService = create_service<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp,
+		std::bind(&ATOSBase::onRequestObjectIP, this, _1, _2));
 	getTestOriginService = create_service<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin,
 		std::bind(&ATOSBase::onRequestTestOrigin, this, _1, _2));
 }
@@ -80,9 +82,7 @@ void ATOSBase::onExitMessage(const Exit::message_type::SharedPtr)
     rclcpp::shutdown();
 }
 
-void ATOSBase::onRequestObjectIDs(
-	const std::shared_ptr<atos_interfaces::srv::GetObjectIds::Request> req,
-	std::shared_ptr<atos_interfaces::srv::GetObjectIds::Response> res)
+std::map<uint32_t,uint32_t> ATOSBase::getObjectsInfo()
 {
 	char path[PATH_MAX];
 	std::vector<std::invalid_argument> errors;
@@ -94,7 +94,7 @@ void ATOSBase::onRequestObjectIDs(
 		throw std::ios_base::failure("Object directory does not exist");
 	}
 
-	std::vector<uint32_t> objectIDs;
+	std::map<uint32_t,uint32_t> objectIps;
 	for (const auto& entry : fs::directory_iterator(objectDir)) {
 		if (!fs::is_regular_file(entry.status())) {
 			continue;
@@ -105,9 +105,10 @@ void ATOSBase::onRequestObjectIDs(
 
 		RCLCPP_DEBUG(get_logger(), "Loaded configuration: %s", conf.toString().c_str());
 		// Check preexisting
-		auto foundID = std::find(objectIDs.begin(), objectIDs.end(), conf.getTransmitterID());
-		if (foundID == objectIDs.end()) {
-			objectIDs.push_back(conf.getTransmitterID());
+
+		auto foundID = objectIps.find(conf.getTransmitterID());
+		if (foundID == objectIps.end()) {
+			objectIps.emplace(conf.getTransmitterID(), conf.getIP());
 		}
 		else {
 			std::string errMsg = "Duplicate object ID " + std::to_string(conf.getTransmitterID())
@@ -115,8 +116,42 @@ void ATOSBase::onRequestObjectIDs(
 			throw std::invalid_argument(errMsg);
 		}
 	}
+	return objectIps;
+}
 
-	res->ids = objectIDs;
+void ATOSBase::onRequestObjectIDs(
+	const std::shared_ptr<atos_interfaces::srv::GetObjectIds::Request> req,
+	std::shared_ptr<atos_interfaces::srv::GetObjectIds::Response> res)
+{
+	std::vector<uint32_t> objectIDs;
+	try {
+		for(auto const& objs: getObjectsInfo())
+    		objectIDs.push_back(objs.first);
+		res->ids = objectIDs;
+	}
+	catch (const std::exception& e) {
+		RCLCPP_ERROR(get_logger(), "Failed to get object IDs: %s", e.what());
+		res->success = false;
+		return;
+	}
+}
+
+void ATOSBase::onRequestObjectIP(
+	const std::shared_ptr<atos_interfaces::srv::GetObjectIp::Request> req,
+	std::shared_ptr<atos_interfaces::srv::GetObjectIp::Response> res)
+{
+	uint32_t objectIp;
+	try {
+		auto objinfo = getObjectsInfo();
+		if (objinfo.find(req->id) == objinfo.end()) {
+			throw std::invalid_argument("Object ID not found");
+		}
+		res->ip = objinfo[req->id];
+	}
+	catch (const std::exception& e) {
+		RCLCPP_ERROR(get_logger(), "Failed to get object IPs: %s", e.what());
+		res->success = false;
+	}
 }
 
 void ATOSBase::onRequestTestOrigin(
