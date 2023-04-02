@@ -7,6 +7,7 @@
 #include "datadictionary.h"
 #include "objectconfig.hpp"
 #include <functional>
+#include <arpa/inet.h>
 
 #include <ament_index_cpp/get_package_prefix.hpp>
 
@@ -146,7 +147,8 @@ void ATOSBase::onRequestObjectIP(
 		if (objinfo.find(req->id) == objinfo.end()) {
 			throw std::invalid_argument("Object ID not found");
 		}
-		res->ip = objinfo[req->id];
+		res->ip = std::string(inet_ntoa(in_addr{objinfo.at(req->id)}));
+		res->success = true;
 	}
 	catch (const std::exception& e) {
 		RCLCPP_ERROR(get_logger(), "Failed to get object IPs: %s", e.what());
