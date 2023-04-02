@@ -1,10 +1,10 @@
 #include "rclcpp/rclcpp.hpp"
-#include "samplemodule.hpp"
+#include "dronecontrol.hpp"
 
 
 int main(int argc, char** argv) {
 	rclcpp::init(argc,argv);
-	auto sm = std::make_shared<SampleModule>();
+	auto sm = std::make_shared<DroneControl>();
 	rclcpp::spin(sm);
 	rclcpp::shutdown();
 	return 0;
