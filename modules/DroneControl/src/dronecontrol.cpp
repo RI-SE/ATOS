@@ -1,5 +1,4 @@
 #include "dronecontrol.hpp"
-#include "roschannels/commandchannels.hpp"
 #include "path.hpp"
 
 using namespace ROSChannels;
@@ -7,8 +6,7 @@ using namespace std::placeholders;
 using ObjectTrajectorySrv = atos_interfaces::srv::GetObjectTrajectory;
 
 DroneControl::DroneControl() :
-	Module(moduleName),
-	initSub(*this, std::bind(&DroneControl::onInitMessage, this, _1))
+	Module(moduleName)
 {
 	// Entry-point to the module
 
@@ -17,39 +15,68 @@ DroneControl::DroneControl() :
 		std::bind(&DroneControl::onRequestObjectTrajectory, this, _1, _2));
 }
 
-// Object control requests the object trajectories
-void DroneControl::onRequestObjectTrajectory(const ObjectTrajectorySrv::Request::SharedPtr request,
-	const ObjectTrajectorySrv::Response::SharedPtr response)
+// Some module has requested the object trajectories
+void DroneControl::onRequestObjectTrajectory(const ObjectTrajectorySrv::Request::SharedPtr req,
+	const ObjectTrajectorySrv::Response::SharedPtr res)
 {
 	
+	res->id = req->id;
+	try {
+		// TODO: Parse .path file
+		auto path = createPath("path/path.path");
+
+		// TODO: Create trajectory object for drone with id req->id
+		auto traj = createDroneTrajectory(path,req->id);
+		RCLCPP_INFO(get_logger(), "Esmini trajectory service called, returning trajectory for object %s", traj.toString().c_str());
+		res->trajectory = traj.toCartesianTrajectory();
+		res->success = true;
+	}
+	catch (std::out_of_range& e){
+		RCLCPP_ERROR(get_logger(), "Esmini trajectory service called, no trajectory found for object %d", req->id);
+		res->success = false;
+	}
 }
 
 // Creates Path objects from .path file
 ABD::Path DroneControl::createPath(const std::string& path)
 {
-	
+	return ABD::Path(path);	
 }
-
-std::vector<ATOS::Trajectory> DroneControl::createDroneTrajectories(ABD::Path& path)
+ATOS::Trajectory DroneControl::createDroneTrajectory(ABD::Path& path, uint32_t id)
 {
-	// TODO: Create trajectory object(s) for drone(s)
-	// droneTrajectories = somefunction(path);
+	// TODO: Automate creation of multiple points
+	auto traj = ATOS::Trajectory(get_logger());
+
+	// The starting point
+	auto point1 = ATOS::Trajectory::TrajectoryPoint(get_logger());
+	point1.setXCoord(0);
+	point1.setYCoord(0);
+	point1.setZCoord(0);
+	point1.setHeading(0);
+	point1.setLongitudinalVelocity(3);
+	point1.setLateralVelocity(3);
+	point1.setLongitudinalAcceleration(3);
+	point1.setLateralAcceleration(3);
+	point1.setTime(0);
+	traj.points.push_back(point1);
+
+	// The ending point
+	auto point2 = ATOS::Trajectory::TrajectoryPoint(get_logger());
+	point2.setXCoord(1);
+	point2.setYCoord(1);
+	point2.setZCoord(1);
+	point2.setHeading(0);
+	point2.setLongitudinalVelocity(0);
+	point2.setLateralVelocity(0);
+	point2.setLongitudinalAcceleration(0);
+	point2.setLateralAcceleration(0);
+	point2.setTime(100);
+	traj.points.push_back(point2);
+
+	return traj;
 }
 
 
 DroneControl::~DroneControl() 
 {
 }
-
-//! Init command callback
-void DroneControl::onInitMessage(const Init::message_type::SharedPtr) 
-{
-	// Callback executed when this module receives a test-is-initialized command
-
-	// TODO: Parse .path file
-	auto path = createPath("path/path.path");
-
-	// TODO: Create trajectory object(s) for drone(s)
-	droneTrajectories = createDroneTrajectories(path);
-}
-

@@ -17,24 +17,18 @@ public:
 
 private:
 	// Member variables
-	std::vector<ATOS::Trajectory> droneTrajectories;
-
-	// State subscribers
-	ROSChannels::Init::Sub initSub;
-
-	// State callbacks
-	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
+	std::map<uint32_t,ATOS::Trajectory> droneTrajectories; // map from drone object-id to trajectory
 
 	// Provided services
 	std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> objectTrajectoryService;
 
 	// Service callbacks
-	void onRequestObjectTrajectory(const atos_interfaces::srv::GetObjectTrajectory::Request::SharedPtr request,
-		const atos_interfaces::srv::GetObjectTrajectory::Response::SharedPtr response);
+	void onRequestObjectTrajectory(const atos_interfaces::srv::GetObjectTrajectory::Request::SharedPtr,
+		const atos_interfaces::srv::GetObjectTrajectory::Response::SharedPtr);
 
 	// Business logic
-	ABD::Path createPath(const std::string& path);
-	std::vector<ATOS::Trajectory> createDroneTrajectories(ABD::Path&);
+	ABD::Path createPath(const std::string&);
+	ATOS::Trajectory createDroneTrajectory(ABD::Path&, uint32_t);
 
 
 
