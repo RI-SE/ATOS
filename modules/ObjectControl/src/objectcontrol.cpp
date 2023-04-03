@@ -258,6 +258,7 @@ void ObjectControl::loadScenario() {
 			objects.emplace(id, object);
 			objects.at(id)->setTransmitterID(id);
 
+			// RESPONSE REQUIRED
 			auto trajectoryCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
 				auto trajResponse = future.get();
 				if (!trajResponse->success) {
@@ -273,6 +274,7 @@ void ObjectControl::loadScenario() {
 			trajRequest->id = id;
 			trajectoryClient->async_send_request(trajRequest, trajectoryCallback);
 
+			// RESPONSE REQUIRED
 			auto ipCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedFuture future) {
 				auto ipResponse = future.get();
 				if (!ipResponse->success) {
@@ -290,7 +292,7 @@ void ObjectControl::loadScenario() {
 			ipRequest->id = id;
 			ipClient->async_send_request(ipRequest, ipCallback);
 
-			// Get delayed start
+			// REPONSE OPTIONAL
 			auto triggerCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTriggerStart>::SharedFuture future) {
 				auto triggerResponse = future.get();
 				if (!triggerResponse->success) {
@@ -304,7 +306,7 @@ void ObjectControl::loadScenario() {
 			triggerRequest->id = id;
 			triggerClient->async_send_request(triggerRequest, triggerCallback);
 
-			// Get test origin
+			// RESPONSE REQUIRED
 			auto originCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
 				auto origin = future.get();
 				if (!origin->success) {
