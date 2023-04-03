@@ -1,11 +1,11 @@
-# ATOS 
-<img align="left" width="100" height="100" src="./doc/ATOS_icon.svg">
+# ATOS - AV Test Operating System
+<img align="left" width="100" height="100" src="./docs/res/ATOS_icon.svg">
 <img align="right" width="400" height="300" src="https://user-images.githubusercontent.com/15685739/227924215-d5ff67f8-1e03-45d0-ae20-8e60819b2ff7.png">
 
-ATOS, an ISO 22133-compliant and ROS2-based scenario execution engine, controls, monitors and coordinates both physical and virtual vehicles and equipment according to scenarios specified in the ASAM OpenSCENARIO® format. It is made for running in real-time and uses GPS time to ensure exact and repeatable execution between runs.
+ATOS (AV Test Operating System), an ISO 22133-compliant and ROS2-based scenario execution engine, controls, monitors and coordinates both physical and virtual vehicles and equipment according to scenarios specified in the ASAM OpenSCENARIO® format. It is made for running in real-time and uses GPS time to ensure exact and repeatable execution between runs.
 <br />
 <br />
-To build ATOS follow the guide below.
+To build ATOS follow the guide below. More documentation can be found [here](https://atos.readthedocs.io/en/latest/).
 
 # Table of contents
 - [ATOS](#atos)
@@ -18,11 +18,9 @@ To build ATOS follow the guide below.
     - [ Installing esmini](#-installing-esmini)
   - [ Installing ROS2 and building for the first time with colcon](#-installing-ros2-and-building-for-the-first-time-with-colcon)
     - [ Ubuntu 20.04](#-ubuntu-2004)
-- [ Optional builds \& installations](#-optional-builds--installations)
-  - [ How to build with RelativeKinematics instead of ObjectControl](#-how-to-build-with-relativekinematics-instead-of-objectcontrol)
 
 # <a name="usage"></a> Using ATOS with a Graphical User Interface (GUI)
-Please click [here](https://github.com/RI-SE/atos/tree/dev/gui/simplecontrol/README.md) for instructions on how to use ATOS with a GUI.
+Please click [here](https://atos.readthedocs.io/en/latest/Usage/GUI/foxglove/) for instructions on how to use ATOS with a GUI.
 
 # <a name="ATOS"></a> Building ATOS with colcon
 Below are the steps for building ATOS for the first time with colcon.
@@ -136,18 +134,28 @@ Launch ATOS
 ```
 ros2 launch atos launch_basic.py
 ```
+# Funded by
+This project has partly been funded by the below organisations. The herein expressed views of the contributors do not necessarily reflect the views of the organisations.
 
-# <a name="optional-builds--installations"></a> Optional builds & installations
-ATOS can be installed in alternative ways, and built with support for various optional modules, described here.
 
-## <a name="relativekinematics"></a> How to build with RelativeKinematics instead of ObjectControl
+<br>
+<br>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/15685739/229127771-1d7e9c89-fc0d-4271-a7da-d805f2e6b884.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/15685739/229127758-612ec1a7-89cf-4d51-86bc-cb6ab47e422f.svg">
+  <img alt="AstaZero logo" src="https://user-images.githubusercontent.com/15685739/229127758-612ec1a7-89cf-4d51-86bc-cb6ab47e422f.svg">
+</picture>
 
-The server will build the ObjectControl with AbsolutKinematics by default. It's possible to build with RelativeKinematics support by rebuilding with the argument -DWITH_RELATIVE_KINEMATICS=ON, see following command
-```sh
-colcon build --cmake-args -DWITH_RELATIVE_KINEMATICS=ON
-```
-To include ObjectControl in the build again run the same command with OFF, as follows
-```sh
-colcon build --cmake-args -DWITH_RELATIVE_KINEMATICS=OFF
-```
+<br>
+<br>
+<br>
+<br>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/15685739/229121585-34dc9018-e142-4841-bc19-2485cdf03eac.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/15685739/229119880-8c0a30eb-f805-4da4-a6d7-544ed7dbea87.png">
+  <img alt="Vinnova logo" src="https://user-images.githubusercontent.com/15685739/229119880-8c0a30eb-f805-4da4-a6d7-544ed7dbea87.png">
+</picture>
+<br>
+<br>
 
