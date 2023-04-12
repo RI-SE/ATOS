@@ -4,9 +4,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+# Adding tinyxml2 to the CMake
+find_package(TinyXML2 REQUIRED) # TODO: FIND PACKAGE FOR TINYXML2
+
 project(drone_control)
 find_package(atos_interfaces REQUIRED)
-
 # Define target names
 set(DRONE_CONTROL_TARGET ${PROJECT_NAME})
 
@@ -22,11 +24,13 @@ add_executable(${DRONE_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/dronecontrol.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/path.cpp
 )
+
 # Link project executable to common libraries
 target_link_libraries(${DRONE_CONTROL_TARGET}
 	${COREUTILS_LIBRARY}
 	${SOCKET_LIBRARY}
 	${COMMON_LIBRARY}
+	${TINYXML2_LIBRARY} #TODO: ADD LIB TINYXML
 )
 
 target_include_directories(${DRONE_CONTROL_TARGET} PUBLIC
