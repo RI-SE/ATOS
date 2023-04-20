@@ -27,6 +27,7 @@ void DroneControl::onRequestObjectTrajectory(const ObjectTrajectorySrv::Request:
 
 		// TODO: Create trajectory object for drone with id req->id
 		auto traj = createDroneTrajectory(path,req->id);
+		// EXAMPLE OF LOGGING TO TERMINAL
 		RCLCPP_INFO(get_logger(), "Esmini trajectory service called, returning trajectory for object %s", traj.toString().c_str());
 		res->trajectory = traj.toCartesianTrajectory();
 		res->success = true;

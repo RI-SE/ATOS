@@ -23,6 +23,7 @@ add_executable(${DRONE_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/dronecontrol.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/path.cpp
+	#${CMAKE_CURRENT_SOURCE_DIR}/src/tinyxml2.cpp
 )
 
 # Link project executable to common libraries
@@ -36,6 +37,7 @@ target_link_libraries(${DRONE_CONTROL_TARGET}
 target_include_directories(${DRONE_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
+	${tinyxml2_INCLUDE_DIRS} #added
 )
 
 # ROS specific rules

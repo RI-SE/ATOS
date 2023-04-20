@@ -14,8 +14,14 @@ namespace ABD
     class Segment
     {
     public:
-        Segment();
         ~Segment() = default;
+        std::string description;
+        float x;
+        float y;
+        float z;
+        float time;
+        float velocity;
+        int heading;
     };
 
     class Path
@@ -28,8 +34,8 @@ namespace ABD
         float OriginAltitude;
         float bearing;
         std::string path_to_file;
-        void get_path(void);
-        void get_traj(float x_offset, float y_offset, float z_offset);
+        void getPath(void);
+        void getTraj(float x_offset, float y_offset, float z_offset);
         std::list<Segment> segmentsList;
         std::list<Segment> dronePath;
     };
