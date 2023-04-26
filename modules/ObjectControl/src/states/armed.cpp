@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include "state.hpp"
 
 AbstractKinematics::Armed::Armed() {
@@ -61,7 +66,7 @@ void RelativeKinematics::Armed::disconnectedFromObject(
 		ObjectControl& handler,
 		uint32_t id) {
 	AbstractKinematics::Armed::disconnectedFromObject(handler, id);
-	setState(handler, new RelativeKinematics::Disarming);
+	setState(handler, new RelativeKinematics::Disarming); // Disconnect in armed state, disarm objects before trying to reconnect
 }
 
 void RelativeKinematics::Armed::objectArmed(
@@ -106,7 +111,7 @@ void AbsoluteKinematics::Armed::disconnectedFromObject(
 		ObjectControl& handler,
 		uint32_t id) {
 	AbstractKinematics::Armed::disconnectedFromObject(handler, id);
-	setState(handler, new AbsoluteKinematics::Disarming);
+	setState(handler, new AbsoluteKinematics::Disarming); // Disconnect in armed state, disarm objects before trying to reconnect
 }
 
 void AbsoluteKinematics::Armed::objectArmed(

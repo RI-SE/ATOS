@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include <iostream>
 #include <unistd.h>
 #include <signal.h>
@@ -17,6 +22,7 @@
 #include "objectcontrol.hpp"
 
 using std::placeholders::_1;
+using std::placeholders::_2;
 using namespace ROSChannels;
 using namespace std::chrono_literals;
 using namespace ATOS;
@@ -27,13 +33,12 @@ ObjectControl::ObjectControl()
 	scnStartSub(*this, std::bind(&ObjectControl::onStartMessage, this, _1)),
 	objectStartSub(*this, std::bind(&ObjectControl::onStartObjectMessage, this, _1)),
 	scnArmSub(*this, std::bind(&ObjectControl::onArmMessage, this, _1)),
+	scnDisarmSub(*this, std::bind(&ObjectControl::onDisarmMessage, this, _1)),
 	scnStopSub(*this, std::bind(&ObjectControl::onStopMessage, this, _1)),
 	scnAbortSub(*this, std::bind(&ObjectControl::onAbortMessage, this, _1)),
 	scnAllClearSub(*this, std::bind(&ObjectControl::onAllClearMessage, this, _1)),
 	scnConnectSub(*this, std::bind(&ObjectControl::onConnectMessage, this, _1)),
 	scnDisconnectSub(*this, std::bind(&ObjectControl::onDisconnectMessage, this, _1)),
-	scnActionSub(*this, std::bind(&ObjectControl::onEXACMessage, this, _1)),
-	scnActionConfigSub(*this, std::bind(&ObjectControl::onACCMMessage, this, _1)),
 	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, _1)),
 	scnRemoteControlEnableSub(*this, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1)),
 	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
@@ -52,6 +57,8 @@ ObjectControl::ObjectControl()
 	if (this->initialize() == -1) {
 		throw std::runtime_error(std::string("Failed to initialize ") + get_name());
 	}
+	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(ServiceNames::getObjectControlState,
+		std::bind(&ObjectControl::onRequestState, this, _1, _2));
 };
 
 ObjectControl::~ObjectControl() {
@@ -60,9 +67,6 @@ ObjectControl::~ObjectControl() {
 
 int ObjectControl::initialize() {
 	int retval = 0;
-
-	// Initialize log
-	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",get_name(), getpid());
 
 	// Create test journal
 	if (JournalInit(get_name(), get_logger()) == -1) {
@@ -95,6 +99,23 @@ int ObjectControl::initialize() {
 		RCLCPP_ERROR(get_logger(), "Unable to initialize data dictionary");
 	}
 	return retval;
+}
+
+void ObjectControl::onRequestState(
+		const std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Request> req,
+		std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Response> res) {
+	try {
+		if (!this->state) {
+			throw std::runtime_error("No state set");
+		}
+		res->state = this->state->asNumber();
+		res->success = true;
+	}
+	catch (std::exception& e) {
+		RCLCPP_ERROR(get_logger(), "Failed to get state: %s", e.what());
+		res->state = -1;
+		res->success = false;
+	}
 }
 
 void ObjectControl::handleActionConfigurationCommand(
@@ -138,6 +159,13 @@ void ObjectControl::onArmMessage(const Arm::message_type::SharedPtr){
 	auto f_try = [&]() { this->state->armRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Arm::topicName, get_logger());
+}
+
+void ObjectControl::onDisarmMessage(const Disarm::message_type::SharedPtr){	
+	COMMAND cmd = COMM_DISARM;
+	auto f_try = [&]() { this->state->disarmRequest(*this); };
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch, Disarm::topicName, get_logger());
 }
 
 void ObjectControl::onStartMessage(const Start::message_type::SharedPtr){	
@@ -184,34 +212,6 @@ void ObjectControl::onAllClearMessage(const AllClear::message_type::SharedPtr){
 	this->tryHandleMessage(f_try,f_catch, AllClear::topicName, get_logger());
 }
 
-void ObjectControl::onACCMMessage(const ActionConfiguration::message_type::SharedPtr accm){
-	COMMAND cmd = COMM_ACCM;
-	auto f_try = [&]() {
-		if (accm->action_type == ACTION_TEST_SCENARIO_COMMAND) {
-			ObjectControl::TestScenarioCommandAction cmdAction;
-			cmdAction.command = static_cast<ActionTypeParameter_t>(accm->action_type_parameter1);
-			cmdAction.actionID = accm->action_id;
-			cmdAction.objectID = getVehicleIDByIP(accm->ip);
-			handleActionConfigurationCommand(cmdAction);
-		}
-	};
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, ActionConfiguration::topicName, get_logger());
-}
-
-void ObjectControl::onEXACMessage(const ExecuteAction::message_type::SharedPtr exac){
-	COMMAND cmd = COMM_EXAC;
-	auto f_try = [&]() {
-		using namespace std::chrono;
-		quartermilliseconds qmsow(exac->executiontime_qmsow);
-		auto now = to_timeval(system_clock::now().time_since_epoch());
-		auto startOfWeek = system_clock::time_point(weeks(TimeGetAsGPSweek(&now)));
-		handleExecuteActionCommand(exac->action_id, startOfWeek+qmsow);	
-	};
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, ExecuteAction::topicName, get_logger());
-}
-
 void ObjectControl::onRemoteControlEnableMessage(const RemoteControlEnable::message_type::SharedPtr){
 	COMMAND cmd = COMM_REMOTECTRL_ENABLE;
 	auto f_try = [&]() { this->state->enableRemoteControlRequest(*this); };
@@ -253,7 +253,8 @@ void ObjectControl::loadScenario() {
 		for (const auto id : idResponse->ids) {
 			auto trajletSub = std::make_shared<Path::Sub>(*this, id, std::bind(&ObjectControl::onPathMessage, this, _1, id));
 			auto monrPub = std::make_shared<Monitor::Pub>(*this, id);
-			auto object = std::make_shared<TestObject>(this->get_logger(), trajletSub, monrPub);
+			auto navSatFixPub = std::make_shared<NavSatFix::Pub>(*this, id);
+			auto object = std::make_shared<TestObject>(this->get_logger(), trajletSub, monrPub, navSatFixPub);
 			objects.emplace(id, object);
 			objects.at(id)->setTransmitterID(id);
 
@@ -363,7 +364,8 @@ void ObjectControl::loadObjectFiles() {
 					
 					auto trajletSub = std::make_shared<Path::Sub>(*this, id, std::bind(&ObjectControl::onPathMessage, this, _1, id));
 					auto monrPub = std::make_shared<Monitor::Pub>(*this, id);
-					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(get_logger(),trajletSub,monrPub);
+					auto navSatFixPub = std::make_shared<NavSatFix::Pub>(*this, id);
+					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(get_logger(),trajletSub,monrPub,navSatFixPub);
 					object->parseConfigurationFile(inputFile);
 					objects.emplace(id, object);
 				}
@@ -705,7 +707,6 @@ void ObjectControl::disarmObjects() {
 			objects.at(id)->disconnect();
 		}
 	}
-	this->state->allObjectsDisarmed(*this); // TODO add a check on object states as well
 }
 
 void ObjectControl::startScenario() {
@@ -734,10 +735,24 @@ void ObjectControl::startObject(
 }
 
 void ObjectControl::allClearObjects() {
+	// Send allClear to all connected objects
 	for (auto& id : getVehicleIDs()) {
-		objects.at(id)->sendAllClear();
+		if (objects.at(id)->isConnected()) {
+			objects.at(id)->sendAllClear();
+		}
 	}
-	this->state->allObjectsAbortDisarmed(*this); // TODO wait for all objects really are disarmed
+}
+
+bool ObjectControl::areAllObjects(std::function<bool(const std::shared_ptr<TestObject>)> predicate) const {
+	return std::all_of(objects.cbegin(), objects.cend(), [predicate](const std::pair<const uint32_t,std::shared_ptr<TestObject>>& obj) {
+		return predicate(obj.second);
+	});
+}
+
+bool ObjectControl::isAnyObject(std::function<bool(const std::shared_ptr<TestObject>)> predicate) const {
+	return std::any_of(objects.cbegin(), objects.cend(), [predicate](const std::pair<const uint32_t,std::shared_ptr<TestObject>>& obj) {
+		return predicate(obj.second);
+	});
 }
 
 bool ObjectControl::isAnyObjectIn(

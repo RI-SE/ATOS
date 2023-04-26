@@ -16,6 +16,7 @@
   <author email="oscar.johansson@astazero.com">Oscar Johansson</author>
   <author email="frida.reichenberg@astazero.com">Frida Reichenberg</author>
   <author email="victor.jarlow@astazero.com">Victor Jarlow</author>
+  <author email="samuel.thoren@astazero.com">Samuel Thorén</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>rclcpp</depend>
@@ -24,6 +25,11 @@
   <depend>std_srvs</depend>
   <depend>atos_interfaces</depend>
   <depend>paho-mqtt-c</depend>
+  <depend>rosbridge_server</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>foxglove_msgs</depend>
+  <depend>pcl_conversions</depend>
   <doc_depend>doxygen</doc_depend>
 
   <test_depend>ament_lint_auto</test_depend>

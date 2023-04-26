@@ -1,27 +1,26 @@
-# ATOS 
-<img align="left" width="100" height="100" src="/doc/ATOS_icon.svg">
+# ATOS - AV Test Operating System
+<img align="left" width="100" height="100" src="./docs/res/ATOS_icon.svg">
+<img align="right" width="400" height="300" src="https://user-images.githubusercontent.com/15685739/227924215-d5ff67f8-1e03-45d0-ae20-8e60819b2ff7.png">
 
-The ATOS server is a communication hub for all test objects. The server monitors and controls the test objects and is also responsible for creating logfiles. To build ATOS follow the guide below.
-
+ATOS (AV Test Operating System), an ISO 22133-compliant and ROS2-based scenario execution engine, controls, monitors and coordinates both physical and virtual vehicles and equipment according to scenarios specified in the ASAM OpenSCENARIO® format. It is made for running in real-time and uses GPS time to ensure exact and repeatable execution between runs.
 <br />
 <br />
-
+To build ATOS follow the guide below. More documentation can be found [here](https://atos.readthedocs.io/en/latest/).
 
 # Table of contents
-- [ATOS](#ATOS)
+- [ATOS](#atos)
 - [Table of contents](#table-of-contents)
-- [ Building ATOS with colcon](#-building-ATOS-with-colcon)
+- [ Using ATOS with a Graphical User Interface (GUI)](#-using-atos-with-a-graphical-user-interface-gui)
+- [ Building ATOS with colcon](#-building-atos-with-colcon)
   - [ Dependencies \& external libraries](#-dependencies--external-libraries)
     - [ Installing OpenSimulationInterface v3.4.0](#-installing-opensimulationinterface-v340)
     - [ Installing atos-interfaces](#-installing-atos-interfaces)
-    - [ Installing ad-xolib](#-installing-ad-xolib)
     - [ Installing esmini](#-installing-esmini)
   - [ Installing ROS2 and building for the first time with colcon](#-installing-ros2-and-building-for-the-first-time-with-colcon)
     - [ Ubuntu 20.04](#-ubuntu-2004)
-- [ Optional builds \& installations](#-optional-builds--installations)
-    - [ Installation via dpkg](#-installation-via-dpkg)
-  - [ Building the server with CITS module and mqtt](#-building-the-server-with-cits-module-and-mqtt)
-  - [ How to build with RelativeKinematics instead of ObjectControl](#-how-to-build-with-relativekinematics-instead-of-objectcontrol)
+
+# <a name="usage"></a> Using ATOS with a Graphical User Interface (GUI)
+Please click [here](https://atos.readthedocs.io/en/latest/Usage/GUI/foxglove/) for instructions on how to use ATOS with a GUI.
 
 # <a name="ATOS"></a> Building ATOS with colcon
 Below are the steps for building ATOS for the first time with colcon.
@@ -31,13 +30,12 @@ Prerequisites: C/C++ compiler, CMake (minimum version 3.10.2)
 ## <a name="dependencies"></a> Dependencies & external libraries
 In order to build ATOS, dependencies and exernal libraries need to be installed. First install the necessary development packages:
 ```
-sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev
+sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev ros-foxy-paho-mqtt-c nlohmann-json3-dev npm nodejs libpcl-dev
 ```
 
 Then, the following external libraries need to be installed:
 - [OpenSimulationInterface v3.4.0](https://github.com/OpenSimulationInterface/open-simulation-interface)
 - [atos-interfaces](https://github.com/RI-SE/atos-interfaces)
-- [ad-xolib](https://github.com/javedulu/ad-xolib)
 - [esmini](https://github.com/esmini/esmini)
 
 ### <a name="osi"></a> Installing OpenSimulationInterface v3.4.0
@@ -56,19 +54,7 @@ sudo ldconfig
 
 ### <a name="atos-interfaces"></a> Installing atos-interfaces
 ```
-git clone https://github.com/RI-SE/atos_interfaces
-```
-
-
-### <a name="ad-xolib"></a> Installing ad-xolib
-```
-git clone https://github.com/javedulu/ad-xolib.git
-cd ad-xolib
-git submodule update --init --recursive
-mkdir build && cd build
-cmake .. -DBUILD_EMBED_TARGETS=OFF && make
-sudo make install
-sudo ldconfig
+git submodule update --init
 ```
 
 ### <a name="esmini"></a> Installing esmini
@@ -112,7 +98,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-a
 Install ros foxy for desktop and colcon
 ```
 sudo apt update
-sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs ros-foxy-geographic-msgs
+sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs ros-foxy-geographic-msgs ros-foxy-foxglove-msgs ros-foxy-sensor-msgs  ros-foxy-rosbridge-suite ros-foxy-pcl-conversions
 ```
 
 source the setup script:
@@ -129,7 +115,7 @@ mkdir -p ~/atos_ws/src
 Create symlinks to atos and atos_interfaces
 ```
 ln -s path/to/ATOS ~/atos_ws/src/atos
-ln -s path/to/atos-interfaces ~/atos_ws/src/atos_interfaces
+ln -s path/to/ATOS/atos_interfaces ~/atos_ws/src/atos_interfaces
 ```
 
 Change directory into the workspace and build
@@ -146,35 +132,30 @@ Also add the above line to ~/.bashrc or similar.
 
 Launch ATOS
 ```
-ros2 launch atos atos_launch.py
+ros2 launch atos launch_basic.py
 ```
+# Funded by
+This project has partly been funded by the below organisations. The herein expressed views of the contributors do not necessarily reflect the views of the organisations.
 
-# <a name="optional-builds--installations"></a> Optional builds & installations
-ATOS can be installed in alternative ways, and built with support for various optional modules, described here.
 
-## <a name="build-MQTT-Bridge"></a> Building the server with MQTT bridge module
-Module for relaying v2x ROS msg to a MQTT broker. 
-Configuration can done in the conf/params.yaml file.  
+<br>
+<br>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/15685739/229127771-1d7e9c89-fc0d-4271-a7da-d805f2e6b884.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/15685739/229127758-612ec1a7-89cf-4d51-86bc-cb6ab47e422f.svg">
+  <img alt="AstaZero logo" src="https://user-images.githubusercontent.com/15685739/229127758-612ec1a7-89cf-4d51-86bc-cb6ab47e422f.svg">
+</picture>
 
-```sh
-sudo apt install ros-foxy-paho-mqtt-c nlohmann-json3-dev
-```
+<br>
+<br>
+<br>
+<br>
 
-## <a name="installation-dpkg"></a> Installation via dpkg
-Navigate to the .deb file and install it
-```sh
-sudo dpkg -i Maestro-x.x.x-Linux.deb
-```
-on first install, it is necessary to reboot to reload groups
-
-## <a name="relativekinematics"></a> How to build with RelativeKinematics instead of ObjectControl
-
-The server will build the ObjectControl with AbsolutKinematics by default. It's possible to build with RelativeKinematics support by rebuilding with the argument -DWITH_RELATIVE_KINEMATICS=ON, see following command
-```sh
-colcon build --cmake-args -DWITH_RELATIVE_KINEMATICS=ON
-```
-To include ObjectControl in the build again run the same command with OFF, as follows
-```sh
-colcon build --cmake-args -DWITH_RELATIVE_KINEMATICS=OFF
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/15685739/229121585-34dc9018-e142-4841-bc19-2485cdf03eac.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/15685739/229119880-8c0a30eb-f805-4da4-a6d7-544ed7dbea87.png">
+  <img alt="Vinnova logo" src="https://user-images.githubusercontent.com/15685739/229119880-8c0a30eb-f805-4da4-a6d7-544ed7dbea87.png">
+</picture>
+<br>
+<br>
 

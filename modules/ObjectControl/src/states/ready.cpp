@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include "state.hpp"
 
 AbstractKinematics::Ready::Ready() {
@@ -51,6 +56,12 @@ void AbstractKinematics::Ready::enableRemoteControlRequest(
  * \section RelativeKinematics
  *  ******************************************************
  */
+
+void RelativeKinematics::Ready::onEnter(
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::onEnter(handler);
+}
+
 void RelativeKinematics::Ready::armRequest(
 		ObjectControl& handler) {
 	AbstractKinematics::Ready::armRequest(handler);
@@ -102,6 +113,12 @@ void RelativeKinematics::Ready::enableRemoteControlRequest(
  * \section AbsoluteKinematics
  *  ******************************************************
  */
+
+void AbsoluteKinematics::Ready::onEnter(
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::onEnter(handler);
+}
+
 void AbsoluteKinematics::Ready::armRequest(
 		ObjectControl& handler) {
 	AbstractKinematics::Ready::armRequest(handler);

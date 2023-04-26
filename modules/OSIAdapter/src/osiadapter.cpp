@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include <chrono>
 #include <boost/asio.hpp>
 #include <algorithm>
@@ -8,7 +13,6 @@
 
 using namespace ROSChannels;
 using namespace std::chrono;
-using namespace boost::asio;
 using std::placeholders::_1;
 
 
@@ -62,8 +66,8 @@ void OSIAdapter::getParameters() {
  * @param port Port
  */
 void OSIAdapter::initializeServer() {
-  RCLCPP_INFO(get_logger(), "%s task running with PID %d", get_name(), getpid());
-  server = ServerFactory(address, port, get_logger()).createServer(protocol);
+  server = std::make_unique<ServerFactory>(address, port, protocol);
+  server->createServer();
   server->setupServer();
 }
 
@@ -75,17 +79,24 @@ void OSIAdapter::initializeServer() {
  * 
  */
 void OSIAdapter::sendOSIData() {
-  boost::system::error_code errorCode;
-  
   // Extrapolate monr data and create a sensorView containing the objects
   std::for_each(lastMonitors.begin(),lastMonitors.end(),[&](auto pair){ OSIAdapter::extrapolateMONR(pair.second,lastMonitorTimes.at(pair.first));});
   std::vector<OsiHandler::GlobalObjectGroundTruth_t> sensorView(lastMonitors.size());
   std::transform(lastMonitors.begin(),lastMonitors.end(), sensorView.begin(), [&](auto pair) {return OSIAdapter::makeOSIData(pair.second);});
   
   std::vector<char> data = OSIAdapter::makeOSIMessage(sensorView);
-  server->sendData(data, errorCode);
-
-  server->handleError(errorCode);
+  
+  try {
+    server->sendData(data);
+  }
+  catch (const SocketErrors::DisconnectedError& e) {
+    RCLCPP_INFO(get_logger(), "Client disconnected: %s. Restarting server", e.what());
+    server->resetServer();
+  }
+  catch (const SocketErrors::SocketSendError& e) {
+    RCLCPP_INFO(get_logger(), "Client disconnected: %s. Restarting server" , e.what());
+    server->resetServer();
+  }
 }
 
 
@@ -183,9 +194,4 @@ void OSIAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr msg, ui
     lastMonitorTimes[id] = duration_cast<TimeUnit>(newTime-oldTime);
   }
   lastMonitors[id] = *msg;
-}
-
-
-void OSIAdapter::onAbortMessage(const Abort::message_type::SharedPtr) {
-  RCLCPP_INFO(get_logger(), "Received abort message");
 }

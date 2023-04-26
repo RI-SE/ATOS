@@ -1,6 +1,9 @@
-/*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2016 CHRONOS project
-  ------------------------------------------------------------------------------
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+ /* ----------------------------------------------------------------------------
   -- File        : util.h
   -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS
@@ -119,7 +122,7 @@ extern "C"{
 
 #define CONF_FILE_NAME "test.conf"
 #define ADAPTIVE_SYNC_FILE_NAME "adaptivesync.conf"
-#define TRIGGER_ACTION_FILE_NAME "triggeraction.conf"
+#define PARAMS_FILE_NAME "params.yaml"
 
 #define MASTER_FILE_EXTENSION ".sync.m"
 #define SLAVE_FILE_EXTENSION ".sync.s"
@@ -361,10 +364,12 @@ typedef enum {
     OBC_STATE_INITIALIZED,
     OBC_STATE_CONNECTED,
     OBC_STATE_ARMED,
+    OBC_STATE_DISARMING,
     OBC_STATE_RUNNING,
 	  OBC_STATE_REMOTECTRL,
     OBC_STATE_ERROR,
-    OBC_STATE_ABORTING
+    OBC_STATE_ABORTING,
+    OBC_STATE_CLEARING
 } OBCState_t;
 
 typedef struct
@@ -695,7 +700,6 @@ int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP);
 
-void llhOffsetMeters(double *llh, const double *xyzOffset);
 void llhToXyz(double lat, double lon, double height, double *x, double *y, double *z);
 void enuToLlh(const double *iLlh, const double *xyz, double *llh);
 void createEnuMatrix(double lat, double lon, double *enuMat);

@@ -1,6 +1,9 @@
-/*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2020 AstaZero
-  ------------------------------------------------------------------------------
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+/* -----------------------------------------------------------------------------
   -- File        : journalcontrol.cpp
   -- Author      : Lukas Wikander
   -- Description :
@@ -53,7 +56,6 @@ JournalControl::JournalControl()
 void JournalControl::initialize()
 {
 	int retval = 0;
-	RCLCPP_INFO(get_logger(), "%s task running with PID: %d", get_name(), getpid());
 
 	if (std::signal(SIGINT, signalHandler) == SIG_ERR) {
 		throw std::runtime_error("Failed to register signal handler");

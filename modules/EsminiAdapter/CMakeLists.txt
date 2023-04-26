@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 cmake_minimum_required(VERSION 3.8)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,6 +12,7 @@ project(esmini_adapter)
 find_package(atos_interfaces REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(esminiLib REQUIRED)
+find_package(foxglove_msgs REQUIRED)
 
 # Define target names
 set(ESMINI_ADAPTER_TARGET ${PROJECT_NAME})
@@ -40,6 +45,7 @@ ament_target_dependencies(${ESMINI_ADAPTER_TARGET}
   rclcpp
   std_msgs
   atos_interfaces
+  foxglove_msgs
   tf2
 )
 

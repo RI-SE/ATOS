@@ -1,10 +1,17 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include <fstream>
 #include <iostream>
 #include <iomanip>
 #include <cmath>
 #include <algorithm>
+#include <iomanip>
 #include "regexpatterns.hpp"
 #include "trajectory.hpp"
+#include "util/coordinateutils.hpp" // xyz2llh
 
 #if ROS_FOXY
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
@@ -63,6 +70,61 @@ atos_interfaces::msg::CartesianTrajectory Trajectory::toCartesianTrajectory(){
 		trajMsg.points.push_back(pointMsg);
 	}
 	return trajMsg;
+}
+
+nav_msgs::msg::Path Trajectory::toPath() const
+{
+	nav_msgs::msg::Path path;
+	path.header.frame_id = "map";
+	path.header.stamp = rclcpp::Time(0);
+	auto rosTimeOffset = rclcpp::Time(std::chrono::system_clock::now().time_since_epoch().count());
+	for (const auto& point : this->points){
+		geometry_msgs::msg::PoseStamped pose;
+		pose.header.stamp = rosTimeOffset + rclcpp::Duration(point.getTime());
+		pose.pose.position.x = point.getPosition().x();
+		pose.pose.position.y = point.getPosition().y();
+		pose.pose.position.z = point.getPosition().z();
+		tf2::Quaternion q;
+		q.setRPY(0, 0, point.getHeading());
+		tf2::convert(q, pose.pose.orientation);
+		path.poses.push_back(pose);
+	}
+	// Force same coordinate frame as header
+	for (auto& pose : path.poses) {
+		pose.header.frame_id = path.header.frame_id;
+	}
+	return path;
+}
+
+foxglove_msgs::msg::GeoJSON Trajectory::toGeoJSON(std::array<double,3> llh_0) const {
+	foxglove_msgs::msg::GeoJSON geoJSON;
+	std::stringstream ss;
+	ss << std::fixed; // supress scientific notation
+	ss << std::setprecision(12);
+	for (const auto& point : this->points){
+		double llh[3] = {llh_0[0], llh_0[1], llh_0[2]};
+		double offset[3] = {point.getXCoord(), point.getYCoord(), point.getZCoord()};
+		llhOffsetMeters(llh, offset);
+		ss << "[" << llh[1] << "," << llh[0] << "],"; // Flipped order
+	}
+	std::string positions = ss.str();
+	positions = positions.substr(0, positions.size()-1); // remove trailing ,
+
+
+	std::string geojson = 
+	R"({
+		"type": "Feature",
+		"geometry": {
+			"type": "LineString",
+			"coordinates": [)" + positions + R"(]
+		},
+		"properties": {
+			"name": ""
+		}
+	})";
+	geoJSON.geojson = geojson;
+	return geoJSON;
+
 }
 
 void Trajectory::initializeFromCartesianTrajectory(const atos_interfaces::msg::CartesianTrajectory &traj) {

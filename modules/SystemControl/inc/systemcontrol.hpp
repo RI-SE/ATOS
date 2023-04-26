@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include "module.hpp"
 
 #include <sys/time.h>
@@ -21,9 +26,11 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <ifaddrs.h>
-#include "maestroTime.h"
+#include "atosTime.h"
 #include "datadictionary.h"
 #include "util.h"
+#include "roschannels/commandchannels.hpp"
+#include "roschannels/remotecontrolchannels.hpp"
 
 #include <chrono>
 #include <map>
@@ -122,7 +129,7 @@ private:
 	/* callbacks */
 	void onGetStatusResponse(const ROSChannels::GetStatusResponse::message_type::SharedPtr) override;
 	void onFailureMessage(const ROSChannels::Failure::message_type::SharedPtr) override;
-	void onBackToStartResponse(const ROSChannels::BackToStartResponse::message_type::SharedPtr) override;
+	void onBackToStartResponse(const ROSChannels::BackToStartResponse::message_type::SharedPtr);
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
 
@@ -285,10 +292,8 @@ private:
 	ROSChannels::Abort::Pub abortPub;
 	ROSChannels::AllClear::Pub allClearPub;
 	ROSChannels::BackToStart::Pub backToStartPub;
-	ROSChannels::DataDictionary::Pub dataDictionaryPub;
 	ROSChannels::RemoteControlEnable::Pub remoteControlEnablePub;
 	ROSChannels::RemoteControlDisable::Pub remoteControlDisablePub;
-	ROSChannels::EnableObject::Pub enableObjectPub;
 	ROSChannels::Exit::Pub exitPub;
 	ROSChannels::GetStatus::Pub getStatusPub;
 

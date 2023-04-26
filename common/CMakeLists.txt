@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 cmake_minimum_required(VERSION 3.8)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -16,15 +20,10 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
 
-find_package(geometry_msgs REQUIRED)
-find_package(tf2_geometry_msgs REQUIRED)
-find_package(tf2 REQUIRED)
-find_package(tf2_ros REQUIRED)
-find_package(tf2_kdl REQUIRED)
-
-set(TIME_LIBRARY MaestroTime)
+set(TIME_LIBRARY ATOSTime)
 set(SHARED_MEMORY_LIBRARY MaestroSHM)
 set(ISO_22133_LIBRARY ISO22133)
 set(MATH_LIBRARY m)
@@ -35,9 +34,11 @@ get_target_property(TIME_HEADERS ${TIME_LIBRARY} INCLUDE_DIRECTORIES)
 get_target_property(SHARED_MEMORY_HEADERS ${SHARED_MEMORY_LIBRARY} INCLUDE_DIRECTORIES)
 get_target_property(ISO_22133_HEADERS ${ISO_22133_LIBRARY} INCLUDE_DIRECTORIES)
 
+
 # Built targets
 add_library(${ATOS_UTIL_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/util.c
+	${CMAKE_CURRENT_SOURCE_DIR}/util/coordinateutils.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/datadictionary.c
 )
 
@@ -47,11 +48,6 @@ add_library(${ATOS_COMMON_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/module.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/journal.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/type.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/serverfactory.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/server.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/tcpserver.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/udpserver.cpp
-
 )
 
 # Includes
@@ -92,6 +88,7 @@ ament_target_dependencies(${ATOS_COMMON_TARGET}
   std_msgs
   std_srvs
   nav_msgs
+	sensor_msgs
   atos_interfaces
   geometry_msgs
   tf2
@@ -102,6 +99,9 @@ ament_target_dependencies(${ATOS_COMMON_TARGET}
 # Exported headers
 set_target_properties(${ATOS_UTIL_TARGET} PROPERTIES
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/util.h
+)
+set_property(TARGET ${ATOS_UTIL_TARGET} APPEND PROPERTY
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/util/coordinateutils.hpp
 )
 set_property(TARGET ${ATOS_UTIL_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/datadictionary.h

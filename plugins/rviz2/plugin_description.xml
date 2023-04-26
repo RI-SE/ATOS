@@ -4,7 +4,7 @@
     type="atos_rviz_plugins::MonitorDisplay"
     base_class_type="rviz_common::Display">
     <description>
-      Insert description
+      Monitoring data from ATOS object
     </description>
     <message_type>geometry_msgs/msg/PoseStamped</message_type>
   </class>

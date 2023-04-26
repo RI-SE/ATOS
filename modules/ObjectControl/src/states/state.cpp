@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include "state.hpp"
 #include "type.h"
 #include "datadictionary.h"
@@ -6,7 +11,9 @@
 void ObjectControlState::setState(
 		ObjectControl& handler,
 		ObjectControlState *st) {
-	// TODO mutex on state modification
+	// Lock stateMutex to prevent data races when ObjectListener threads execute handler methods
+	std::lock_guard<std::mutex> lock(handler.stateMutex);
+
 	// Before replacing state, execute any exit behaviour
 	handler.state->onExit(handler);
 	RCLCPP_INFO(handler.get_logger(), "Transitioning to state %s", type(*st).c_str());

@@ -1,9 +1,13 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #pragma once
 
-#include <boost/asio.hpp>
-
 #include "module.hpp"
-#include "roschannel.hpp"
+#include "roschannels/commandchannels.hpp"
+#include "roschannels/monitorchannel.hpp"
 #include "osi_handler.hpp"
 #include "unordered_map"
 #include "serverfactory.hpp"
@@ -30,9 +34,7 @@ class OSIAdapter : public Module
     std::vector<char> makeOSIMessage(const std::vector<OsiHandler::GlobalObjectGroundTruth_t>& osiData);
     const OsiHandler::GlobalObjectGroundTruth_t makeOSIData(ROSChannels::Monitor::message_type& monr);
     
-    void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
-    
-    std::unique_ptr<Server> server;
+    std::unique_ptr<ServerFactory> server;
     rclcpp::TimerBase::SharedPtr timer;
     ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;	//!< Publisher to report connected objects
 
@@ -41,7 +43,7 @@ class OSIAdapter : public Module
     std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
 
     void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
-    void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr msg, uint32_t id) override;
+    void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr msg, uint32_t id);
 
     inline double linPosPrediction(const double position, const double velocity, const TimeUnit dt);
     void extrapolateMONR(ROSChannels::Monitor::message_type& monr, const TimeUnit dt);

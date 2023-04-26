@@ -1,8 +1,13 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include <vector>
 #include "directcontrol.hpp"
 #include "util.h"
 #include "tcphandler.hpp"
-#include "maestroTime.h"
+#include "atosTime.h"
 #include "datadictionary.h"
 #include "atos_interfaces/msg/control_signal_percentage.hpp"
 
@@ -233,7 +238,6 @@ size_t DirectControl::handleUnknownMessage(
 int DirectControl::initializeModule() {
 	int retval = 0;
 
-	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",moduleName.c_str(), getpid());
 	if (requestDataDictInitialization()) {
 		if (DataDictionaryInitObjectData() != READ_OK) {
 			retval = -1;

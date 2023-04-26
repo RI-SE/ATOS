@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 cmake_minimum_required(VERSION 3.1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,7 +16,7 @@ set(BACK_TO_START ${PROJECT_NAME})
 set(COREUTILS_LIBRARY ATOSCoreUtil)
 set(ISO_22133_LIBRARY MaestroISO22133)
 set(POSITIONING_LIBRARY MaestroPositioning)
-set(TIME_LIBRARY MaestroTime)
+set(TIME_LIBRARY ATOSTime)
 set(ATOS_COMMON_LIBRARY ATOSCommon)
 set(LOGGING_LIBRARY MaestroLogging)
 set(MESSAGE_BUS_LIBRARY MaestroMQ)

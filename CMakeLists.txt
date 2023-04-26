@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 cmake_minimum_required(VERSION 3.10)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -31,47 +35,20 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 
 # Enable or disable modules
-set(WITH_SCENARIO_CONTROL ON CACHE BOOL "Enable ScenarioControl module")
-set(WITH_SUPERVISION OFF CACHE BOOL "Enable Supervision module")
-set(WITH_VISUALIZATION OFF CACHE BOOL "Enable Visualization module")
 set(WITH_OBJECT_CONTROL ON CACHE BOOL "Enable ObjectControl module")
 set(WITH_DIRECT_CONTROL OFF CACHE BOOL "Enable DirectControl module")
-set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
-set(WITH_BACK_TO_START OFF CACHE BOOL "Enable BackToStart module")
-set(WITH_SYSTEM_CONTROL ON CACHE BOOL "Enable SystemControl module")
-set(WITH_TIME_CONTROL ON CACHE BOOL "Enable TimeControl module")
 set(WITH_JOURNAL_CONTROL ON CACHE BOOL "Enable JournalControl module")
 set(WITH_TRAJECTORYLET_STREAMER ON CACHE BOOL "Enable TrajectoryletStreamer module")
 set(WITH_OSI_ADAPTER ON CACHE BOOL "Enable OSIAdapter module")
 set(WITH_ESMINI_ADAPTER ON CACHE BOOL "Enable EsminiAdapter module")
 set(WITH_MQTT_BRIDGE ON CACHE BOOL "Enable MQTTBridge module")
+set(WITH_POINTCLOUD_PUBLISHER ON CACHE BOOL "Enable PointcloudPublisher module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
 # Create list of all enabled modules
-if(WITH_SCENARIO_CONTROL)
-        list(APPEND ENABLED_MODULES ScenarioControl)
-endif()
-if(WITH_SUPERVISION)
-        list(APPEND ENABLED_MODULES Supervision)
-endif()
-if(WITH_VISUALIZATION)
-        list(APPEND ENABLED_MODULES Visualization)
-endif()
 if(WITH_DIRECT_CONTROL)
         list(APPEND ENABLED_MODULES DirectControl)
-endif()
-if(WITH_OBJECT_MONITORING)
-        list(APPEND ENABLED_MODULES ObjectMonitoring)
-endif()
-if(WITH_BACK_TO_START)
-        list(APPEND ENABLED_MODULES BackToStart)
-endif()
-if(WITH_SYSTEM_CONTROL)
-	list(APPEND ENABLED_MODULES SystemControl)
-endif()
-if(WITH_TIME_CONTROL)
-	list(APPEND ENABLED_MODULES TimeControl)
 endif()
 if(WITH_OBJECT_CONTROL)
 	list(APPEND ENABLED_MODULES ObjectControl)
@@ -91,14 +68,16 @@ endif()
 if(WITH_MQTT_BRIDGE)
         list(APPEND ENABLED_MODULES MQTTBridge)
 endif()
+if(WITH_POINTCLOUD_PUBLISHER)
+        list(APPEND ENABLED_MODULES PointcloudPublisher)
+endif()
 
 # Add corresponding subprojects
-add_subdirectory(util/C/time)
-add_subdirectory(util/C/shmem)
-add_subdirectory(util/C/iso22133)
-add_subdirectory(util/C/mathutils)
-add_subdirectory(util/C/osihandler)
-add_subdirectory(util/C/sockets)
+add_subdirectory(iso22133)
+add_subdirectory(common/time)
+add_subdirectory(common/shmem)
+add_subdirectory(common/osihandler)
+add_subdirectory(common/sockets)
 add_subdirectory(common)
 add_subdirectory(modules/ATOSBase)
 
@@ -106,11 +85,10 @@ foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})
 endforeach()
 
+add_subdirectory(gui)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # uncomment the line when a copyright and license is not present in all source files
-  #set(ament_cmake_copyright_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
 
@@ -119,10 +97,11 @@ ament_package()
 
 # Install configuration
 include(GNUInstallDirs)
+install(DIRECTORY launch DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/)
 file(GLOB CONF_FILES ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.conf)
 file(GLOB PARAMS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.yaml)
-install(FILES ${CONF_FILES} ${PARAMS_FILE} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
-install(DIRECTORY launch DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/)
+file(GLOB VERSION_FILE ${CMAKE_CURRENT_SOURCE_DIR}/.VERSION)
+install(FILES ${CONF_FILES} ${PARAMS_FILE} ${VERSION_FILE} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
 
 # Add post install instructions
 add_subdirectory(cmake/cpack)

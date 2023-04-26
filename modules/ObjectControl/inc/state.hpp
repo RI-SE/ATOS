@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #pragma once
 
 #include "objectcontrol.hpp"
@@ -226,6 +231,37 @@ public:
 	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_ABORT; }
 };
 
+class Clearing : public ObjectControlState {
+public:
+	Clearing();
+	virtual void onEnter(ObjectControl&) override;
+	//! Only handle some object events
+	virtual void objectDisarmed(ObjectControl&, uint32_t) override;
+	virtual void objectArmed(ObjectControl&, uint32_t) override;
+	virtual void objectAbortDisarmed(ObjectControl&,uint32_t) override;
+	virtual void disconnectedFromObject(ObjectControl&, uint32_t) override;
+	virtual void connectedToLiveObject(ObjectControl&, uint32_t) override;
+	virtual void connectedToArmedObject(ObjectControl&, uint32_t) override;
+
+	//! Ignore other commands
+	void allClearRequest(ObjectControl&) override {};
+	void connectedToObject(ObjectControl&, uint32_t) override {};
+	void objectAborting(ObjectControl&,uint32_t) override {};
+	void initializeRequest(ObjectControl&) override {}
+	void disconnectRequest(ObjectControl&) override {}
+	void connectRequest(ObjectControl&) override {}
+	void armRequest(ObjectControl&) override {}
+	void disarmRequest(ObjectControl&) override {}
+	void startRequest(ObjectControl&) override {}
+	void stopRequest(ObjectControl&) override {}
+	void abortRequest(ObjectControl&) override {}
+	void enableRemoteControlRequest(ObjectControl&) override {}
+	void disableRemoteControlRequest(ObjectControl&) override {}
+
+	OBCState_t asNumber() const override { return OBC_STATE_CLEARING; }
+	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_READY; }
+};
+
 class TestLive : public ObjectControlState {
 public:
 	TestLive();
@@ -291,7 +327,7 @@ public:
 	//
 
 	// TODO integrate this state into the enum variable
-	OBCState_t asNumber() const override { return OBC_STATE_ARMED; }
+	OBCState_t asNumber() const override { return OBC_STATE_DISARMING; }
 	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_RUNNING; } // TODO
 };
 
@@ -405,6 +441,7 @@ class Connecting : public AbstractKinematics::Connecting {
 };
 
 class Ready : public AbstractKinematics::Ready {
+	void onEnter(ObjectControl&) override;
 	void armRequest(ObjectControl&) override;
 	void disconnectRequest(ObjectControl&) override;
 	void disconnectedFromObject(ObjectControl&, uint32_t) override;
@@ -423,6 +460,17 @@ class Aborting : public AbstractKinematics::Aborting {
 	void objectAborting(ObjectControl&, uint32_t) override;
 	void objectAbortDisarmed(ObjectControl&, uint32_t) override;
 	void allObjectsAbortDisarmed(ObjectControl&) override;
+};
+
+class Clearing : public AbstractKinematics::Clearing {
+	void changeStateIfAllOK(ObjectControl&);
+	void objectArmed(ObjectControl&, uint32_t) override;
+	void objectDisarmed(ObjectControl&, uint32_t) override;
+	void objectAbortDisarmed(ObjectControl&, uint32_t) override;
+	void disconnectedFromObject(ObjectControl&, uint32_t) override;
+	void connectedToLiveObject(ObjectControl&, uint32_t) override;
+	void connectedToArmedObject(ObjectControl&, uint32_t) override;
+
 };
 
 class TestLive : public AbstractKinematics::TestLive {
@@ -491,6 +539,7 @@ class Connecting : public AbstractKinematics::Connecting {
 };
 
 class Ready : public AbstractKinematics::Ready {
+	void onEnter(ObjectControl&) override;
 	void armRequest(ObjectControl&) override;
 	void disconnectRequest(ObjectControl&) override;
 	void disconnectedFromObject(ObjectControl&, uint32_t) override;
@@ -509,6 +558,16 @@ class Aborting : public AbstractKinematics::Aborting {
 	void objectAborting(ObjectControl&, uint32_t) override;
 	void objectAbortDisarmed(ObjectControl&, uint32_t) override;
 	void allObjectsAbortDisarmed(ObjectControl&) override;
+};
+
+class Clearing : public AbstractKinematics::Clearing {
+	void changeStateIfAllOK(ObjectControl&);
+	void objectArmed(ObjectControl&, uint32_t) override;
+	void objectDisarmed(ObjectControl&, uint32_t) override;
+	void objectAbortDisarmed(ObjectControl&, uint32_t) override;
+	void disconnectedFromObject(ObjectControl&, uint32_t) override;
+	void connectedToLiveObject(ObjectControl&, uint32_t) override;
+	void connectedToArmedObject(ObjectControl&, uint32_t) override;
 };
 
 class TestLive : public AbstractKinematics::TestLive {
