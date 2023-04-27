@@ -22,6 +22,10 @@ find_package(std_srvs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(foxglove_msgs REQUIRED)
 
 set(TIME_LIBRARY ATOSTime)
 set(SHARED_MEMORY_LIBRARY MaestroSHM)
@@ -88,12 +92,13 @@ ament_target_dependencies(${ATOS_COMMON_TARGET}
   std_msgs
   std_srvs
   nav_msgs
-	sensor_msgs
+  sensor_msgs
   atos_interfaces
   geometry_msgs
   tf2
   tf2_ros
   tf2_geometry_msgs
+  foxglove_msgs
 )
 
 # Exported headers

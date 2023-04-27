@@ -15,7 +15,7 @@
 PointcloudPublisher::PointcloudPublisher() : Module(PointcloudPublisher::moduleName),
 																						 initSub(*this, std::bind(&PointcloudPublisher::onInitMessage, this, std::placeholders::_1))
 {
-	declare_parameter("pointcloud_files");
+	declare_parameter("pointcloud_files", "");
 }
 
 /**
