@@ -31,8 +31,10 @@ RUN sudo apt update \
     && sudo apt install -y libpaho-mqtt-dev \
     && sudo apt install -y curl \   
     && sudo apt install -y gnupg2 \
-    && sudo apt install -y lsb-release
+    && sudo apt install -y lsb-release \
+    && sudo apt install -y pip
 
+RUN pip install pyOpenSSL
 
 RUN if [ "$OS" == "jammy" ]; then sudo apt install -y libpaho-mqtt-dev; fi
 RUN if [ "$OS" == "foxy" ]; then sudo apt install -y ros-foxy-paho-mqtt-c; fi
