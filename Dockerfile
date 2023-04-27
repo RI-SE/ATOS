@@ -48,7 +48,8 @@ RUN sudo apt install -y ros-${ROS_DISTRO}-geographic-msgs \
     && sudo apt install ros-${ROS_DISTRO}-nav-msgs  \
     && sudo apt install ros-${ROS_DISTRO}-geographic-msgs \
     && sudo apt install ros-${ROS_DISTRO}-foxglove-msgs \
-    && sudo apt install ros-${ROS_DISTRO}-pcl-conversions
+    && sudo apt install ros-${ROS_DISTRO}-pcl-conversions \
+    && sudo apt install ros-${ROS_DISTRO}-rosbridge-suite
 
 #TODO fucking up the apt atm fix later
 # RUN sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key  -o /usr/share/keyrings/ros-archive-keyring.gpg \
