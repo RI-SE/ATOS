@@ -1,0 +1,7 @@
+.github
+.vscode
+build
+docs
+install
+scripts
+plugins
