@@ -1,14 +1,24 @@
-version: "3"
-
+version: "3.2"
 services:
   atos:
-    image: atos
+    image: atos:latest
     build: 
       context: .
       dockerfile: ./Dockerfile
-    network_mode: "host"
     ipc: host
     privileged: true
     stdin_open: true
     tty: true
-    command: ["ros2", "launch", "atos", "launch_basic.py"]
+    volumes:
+      - ~/.astazero/ATOS/:/root/.astazero/ATOS/
+    ports:
+      - "80:80" 
+      - "8080:8080" 
+      - "8081:8081"
+      - "3000:3000" 
+      - "3443:3443" 
+      - "443:443"
+      - "9090:9090" 
+      - "53241:53241"
+      - "53240:53240"
+    command: bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"

@@ -103,7 +103,7 @@ RUN mv ./src/atos/atos_interfaces ./src
 
 # Build
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
-    && MAKEFLAGS=-j2 colcon build \
+    && MAKEFLAGS=-j1 colcon build \
     && chmod +x /root/atos_ws/install/setup.sh 
 
 RUN mkdir -p /root/.astazero/ATOS
