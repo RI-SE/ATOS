@@ -13,7 +13,11 @@
 #include "trajectory.hpp"
 #include "util/coordinateutils.hpp" // xyz2llh
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#if ROS_FOXY
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#elif ROS_HUMBLE
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#endif
 
 namespace ATOS{
 const std::regex Trajectory::fileHeaderPattern("TRAJECTORY;(" + RegexPatterns::intPattern + ");("

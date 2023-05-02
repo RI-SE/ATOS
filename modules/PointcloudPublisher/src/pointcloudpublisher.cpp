@@ -7,6 +7,7 @@
 #include "pointcloudpublisher.hpp"
 #include <pcl_conversions/pcl_conversions.h>
 #include <chrono>
+#include <string>
 
 /**
  * @brief PointcloudPublisher constructor.
@@ -15,7 +16,8 @@
 PointcloudPublisher::PointcloudPublisher() : Module(PointcloudPublisher::moduleName),
 																						 initSub(*this, std::bind(&PointcloudPublisher::onInitMessage, this, std::placeholders::_1))
 {
-	declare_parameter("pointcloud_files");
+	std::vector<std::string> default_files = {""};
+	declare_parameter("pointcloud_files", default_files);
 }
 
 /**
