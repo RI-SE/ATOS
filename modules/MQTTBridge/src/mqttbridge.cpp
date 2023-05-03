@@ -15,11 +15,11 @@ using std::placeholders::_1;
 MqttBridge::MqttBridge() : Module(MqttBridge::moduleName),
 						   v2xMsgSub(*this, std::bind(&MqttBridge::onV2xMsg, this, _1))
 {
-	declare_parameter("broker_ip","192.71.100.198");
-	declare_parameter("pub_client_id","ATOS");
-	declare_parameter("username","astauser");
-	declare_parameter("password","resuatsa");
-	declare_parameter("topic","azapos/cmd");
+	declare_parameter("broker_ip","");
+	declare_parameter("pub_client_id","");
+	declare_parameter("username","");
+	declare_parameter("password","");
+	declare_parameter("topic","");
 	declare_parameter("quality_of_service","1");
 
 	get_parameter("broker_ip", brokerIP);
