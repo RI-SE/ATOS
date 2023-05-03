@@ -7,9 +7,6 @@ FROM ${FROM_IMAGE} AS cacher
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-ENV CUSTOM_PATH=/../sourceinstall
-
-WORKDIR /root/atos_ws
 
 # Install system libs
 RUN \
@@ -59,9 +56,11 @@ RUN \
     ros-${ROS_DISTRO}-rosbridge-suite
 
 
+ENV TEMP_SRC_PATH=/root/sourceinstall
+RUN mkdir -p $TEMP_SRC_PATH
+WORKDIR /root/sourceinstall
 # Install OpenSimulationInterface
-RUN mkdir -p .$CUSTOM_PATH && \
-    cd .$CUSTOM_PATH && \
+RUN cd $TEMP_SRC_PATH && \
     git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git -b v3.4.0 && \
     cd open-simulation-interface && \
     mkdir -p build && cd build && \
@@ -69,10 +68,10 @@ RUN mkdir -p .$CUSTOM_PATH && \
     sudo make install && \
     sudo sh -c "echo '/usr/local/lib/osi3' > /etc/ld.so.conf.d/osi3.conf" && \
     sudo ldconfig \
-    sudo rm -rf .$CUSTOM_PATH/open-simulation-interface
+    sudo rm -rf $TEMP_SRC_PATH/open-simulation-interface
 
 # Install ad-xolib
-RUN cd .$CUSTOM_PATH && \
+RUN cd $TEMP_SRC_PATH && \
     git clone https://github.com/javedulu/ad-xolib.git && \
     cd ad-xolib && \
     git submodule update --init --recursive && \
@@ -80,11 +79,11 @@ RUN cd .$CUSTOM_PATH && \
     cmake .. -DBUILD_EMBED_TARGETS=OFF && make -j4 && \
     sudo make install && \
     sudo ldconfig \
-    sudo rm -rf .$CUSTOM_PATH/ad-xolib
+    sudo rm -rf $TEMP_SRC_PATH/ad-xolib
 
 
 # Install esmini
-RUN cd .$CUSTOM_PATH && \
+RUN cd $TEMP_SRC_PATH && \
     git clone https://github.com/esmini/esmini && \
     cd esmini && \
     mkdir -p build && cd build && \
@@ -96,10 +95,11 @@ RUN cd .$CUSTOM_PATH && \
     sudo cp ../EnvironmentSimulator/Libraries/esminiLib/esminiLib.hpp /usr/local/include/esmini/ && \
     sudo cp ../EnvironmentSimulator/Libraries/esminiRMLib/esminiRMLib.hpp /usr/local/include/esmini/ && \
     sudo ldconfig \
-    sudo rm -rf .$CUSTOM_PATH/esmini
+    sudo rm -rf $TEMP_SRC_PATH/esmini
 
 
 
+WORKDIR /root/atos_ws
 # Setup workspace (.dockerignore is used to avoid copying unnecessary files)
 RUN mkdir -p ./src/atos 
 COPY . ./src/atos
