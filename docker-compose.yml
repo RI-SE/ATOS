@@ -1,7 +1,7 @@
 version: "3.2"
 services:
   atos:
-    image: atos:latest
+    image: astazero/atos_docker_env:latest
     build: 
       context: .
       dockerfile: ./Dockerfile
