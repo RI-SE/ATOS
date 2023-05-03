@@ -1,6 +1,6 @@
 ARG ROS_DISTRO=humble
 ARG OS=jammy
-ARG FROM_IMAGE=osrf/ros:${ROS_DISTRO}-desktop-full-${OS}
+ARG FROM_IMAGE=ros:${ROS_DISTRO}-ros-base-${OS}
 ARG OVERLAY_WS=/opt/ros/${ROS_DISTRO}/overlay_ws
 
 FROM ${FROM_IMAGE} AS cacher
@@ -11,21 +11,11 @@ ENV CUSTOM_PATH=/../sourceinstall
 
 WORKDIR /root/atos_ws
 
-ENV NODE_VERSION=16.13.0
-RUN apt install -y curl
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-ENV NVM_DIR=/root/.nvm
-RUN . "$NVM_DIR/nvm.sh" && nvm install ${NODE_VERSION}
-RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION}
-RUN . "$NVM_DIR/nvm.sh" && nvm alias default v${NODE_VERSION}
-ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
-RUN node --version
-RUN npm --version
-
 # Install system libs
 RUN \
     --mount=type=cache,target=/var/cache/apt \
     apt update && apt install -y \
+    curl \
     libsystemd-dev \
     libprotobuf-dev \
     protobuf-compiler \
@@ -40,6 +30,17 @@ RUN pip install pyOpenSSL
 
 RUN if [ "$OS" == "jammy" ]; then sudo apt install -y libpaho-mqtt-dev; fi
 RUN if [ "$OS" == "foxy" ]; then sudo apt install -y ros-foxy-paho-mqtt-c; fi
+
+ENV NODE_VERSION=16.13.0
+RUN apt install -y curl
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+ENV NVM_DIR=/root/.nvm
+RUN . "$NVM_DIR/nvm.sh" && nvm install ${NODE_VERSION}
+RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION}
+RUN . "$NVM_DIR/nvm.sh" && nvm alias default v${NODE_VERSION}
+ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
+RUN node --version
+RUN npm --version
 
 # Install ROS2 libs
 RUN \
@@ -64,10 +65,11 @@ RUN mkdir -p .$CUSTOM_PATH && \
     git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git -b v3.4.0 && \
     cd open-simulation-interface && \
     mkdir -p build && cd build && \
-    cmake .. && make && \
+    cmake .. && make -j4 && \
     sudo make install && \
     sudo sh -c "echo '/usr/local/lib/osi3' > /etc/ld.so.conf.d/osi3.conf" && \
-    sudo ldconfig
+    sudo ldconfig \
+    sudo rm -rf .$CUSTOM_PATH/open-simulation-interface
 
 # Install ad-xolib
 RUN cd .$CUSTOM_PATH && \
@@ -75,9 +77,10 @@ RUN cd .$CUSTOM_PATH && \
     cd ad-xolib && \
     git submodule update --init --recursive && \
     mkdir -p build && cd build && \
-    cmake .. -DBUILD_EMBED_TARGETS=OFF && make && \
+    cmake .. -DBUILD_EMBED_TARGETS=OFF && make -j4 && \
     sudo make install && \
-    sudo ldconfig
+    sudo ldconfig \
+    sudo rm -rf .$CUSTOM_PATH/ad-xolib
 
 
 # Install esmini
@@ -85,14 +88,15 @@ RUN cd .$CUSTOM_PATH && \
     git clone https://github.com/esmini/esmini && \
     cd esmini && \
     mkdir -p build && cd build && \
-    cmake .. && make && \
+    cmake .. && make -j4 && \
     sudo make install && \
     sudo cp ../bin/libesminiLib.so /usr/local/lib && \
     sudo cp ../bin/libesminiRMLib.so /usr/local/lib && \
     sudo mkdir -p /usr/local/include/esmini/ && \
     sudo cp ../EnvironmentSimulator/Libraries/esminiLib/esminiLib.hpp /usr/local/include/esmini/ && \
     sudo cp ../EnvironmentSimulator/Libraries/esminiRMLib/esminiRMLib.hpp /usr/local/include/esmini/ && \
-    sudo ldconfig
+    sudo ldconfig \
+    sudo rm -rf .$CUSTOM_PATH/esmini
 
 
 
@@ -103,7 +107,7 @@ RUN mv ./src/atos/atos_interfaces ./src
 
 # Build
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
-    && MAKEFLAGS=-j1 colcon build \
+    && MAKEFLAGS=-j4 colcon build \
     && chmod +x /root/atos_ws/install/setup.sh 
 
 RUN mkdir -p /root/.astazero/ATOS
