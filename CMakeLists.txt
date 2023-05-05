@@ -36,6 +36,7 @@ set(WITH_OSI_ADAPTER ON CACHE BOOL "Enable OSIAdapter module")
 set(WITH_ESMINI_ADAPTER ON CACHE BOOL "Enable EsminiAdapter module")
 set(WITH_MQTT_BRIDGE ON CACHE BOOL "Enable MQTTBridge module")
 set(WITH_POINTCLOUD_PUBLISHER ON CACHE BOOL "Enable PointcloudPublisher module")
+set(WITH_DRONE_CONTROL ON CACHE BOOL "Enable DroneControl module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -63,6 +64,9 @@ if(WITH_MQTT_BRIDGE)
 endif()
 if(WITH_POINTCLOUD_PUBLISHER)
         list(APPEND ENABLED_MODULES PointcloudPublisher)
+endif()
+if(WITH_DRONE_CONTROL)
+        list(APPEND ENABLED_MODULES DroneControl)
 endif()
 
 # Add corresponding subprojects
