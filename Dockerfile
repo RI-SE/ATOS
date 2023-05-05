@@ -67,7 +67,7 @@ RUN cd $TEMP_SRC_PATH && \
     cmake .. && make -j4 && \
     sudo make install && \
     sudo sh -c "echo '/usr/local/lib/osi3' > /etc/ld.so.conf.d/osi3.conf" && \
-    sudo ldconfig \
+    sudo ldconfig && \
     sudo rm -rf $TEMP_SRC_PATH/open-simulation-interface
 
 # Install ad-xolib
@@ -78,7 +78,7 @@ RUN cd $TEMP_SRC_PATH && \
     mkdir -p build && cd build && \
     cmake .. -DBUILD_EMBED_TARGETS=OFF && make -j4 && \
     sudo make install && \
-    sudo ldconfig \
+    sudo ldconfig && \
     sudo rm -rf $TEMP_SRC_PATH/ad-xolib
 
 
@@ -94,7 +94,7 @@ RUN cd $TEMP_SRC_PATH && \
     sudo mkdir -p /usr/local/include/esmini/ && \
     sudo cp ../EnvironmentSimulator/Libraries/esminiLib/esminiLib.hpp /usr/local/include/esmini/ && \
     sudo cp ../EnvironmentSimulator/Libraries/esminiRMLib/esminiRMLib.hpp /usr/local/include/esmini/ && \
-    sudo ldconfig \
+    sudo ldconfig && \
     sudo rm -rf $TEMP_SRC_PATH/esmini
 
 
@@ -106,9 +106,10 @@ COPY . ./src/atos
 RUN mv ./src/atos/atos_interfaces ./src
 
 # Build
-RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
-    && MAKEFLAGS=-j4 colcon build \
-    && chmod +x /root/atos_ws/install/setup.sh 
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
+    MAKEFLAGS=-j4 colcon build && \
+    chmod +x /root/atos_ws/install/setup.sh && \
+    rm -rf /root/atos_ws/build /root/atos_ws/src
 
 RUN mkdir -p /root/.astazero/ATOS
 COPY ./conf /root/.astazero/ATOS/
