@@ -7,6 +7,7 @@
 #include "mqtt.hpp"
 #include <random>
 
+
 using namespace ROSChannels;
 
 using std::placeholders::_1;
@@ -14,12 +15,12 @@ using std::placeholders::_1;
 MqttBridge::MqttBridge() : Module(MqttBridge::moduleName),
 						   v2xMsgSub(*this, std::bind(&MqttBridge::onV2xMsg, this, _1))
 {
-	declare_parameter("broker_ip");
-	declare_parameter("pub_client_id");
-	declare_parameter("username");
-	declare_parameter("password");
-	declare_parameter("topic");
-	declare_parameter("quality_of_service");
+	declare_parameter("broker_ip","");
+	declare_parameter("pub_client_id","");
+	declare_parameter("username","");
+	declare_parameter("password","");
+	declare_parameter("topic","");
+	declare_parameter("quality_of_service","1");
 
 	get_parameter("broker_ip", brokerIP);
 	get_parameter("pub_client_id", pubClientId);
