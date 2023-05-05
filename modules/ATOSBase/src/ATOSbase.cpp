@@ -19,10 +19,10 @@ ATOSBase::ATOSBase()
     : Module(ATOSBase::moduleName),
 	exitSub(*this, std::bind(&ATOSBase::onExitMessage, this, _1))
 {
-	declare_parameter("test_origin_latitude");
-	declare_parameter("test_origin_longitude");
-	declare_parameter("test_origin_altitude");
-	declare_parameter("test_origin_rot");
+	declare_parameter("test_origin_latitude", 0.0);
+	declare_parameter("test_origin_longitude", 0.0);
+	declare_parameter("test_origin_altitude",0.0);
+	declare_parameter("test_origin_rot",0.0);
 
 	std::string installationPath = ament_index_cpp::get_package_prefix("atos");
 	if (UtilVerifyTestDirectory(installationPath.c_str()) == -1) {

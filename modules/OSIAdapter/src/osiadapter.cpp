@@ -10,6 +10,7 @@
 #include "osi_handler.hpp"
 #include "osiadapter.hpp"
 
+
 using namespace ROSChannels;
 using namespace std::chrono;
 using std::placeholders::_1;
@@ -45,10 +46,10 @@ OSIAdapter::~OSIAdapter() {
  * 
  */
 void OSIAdapter::getParameters() {
-  declare_parameter("address");
-  declare_parameter("port");
-  declare_parameter("protocol");
-  declare_parameter("frequency");
+  declare_parameter("address","0.0.0.0");
+  declare_parameter("port",10);
+  declare_parameter("protocol","tcp");
+  declare_parameter("frequency",10);
 
   get_parameter("address", address);
   get_parameter("port", port);

@@ -7,6 +7,7 @@
 #include "util.h"
 #include "atosTime.h"
 #include "osi_handler.hpp"
+
 using namespace ATOS;
 
 TestObject::TestObject(rclcpp::Logger log,

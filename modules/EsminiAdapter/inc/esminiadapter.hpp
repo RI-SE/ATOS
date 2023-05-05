@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <filesystem>
 #include "esmini/esminiLib.hpp"
+
 #include "trajectory.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
@@ -87,6 +88,7 @@ private:
 	static void onRequestObjectIP(
 		const std::shared_ptr<atos_interfaces::srv::GetObjectIp::Request> req,
 		std::shared_ptr<atos_interfaces::srv::GetObjectIp::Response> res);
+	
 
 	static std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> testOriginClient;
 	static std::shared_ptr<EsminiAdapter> me;

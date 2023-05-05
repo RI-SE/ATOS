@@ -19,6 +19,12 @@
 #include "roschannels/navsatfixchannel.hpp"
 #include "util/coordinateutils.hpp"// xyz2llh
 
+#if ROS_FOXY
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#elif ROS_HUMBLE
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#endif
+
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
 static atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& data); // TODO move to somewhere central
 static sensor_msgs::msg::NavSatFix createNavSatFixMessage(const struct timeval& tv, std::array<double,3> origin, const atos_interfaces::msg::Monitor &monr); // TODO move to somewhere central

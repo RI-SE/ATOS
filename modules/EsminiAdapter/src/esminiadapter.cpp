@@ -5,10 +5,8 @@
  */
 #include "esminiadapter.hpp"
 #include "esmini/esminiLib.hpp"
-#include "esmini/esminiRMLib.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <algorithm>
 #include <functional>
 #include <chrono>
@@ -23,6 +21,7 @@
 #include "util.h"
 #include "util/coordinateutils.hpp"
 
+
 using namespace ROSChannels;
 using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
 using ObjectTrajectorySrv = atos_interfaces::srv::GetObjectTrajectory;
@@ -31,6 +30,9 @@ using ObjectIpSrv = atos_interfaces::srv::GetObjectIp;
 using std::placeholders::_1;
 using std::placeholders::_2;
 using namespace std::chrono_literals;
+
+
+
 
 std::shared_ptr<EsminiAdapter> EsminiAdapter::me = nullptr;
 std::unordered_map<int,int> EsminiAdapter::ATOStoEsminiObjectId = std::unordered_map<int, int>();
@@ -54,7 +56,7 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	exitSub(*this, &EsminiAdapter::onStaticExitMessage),
 	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage)
  {
-	declare_parameter("open_scenario_file");
+	declare_parameter("open_scenario_file","");
 }
 
 /*!
@@ -618,7 +620,6 @@ void EsminiAdapter::onRequestObjectIP(
 		res->success = false;
 	}
 }
-
 
 /*!
  * \brief initializeModule Initializes this module by creating log,
