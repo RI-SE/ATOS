@@ -21,6 +21,4 @@ services:
       - "55555:55555"
       - "443:443"
       - "9090:9090" 
-      - "53241:53241"
-      - "53240:53240"
     command: bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
