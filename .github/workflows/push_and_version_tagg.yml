@@ -69,16 +69,6 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    # Build docker images for PR
-    - name: Build for PR
-      if: ${{ github.event_name == 'pull_request' }}
-      id: docker-build-PR
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        file: $DOCKERFILE
-        tags: $IMAGE_REPO:$IMAGE_NAME
-
     # Build docker images for merging to dev and push to Docker Hub
     - name: Build and push for merging to dev
       if: ${{ github.event.pull_request.merged == true }}
