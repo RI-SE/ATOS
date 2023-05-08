@@ -17,7 +17,7 @@ env:
   IMAGE_NAME: atos
 
 jobs:
-  if_merged:
+  push_and_version_tagg:
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
