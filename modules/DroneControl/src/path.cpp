@@ -5,13 +5,13 @@ namespace ABD
 
     Path::Path(const std::string &path)
     {
-        // Todo construct path using a filepath to a .path file
+        // Todo construct path using a filepath to a .path file by calling getPath()
         path_to_file = path;
     }
 
+    // This function writes to the path's segments list, returns nothing
     void Path::getPath(void)
     {
-
         // load xml doc based on path argument
         tinyxml2::XMLDocument doc;
         doc.LoadFile(path_to_file.c_str());
@@ -20,42 +20,30 @@ namespace ABD
         tinyxml2::XMLNode *root = doc.RootElement();
         if (root == NULL)
         {
-            //cout << "root in NULL, check the path" << endl;
             return;
         }
 
         // get OriginDatum element
         tinyxml2::XMLNode *origin = root->FirstChildElement()->FirstChildElement();
-        //cout << origin->ToElement()->Name() << endl;
 
         // assign origin values from OriginDatum attributes
         const tinyxml2::XMLAttribute *attribute = origin->ToElement()->FirstAttribute();
 
-        // const XMLAttribute *attribute = element->FindAttribute("OriginLatitiude");
-        // trying to get search to work instead
-        // not having search may present issues for other xml files with different
-        // formats
-
+        // gathering each attribute by steping through the header
+        // doing it this way may present issues for other xml files with different
         OriginLatitiude = std::stof(attribute->Value(), NULL);
-        //cout << attribute->Name() << ": " << OriginLatitiude << endl;
-
         attribute = attribute->Next();
         OriginLongitude = std::stof(attribute->Value(), NULL);
-        //cout << attribute->Name() << ": " << OriginLongitude << endl;
-
         attribute = attribute->Next();
         OriginAltitude = std::stof(attribute->Value(), NULL);
-        //cout << attribute->Name() << ": " << OriginAltitude << endl;I
-
         attribute = attribute->Next();
         bearing = std::stof(attribute->Value(), NULL);
-        //cout << attribute->Name() << ": " << bearing << endl;
 
         tinyxml2::XMLNode *segmentStart = origin->Parent()->NextSibling()->FirstChild();
 
 
         while (segmentStart)
-        { // while loop for all waypoints
+        { // iterate through all waypoints in the .path file
 
             Segment segment;
 
@@ -64,8 +52,6 @@ namespace ABD
                 segmentStart->ToElement()->FirstAttribute();
 
             segment.description = description->Value();
-
-            //cout << description->Name() << ": " << segment.description << endl;
 
             // get start point xyz values
             const tinyxml2::XMLAttribute *startpoint =
@@ -76,22 +62,16 @@ namespace ABD
             segment.y = std::stof(startpoint->Value(), NULL);
             segment.z = 0;
 
-
             // get time
             startpoint = startpoint->Next();
-
             segment.time = std::stof(startpoint->Value(), NULL);
-
 
             // get velocity
             startpoint = startpoint->Next();
-
             segment.velocity = std::stof(startpoint->Value(), NULL);
-
 
             // get heading
             startpoint = startpoint->Next();
-
             segment.heading = std::stoi(startpoint->Value(), NULL);
 
             // add to list
@@ -103,11 +83,23 @@ namespace ABD
 
     }
 
-    /*
-    Segment::Segment()
+    // This function returns a list of segments with the specified offset from the paths segment list
+    std::list<Segment> Path::offsetPath(float x_offset, float y_offset, float z_offset) 
     {
-        // Todo construct segment
+        // This will change to Path::drone path to fly above the segments list
+        std::list<Segment> newPath; 
+        std::list<Segment>::iterator it;
+        for (it = segmentsList.begin(); it != segmentsList.end(); ++it) {
+            Segment s;
+            s.description = "Drone Path: " + it->description;
+            s.x = it->x + x_offset;
+            s.y = it->y + y_offset;
+            s.z = it->z + z_offset;
+            s.time = it->time;
+            s.velocity = it->velocity;
+            s.heading = it->heading;
+            newPath.push_back(s);
+        }
+        return newPath;
     }
-    */
-
 }

@@ -35,7 +35,7 @@ namespace ABD
         float bearing;
         std::string path_to_file;
         void getPath(void);
-        void getTraj(float x_offset, float y_offset, float z_offset);
+        std::list<Segment> offsetPath(float x_offset, float y_offset, float z_offset);
         std::list<Segment> segmentsList;
         std::list<Segment> dronePath;
     };
