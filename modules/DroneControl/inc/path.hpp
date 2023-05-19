@@ -5,7 +5,6 @@
 #include <iterator>
 #include "tinyxml2.h"
 #include <iostream>
-#include <iterator>
 #include <list>
 #include <string>
 
