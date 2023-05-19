@@ -23,7 +23,6 @@ add_executable(${DRONE_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/dronecontrol.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/path.cpp
-	#${CMAKE_CURRENT_SOURCE_DIR}/src/tinyxml2.cpp
 )
 
 # Link project executable to common libraries
