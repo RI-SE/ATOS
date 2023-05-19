@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Adding tinyxml2 to the CMake
-find_package(TinyXML2 REQUIRED) # TODO: FIND PACKAGE FOR TINYXML2
+find_package(TinyXML2 REQUIRED)
 
 project(drone_control)
 find_package(atos_interfaces REQUIRED)
