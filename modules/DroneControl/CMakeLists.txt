@@ -36,7 +36,7 @@ target_link_libraries(${DRONE_CONTROL_TARGET}
 target_include_directories(${DRONE_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
-	${TinyXML2_INCLUDE_DIRS} #added
+	${TinyXML2_INCLUDE_DIRS}
 )
 
 # ROS specific rules
