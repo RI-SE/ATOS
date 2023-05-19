@@ -84,7 +84,7 @@ namespace ABD
     }
 
     // This function returns a list of segments with the specified offset from the paths segment list
-    std::list<Segment> Path::offsetPath(float x_offset, float y_offset, float z_offset) 
+    std::list<Segment> Path::offsetPath(double xOffset, double yOffset, double zOffset) 
     {
         // This will change to Path::drone path to fly above the segments list
         std::list<Segment> newPath; 
