@@ -9,7 +9,8 @@ on:
 
 concurrency: production # Only allow sequential builds
 jobs:
-  Patch:
+  version_tag:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
