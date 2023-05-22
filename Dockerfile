@@ -21,12 +21,10 @@ RUN \
     libpaho-mqtt-dev \
     gnupg2 \
     lsb-release \
-    python3-pip
+    python3-pip \
+    libpaho-mqtt-dev
 
 RUN pip install pyOpenSSL
-
-RUN if [ "$OS" == "jammy" ]; then sudo apt install -y libpaho-mqtt-dev; fi
-RUN if [ "$OS" == "foxy" ]; then sudo apt install -y ros-foxy-paho-mqtt-c; fi
 
 ENV NODE_VERSION=16.20.0
 RUN apt install -y curl
