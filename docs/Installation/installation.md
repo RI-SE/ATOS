@@ -7,7 +7,11 @@ To run ATOS using the docker image, first install docker on your computer. Then,
 docker compose up
 ```
 
-You can also start ATOS without the compose file with docker run:
+If you run Docker Engine you can start ATOS using the computers own network stack with
+```bash
+docker run --network="host"  --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
+```
+If you run Docker Desktop you will need to specify the ports to expose to the host computer.
 ```bash
 docker run --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ -p 80:80 -p 8080:8080 -p 8081:8081 -p 8082:8082 -p 3000:3000 -p 3443:3443 -p 55555:55555 -p 443:443 -p 9090:9090 astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
 ```
