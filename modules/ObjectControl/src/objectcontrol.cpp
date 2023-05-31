@@ -279,10 +279,26 @@ void ObjectControl::loadScenario() {
 					RCLCPP_ERROR(get_logger(), "Get IP service call failed for object %u", id);
 					return;
 				}
-				// convert from string to in_addr
-				in_addr_t ip;
-				inet_pton(AF_INET, ipResponse->ip.c_str(), &ip);
-				RCLCPP_INFO(get_logger(), "Got ip %s for object %u", ipResponse->ip.c_str(), id,ip);
+				// Resolve the hostname or numerical IP address to an in_addr_t value
+				addrinfo hints = {0};
+				addrinfo* result;
+				hints.ai_family = AF_INET; // Use AF_INET6 for IPv6
+				hints.ai_socktype = SOCK_STREAM;
+
+				int status = getaddrinfo(ipResponse->ip.c_str(), nullptr, &hints, &result);
+				if (status != 0) {
+					RCLCPP_ERROR(get_logger(), "Failed to resolve address for object %u: %s", id, gai_strerror(status));
+					return;
+				}
+
+				in_addr_t ip = ((sockaddr_in*)result->ai_addr)->sin_addr.s_addr;
+				freeaddrinfo(result);
+
+				// Convert binary IP to string for logging
+				char ip_str[INET_ADDRSTRLEN];
+				inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN);
+
+				RCLCPP_INFO(get_logger(), "Got ip %s for object %u", ip_str, id);
 				objects.at(id)->setObjectIP(ip);
 			};
 

@@ -59,7 +59,11 @@ sudo apt update && sudo apt install -y \
 ################################################
 
 echo "Installing nvm and Node.js..."
-NODE_VERSION=16.13.0
+if [ "$ROS_DISTRO" == "humble" ]; then 
+    NODE_VERSION=16.20.0
+elif [ "$ROS_DISTRO" == "foxy" ]; then
+    NODE_VERSION=10.19.0
+fi
 NVM_DIR="$HOME/.nvm"
 
 if ! command -v nvm &> /dev/null; then
