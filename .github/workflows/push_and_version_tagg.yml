@@ -47,10 +47,6 @@ jobs:
       run: |
         echo "The version increment was: ${{ steps.AutoTaggerDryRun.outputs.part }}"
 
-    # Initiate submodules
-    - name: submodule update
-      run: git submodule update --init --recursive
-
     # BuildX allows creation of a managed and customizable BuildKit environment
     # in a dedicated Docker container
     - name: Set up Docker Buildx
