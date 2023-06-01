@@ -67,9 +67,9 @@ jobs:
       uses: docker/build-push-action@v4
       with:
         context: .
-        file: $DOCKERFILE
+        file: ${{ env.DOCKERFILE }}
         push: true
-        tags: $IMAGE_REPO:$IMAGE_NAME_${{ steps.AutoTaggerDryRun.outputs.new_tag }},$IMAGE_REPO:latest
+        tags: ${{ env.IMAGE_REPO }}:${{ env.IMAGE_NAME }}_${{ steps.AutoTaggerDryRun.outputs.new_tag }},${{ env.IMAGE_REPO }}:latest
 
     # Build docker images for release and push to Docker Hub
     - name: Build and push for release
@@ -78,9 +78,9 @@ jobs:
       uses: docker/build-push-action@v4
       with:
         context: .
-        file: $DOCKERFILE
+        file: ${{ env.DOCKERFILE }}
         push: true
-        tags: $IMAGE_REPO:$IMAGE_NAME_release_${{ github.event.release.tag_name }}
+        tags: ${{ env.IMAGE_REPO }}:${{ env.IMAGE_NAME }}_release_${{ github.event.release.tag_name }}
 
     # If everything is successful do the actual tagging.
     - name: Do the actual tagging
