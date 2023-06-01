@@ -23,6 +23,9 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
+**Branch or release information (please complete the following information):**
+ - Branch/release name: [eg. main, dev or version 1.0.0]
+
 **Desktop (please complete the following information):**
  - OS: [e.g. ubuntu, arch]
  - Browser [e.g. chrome, safari]
