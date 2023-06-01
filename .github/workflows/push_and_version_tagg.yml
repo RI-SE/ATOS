@@ -23,6 +23,8 @@ jobs:
     steps:
     - name: Checkout 
       uses: actions/checkout@v3
+      with:
+        submodules: recursive
     # Do a dry run versioning to get the new version number for the build
     - name: Dry run versioning
       id: AutoTaggerDryRun
@@ -44,17 +46,6 @@ jobs:
     - name: echo part
       run: |
         echo "The version increment was: ${{ steps.AutoTaggerDryRun.outputs.part }}"
-
-    # Checkout submodules
-    - name: Checkout submodules
-      uses: actions/checkout@v3
-      with:
-        token: ${{ steps.get_workflow_token.outputs.token }}
-        submodules: recursive
-      
-    # Initiate submodules
-    - name: submodule update
-      run: git submodule update --init --recursive
 
     # BuildX allows creation of a managed and customizable BuildKit environment
     # in a dedicated Docker container
