@@ -7,8 +7,10 @@
 
 int main(int argc, char **argv) {
 	rclcpp::init(argc,argv);
-	auto obc = std::make_shared<ObjectControl>();
-	rclcpp::spin(obc);
+	auto executor = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
+	auto obc = std::make_shared<ObjectControl>(executor);
+	executor->add_node(obc);
+	executor->spin();
 	rclcpp::shutdown();
 
 	return 0;

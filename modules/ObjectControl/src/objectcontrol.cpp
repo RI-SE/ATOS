@@ -27,7 +27,7 @@ using namespace ROSChannels;
 using namespace std::chrono_literals;
 using namespace ATOS;
 
-ObjectControl::ObjectControl()
+ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> exec)
 	: Module(ObjectControl::moduleName),
 	scnInitSub(*this, std::bind(&ObjectControl::onInitMessage, this, _1)),
 	scnStartSub(*this, std::bind(&ObjectControl::onStartMessage, this, _1)),
@@ -45,7 +45,8 @@ ObjectControl::ObjectControl()
 	failurePub(*this),
 	scnAbortPub(*this),
 	objectsConnectedPub(*this),
-	connectedObjectIdsPub(*this)
+	connectedObjectIdsPub(*this),
+	exec(exec)
 {
 	int queueSize=0;
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));

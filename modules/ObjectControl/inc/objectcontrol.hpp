@@ -116,7 +116,7 @@ class ObjectControl : public Module
 
 public:
 	int initialize();
-	ObjectControl();
+	ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExecutor>);
 	typedef enum {
 		RELATIVE_KINEMATICS,	//!< Scenario executed relative to immobile VUT
 		ABSOLUTE_KINEMATICS		//!< Scenario executed relative to earth-fixed point
@@ -208,6 +208,7 @@ public:
 
 private:
 	std::mutex stateMutex;
+	std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> exec;
 	static inline std::string const moduleName = "object_control";
 	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
 	void onConnectMessage(const ROSChannels::Connect::message_type::SharedPtr) override;
