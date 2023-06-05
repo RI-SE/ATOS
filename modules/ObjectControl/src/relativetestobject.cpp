@@ -10,6 +10,13 @@ RelativeTestObject::RelativeTestObject(uint32_t id, uint32_t anchorID) :
     isAnchor = id == anchorID;
 }
 
+RelativeTestObject::RelativeTestObject(RelativeTestObject&& other) :
+	TestObject(std::move(other)),
+	anchor(other.anchor),
+	isAnchor(other.isAnchor)
+{
+}
+
 /*!
  * \brief RelativeTestObject Transforms monitor data in positions/speeds relative to 
     *			an anchor point into being relative to the anchor points reference.

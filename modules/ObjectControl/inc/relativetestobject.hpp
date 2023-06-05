@@ -4,7 +4,7 @@ class RelativeTestObject : public TestObject {
 public:
 	RelativeTestObject(uint32_t id, uint32_t anchorID);
 	RelativeTestObject(const RelativeTestObject&) = delete;
-	//RelativeTestObject(RelativeTestObject&&);
+	RelativeTestObject(RelativeTestObject&&);
 
 	RelativeTestObject& operator=(const RelativeTestObject&) = delete;
 	RelativeTestObject& operator=(RelativeTestObject&&) = default;
