@@ -17,6 +17,7 @@
 #include "roschannels/navsatfixchannel.hpp"
 #include "roschannels/pathchannel.hpp"
 #include "roschannels/monitorchannel.hpp"
+#include "roschannels/objstatechangechannel.hpp"
 
 #include "loggable.hpp"
 
@@ -129,11 +130,12 @@ protected:
 	std::shared_ptr<ROSChannels::Monitor::Pub> monrPub;
 	std::shared_ptr<ROSChannels::NavSatFix::Pub> navSatFixPub;
 	std::shared_ptr<ROSChannels::Path::Sub> pathSub;
+	std::shared_ptr<ROSChannels::ObjectStateChange::Pub> stateChangePub;
 	std::shared_ptr<ROSChannels::Path::message_type> lastReceivedPath;
 
 	virtual void onPathMessage(const ROSChannels::Path::message_type::SharedPtr msg, int id);
 	virtual void publishMonitor(MonitorMessage& monr);
-	virtual void handleStateChange(ObjectStateType &prevObjState);
+	virtual void publishStateChange(ObjectStateType &prevObjState);
 
 	ObjectConfig conf;
 
