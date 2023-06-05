@@ -20,6 +20,7 @@
 #include "roschannels/remotecontrolchannels.hpp"
 #include "roschannels/pathchannel.hpp"
 #include "roschannels/controlsignalchannel.hpp"
+#include "roschannels/objstatechangechannel.hpp"
 #include "atos_interfaces/srv/get_object_ids.hpp"
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "atos_interfaces/srv/get_object_ip.hpp"
@@ -222,6 +223,7 @@ private:
 	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
 	void onRemoteControlEnableMessage(const ROSChannels::RemoteControlEnable::message_type::SharedPtr);
 	void onRemoteControlDisableMessage(const ROSChannels::RemoteControlDisable::message_type::SharedPtr);
+	void onObjectStateChangeMessage(const ROSChannels::ObjectStateChange::message_type::SharedPtr);
 	void onControlSignalMessage(const ROSChannels::ControlSignal::message_type::SharedPtr);
 	void onPathMessage(const ROSChannels::Path::message_type::SharedPtr,const uint32_t);
 	void onRequestState(const std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Request>,
@@ -255,6 +257,7 @@ private:
 	ROSChannels::RemoteControlEnable::Sub scnRemoteControlEnableSub;		//!< Subscriber to remote control enable requests
 	ROSChannels::RemoteControlDisable::Sub scnRemoteControlDisableSub;	//!< Subscriber to remote control disable requests
 	ROSChannels::GetStatus::Sub getStatusSub;				//!< Subscriber to scenario get status requests
+	ROSChannels::ObjectStateChange::Sub objectStateChangeSub;							//!< Subscriber to scenario path requests
 	std::shared_ptr<ROSChannels::ControlSignal::Sub> controlSignalSub;	//!< Pointer to subscriber to receive control signal messages with percentage
 
 	rclcpp::TimerBase::SharedPtr objectsConnectedTimer;	//!< Timer to periodically publish connected objects

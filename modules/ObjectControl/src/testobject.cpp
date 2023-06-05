@@ -21,6 +21,7 @@ TestObject::TestObject(uint32_t id) :
 		pathSub = std::make_shared<ROSChannels::Path::Sub>(*this, id, std::bind(&TestObject::onPathMessage, this, _1, id));
 		monrPub = std::make_shared<ROSChannels::Monitor::Pub>(*this, id);
 		navSatFixPub = std::make_shared<ROSChannels::NavSatFix::Pub>(*this, id);
+		stateChangePub = std::make_shared<ROSChannels::ObjectStateChange::Pub>(*this);
 }
 void TestObject::onPathMessage(const ROSChannels::Path::message_type::SharedPtr msg, int id){
 	;
@@ -159,7 +160,9 @@ void TestObject::handleISOMessage(bool awaitNext) {
 			auto monr = this->readMonitorMessage();
 			TimeSetToCurrentSystemTime(&currentTime);
 			this->publishMonitor(monr);
-			this->handleStateChange(prevObjState);
+			if (this->getState() != prevObjState) {
+				this->publishStateChange(prevObjState);
+			}
 		}
 		break;
 	case MESSAGE_ID_TREO:
@@ -352,33 +355,11 @@ void TestObject::publishMonitor(MonitorMessage& monr){
 	publishNavSatFix(ROSChannels::NavSatFix::fromMonr(llh_0, rosMonr));
 }
 
-void TestObject::handleStateChange(ObjectStateType &prevObjState){
-	// Check if state has changed
-	// TODO: Replace below calls by a topic for each event.
-	if (this->getState() != prevObjState) {
-		switch (this->getState()){
-			case OBJECT_STATE_DISARMED:
-				if (prevObjState == OBJECT_STATE_ABORTING) {
-					RCLCPP_INFO(get_logger(), "Object %u abort cleared", this->getTransmitterID());
-					//handler->state->objectAbortDisarmed(*handler, this->getTransmitterID());
-				}
-				else {
-					RCLCPP_INFO(get_logger(), "Object %u disarmed", this->getTransmitterID());
-					//handler->state->objectDisarmed(*handler, this->getTransmitterID());
-				}
-				break;
-			case OBJECT_STATE_POSTRUN:
-				break;
-			case OBJECT_STATE_ARMED:
-				RCLCPP_INFO(get_logger(), "Object %u armed", this->getTransmitterID());
-				//handler->state->objectArmed(*handler, this->getTransmitterID());
-				break;
-			case OBJECT_STATE_ABORTING:
-				RCLCPP_INFO(get_logger(), "Object %u aborting", this->getTransmitterID());
-				//handler->state->objectAborting(*handler, this->getTransmitterID());
-				break;
-		}
-	}
-	// TODO: Replace below by a subscriber per object in OBC.
-	//handler->injectObjectData(monr);
+void TestObject::publishStateChange(ObjectStateType &prevObjState){
+	ROSChannels::ObjectStateChange::message_type msg;
+	msg.id = this->getTransmitterID();
+	msg.prev_state.state = prevObjState;
+	msg.state.state = this->getState();
+	
+	stateChangePub->publish(msg);
 }

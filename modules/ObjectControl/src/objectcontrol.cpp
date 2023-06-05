@@ -42,6 +42,7 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, _1)),
 	scnRemoteControlEnableSub(*this, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1)),
 	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
+	objectStateChangeSub(*this, std::bind(&ObjectControl::onObjectStateChangeMessage, this, _1)),
 	failurePub(*this),
 	scnAbortPub(*this),
 	objectsConnectedPub(*this),
@@ -573,6 +574,7 @@ OsiHandler::LocalObjectGroundTruth_t ObjectControl::buildOSILocalGroundTruth(
 	return gt;
 }
 
+// TODO (NOT WORKING ATM!): Replace this with a subscriber that listens for monr messages. 
 void ObjectControl::injectObjectData(const MonitorMessage &monr) {
 	if (!objects.at(monr.first)->getObjectConfig().getInjectionMap().targetIDs.empty()) {
 		std::chrono::system_clock::time_point ts;
@@ -742,6 +744,36 @@ void ObjectControl::startObject(
 		auto str = ss.str();
 		str.pop_back();
 		RCLCPP_WARN(get_logger(), "Attempted to start nonexistent object %u - configured objects are%s", id, str.c_str());
+	}
+}
+
+void ObjectControl::onObjectStateChangeMessage(const ObjectStateChange::message_type::SharedPtr stateChangeMsg) {
+	ObjectStateType prevState = static_cast<ObjectStateType>(stateChangeMsg->prev_state.state);
+	ObjectStateType state = static_cast<ObjectStateType>(stateChangeMsg->state.state);
+	uint32_t id = stateChangeMsg->id;
+	switch (state) {
+	case OBJECT_STATE_DISARMED:
+		if (prevState == OBJECT_STATE_ABORTING) {
+			this->state->objectAbortDisarmed(*this, id);
+		}
+		else {
+			this->state->objectDisarmed(*this, id);
+		}
+		break;
+	case OBJECT_STATE_ARMED:
+		this->state->objectArmed(*this, id);
+		break;
+	case OBJECT_STATE_ABORTING:
+		this->state->objectAborting(*this, id);
+		break;
+	case OBJECT_STATE_INIT:
+	case OBJECT_STATE_RUNNING:
+	case OBJECT_STATE_POSTRUN:
+	case OBJECT_STATE_REMOTE_CONTROL:
+		break;
+
+	default:
+		RCLCPP_WARN(get_logger(), "Received unknown object state change message for object %u: %d", id, state);
 	}
 }
 
