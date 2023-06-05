@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include "objectconnection.hpp"
+
 #include <netinet/in.h>
 #include <future>
 #include <vector>
@@ -29,90 +31,12 @@ namespace fs = std::filesystem;
 namespace fs = std::experimental::filesystem;
 #endif
 
-struct MonitorMessage : std::pair<uint32_t,ObjectMonitorType> {};
-
 #define OSI_DEFAULT_OBJECT_TCP_PORT 53250
-
-/*!
- * \brief The Channel class represents any socket based connection
- *			and allows transmission / reception of ISO messages
- */
-class Channel : public Loggable
-{
-public:
-	Channel(const size_t bufferLength, const int type, rclcpp::Logger log)
-		: channelType(type),
-		  transmitBuffer(bufferLength, 0),
-		  receiveBuffer(bufferLength, 0),
-		  Loggable(log)
-	{}
-	Channel(int type, rclcpp::Logger log) : Channel(1024, type, log) {}
-	struct sockaddr_in addr = {};
-	int socket = -1;
-	int channelType = 0; //!< SOCK_STREAM or SOCK_DGRAM
-	std::vector<char> transmitBuffer;
-	std::vector<char> receiveBuffer;
-
-	ISOMessageID pendingMessageType(bool awaitNext = false);
-	std::string remoteIP() const;
-	bool isValid() const { return socket != -1; }
-	void connect(std::shared_future<void> stopRequest,
-				 const std::chrono::milliseconds retryPeriod);
-	void disconnect();
-
-	friend Channel& operator<<(Channel&,const HeabMessageDataType&);
-	friend Channel& operator<<(Channel&,const ObjectSettingsType&);
-	friend Channel& operator<<(Channel&,const ATOS::Trajectory&);
-	friend Channel& operator<<(Channel&,const ObjectCommandType&);
-	friend Channel& operator<<(Channel&,const StartMessageType&);
-	friend Channel& operator<<(Channel&,const std::vector<char>&);
-	friend Channel& operator<<(Channel&,const ControlSignalPercentage::SharedPtr csp);
-
-	friend Channel& operator>>(Channel&,MonitorMessage&);
-	friend Channel& operator>>(Channel&,ObjectPropertiesType&);
-
-};
-
-/*!
- * \brief The ObjectConnection class holds network connection data for
- *			a single object, i.e. the two channels for command and
- *			safety data.
- */
-class ObjectConnection : public Loggable {
-public:
-	Channel cmd;
-	Channel mntr;
-
-	ObjectConnection(rclcpp::Logger log)
-		: cmd(SOCK_STREAM, log),
-		mntr(SOCK_DGRAM, log),
-		Loggable(log) {
-			pipe(interruptionPipeFds);
-		}
-
-	bool isValid() const;
-	bool isConnected() const;
-	void connect(std::shared_future<void> stopRequest,
-				 const std::chrono::milliseconds retryPeriod);
-	void disconnect();
-	ISOMessageID pendingMessageType(bool awaitNext = false);
-	void interruptSocket() {
-		int i = 1;
-		write(interruptionPipeFds[1], &i, sizeof(i));
-		close(interruptionPipeFds[1]);
-	}
-private:
-	int interruptionPipeFds[2];
-};
 
 class TestObject : public rclcpp::Node {
 	using clock = std::chrono::steady_clock;
 public:
-	TestObject(rclcpp::Logger, 
-		std::shared_ptr<ROSChannels::Path::Sub>, 
-		std::shared_ptr<ROSChannels::Monitor::Pub>,
-		std::shared_ptr<ROSChannels::NavSatFix::Pub>
-	);
+	TestObject(uint32_t id);
 	TestObject(const TestObject&) = delete;
 	TestObject(TestObject&&);
 
