@@ -7,6 +7,7 @@
 #include "util.h"
 #include "atosTime.h"
 #include "osi_handler.hpp"
+#include "journal.hpp"
 
 using namespace ATOS;
 using std::placeholders::_1;
@@ -145,6 +146,31 @@ MonitorMessage TestObject::awaitNextMonitor() {
 	}
 	else {
 		throw std::invalid_argument("Received non-MONR message on MONR channel");
+	}
+}
+
+void TestObject::handleISOMessage(bool awaitNext) {
+	auto message = this->comms.pendingMessageType(awaitNext);
+	switch (message) {
+	case MESSAGE_ID_MONR: 
+		{
+			struct timeval currentTime;
+			auto prevObjState = this->getState();
+			auto monr = this->readMonitorMessage();
+			TimeSetToCurrentSystemTime(&currentTime);
+			this->publishMonitor(monr);
+			this->handleStateChange(prevObjState);
+		}
+		break;
+	case MESSAGE_ID_TREO:
+		RCLCPP_WARN(get_logger(), "Unhandled TREO message");
+		break;
+	case MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO:
+		this->parseObjectPropertyMessage();
+		break;
+	default:
+		RCLCPP_WARN(get_logger(), "Received unknown message type");
+		break;
 	}
 }
 
@@ -308,4 +334,51 @@ void TestObject::sendStart(std::chrono::system_clock::time_point startTime) {
 
 void TestObject::sendControlSignal(const ControlSignalPercentage::SharedPtr csp) {
 	this->comms.mntr << csp;
+}
+
+void TestObject::publishMonitor(MonitorMessage& monr){
+	// Publish to journal
+	auto objData = this->getAsObjectData();
+	objData.MonrData = monr.second;
+	JournalRecordMonitorData(&objData);
+
+	// Publish to ROS topic
+	auto rosMonr = ROSChannels::Monitor::fromMonr(monr.first,monr.second);
+	publishMonr(rosMonr);
+
+	// TODO: Make a translator node that listens on Monitor topic and does this..
+	auto origin = this->getOrigin();
+	std::array<double,3> llh_0 = {origin.latitude_deg, origin.longitude_deg, origin.altitude_m};
+	publishNavSatFix(ROSChannels::NavSatFix::fromMonr(llh_0, rosMonr));
+}
+
+void TestObject::handleStateChange(ObjectStateType &prevObjState){
+	// Check if state has changed
+	// TODO: Replace below calls by a topic for each event.
+	if (this->getState() != prevObjState) {
+		switch (this->getState()){
+			case OBJECT_STATE_DISARMED:
+				if (prevObjState == OBJECT_STATE_ABORTING) {
+					RCLCPP_INFO(get_logger(), "Object %u abort cleared", this->getTransmitterID());
+					//handler->state->objectAbortDisarmed(*handler, this->getTransmitterID());
+				}
+				else {
+					RCLCPP_INFO(get_logger(), "Object %u disarmed", this->getTransmitterID());
+					//handler->state->objectDisarmed(*handler, this->getTransmitterID());
+				}
+				break;
+			case OBJECT_STATE_POSTRUN:
+				break;
+			case OBJECT_STATE_ARMED:
+				RCLCPP_INFO(get_logger(), "Object %u armed", this->getTransmitterID());
+				//handler->state->objectArmed(*handler, this->getTransmitterID());
+				break;
+			case OBJECT_STATE_ABORTING:
+				RCLCPP_INFO(get_logger(), "Object %u aborting", this->getTransmitterID());
+				//handler->state->objectAborting(*handler, this->getTransmitterID());
+				break;
+		}
+	}
+	// TODO: Replace below by a subscriber per object in OBC.
+	//handler->injectObjectData(monr);
 }
