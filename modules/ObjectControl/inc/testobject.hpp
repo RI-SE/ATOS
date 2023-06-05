@@ -105,7 +105,7 @@ private:
 	int interruptionPipeFds[2];
 };
 
-class TestObject : public Loggable {
+class TestObject : public rclcpp::Node {
 	using clock = std::chrono::steady_clock;
 public:
 	TestObject(rclcpp::Logger, 
@@ -209,7 +209,7 @@ private:
 	std::shared_ptr<ROSChannels::Path::Sub> pathSub;
 	std::shared_ptr<ROSChannels::Path::message_type> lastReceivedPath;
 
-	void onPathMessage(const ROSChannels::Path::message_type::SharedPtr);
+	void onPathMessage(const ROSChannels::Path::message_type::SharedPtr msg, int id);
 
 	ObjectConfig conf;
 
