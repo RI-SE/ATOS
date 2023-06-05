@@ -42,6 +42,7 @@ include(GNUInstallDirs)
 add_executable(${OBJECT_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/testobject.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/relativetestobject.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectlistener.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectconnection.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/channel.cpp
