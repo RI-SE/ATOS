@@ -34,7 +34,6 @@ namespace fs = std::experimental::filesystem;
 #define OSI_DEFAULT_OBJECT_TCP_PORT 53250
 
 class TestObject : public rclcpp::Node {
-	using clock = std::chrono::steady_clock;
 public:
 	TestObject(uint32_t id);
 	TestObject(const TestObject&) = delete;
@@ -43,60 +42,60 @@ public:
 	TestObject& operator=(const TestObject&) = delete;
 	TestObject& operator=(TestObject&&) = default;
 
-	void parseConfigurationFile(const fs::path& file);
+	virtual void parseConfigurationFile(const fs::path& file);
 
-	uint32_t getTransmitterID() const { return conf.getTransmitterID(); }
-	std::string getTrajectoryFileName() const { return conf.getTrajectoryFileName(); }
-	ATOS::Trajectory getTrajectory() const { return conf.getTrajectory(); }
-	GeographicPositionType getOrigin() const { return conf.getOrigin(); }
-	ObjectStateType getState(const bool awaitUpdate);
-	ObjectStateType getState(const bool awaitUpdate, const std::chrono::milliseconds timeout);
-	ObjectStateType getState() const { return isConnected() ? state : OBJECT_STATE_UNKNOWN; }
-	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
-	ObjectConfig getObjectConfig() const { return conf; }
-	void setTrajectory(const ATOS::Trajectory& newTrajectory) { conf.setTrajectory(newTrajectory); }
-	void setTransmitterID(const uint32_t newID) { conf.setTransmitterID(newID); }
-	void setLastReceivedPath(ROSChannels::Path::message_type::SharedPtr);
-	void setObjectIP(const in_addr_t newIP);
-	void setCommandAddress(const sockaddr_in& newAddr);
-	void setMonitorAddress(const sockaddr_in& newAddr);
-	void setOsiAddress(const sockaddr_in& newAddr);
-	void setObjectConfig(ObjectConfig& newObjectConfig);
-	void setTriggerStart(const bool startOnTrigger = true);
-	void setOrigin(const GeographicPositionType&);
-	void interruptSocket() { comms.interruptSocket();}
+	virtual uint32_t getTransmitterID() const { return conf.getTransmitterID(); }
+	virtual std::string getTrajectoryFileName() const { return conf.getTrajectoryFileName(); }
+	virtual ATOS::Trajectory getTrajectory() const { return conf.getTrajectory(); }
+	virtual GeographicPositionType getOrigin() const { return conf.getOrigin(); }
+	virtual ObjectStateType getState(const bool awaitUpdate);
+	virtual ObjectStateType getState(const bool awaitUpdate, const std::chrono::milliseconds timeout);
+	virtual ObjectStateType getState() const { return isConnected() ? state : OBJECT_STATE_UNKNOWN; }
+	virtual ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
+	virtual ObjectConfig getObjectConfig() const { return conf; }
+	virtual void setTrajectory(const ATOS::Trajectory& newTrajectory) { conf.setTrajectory(newTrajectory); }
+	virtual void setTransmitterID(const uint32_t newID) { conf.setTransmitterID(newID); }
+	virtual void setLastReceivedPath(ROSChannels::Path::message_type::SharedPtr);
+	virtual void setObjectIP(const in_addr_t newIP);
+	virtual void setCommandAddress(const sockaddr_in& newAddr);
+	virtual void setMonitorAddress(const sockaddr_in& newAddr);
+	virtual void setOsiAddress(const sockaddr_in& newAddr);
+	virtual void setObjectConfig(ObjectConfig& newObjectConfig);
+	virtual void setTriggerStart(const bool startOnTrigger = true);
+	virtual void setOrigin(const GeographicPositionType&);
+	virtual void interruptSocket() { comms.interruptSocket();}
 	
-	bool isAnchor() const { return conf.isAnchor(); }
-	bool isOsiCompatible() const { return conf.isOSI(); }
-	bool isStartingOnTrigger() const { return startOnTrigger; }
-	std::string toString() const;
-	std::string getProjString() const { return conf.getProjString(); }
-	ObjectDataType getAsObjectData() const;
+	virtual bool isAnchor() const { return conf.isAnchor(); }
+	virtual bool isOsiCompatible() const { return conf.isOSI(); }
+	virtual bool isStartingOnTrigger() const { return startOnTrigger; }
+	virtual std::string toString() const;
+	virtual std::string getProjString() const { return conf.getProjString(); }
+	virtual ObjectDataType getAsObjectData() const;
 
-	bool isConnected() const { return comms.isConnected(); }
-	void establishConnection(std::shared_future<void> stopRequest);
-	void disconnect() {
+	virtual bool isConnected() const { return comms.isConnected(); }
+	virtual void establishConnection(std::shared_future<void> stopRequest);
+	virtual void disconnect() {
 		RCLCPP_INFO(get_logger(), "Disconnecting object %u",
 				   this->getTransmitterID());
 		this->comms.disconnect();
 	}
 
-	void sendSettings();
-	void sendHeartbeat(const ControlCenterStatusType ccStatus);
-	void sendArm();
-	void sendDisarm();
-	void sendRemoteControl(bool on);
-	void sendStart(std::chrono::system_clock::time_point timestamp);
-	void sendAllClear();
-	void sendOsiData(const OsiHandler::LocalObjectGroundTruth_t& osidata,
+	virtual void sendSettings();
+	virtual void sendHeartbeat(const ControlCenterStatusType ccStatus);
+	virtual void sendArm();
+	virtual void sendDisarm();
+	virtual void sendRemoteControl(bool on);
+	virtual void sendStart(std::chrono::system_clock::time_point timestamp);
+	virtual void sendAllClear();
+	virtual void sendOsiData(const OsiHandler::LocalObjectGroundTruth_t& osidata,
 					 const std::string& projStr,
 					 const std::chrono::system_clock::time_point& timestamp);
 
-	void sendControlSignal(const ControlSignalPercentage::SharedPtr csp);
-	void publishMonr(const ROSChannels::Monitor::message_type);
-	void publishNavSatFix(const ROSChannels::NavSatFix::message_type);
+	virtual void sendControlSignal(const ControlSignalPercentage::SharedPtr csp);
+	virtual void publishMonr(const ROSChannels::Monitor::message_type);
+	virtual void publishNavSatFix(const ROSChannels::NavSatFix::message_type);
 
-	std::chrono::milliseconds getTimeSinceLastMonitor() const {
+	virtual std::chrono::milliseconds getTimeSinceLastMonitor() const {
 		if (lastMonitorTime.time_since_epoch().count() == 0) {
 			return std::chrono::milliseconds(0);
 		}
@@ -104,27 +103,26 @@ public:
 					clock::now() - lastMonitorTime);
 	}
 
-	std::chrono::milliseconds getMaxAllowedMonitorPeriod() const {
+	virtual std::chrono::milliseconds getMaxAllowedMonitorPeriod() const {
 		return this->maxAllowedMonitorPeriod;
 	}
-	MonitorMessage readMonitorMessage() {
+	virtual MonitorMessage readMonitorMessage() {
 		MonitorMessage retval;
 		this->comms.mntr >> retval;
 		lastMonitorTime = clock::now();
 		updateMonitor(retval);
 		return retval;
 	}
-	ObjectPropertiesType parseObjectPropertyMessage() {
+	virtual ObjectPropertiesType parseObjectPropertyMessage() {
 		ObjectPropertiesType retval;
 		this->comms.cmd >> retval; // TODO make use of this
 		RCLCPP_DEBUG(get_logger(), "Ignoring object properties message");
 		return retval;
 	}
+	virtual void handleISOMessage(bool awaitNext = false);
 
-	ISOMessageID pendingMessageType(bool awaitNext = false) {
-		return this->comms.pendingMessageType(awaitNext);
-	}
-private:
+protected:
+	using clock = std::chrono::steady_clock;
 	ObjectConnection comms;		//!< Channel for communication with object over the ISO 22133 protocol
 	Channel osiChannel;			//!< Channel for communication with object over the OSI protocol
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
@@ -133,14 +131,16 @@ private:
 	std::shared_ptr<ROSChannels::Path::Sub> pathSub;
 	std::shared_ptr<ROSChannels::Path::message_type> lastReceivedPath;
 
-	void onPathMessage(const ROSChannels::Path::message_type::SharedPtr msg, int id);
+	virtual void onPathMessage(const ROSChannels::Path::message_type::SharedPtr msg, int id);
+	virtual void publishMonitor(MonitorMessage& monr);
+	virtual void handleStateChange(ObjectStateType &prevObjState);
 
 	ObjectConfig conf;
 
 	bool startOnTrigger = false;
 
-	void updateMonitor(const MonitorMessage&);
-	MonitorMessage awaitNextMonitor();
+	virtual void updateMonitor(const MonitorMessage&);
+	virtual MonitorMessage awaitNextMonitor();
 	std::future<MonitorMessage> nextMonitor;
 	ObjectMonitorType lastMonitor; // TODO change this into a more usable format
 	clock::time_point lastMonitorTime;
