@@ -9,6 +9,7 @@
 #include "osi_handler.hpp"
 
 using namespace ATOS;
+using std::placeholders::_1;
 
 TestObject::TestObject(rclcpp::Logger log,
 		std::shared_ptr<ROSChannels::Path::Sub> pathSub,
@@ -17,12 +18,20 @@ TestObject::TestObject(rclcpp::Logger log,
 	) :
 	osiChannel(SOCK_STREAM, log),
 	comms(log),
-	Loggable(log),
-	pathSub(pathSub),
-	monrPub(monrPub),
-	navSatFixPub(navSatFixPub),
-	conf(log)
+	//Loggable(log),
+	//pathSub(pathSub),
+	//monrPub(monrPub),
+	//navSatFixPub(navSatFixPub),
+	conf(log),
+	Node("name123")
 	 {
+		auto id = 1;
+		pathSub = std::make_shared<ROSChannels::Path::Sub>(*this, id, std::bind(&TestObject::onPathMessage, this, _1, id));
+		monrPub = std::make_shared<ROSChannels::Monitor::Pub>(*this, id);
+		navSatFixPub = std::make_shared<ROSChannels::NavSatFix::Pub>(*this, id);
+}
+void TestObject::onPathMessage(const ROSChannels::Path::message_type::SharedPtr msg, int id){
+	;
 }
 
 TestObject::TestObject(TestObject&& other) :
@@ -32,7 +41,9 @@ TestObject::TestObject(TestObject&& other) :
 	conf(other.conf),
 	lastMonitor(other.lastMonitor),
 	maxAllowedMonitorPeriod(other.maxAllowedMonitorPeriod),
-	Loggable(other.get_logger())
+	//Loggable(other.get_logger())
+	rclcpp::Node(other.get_name())
+
 {
 	this->comms = other.comms;
 	this->osiChannel = other.osiChannel;
