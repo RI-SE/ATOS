@@ -252,10 +252,7 @@ void ObjectControl::loadScenario() {
 		RCLCPP_INFO(get_logger(), "Received %d configured object ids", idResponse->ids.size());
 
 		for (const auto id : idResponse->ids) {
-			auto trajletSub = std::make_shared<Path::Sub>(*this, id, std::bind(&ObjectControl::onPathMessage, this, _1, id));
-			auto monrPub = std::make_shared<Monitor::Pub>(*this, id);
-			auto navSatFixPub = std::make_shared<NavSatFix::Pub>(*this, id);
-			auto object = std::make_shared<TestObject>(this->get_logger(), trajletSub, monrPub, navSatFixPub);
+			auto object = std::make_shared<TestObject>(id);
 			objects.emplace(id, object);
 			objects.at(id)->setTransmitterID(id);
 
@@ -379,12 +376,7 @@ void ObjectControl::loadObjectFiles() {
 				// Check preexisting
 				auto foundObject = objects.find(id);
 				if (foundObject == objects.end()) {
-					// Create sub and pub as unique ptrs, when TestObject is destroyed, these get destroyed too.
-					
-					auto trajletSub = std::make_shared<Path::Sub>(*this, id, std::bind(&ObjectControl::onPathMessage, this, _1, id));
-					auto monrPub = std::make_shared<Monitor::Pub>(*this, id);
-					auto navSatFixPub = std::make_shared<NavSatFix::Pub>(*this, id);
-					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(get_logger(),trajletSub,monrPub,navSatFixPub);
+					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(id);
 					object->parseConfigurationFile(inputFile);
 					objects.emplace(id, object);
 				}
