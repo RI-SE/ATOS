@@ -26,7 +26,7 @@
 #endif
 
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
-static atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& data); // TODO move to somewhere central
+static atos_interfaces::msg::Monitor createMonitor(const MonitorMessage& data); // TODO move to somewhere central
 static sensor_msgs::msg::NavSatFix createNavSatFixMessage(const struct timeval& tv, std::array<double,3> origin, const atos_interfaces::msg::Monitor &monr); // TODO move to somewhere central
 
 ObjectListener::ObjectListener(
@@ -214,7 +214,7 @@ ObjectMonitorType transformCoordinate(
 }
 
 
-atos_interfaces::msg::Monitor createROSMessage(const MonitorMessage& monrMessage) {
+atos_interfaces::msg::Monitor createMonitor(const MonitorMessage& monrMessage) {
 	atos_interfaces::msg::Monitor msg;
 	auto txid = monrMessage.first;
 	auto indata = monrMessage.second;
