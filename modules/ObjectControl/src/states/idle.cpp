@@ -19,7 +19,7 @@ void AbstractKinematics::Idle::initializeRequest(
 		ObjectControl& handler) {
 	RCLCPP_INFO(handler.get_logger(), "Handling initialization request");
 	JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
-	handler.loadScenario();
+	handler.loadScenario(); // Reload objects on each initialize request. 
 	try {
 		auto anchorID = handler.getAnchorObjectID();
 		handler.transformScenarioRelativeTo(anchorID);
