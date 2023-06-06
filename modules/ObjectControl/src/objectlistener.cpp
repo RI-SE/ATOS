@@ -6,13 +6,6 @@
 #include "objectlistener.hpp"
 #include "objectcontrol.hpp"
 #include "state.hpp"
-#include <iostream>
-
-#if ROS_FOXY
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-#elif ROS_HUMBLE
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
-#endif
 
 ObjectListener::ObjectListener(
 		ObjectControl* sh,
@@ -45,7 +38,7 @@ void ObjectListener::listen() {
 			obj->handleISOMessage(true);
 		}
 	} catch (std::invalid_argument& e) {
-		RCLCPP_ERROR(get_logger(), e.what());
+		RCLCPP_ERROR(get_logger(), e.what()); // TODO: add comment explaining this case..
 	} catch (std::range_error& e){
 		RCLCPP_DEBUG(get_logger(), e.what()); // Socket was interrupted intentionally, exit gracefully
 	} catch (std::runtime_error& e) {
