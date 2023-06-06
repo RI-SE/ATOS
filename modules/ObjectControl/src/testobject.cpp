@@ -346,13 +346,13 @@ void TestObject::publishMonitor(MonitorMessage& monr){
 	JournalRecordMonitorData(&objData);
 
 	// Publish to ROS topic
-	auto rosMonr = ROSChannels::Monitor::fromMonr(monr.first,monr.second);
+	auto rosMonr = ROSChannels::Monitor::fromISOMonr(monr.first,monr.second);
 	publishMonr(rosMonr);
 
 	// TODO: Make a translator node that listens on Monitor topic and does this..
 	auto origin = this->getOrigin();
 	std::array<double,3> llh_0 = {origin.latitude_deg, origin.longitude_deg, origin.altitude_m};
-	publishNavSatFix(ROSChannels::NavSatFix::fromMonr(llh_0, rosMonr));
+	publishNavSatFix(ROSChannels::NavSatFix::fromROSMonr(llh_0, rosMonr));
 }
 
 void TestObject::publishStateChange(ObjectStateType &prevObjState){

@@ -1,20 +1,33 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #include "relativetestobject.hpp"
-#include "testobject.hpp"
 #include "atosTime.h"
 #include <cstdint>
+#include <functional>
 
-RelativeTestObject::RelativeTestObject(uint32_t id, uint32_t anchorID) : 
+using std::placeholders::_1;
+
+RelativeTestObject::RelativeTestObject(uint32_t id) : 
     TestObject(id),
-    anchor(anchorID)
+	anchorSub(*this, std::bind(&RelativeTestObject::updateAnchor, this, _1))
 {
-    isAnchor = id == anchorID;
 }
 
 RelativeTestObject::RelativeTestObject(RelativeTestObject&& other) :
 	TestObject(std::move(other)),
-	anchor(other.anchor),
-	isAnchor(other.isAnchor)
+	anchorSub(std::move(other.anchorSub))
 {
+}
+
+/*! \brief updateAnchor Updates the position of the anchor object
+ * \param monr Monitor data of anchor point
+ */
+void RelativeTestObject::updateAnchor(const ROSChannels::Monitor::message_type::SharedPtr monr) {
+	lastAnchorMonr = ROSChannels::Monitor::toISOMonr(*monr);
 }
 
 /*!
@@ -29,11 +42,8 @@ MonitorMessage RelativeTestObject::readMonitorMessage() {
     this->comms.mntr >> retval;
     lastMonitorTime = clock::now();
     updateMonitor(retval);
-    if (!isAnchor){ // If we are not the anchor, transform the monitor data relative to anchor
-        transformCoordinate(retval.second,
-                     retval.second, // TODO: replace this with last anchor monr from OBC
-                     true);
-    }
+    // transform the monitor data relative to anchor
+	transformCoordinate(retval.second,lastAnchorMonr,true);
     return retval;
 }
 
