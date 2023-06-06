@@ -14,6 +14,7 @@
 #include <dirent.h>
 #include <exception>
 
+#include "sm_impl.hpp"
 #include "state.hpp"
 #include "util.h"
 #include "journal.hpp"
@@ -26,9 +27,17 @@ using std::placeholders::_2;
 using namespace ROSChannels;
 using namespace std::chrono_literals;
 using namespace ATOS;
+namespace sml = boost::sml;
+
+class ObjectControl::Sm : public sml::sm<SmImpl,sml::thread_safe<std::mutex>> {
+	public: 
+		explicit Sm(ObjectControl* handler)
+        	: sml::sm<SmImpl,sml::thread_safe<std::mutex>>(static_cast<ObjectControl*>(handler)) {}
+};
 
 ObjectControl::ObjectControl()
 	: Module(ObjectControl::moduleName),
+	sm(std::make_unique<Sm>(this)),
 	scnInitSub(*this, std::bind(&ObjectControl::onInitMessage, this, _1)),
 	scnStartSub(*this, std::bind(&ObjectControl::onStartMessage, this, _1)),
 	objectStartSub(*this, std::bind(&ObjectControl::onStartObjectMessage, this, _1)),
@@ -66,6 +75,7 @@ ObjectControl::~ObjectControl() {
 }
 
 int ObjectControl::initialize() {
+	//sml::sm<ObjectControl, sml::thread_safe<std::mutex>> sm; // Create a state machine
 	int retval = 0;
 
 	// Create test journal
