@@ -256,7 +256,7 @@ private:
 	ROSChannels::RemoteControlEnable::Sub scnRemoteControlEnableSub;		//!< Subscriber to remote control enable requests
 	ROSChannels::RemoteControlDisable::Sub scnRemoteControlDisableSub;	//!< Subscriber to remote control disable requests
 	ROSChannels::GetStatus::Sub getStatusSub;				//!< Subscriber to scenario get status requests
-	ROSChannels::ObjectStateChange::Sub objectStateChangeSub;							//!< Subscriber to scenario path requests
+	ROSChannels::ObjectStateChange::Sub objectStateChangeSub;	//!< Subscriber to object state changes
 	std::shared_ptr<ROSChannels::ControlSignal::Sub> controlSignalSub;	//!< Pointer to subscriber to receive control signal messages with percentage
 
 	rclcpp::TimerBase::SharedPtr objectsConnectedTimer;	//!< Timer to periodically publish connected objects
