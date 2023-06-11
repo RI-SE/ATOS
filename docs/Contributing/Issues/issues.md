@@ -13,8 +13,8 @@ requests, but please respect the following restrictions:
 <a name="bugs"></a>
 ## Bug reports
 
-A bug is a _demonstrable problem_ that is caused by the code in the repository.
-Good bug reports are extremely helpful - thank you!
+A bug is an error, flaw or fault in the design of a piece of software or code.
+We welcome bug reports, as they are extremely helpful in furthering the development of the project.
 
 Guidelines for bug reports:
 
