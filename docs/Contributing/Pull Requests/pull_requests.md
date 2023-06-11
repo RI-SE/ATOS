@@ -3,12 +3,9 @@
 
 Good pull requests - patches, improvements, new features - are great.
 
-**Please ask first** before embarking on any significant pull request (e.g.
-implementing new features, refactoring code, porting to a different language),
+**Please ask in the [discussions](https://github.com/RI-SE/ATOS/discussions) tab** before embarking on any significant pull request (e.g. implementing new features, refactoring code, porting to a different language),
 otherwise you risk spending a lot of time working on something that the
 project's developers might not want to merge into the project. 
-
-[The discussions tab](https://github.com/RI-SE/ATOS/discussions) on the repo can be for this if you want to make sure that your endevour is something the maintainers consider relevant for the project.
 
 Please adhere to the coding conventions used throughout the project (indentation,
 accurate comments, etc.) and any other requirements (such as test coverage).
