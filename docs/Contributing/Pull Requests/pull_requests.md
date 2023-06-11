@@ -29,7 +29,7 @@ license your work under the same license as that used by the project.
 * **What is the new behavior (if this is a feature change)?**
 
 
-* **Does this PR introduce a breaking change?** (What changes might users need to make in their application due to this PR?)
+* **Does the PR change the way the software in this project interfaces with internal/external components such as files, other software, etc?**
 
 
 * **Other information**:
