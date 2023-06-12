@@ -38,13 +38,13 @@ void RelativeTestObject::updateAnchor(const ROSChannels::Monitor::message_type::
  * \return Transformed monitor data
  */
 MonitorMessage RelativeTestObject::readMonitorMessage() {
-    MonitorMessage retval;
-    this->comms.mntr >> retval;
-    lastMonitorTime = clock::now();
-    updateMonitor(retval);
-    // transform the monitor data relative to anchor
+	MonitorMessage retval;
+	this->comms.mntr >> retval;
+	lastMonitorTime = clock::now();
+	updateMonitor(retval);
+	// transform the monitor data relative to anchor
 	transformCoordinate(retval.second,lastAnchorMonr,true);
-    return retval;
+	return retval;
 }
 
 
