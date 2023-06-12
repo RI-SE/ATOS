@@ -1,7 +1,6 @@
 <a name="pull-requests"></a>
 ## Pull requests
 
-Good pull requests - patches, improvements, new features - are great.
 
 **Please ask in the [discussions](https://github.com/RI-SE/ATOS/discussions) tab** before embarking on any significant pull request (e.g. implementing new features, refactoring code, porting to a different language),
 otherwise you risk spending a lot of time working on something that the
