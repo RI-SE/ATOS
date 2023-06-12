@@ -6,7 +6,7 @@
 otherwise you risk spending a lot of time working on something that the
 project's developers might not want to merge into the project. 
 
-Please adhere to the coding conventions used throughout the project (indentation,
+Please adhere to the [coding conventions](https://github.com/RI-SE/ATOS/wiki/Coding-Conventions) used throughout the project (indentation,
 accurate comments, etc.) and any other requirements (such as test coverage).
 
 Follow this process if you'd like your work considered for inclusion in the
