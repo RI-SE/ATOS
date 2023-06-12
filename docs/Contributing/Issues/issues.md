@@ -1,8 +1,11 @@
 ## Using the issue tracker
 
-The [issue tracker](https://github.com/RI-SE/ATOS/issues) on the repo page is the preferred channel for [bug reports](#bugs),
-features requests and for submitting pull
-requests, but please respect the following restrictions:
+The [issue tracker](https://github.com/RI-SE/ATOS/issues) on the repo page is the preferred channel for [bug reports](#bugs) and features requests. If you want to submit a pull request that relates to a specific issue or bug, please select the bug in question and use the "create branch for this issue or link a pull request" option under the debelopment heading to link your pull request to the issue.
+
+![image](https://github.com/RI-SE/ATOS/assets/10436623/adb9d512-ab25-4504-aa9d-63c95ba76c85)
+
+
+In general, also please respect the following restrictions:
 
 * Please **do not** use the issue tracker for personal support requests. [The discussions tab](https://github.com/RI-SE/ATOS/discussions) on the repo can be used for this instead. 
 
