@@ -30,7 +30,7 @@ license your work under the same license as that used by the project.
 
 * **Does the PR change the way the software in this project interfaces with internal/external components such as files, other software, etc?**
 
-
-* **Other information**:
+#### Additional information
+* **In the case that you feel there is additional information, files images or something else that will add valuable context, feel free to add anything extra that will help the developers understand the aim and purpouse of your pull request.**:
 
 
