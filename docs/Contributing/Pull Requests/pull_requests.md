@@ -20,7 +20,7 @@ license your work under the same license as that used by the project.
 #### Required information for a pull request
 
 
-* **What kind of change does this PR introduce?** (Bug fix, feature, docs update, ...)
+* **What kind of change does this PR introduce?** (Bug fix, feature, docs update, etc.)
 
 
 * **What is the current behavior?** (You can also link to an open issue here)
