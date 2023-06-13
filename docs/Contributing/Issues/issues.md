@@ -38,7 +38,7 @@ The issue report template is present in the issues tab on gihub, but the main po
 
 ## Issue Template
 
-**Describe the bug**<br />
+**Describe the issue**<br />
 A clear and concise description of what the bug is.
  
 **To Reproduce**<br />
