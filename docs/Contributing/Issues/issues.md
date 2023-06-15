@@ -34,36 +34,9 @@ your environment? What steps will reproduce the issue? What OS are you using, wh
 browser is used for the gui?What would you expect to be the outcome? All these
 details will help people to fix any potential bugs.
 
-The issue report template is present in the issues tab on gihub, but the main points are also shown below:
+The issue report template is present in the issues tab on gihub, a copy of it can be found [here](https://github.com/RI-SE/ATOS/blob/feature_bug_issue_template/.github/ISSUE_TEMPLATE/bug_report.md) 
 
-## Issue Template
 
-**Describe the issue**<br />
-A clear and concise description of what the bug is.
- 
-**To Reproduce**<br />
-Steps to reproduce the behavior:<br />
-1. Go to '...'<br />
-2. Click on '....'<br />
-3. Scroll down to '....'<br />
-4. See error<br />
-
-**Expected behavior**<br />
-A clear and concise description of what you expected to happen.
- 
-**Screenshots**<br />
-If applicable, add screenshots to help explain your problem.
-
-**Branch or release information (please complete the following information):**<br />
- - Branch/release name: [eg. main, dev or version 1.0.0]
- 
-**Desktop (please complete the following information):**<br />
- - OS: [e.g. ubuntu, arch]<br />
- - Browser [e.g. chrome, safari]<br />
- - Version [e.g. 22]<br />
-
-**Additional context**<br />
- Add any other context about the problem here.
 
 
 
