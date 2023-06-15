@@ -21,20 +21,20 @@ We welcome bug reports, as they are extremely helpful in furthering the developm
 
 Guidelines for bug reports:
 
-1. **Use the GitHub issue search** &mdash; check if the issue has already been
+1. **Use the GitHub bug search** &mdash; check if the bug has already been
    reported.
 
-2. **Check if the issue has been fixed** &mdash; try to reproduce it using the
+2. **Check if the bug has been fixed** &mdash; try to reproduce it using the
    latest `main` or development branch in the repository.
 
 3. **Isolate the problem** &mdash;
 A good bug report shouldn't leave others needing to chase you up for more
 information. Please try to be as detailed as possible in your report. What is
-your environment? What steps will reproduce the issue? What OS are you using, which
+your environment? What steps will reproduce the bug? What OS are you using, which
 browser is used for the gui?What would you expect to be the outcome? All these
 details will help people to fix any potential bugs.
 
-The issue report template is present in the issues tab on gihub, a copy of it can be found [here](https://github.com/RI-SE/ATOS/blob/feature_bug_issue_template/.github/ISSUE_TEMPLATE/bug_report.md) 
+The bug report template is present in the bug tab on gihub, a copy of it can be found [here](https://github.com/RI-SE/ATOS/blob/feature_bug_issue_template/.github/ISSUE_TEMPLATE/bug_report.md) 
 
 
 
