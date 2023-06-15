@@ -19,16 +19,16 @@ license your work under the same license as that used by the project.
 #### Required information for a pull request
 
 
-* **What kind of change does this PR introduce?** (Bug fix, feature, docs update, etc.)
+* What kind of change does this PR introduce? (Bug fix, feature, docs update, etc.)
 
 
-* **What is the current behavior?** (You can also link to an open issue here)
+* What is the current behavior? (You can also link to an open issue here)
 
 
-* **What is the new behavior (if this is a feature change)?**
+* What is the new behavior (if this is a feature change)?
 
 
-* **Does the PR change the way the software in this project interfaces with internal/external components such as files, other software, etc?**
+* Does the PR change the way the software in this project interfaces with internal/external components such as files, other software, etc?
 
 #### Additional information
 * In the case that you feel there is additional information, files images, or something else that will add valuable context, feel free to add anything extra that will help the developers understand the aim and purpose of your pull request.:
