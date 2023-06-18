@@ -54,7 +54,6 @@ def get_base_nodes():
             package='atos',
             namespace='atos',
             executable='object_control',
-            name='object_control',
             parameters=[files["params"]]
             # ,prefix="xterm -e gdb --args" #Useful for debugging
         ),
