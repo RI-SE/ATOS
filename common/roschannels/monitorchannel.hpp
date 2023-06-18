@@ -98,7 +98,7 @@ namespace ROSChannels {
             ObjectMonitorType outdata;
             outdata.timestamp.tv_sec = indata.atos_header.header.stamp.sec;
             outdata.timestamp.tv_usec = indata.atos_header.header.stamp.nanosec / 1000;
-            //TODO: Add state..
+            outdata.state = static_cast<ObjectStateType>(indata.object_state.state);
             outdata.position.isPositionValid = true;
             outdata.position.isXcoordValid = true;
             outdata.position.isYcoordValid = true;
