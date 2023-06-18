@@ -27,7 +27,7 @@ using namespace ROSChannels;
 using namespace std::chrono_literals;
 using namespace ATOS;
 
-ObjectControl::ObjectControl()
+ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> exec)
 	: Module(ObjectControl::moduleName),
 	scnInitSub(*this, std::bind(&ObjectControl::onInitMessage, this, _1)),
 	scnStartSub(*this, std::bind(&ObjectControl::onStartMessage, this, _1)),
@@ -42,10 +42,12 @@ ObjectControl::ObjectControl()
 	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, _1)),
 	scnRemoteControlEnableSub(*this, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1)),
 	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
+	objectStateChangeSub(*this, std::bind(&ObjectControl::onObjectStateChangeMessage, this, _1)),
 	failurePub(*this),
 	scnAbortPub(*this),
 	objectsConnectedPub(*this),
-	connectedObjectIdsPub(*this)
+	connectedObjectIdsPub(*this),
+	exec(exec)
 {
 	int queueSize=0;
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
@@ -251,10 +253,8 @@ void ObjectControl::loadScenario() {
 		RCLCPP_INFO(get_logger(), "Received %d configured object ids", idResponse->ids.size());
 
 		for (const auto id : idResponse->ids) {
-			auto trajletSub = std::make_shared<Path::Sub>(*this, id, std::bind(&ObjectControl::onPathMessage, this, _1, id));
-			auto monrPub = std::make_shared<Monitor::Pub>(*this, id);
-			auto navSatFixPub = std::make_shared<NavSatFix::Pub>(*this, id);
-			auto object = std::make_shared<TestObject>(this->get_logger(), trajletSub, monrPub, navSatFixPub);
+			auto object = std::make_shared<TestObject>(id);
+			exec->add_node(object);
 			objects.emplace(id, object);
 			objects.at(id)->setTransmitterID(id);
 
@@ -376,12 +376,7 @@ void ObjectControl::loadObjectFiles() {
 				// Check preexisting
 				auto foundObject = objects.find(id);
 				if (foundObject == objects.end()) {
-					// Create sub and pub as unique ptrs, when TestObject is destroyed, these get destroyed too.
-					
-					auto trajletSub = std::make_shared<Path::Sub>(*this, id, std::bind(&ObjectControl::onPathMessage, this, _1, id));
-					auto monrPub = std::make_shared<Monitor::Pub>(*this, id);
-					auto navSatFixPub = std::make_shared<NavSatFix::Pub>(*this, id);
-					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(get_logger(),trajletSub,monrPub,navSatFixPub);
+					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(id);
 					object->parseConfigurationFile(inputFile);
 					objects.emplace(id, object);
 				}
@@ -578,6 +573,7 @@ OsiHandler::LocalObjectGroundTruth_t ObjectControl::buildOSILocalGroundTruth(
 	return gt;
 }
 
+// TODO (NOT WORKING ATM!): Replace this with a subscriber that listens for monr messages. 
 void ObjectControl::injectObjectData(const MonitorMessage &monr) {
 	if (!objects.at(monr.first)->getObjectConfig().getInjectionMap().targetIDs.empty()) {
 		std::chrono::system_clock::time_point ts;
@@ -747,6 +743,36 @@ void ObjectControl::startObject(
 		auto str = ss.str();
 		str.pop_back();
 		RCLCPP_WARN(get_logger(), "Attempted to start nonexistent object %u - configured objects are%s", id, str.c_str());
+	}
+}
+
+void ObjectControl::onObjectStateChangeMessage(const ObjectStateChange::message_type::SharedPtr stateChangeMsg) {
+	ObjectStateType prevState = static_cast<ObjectStateType>(stateChangeMsg->prev_state.state);
+	ObjectStateType state = static_cast<ObjectStateType>(stateChangeMsg->state.state);
+	uint32_t id = stateChangeMsg->id;
+	switch (state) {
+	case OBJECT_STATE_DISARMED:
+		if (prevState == OBJECT_STATE_ABORTING) {
+			this->state->objectAbortDisarmed(*this, id);
+		}
+		else {
+			this->state->objectDisarmed(*this, id);
+		}
+		break;
+	case OBJECT_STATE_ARMED:
+		this->state->objectArmed(*this, id);
+		break;
+	case OBJECT_STATE_ABORTING:
+		this->state->objectAborting(*this, id);
+		break;
+	case OBJECT_STATE_INIT:
+	case OBJECT_STATE_RUNNING:
+	case OBJECT_STATE_POSTRUN:
+	case OBJECT_STATE_REMOTE_CONTROL:
+		break;
+
+	default:
+		RCLCPP_WARN(get_logger(), "Received unknown object state change message for object %u: %d", id, state);
 	}
 }
 
