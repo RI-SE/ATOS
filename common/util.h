@@ -120,8 +120,7 @@ extern "C"{
 // 60 * 1000
 #define MINUTE_TIME_MS 60000
 
-#define CONF_FILE_NAME "test.conf"
-#define ADAPTIVE_SYNC_FILE_NAME "adaptivesync.conf"
+#define CONF_FILE_NAME "test.conf" // TODO: Remove, Use ROS Parameters instead (params.yaml)
 #define PARAMS_FILE_NAME "params.yaml"
 
 #define MASTER_FILE_EXTENSION ".sync.m"

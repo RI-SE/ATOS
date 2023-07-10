@@ -2087,28 +2087,6 @@ int UtilVerifyTestDirectory(const char* installationPath) {
 		}
 	}
 
-	// Check so that a configuration file exists
-	char confFile[MAX_FILE_PATH];
-	strcpy(confFile, astazeroDir);
-	strcat(confFile, CONFIGURATION_DIR_NAME "/" CONF_FILE_NAME);
-	file = fopen(confFile, "r+");
-
-	if (file != NULL) {
-		fclose(file);
-	}
-	else {
-		char sysConfDir[MAX_FILE_PATH];
-		strcpy(sysConfDir, installationPath);
-		strcat(sysConfDir, SYSCONF_DIR_NAME "/" CONF_FILE_NAME);
-		
-		fprintf(stderr, "Configuration file %s does not exist, copying default from %s\n",
-			confFile, sysConfDir);
-		if (UtilCopyFile(sysConfDir, sizeof(sysConfDir), confFile, sizeof(confFile)) < 0) {
-			fprintf(stderr, "Failed to copy file\n");
-			return -1;
-		}
-	}
-
 
 	// check so that a params.yaml file exists
 	char paramsFile[MAX_FILE_PATH];
