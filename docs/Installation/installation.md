@@ -153,3 +153,5 @@ Launch ATOS
 ```bash
 ros2 launch atos launch_basic.py
 ```
+
+You are now ready to procese to the configuration section which you can find [here](../Usage/How-to/configuration.md).

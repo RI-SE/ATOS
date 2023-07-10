@@ -1,4 +1,4 @@
-# Configurations
+# Configuration
 
 ## The test directory
 After starting ATOS the first time, you will find the test directory in `~/.astazero/ATOS`. This directory will contain all test settings and will contain the following directories:
