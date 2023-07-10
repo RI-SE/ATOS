@@ -137,19 +137,13 @@ void JournalModelCollection::insertNonBookmarked() {
  *			interleaving relevant entries from all contained journals.
  * \return 0 on success, -1 otherwise
  */
-int JournalModelCollection::dumpToFile() {
+int JournalModelCollection::dumpToFile(std::string fileName) {
 
 	int retval = 0;
-	char scenarioName[PATH_MAX] = {'\0'};
 	char journalDir[PATH_MAX] = {'\0'};
 
-	// Construct output file name and path
-	if (DataDictionaryGetScenarioName(scenarioName, sizeof (scenarioName)) != READ_OK) {
-		RCLCPP_ERROR(get_logger(), "Unable to get scenario name parameter to generate output file");
-		return -1;
-	}
 	UtilGetJournalDirectoryPath(journalDir, sizeof (journalDir));
-	fs::path journalDirPath(std::string(journalDir) + std::string(scenarioName) + JOURNAL_FILE_ENDING);
+	fs::path journalDirPath(std::string(journalDir) + fileName + JOURNAL_FILE_ENDING);
 
 	std::ofstream ostrm(journalDirPath);
 	if (!ostrm.is_open()) {

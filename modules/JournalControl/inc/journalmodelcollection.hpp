@@ -24,7 +24,7 @@ public:
 	void placeStartBookmarks();
 	void placeStopBookmarks();
 	void insertNonBookmarked();
-	int dumpToFile();
+	int dumpToFile(std::string filename);
 	std::string toString() const {
 		std::string retval = "";
 		for (const auto &journal : *this) {

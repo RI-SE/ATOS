@@ -61,7 +61,8 @@ def get_base_nodes():
             package='atos',
             namespace='atos',
             executable='journal_control',
-            name='journal_control'
+            name='journal_control',
+            parameters=[files["params"]]
         ),
         Node(
             package='atos',

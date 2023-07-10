@@ -57,10 +57,6 @@ ReadWriteAccess_t DataDictionaryConstructor() {
 	ReadWriteAccess_t result = READ_WRITE_OK;
 	ReadWriteAccess_t retval = READ_WRITE_OK;
 
-	// Configuration file parameters should always exist
-	if ((result = DataDictionaryInitScenarioName()) != READ_OK) {
-		retval = READ_FAIL;
-	}
 	if ((result = DataDictionaryInitMaxPacketsLost()) != READ_OK) {
 		retval = READ_FAIL;
 	}
@@ -109,44 +105,6 @@ ReadWriteAccess_t DataDictionaryDestructor() {
 		retval = WRITE_FAIL;
 	}
 	return retval;
-}
-
-
-ReadWriteAccess_t DataDictionaryInitScenarioName() {
-	ReadWriteAccess_t Res = UNDEFINED;
-	char ResultBufferC8[DD_CONTROL_BUFFER_SIZE_1024];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_SCENARIO_NAME, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		fprintf(stderr, "ScenarioName not found!\n");
-	}
-	return Res;
-}
-
-ReadWriteAccess_t DataDictionarySetScenarioName(const char *name, const size_t nameLength) {
-	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_SCENARIO_NAME, name, nameLength)) {
-		return WRITE_OK;
-	}
-	else {
-		return PARAMETER_NOTFOUND;
-	}
-}
-
-ReadWriteAccess_t DataDictionaryGetScenarioName(char *name, const size_t nameLength) {
-	ReadWriteAccess_t Res = UNDEFINED;
-
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SCENARIO_NAME, name, nameLength)) {
-		Res = READ_OK;
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		fprintf(stderr, "ScenarioName not found!\n");
-	}
-	return Res;
 }
 
 /*!

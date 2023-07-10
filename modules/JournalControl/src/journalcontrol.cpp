@@ -50,6 +50,8 @@ JournalControl::JournalControl()
 	replaySub(*this, std::bind(&JournalControl::onReplayMessage, this, _1)),
 	exitSub(*this, std::bind(&JournalControl::onExitMessage, this, _1))
 {
+	declare_parameter("scenario_name", "default_scenario_name");
+	get_parameter("scenario_name", scenarioName);
 	initialize();
 }
 
@@ -76,7 +78,7 @@ void JournalControl::onStopMessage(const Stop::message_type::SharedPtr msg)
 		// insert them
 		journals.insertNonBookmarked();
 		// Merge journals into named output
-		journals.dumpToFile();
+		journals.dumpToFile(scenarioName);
 	} catch (std::exception &e) {
 		RCLCPP_ERROR(get_logger(), "Failed to save journal: %s", e.what());
 	}
