@@ -97,7 +97,7 @@ void ATOSBase::onRequestObjectIDs(
 		}
 
 		ObjectConfig conf(get_logger());
-		conf.parseConfigurationFile(entry.path());
+		conf.parseObjectIdFromConfigurationFile(entry.path());
 
 		RCLCPP_DEBUG(get_logger(), "Loaded configuration: %s", conf.toString().c_str());
 		// Check preexisting
