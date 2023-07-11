@@ -1,16 +1,16 @@
 atos:
   atos_base:
     ros__parameters:
-      test_origin_latitude: 0.0
-      test_origin_longitude: 0.0
-      test_origin_altitude: 0.0
+      test_origin_latitude: 57.77752905043481
+      test_origin_longitude: 12.7814573051027
+      test_origin_altitude: 193.114
       test_origin_rot: 0.0
   journal_control:
     ros__parameters:
       scenario_name: ""
   esmini_adapter:
     ros__parameters:
-      open_scenario_file: ""
+      open_scenario_file: "GaragePlanScenario.xosc"
   object_control:
     ros__parameters:
       max_missing_heartbeats: 100
