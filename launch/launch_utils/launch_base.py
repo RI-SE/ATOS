@@ -67,25 +67,9 @@ def get_base_nodes():
         Node(
             package='atos',
             namespace='atos',
-            executable='osi_adapter',
-            name='osi_adapter',
-            parameters=[files["params"]]
-        ),
-        Node(
-            package='atos',
-            namespace='atos',
             executable='esmini_adapter',
             name='esmini_adapter',
             parameters=[files["params"]]
-        ),
-        Node(
-            package='atos',
-            namespace='atos',
-            executable='mqtt_bridge',
-            name='mqtt_bridge',
-            # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
-            parameters=[files["params"]],
-            # arguments=['--ros-args', '--log-level', "debug"] # To get RCL_DEBUG prints
         ),
         Node(
             package='atos',
