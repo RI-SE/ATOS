@@ -45,7 +45,7 @@ def validate_certs(directory_path):
 
 def validate_files():
     atos_dir = os.path.join(os.path.expanduser('~'), '.astazero', 'ATOS')
-    dirs_to_validate = ["objects", "pointclouds"]
+    dirs_to_validate = ["conf", "pointclouds"]
     for dir_to_validate in dirs_to_validate:
         validate_directory(atos_dir / Path(dir_to_validate))
 
@@ -53,6 +53,9 @@ def validate_files():
     openx_dirs = ["odr", "osc", "Catalogs"]
     for openx_dir in openx_dirs:
         validate_directory(atos_dir / Path(openx_dir), get_package_prefix('atos') / Path("etc") / Path(openx_dir))
+
+    # objects dir
+    validate_directory(atos_dir / Path("objects"), get_package_prefix('atos') / Path("etc") / Path("objects"))
 
     # Certs
     [cert, key] = validate_certs(atos_dir / Path("certs"))
