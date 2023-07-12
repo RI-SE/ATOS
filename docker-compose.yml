@@ -5,6 +5,7 @@ services:
     build: 
       context: .
       dockerfile: ./Dockerfile
+    network_mode: host
     ipc: host
     stop_signal: SIGINT
     privileged: true
@@ -12,14 +13,4 @@ services:
     tty: true
     volumes:
       - ~/.astazero/ATOS/:/root/.astazero/ATOS/
-    ports:
-      - "80:80" 
-      - "8080:8080" 
-      - "8081:8081"
-      - "8082:8082"
-      - "3000:3000" 
-      - "3443:3443"
-      - "55555:55555"
-      - "443:443"
-      - "9090:9090" 
     command: bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
