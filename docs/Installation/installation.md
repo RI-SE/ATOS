@@ -2,21 +2,25 @@
 There are two ways of starting ATOS: using the docker image or building from source. The docker image is the easiest way to get started, but if you intend to make changes to ATOS, we recommend building from source.
 
 ## <a name="docker"></a> Using the docker image
-To run ATOS using docker compose, first install docker on your computer. Update the path in the docker-compose.yaml file to were your .astazero folder is/should be found. Then, run the following command from the root repo directory:
+To run ATOS using docker compose, first [install docker](https://docs.docker.com/engine/install/) on your computer. Download the [ATOS repo](https://github.com/RI-SE/ATOS). Then, run the following command from the root repo directory:
 ```bash
 docker compose up
+```
+or if you are not in the docker group:
+```bash
+sudo -E docker compose up
 ```
 
 If you run Docker Engine you can start ATOS using the computers own network stack with
 ```bash
 docker run --network="host"  --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
 ```
-If you run Docker Desktop you will need to specify the ports to expose them to the host computer.
-```bash
-docker run --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ -p 80:80 -p 8080:8080 -p 8081:8081 -p 8082:8082 -p 3000:3000 -p 3443:3443 -p 55555:55555 -p 443:443 -p 9090:9090 astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
-```
+If you run Docker Desktop, special care must be taken to allow the container running in the Docker Desktop VM to communicate with clients running on the host network. If uncertain about this we suggest installing Docker Engine instead. 
 
-You might wish to mount the config directory at ~/.astazero/ATOS/ to a different location on your host computer. This can be done by changing the path after the -v flag in the above command. You might also wish to inspect the image instead of running the launch_basic.py script. This can be done by removing the last "bash -c ..." part of the command.
+Note: If no preexisting .astazero/ATOS folder is found, the docker image will create one. This folder will have root user permissions due to the way the docker image is built. For ease of use, change owner to your own user, run the following command on the host machine:
+```bash 
+sudo chown -R $USER:$USER ~/.astazero/ATOS/
+```
 
 ## <a name="Installation script"></a> Using the installation script
 ATOS comes with an installation script that automates the installation process. It is intended for use on Ubuntu 20.04 or 22.04, and has been tested on a fresh install of Ubuntu 20.04. The script will install ROS2, ATOS dependencies, and ATOS itself. It will also create a workspace and build ATOS. The script can be executed using the following command:
@@ -153,5 +157,4 @@ Launch ATOS
 ```bash
 ros2 launch atos launch_basic.py
 ```
-
-You are now ready to procese to the configuration section which you can find [here](../Usage/How-to/configuration.md).
+When running ATOS for the first time and the no preexisting .astazero/ATOS folder is found, ATOS will create some barebone configuration files which you can read more about in the configuration section [here](../Usage/How-to/configuration.md).
