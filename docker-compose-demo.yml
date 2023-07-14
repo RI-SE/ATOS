@@ -1,0 +1,34 @@
+version: "3.2"
+services:
+  atos:
+    image: astazero/atos_docker_env:latest
+    build: 
+      context: .
+      dockerfile: ./Dockerfile
+    ipc: host
+    stop_signal: SIGINT
+    stop_grace_period: 15s
+    privileged: true
+    stdin_open: true
+    tty: true
+    volumes:
+      - ~/.astazero/ATOS/:/root/.astazero/ATOS/
+    ports:
+      - "80:80" 
+      - "8080:8080" 
+      - "8081:8081"
+      - "8082:8082"
+      - "3000:3000" 
+      - "3443:3443"
+      - "55555:55555"
+      - "443:443"
+      - "9090:9090" 
+    command: bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
+  isoObject:
+    image: astazero/iso_object_demo:latest
+    privileged: true
+    stdin_open: true
+    tty: true
+    ports: 
+      - "53240:53240/udp"
+      - "53241:53241/tcp"
