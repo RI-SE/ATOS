@@ -25,7 +25,7 @@ This section will walk you through the steps of starting ATOS on a host machine 
 
     ![Alt text](isoobject_preconnect.png)
 
-* Open a web browser and go to [localhost:3443](http://localhost:3443). You should see a page warning about NET::ERR_CERT_AUTHORITY_INVALID. This is because the certificates we create are self signed. Click on "Advanced" and then "Proceed to localhost (unsafe)". Now you should see the ATOS control panel.
+* Open a web browser and go to [https://localhost:3443](https://localhost:3443). You should see a page warning about NET::ERR_CERT_AUTHORITY_INVALID. This is because the certificates we create are self signed. Click on "Advanced" and then "Proceed to localhost (unsafe)". Now you should see the ATOS control panel.
 
     ![Alt text](controlpanel.png)
 
