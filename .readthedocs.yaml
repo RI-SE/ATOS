@@ -12,7 +12,7 @@ build:
     python: "3.8"
   jobs:
     post_create_environment: 
-      - doxygen Doxyfile
+      - apt install graphviz && doxygen Doxyfile
 
 # Build documentation in the docs/ directory with mkdocs
 mkdocs:
