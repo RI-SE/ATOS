@@ -10,9 +10,11 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.8"
+  apt_packages:
+    - graphviz
   jobs:
     post_create_environment: 
-      - apt install graphviz && doxygen Doxyfile
+      - doxygen Doxyfile
 
 # Build documentation in the docs/ directory with mkdocs
 mkdocs:
