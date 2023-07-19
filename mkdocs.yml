@@ -4,6 +4,8 @@ theme:
     name: readthedocs
     logo: res/ATOS_icon.png
 
+markdown_extensions:
+  - admonition
 nav:
   - ATOS Doxygen: html/index.html
   - Home:
