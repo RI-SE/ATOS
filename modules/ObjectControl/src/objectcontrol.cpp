@@ -17,7 +17,6 @@
 #include "state.hpp"
 #include "util.h"
 #include "journal.hpp"
-#include "datadictionary.h"
 
 #include "objectcontrol.hpp"
 
@@ -56,51 +55,19 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory);
 	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp);
 	triggerClient = create_client<atos_interfaces::srv::GetObjectTriggerStart>(ServiceNames::getObjectTriggerStart);
-	if (this->initialize() == -1) {
-		throw std::runtime_error(std::string("Failed to initialize ") + get_name());
-	}
 	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(ServiceNames::getObjectControlState,
 		std::bind(&ObjectControl::onRequestState, this, _1, _2));
+
+	// Set the initial state
+	this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
+	// Create test journal
+	if (JournalInit(get_name(), get_logger()) == -1) {
+		RCLCPP_ERROR(get_logger(), "Unable to create test journal");
+	}
 };
 
 ObjectControl::~ObjectControl() {
 	delete state;
-}
-
-int ObjectControl::initialize() {
-	int retval = 0;
-
-	// Create test journal
-	if (JournalInit(get_name(), get_logger()) == -1) {
-		retval = -1;
-		RCLCPP_ERROR(get_logger(), "Unable to create test journal");
-	}
-
-	if (requestDataDictInitialization()) {
-		// Map state and object data into memory
-		if (DataDictionaryInitObjectData() != READ_OK) {
-			DataDictionaryFreeObjectData();
-			retval = -1;
-			RCLCPP_ERROR(get_logger(),
-						"Found no previously initialized shared memory for object data");
-		}
-		if (DataDictionaryInitStateData() != READ_OK) {
-			DataDictionaryFreeStateData();
-			retval = -1;
-			RCLCPP_ERROR(get_logger(),
-						"Found no previously initialized shared memory for state data");
-		}
-		else {
-			// Set state
-			this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
-			DataDictionarySetOBCState(this->state->asNumber());
-		}
-	}
-	else {
-		retval = -1;
-		RCLCPP_ERROR(get_logger(), "Unable to initialize data dictionary");
-	}
-	return retval;
 }
 
 void ObjectControl::onRequestState(
@@ -346,13 +313,6 @@ void ObjectControl::loadScenario() {
 	auto request = std::make_shared<atos_interfaces::srv::GetObjectIds::Request>();
 	auto promise = idClient->async_send_request(request, idsCallback);
 	return;
-
-
-	this->loadObjectFiles();
-	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, std::shared_ptr<TestObject>> &o) {
-		auto data = o.second->getAsObjectData();
-		DataDictionarySetObjectData(&data);
-	});
 }
 
 void ObjectControl::loadObjectFiles() {

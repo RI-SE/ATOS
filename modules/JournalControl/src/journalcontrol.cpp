@@ -29,7 +29,6 @@
 
 #include "journalcontrol.hpp"
 #include "journal.hpp"
-#include "datadictionary.h"
 
 #if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
 namespace fs = std::filesystem;
