@@ -120,7 +120,6 @@ extern "C"{
 // 60 * 1000
 #define MINUTE_TIME_MS 60000
 
-#define CONF_FILE_NAME "test.conf" // TODO: Remove, Use ROS Parameters instead (params.yaml)
 #define PARAMS_FILE_NAME "params.yaml"
 
 #define MASTER_FILE_EXTENSION ".sync.m"
@@ -633,8 +632,6 @@ void UtilgetDateTimefromUTCCSVformat(int64_t utc_ms, char *buffer, int size_t);
 void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int size_t);
 
 void util_error(const char *message);
-int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
-int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
 // File system functions
 void UtilGetTestDirectoryPath(char* path, size_t pathLen);
@@ -723,8 +720,6 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
-int32_t UtilWriteConfigurationParameter(const enum ConfigurationFileParameter parameter, const char* newValue, const size_t bufferLength);
-int32_t UtilReadConfigurationParameter(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength);
 char* UtilGetConfigurationParameterAsString(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength);
 enum ConfigurationFileParameter UtilParseConfigurationParameter(const char* parameter, const size_t bufferLength);
 char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter, char *returnValue, const size_t bufferLength);

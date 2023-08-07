@@ -34,7 +34,6 @@
 
 #include "util.h"
 #include "atosTime.h"
-#include "datadictionary.h"
 
 
 /*------------------------------------------------------------
@@ -645,44 +644,6 @@ int UtilAddNBytesMessageData(unsigned char *MessageBuffer, int StartIndex, int L
 }
 
 
-int iUtilGetParaConfFile(char *pcParameter, char *pcValue) {
-	FILE *filefd;
-	int iFindResult;
-	char pcTemp[512];
-	char confPathDir[MAX_FILE_PATH];
-
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcat(confPathDir, CONF_FILE_NAME);
-
-	iFindResult = 0;
-
-	filefd = fopen(confPathDir, "rb");
-
-	if (filefd == NULL) {
-		return 0;
-	}
-
-	while (fgets(pcTemp, 512, filefd) != NULL) {
-		if ((strstr(pcTemp, pcParameter)) != NULL) {
-
-			/* Does contain any value? */
-			if (strlen(pcTemp) > (strlen(pcParameter) + 1)) {
-				/* replace new line */
-				if (pcTemp[strlen(pcTemp) - 1] == '\n') {
-					pcTemp[strlen(pcTemp) - 1] = 0;
-				}
-				strcpy(pcValue, &pcTemp[strlen(pcParameter) + 1]);
-			}
-			iFindResult = 1;
-		}
-	}
-
-	if (filefd) {
-		fclose(filefd);
-	}
-
-	return 1;
-}
 
 
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint * ASP, FILE * filefd, char debug) {
@@ -1939,20 +1900,6 @@ C8 *UtilSearchTextFile(const C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result)
 }
 
 
-int iUtilGetIntParaConfFile(char *pcParameter, int *iValue) {
-	int iResult;
-	char pcValue[512];
-
-	bzero(pcValue, 512);
-	iResult = iUtilGetParaConfFile(pcParameter, pcValue);
-
-	if (iResult > 0) {
-		*iValue = atoi(pcValue);
-	}
-
-	return iResult;
-}
-
 /*!
  * \brief getTestDirectoryPath Gets the absolute path to the directory where subdirectories for
  * trajectories, geofences, configuration etc. are stored, ending with a forward slash. The
@@ -2555,50 +2502,6 @@ int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen) {
 	return retval;
 }
 
-/*------------------------------------------------------------
-  -- Function traj2ldm
-  --  converts a traj file format to a ldm:monitor_t
-  ------------------------------------------------------------*/
-
-void traj2ldm(float time, double x, double y, double z, float hdg, float vel, monitor_t * ldm) {
-
-	char pcTempBuffer[512];
-
-	double earth_radius = EARTH_EQUATOR_RADIUS_M;
-
-	double lat_origin = 0.0;
-	double lon_origin = 0.0;
-	double alt_origin = 0.0;
-	double lat = 0.0;
-	double lon = 0.0;
-	double alt = 0.0;
-
-	ldm->timestamp = (uint64_t) (time * 100);
-	ldm->speed = (uint16_t) (vel * 100);
-	ldm->heading = (uint16_t) (hdg * 100);
-
-	bzero(pcTempBuffer, 512);
-	iUtilGetParaConfFile("OrigoLatitude=", pcTempBuffer);
-	sscanf(pcTempBuffer, "%lf", &lat_origin);
-
-	bzero(pcTempBuffer, 512);
-	iUtilGetParaConfFile("OrigoLongitude=", pcTempBuffer);
-	sscanf(pcTempBuffer, "%lf", &lon_origin);
-
-	bzero(pcTempBuffer, 512);
-	iUtilGetParaConfFile("OrigoAltitude=", pcTempBuffer);
-	sscanf(pcTempBuffer, "%lf", &alt_origin);
-
-	lat = ((y * 180) / (M_PI * earth_radius)) + lat_origin;
-	lon =
-		((x * 180) / (M_PI * earth_radius)) * (1 / (cos((M_PI / 180) * (0.5 * (lat_origin + lat))))) + lon_origin;
-	alt = z + alt_origin;
-
-	ldm->latitude = (uint32_t) (lat * 10000000);
-	ldm->longitude = (uint32_t) (lon * 10000000);
-	ldm->altitude = (uint32_t) (alt * 100);
-
-}
 
 
 static void init_crc16_tab(void);
@@ -3108,121 +3011,6 @@ U16 UtilGetMillisecond(TimeType * GPSTime) {
 }
 
 
-/*
-UtilWriteConfigurationParameter updates parameters in the file test.conf.
-
-- *ParameterName the name of the parameter in test.conf
-- *NewValue the value of the parameter.
-- Debug enable(1)/disable(0) debug printouts
-*/
-int32_t UtilWriteConfigurationParameter(const enum ConfigurationFileParameter parameterName,
-										const char *newValue, const size_t bufferLength) {
-
-	int32_t RowCount, i;
-	char Parameter[SMALL_BUFFER_SIZE_64];
-	char Row[SMALL_BUFFER_SIZE_128];
-	char NewRow[SMALL_BUFFER_SIZE_128];
-	FILE *fd, *TempFd;
-	char *ptr1, *ptr2;
-	uint8_t ParameterFound = 0;
-	char confPathDir[MAX_FILE_PATH];
-	char tempConfPathDir[MAX_FILE_PATH];
-	const char TEMP_FILE_NAME[] = "temp-util.conf";
-
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcpy(tempConfPathDir, confPathDir);
-	strcat(confPathDir, CONF_FILE_NAME);
-	strcat(tempConfPathDir, TEMP_FILE_NAME);
-
-	memset(Parameter, 0, sizeof (Parameter));
-
-	UtilGetConfigurationParameterAsString(parameterName, Parameter, sizeof (Parameter));
-
-	strcat(Parameter, "=");
-
-	//Remove temporary file
-	remove(tempConfPathDir);
-
-	//Create temporary file
-	TempFd = fopen(tempConfPathDir, "w+");
-
-	//Open configuration file
-	fd = fopen(confPathDir, "r");
-
-	if (fd != NULL) {
-		RowCount = UtilCountFileRows(fd);
-		fclose(fd);
-		fd = fopen(confPathDir, "r");
-
-		for (i = 0; i < RowCount; i++) {
-			bzero(Row, SMALL_BUFFER_SIZE_128);
-			UtilReadLine(fd, Row);
-
-			ptr1 = strstr(Row, Parameter);
-			ptr2 = strstr(Row, "//");
-			if (ptr2 == NULL)
-				ptr2 = ptr1;	//No comment found
-			if (ptr1 != NULL && (U64) ptr2 >= (U64) ptr1 && ParameterFound == 0) {
-				ParameterFound = 1;
-				bzero(NewRow, SMALL_BUFFER_SIZE_128);
-				strncpy(NewRow, Row, (U64) ptr1 - (U64) Row + strlen(Parameter));
-				strncat(NewRow, newValue, bufferLength);
-				if ((U64) ptr2 > (U64) ptr1) {
-					strcat(NewRow, " ");	// Add space
-					strcat(NewRow, ptr2);	// Add the comment
-				}
-				fprintf("Changed parameter: %s\n", NewRow);
-
-				strcat(NewRow, "\n");
-				(void)fwrite(NewRow, 1, strlen(NewRow), TempFd);
-
-			}
-			else {
-				strcat(Row, "\n");
-				(void)fwrite(Row, 1, strlen(Row), TempFd);
-			}
-		}
-		fclose(TempFd);
-		fclose(fd);
-
-		//Remove test.conf
-		remove(confPathDir);
-
-		//Rename temp.conf to test.conf
-		rename(tempConfPathDir, confPathDir);
-
-		//Remove temporary file
-		remove(tempConfPathDir);
-	}
-	else {
-		fprintf(stderr, "Unable to open configuration file %s\n", confPathDir);
-	}
-
-	return (int32_t) ParameterFound;
-}
-
-int32_t UtilReadConfigurationParameter(const enum ConfigurationFileParameter parameter,
-									   char *returnValue, const size_t bufferLength) {
-
-	char TextBuffer[SMALL_BUFFER_SIZE_128];
-	char confPathDir[MAX_FILE_PATH];
-
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcat(confPathDir, CONF_FILE_NAME);
-
-	memset(TextBuffer, 0, sizeof (TextBuffer));
-	memset(returnValue, 0, bufferLength);
-
-	UtilGetConfigurationParameterAsString(parameter, TextBuffer, sizeof (TextBuffer));
-	strcat(TextBuffer, "=");
-
-	UtilSearchTextFile(confPathDir, TextBuffer, "", returnValue);
-
-	fprintf("Read parameter: %s%s\n", TextBuffer, returnValue);
-
-	return strnlen(returnValue, bufferLength);
-}
-
 char *UtilGetConfigurationParameterAsString(const enum ConfigurationFileParameter parameter,
 											char *returnValue, const size_t bufferLength) {
 	const char *outputString = NULL;
@@ -3466,27 +3254,27 @@ int UtilReadOriginConfiguration(GeoPositionType* origin) {
 	GeoPositionType retval;
 	char setting[20];
 	char* endptr;
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
-									   setting, sizeof (setting))) {
-		retval.Latitude = strtod(setting, &endptr);
-		if (endptr == setting) {
-			return -1;
-		}
-	}
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
-									   setting, sizeof (setting))) {
-		retval.Longitude = strtod(setting, &endptr);
-		if (endptr == setting) {
-			return -1;
-		}
-	}
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE,
-									   setting, sizeof (setting))) {
-		retval.Altitude = strtod(setting, &endptr);
-		if (endptr == setting) {
-			return -1;
-		}
-	}
+	// if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
+	// 								   setting, sizeof (setting))) {
+	// 	retval.Latitude = strtod(setting, &endptr);
+	// 	if (endptr == setting) {
+	// 		return -1;
+	// 	}
+	// }
+	// if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
+	// 								   setting, sizeof (setting))) {
+	// 	retval.Longitude = strtod(setting, &endptr);
+	// 	if (endptr == setting) {
+	// 		return -1;
+	// 	}
+	// }
+	// if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE,
+	// 								   setting, sizeof (setting))) {
+	// 	retval.Altitude = strtod(setting, &endptr);
+	// 	if (endptr == setting) {
+	// 		return -1;
+	// 	}
+	// }
 	retval.Heading = 0; // TODO
 	*origin = retval;
 	return 0;
