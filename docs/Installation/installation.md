@@ -52,8 +52,11 @@ http://packages.ros.org/ros2/ubuntu \
 $(source /etc/os-release && echo $UBUNTU_CODENAME) main" | \
 sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
 ```
+### Installing ROS 2 Foxy
+ATOS Supports both ROS 2 Foxy and ROS 2 Humble. Chose one of the versions, we recommend Foxy as the default choice.
+ Instructions for Humble follow in the next subsection.
 
-Install ROS 2 Foxy for desktop and colcon
+ To install ROS 2 Foxy, do:
 ```bash
 sudo apt update
 sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs \
@@ -67,7 +70,7 @@ source /opt/ros/foxy/setup.bash
 ```
 Add the above line to ~/.bashrc or similar startup script to automate this process.
 
-For installing for ROS 2 Humble, do:
+### Installing ROS 2 Humble
 If you instead want to install ROS 2 Humble, do:
 ```bash
 sudo apt update
@@ -80,6 +83,7 @@ and source the setup script:
 ```bash
 source /opt/ros/humble/setup.bash
 ```
+Add the above line to ~/.bashrc or similar startup script to automate this process.
 
 ## <a name="dependencies"></a> Dependencies & external libraries
 In order to build ATOS, dependencies and exernal libraries need to be installed. First install the necessary development packages:
