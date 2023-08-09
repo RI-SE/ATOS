@@ -19,7 +19,7 @@ docker run --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS
 You might wish to mount the config directory at ~/.astazero/ATOS/ to a different location on your host computer. This can be done by changing the path after the -v flag in the above command. You might also wish to inspect the image with instead of running the launch_basic.py script. This can be done by removing the last "bash -c ..." part of the command.
 
 ## <a name="Installation script"></a> Using the installation script
-ATOS comes with an installation script that automates the installation process. It is intended for use on Ubuntu 20.04 or 22.04, and has been tested on a fresh install of Ubuntu 20.04. The script will install ROS2, ATOS dependencies, and ATOS itself. It will also create a workspace and build ATOS. The script can be run using the following command:
+ATOS comes with an installation script that automates the installation process. It is intended for use on Ubuntu 20.04 or 22.04, and has been tested on a fresh install of Ubuntu 20.04. The script will install ROS 2, ATOS dependencies, and ATOS itself. It will also create a workspace and build ATOS. The script can be run using the following command:
 ```bash
 ./install_atos.sh
 ```
@@ -27,23 +27,23 @@ ATOS comes with an installation script that automates the installation process. 
 ## <a name="Native build"></a> Building from source manually
 The following instructions are for installing ATOS manually on Ubuntu 20.04.
 
-## <a name="ros2"></a> Installing ROS2
+## <a name="ros2"></a> Installing ROS 2
 
-ATOS is based on ROS2, and requires ROS2 to be installed on the host computer. The following instructions are for installing ROS2 on Ubuntu 20.04.
+ATOS is based on ROS 2, and requires ROS 2 to be installed on the host computer. The following instructions are for installing ROS 2 on Ubuntu 20.04.
 
-Download ROS2 prerequisites:
+Download ROS 2 prerequisites:
 ```bash
 sudo apt update && sudo apt install curl gnupg2 lsb-release
 ```
 
-Authorize the ROS2 gpg key with apt:
+Authorize the ROS 2 gpg key with apt:
 ```bash
 sudo apt update && sudo apt install curl gnupg2 lsb-release
 sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key  \
 -o /usr/share/keyrings/ros-archive-keyring.gpg
 ```
 
-Add the ROS2 repo to sources list:
+Add the ROS 2 repo to sources list:
 
 ```bash
 echo "deb [arch=$(dpkg --print-architecture) \
@@ -52,8 +52,11 @@ http://packages.ros.org/ros2/ubuntu \
 $(source /etc/os-release && echo $UBUNTU_CODENAME) main" | \
 sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
 ```
+### Installing ROS 2 Foxy
+ATOS Supports both ROS 2 Foxy and ROS 2 Humble. Chose one of the versions, we recommend Foxy as the default choice.
+ Instructions for Humble follow in the next subsection.
 
-Install ros foxy for desktop and colcon
+ To install ROS 2 Foxy, do:
 ```bash
 sudo apt update
 sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs \
@@ -64,6 +67,21 @@ ros-foxy-rosbridge-suite ros-foxy-pcl-conversions
 source the setup script:
 ```bash
 source /opt/ros/foxy/setup.bash
+```
+Add the above line to ~/.bashrc or similar startup script to automate this process.
+
+### Installing ROS 2 Humble
+If you instead want to install ROS 2 Humble, do:
+```bash
+sudo apt update
+sudo apt install ros-humble-desktop python3-colcon-common-extensions ros-humble-nav-msgs \
+ros-humble-geographic-msgs ros-humble-foxglove-msgs ros-humble-sensor-msgs \
+ros-humble-rosbridge-suite ros-humble-pcl-conversions
+```
+
+and source the setup script:
+```bash
+source /opt/ros/humble/setup.bash
 ```
 Add the above line to ~/.bashrc or similar startup script to automate this process.
 
