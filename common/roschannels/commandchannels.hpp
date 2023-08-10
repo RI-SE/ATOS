@@ -12,6 +12,7 @@
 #include "atos_interfaces/msg/object_id_array.hpp"
 #include "atos_interfaces/msg/object_trigger_start.hpp"
 
+//! ROSChannels namespace
 namespace ROSChannels {
     namespace Init {
         const std::string topicName = "init";
