@@ -828,5 +828,12 @@ void ObjectControl::publishScenarioInfoToJournal() {
 
 	}
 	JournalRecordData(JOURNAL_RECORD_STRING, ss.str().c_str());
+
+	// print params.yaml in journal
+	auto path = getenv("HOME") + std::string("/.astazero/ATOS/conf/params.yaml");
+	std::ifstream ifs(path);
+	std::stringstream params;
+	params << "Parameters from params.yaml: \n" << ifs.rdbuf();
+	JournalRecordData(JOURNAL_RECORD_STRING, params.str().c_str());
 	JournalRecordData(JOURNAL_RECORD_STRING, "--- End of Scenario Info ---");
 }
