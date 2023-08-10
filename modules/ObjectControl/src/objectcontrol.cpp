@@ -174,7 +174,8 @@ void ObjectControl::onAbortMessage(const Abort::message_type::SharedPtr){
 	this->state->abortRequest(*this);
 }
 
-void ObjectControl::onAllClearMessage(const AllClear::message_type::SharedPtr){	
+void ObjectControl::onAllClearMessage(const AllClear::message_type::SharedPtr){
+  publishScenarioInfoToJournal(); // TODO: This should be moved to a state that occurs right after a test is finished
 	COMMAND cmd = COMM_ABORT_DONE;
 	auto f_try = [&]() { this->state->allClearRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
@@ -794,4 +795,38 @@ void ObjectControl::stopControlSignalSubscriber(){
 
 void ObjectControl::sendAbortNotification(){
 	this->scnAbortPub.publish(ROSChannels::Abort::message_type());
+}
+
+/**
+ * @brief Publishes scenario info to the journal
+ * 
+ */
+void ObjectControl::publishScenarioInfoToJournal() {
+	JournalRecordData(JOURNAL_RECORD_STRING, "--- Scenario Info ---");
+	std::stringstream ss;
+	int index = 1;
+	for (const auto& object : objects) {
+		auto testObject = object.second;
+		auto traj = testObject->getTrajectory();
+
+		// Convert binary IP to string for logging
+		auto ip = testObject->getAsObjectData().ClientIP;
+		char ip_str[INET_ADDRSTRLEN];
+		inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN);
+
+		ss << "\n> Object " << index << ": \n"
+			 << "\t - ID: " << object.first << "\n" 
+			 << "\t - IP: " << ip_str << "\n"
+			 << "\t - Origin: (" << testObject->getOrigin().latitude_deg << ", " << testObject->getOrigin().longitude_deg << ", " << testObject->getOrigin().altitude_m << ")\n"
+			 << "\t - Trajectory size: " << testObject->getTrajectory().size() << "\n"
+			 << "\t - Trajectory: \n";
+		for (const auto& point : traj.points) {
+			ss << "\t\t" << point.toString() << "\n";
+		}
+
+		++index;
+
+	}
+	JournalRecordData(JOURNAL_RECORD_STRING, ss.str().c_str());
+	JournalRecordData(JOURNAL_RECORD_STRING, "--- End of Scenario Info ---");
 }
