@@ -22,6 +22,7 @@
 #include "atos_interfaces/msg/cartesian_trajectory.hpp"
 
 #include "util.h"
+//! ATOS Namespace
 namespace ATOS {
 class Trajectory : public Loggable {
 public:
