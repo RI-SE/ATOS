@@ -157,4 +157,4 @@ Launch ATOS
 ```bash
 ros2 launch atos launch_basic.py
 ```
-When running ATOS for the first time and the no preexisting .astazero/ATOS folder is found, ATOS will create some barebone configuration files which you can read more about in the configuration section [here](../Usage/How-to/configuration.md).
+When running ATOS for the first time and the no pre-existing .astazero/ATOS folder is found, ATOS will create some barebone configuration files which you can read more about in the configuration section [here](../Usage/How-to/configuration.md).
