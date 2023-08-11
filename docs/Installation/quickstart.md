@@ -21,7 +21,7 @@ This section will walk you through the steps of starting ATOS on a host machine 
         sudo chown -R $USER:$USER ~/.astazero/ATOS/
         
 
-* Download and build the ISO_objectDemo binary from the [isoObject repo](https://github.com/RI-SE/isoObject). Follow the build instructions and execute the binary ISO_objectDemo in the build folder. (This object is not controlable but will respond to control messages from ATOS. It is used to test the connection between ATOS and the object.)
+* Download and build the ISO_objectDemo binary from the [isoObject repo](https://github.com/RI-SE/isoObject). Follow the build instructions and execute the binary ISO_objectDemo in the build folder. (This object is not controllable but will respond to control messages from ATOS. It is used to test the connection between ATOS and the object.)
 
     ![Alt text](isoobject_preconnect.png)
 
