@@ -41,7 +41,6 @@ private:
 
 
     static std::string getDateAsString(const std::chrono::system_clock::time_point &date);
-    static int printJournalHeaderTo(std::ofstream &ostrm);
     static std::string getCurrentDateAsString();
     static std::vector<fs::path> getJournalFilesFrom(const std::chrono::system_clock::time_point &date);
     static std::vector<fs::path> getJournalFilesFromToday() {

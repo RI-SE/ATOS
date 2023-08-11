@@ -150,16 +150,6 @@ int JournalModelCollection::dumpToFile(std::string fileName) {
 		return -1;
 	}
 
-	try {
-		printJournalHeaderTo(ostrm);
-	}
-	catch (const std::runtime_error& e) {
-		RCLCPP_ERROR(get_logger(), "Unable to write journal header to %s: %s",
-				   journalDirPath.c_str(), e.what());
-		ostrm.close();
-		return -1;
-	}
-
 	/*!
 	 * \brief The JournalFileSection struct is used to keep track of reading one
 	 *			file section which is part of a journal.
@@ -264,59 +254,6 @@ int JournalModelCollection::dumpToFile(std::string fileName) {
 	RCLCPP_INFO(get_logger(), "Generated output journal %s", journalDirPath.stem().c_str());
 	return retval;
 }
-
-
-
-int JournalModelCollection::printJournalHeaderTo(std::ofstream &ostrm) {
-	std::vector<char> trajectoryDirectory(PATH_MAX, '\0');
-	std::vector<char> configurationDirectory(PATH_MAX, '\0');
-	std::vector<char> objectDirectory(PATH_MAX, '\0');
-	std::ifstream istrm;
-	fs::path fileDirectory;
-
-	ostrm << "------------------------------------------" << std::endl;
-	ostrm << "Whole object files" << std::endl;
-	ostrm << "------------------------------------------" << std::endl;
-
-	UtilGetObjectDirectoryPath(objectDirectory.data(), objectDirectory.size());
-	objectDirectory.erase(std::find(objectDirectory.begin(), objectDirectory.end(), '\0'),
-							  objectDirectory.end());
-	std::remove(std::find(objectDirectory.begin(), objectDirectory.end(), '\0'),
-				objectDirectory.end(), '\0');
-	fileDirectory.assign(objectDirectory.begin(), objectDirectory.end());
-
-	printFilesTo(fileDirectory, ostrm);
-
-	ostrm << "------------------------------------------" << std::endl;
-	ostrm << "Whole trajectory files" << std::endl;
-	ostrm << "------------------------------------------" << std::endl;
-
-	UtilGetTrajDirectoryPath(trajectoryDirectory.data(), trajectoryDirectory.size());
-	trajectoryDirectory.erase(std::find(trajectoryDirectory.begin(), trajectoryDirectory.end(), '\0'),
-							  trajectoryDirectory.end());
-	std::remove(std::find(trajectoryDirectory.begin(), trajectoryDirectory.end(), '\0'),
-				trajectoryDirectory.end(), '\0');
-	fileDirectory.assign(trajectoryDirectory.begin(), trajectoryDirectory.end());
-
-	printFilesTo(fileDirectory, ostrm);
-
-	ostrm << "------------------------------------------" << std::endl;
-	ostrm << "Whole configuration files" << std::endl;
-	ostrm << "------------------------------------------" << std::endl;
-
-	UtilGetConfDirectoryPath(configurationDirectory.data(), configurationDirectory.size());
-	configurationDirectory.erase(std::find(configurationDirectory.begin(), configurationDirectory.end(), '\0'),
-								 configurationDirectory.end());
-	std::remove(std::find(configurationDirectory.begin(), configurationDirectory.end(), '\0'),
-				configurationDirectory.end(), '\0');
-	fileDirectory.assign(configurationDirectory.begin(), configurationDirectory.end());
-
-	printFilesTo(fileDirectory, ostrm);
-
-	// TODO: information about file structure
-	return 0;
-}
-
 
 /*!
  * \brief getCurrentDateAsString Creates a string on the format YYYY-MM-DD of the current date.
