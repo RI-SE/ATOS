@@ -27,6 +27,7 @@ This section will walk you through the steps of starting the ATOS server for the
 
 * Open a web browser and go to [https://localhost:3443](https://localhost:3443). You should see a page warning about NET::ERR_CERT_AUTHORITY_INVALID. This is because the certificates we create are self signed. Click on "Advanced" and then "Proceed to localhost (unsafe)". Now you should see the ATOS control panel.
 
+Repeat the above steps for the self-signed WebSocket SSL certificate [https://localhost:9090](https://localhost:9090)
     ![Alt text](controlpanel.png)
 
 * In your browser, go to [Foxglove studio](https://studio.foxglove.dev/). Press Open connection -> Rosbridge. Enter WebSocket URL wss://localhost:9090. Press Open. You should now see ROS topics in the left panel named "Topics". 
