@@ -1,4 +1,4 @@
 ## ATOS OpenDrive folder
 
-This folder contains OpenDrive files of various test tracks at AstaZero. 
+This folder contains OpenDrive files of various test areas at AstaZero. 
 
