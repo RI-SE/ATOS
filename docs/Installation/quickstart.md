@@ -5,7 +5,7 @@ Make sure you have installed ATOS by following the instructions in the [Installa
 
 # Quick start
 
-This section will walk you through the steps of starting ATOS on a host machine that has never started ATOS before. 
+This section will walk you through the steps of starting the ATOS server for the first time. 
 
 * Start ATOS by running either one of the docker commands (or with "ros2 launch ..." if you have installed it locally). This guide will show ATOS running on a host computer with docker compose.
 
