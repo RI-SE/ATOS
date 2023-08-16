@@ -5,7 +5,7 @@
         "lat": 57.777516739360564,
         "lon": 12.78165936470032
       },
-      "customTileUrl": "http://10.113.148.2/tiles/asta-1/{z}/{x}/{y}.png",
+      "customTileUrl": "",
       "disabledTopics": [
         "/atos/object_1/object_monitor"
       ],

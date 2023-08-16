@@ -10,7 +10,7 @@
         "lat": 57.777672270673726,
         "lon": 12.781346216797829
       },
-      "customTileUrl": "http://10.113.148.2/tiles/flexzone_tiles/{z}/{x}/{y}.png",
+      "customTileUrl": "",
       "disabledTopics": [
         "/atos/object_1/object_monitor"
       ],
