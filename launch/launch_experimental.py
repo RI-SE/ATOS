@@ -4,7 +4,7 @@ import launch_utils.launch_base as launch_base
 import sys
 import os
 from ament_index_python.packages import get_package_prefix
-sys.path.insert(0, os.path.join(  # Need to modify the sys.path since we launch from the ros2 installed path
+sys.path.insert(0, os.path.join( # Need to modify the sys.path since we launch from the ros2 installed path
     get_package_prefix('atos'),
     'share', 'atos', 'launch'))
 
