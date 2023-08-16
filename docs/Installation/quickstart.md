@@ -21,7 +21,7 @@ This section will walk you through the steps of starting the ATOS server for the
         sudo chown -R $USER:$USER ~/.astazero/ATOS/
         
 
-* Download and build the ISO_objectDemo binary from the [isoObject repo](https://github.com/RI-SE/isoObject). Follow the build instructions and execute the binary ISO_objectDemo in the build folder. (This object is not controllable but will respond to control messages from ATOS. It is used to test the connection between ATOS and the object.)
+* Download and build the client software _ISO\_objectDemo_ from the [isoObject repo](https://github.com/RI-SE/isoObject). Follow the build instructions and execute the binary ISO\_objectDemo in the build folder. This client software creates a virtual test object which will respond to control messages from ATOS. This software can be used to verify the correctness of communication between server and client.
 
     ![Alt text](isoobject_preconnect.png)
 
