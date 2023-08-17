@@ -70,12 +70,5 @@ def get_base_nodes():
             executable='esmini_adapter',
             name='esmini_adapter',
             parameters=[files["params"]]
-        ),
-        Node(
-            package='atos',
-            namespace='atos',
-            executable='pointcloud_publisher',
-            name='pointcloud_publisher',
-            parameters=[files["params"]]
         )
     ]
