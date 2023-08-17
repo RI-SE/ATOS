@@ -13,7 +13,7 @@ GVT_ID = "2"
 CATALOG_PATH = "../Catalogs/Vehicles"
 CATALOG_NAME = "VehicleCatalog"
 
-OPENDRIVE_PATH = "../odr/AstaZero_PG_OpenDRIVE_MULTILANE_ROAD.xodr"
+OPENDRIVE_PATH = "/home/seifbourogaa/Documents/AstaZero/SAFFRAN/xodr/Multilane.xodr"
 SCENARIO_NAME = "OvertakeScenario"
 SCENARIO_FILE_NAME = SCENARIO_NAME + ".xosc"
 
@@ -73,7 +73,7 @@ trajectory = xosc.Trajectory(VUT_ID + ",start_follow_trajectory", closed=False)
 trajectory.add_shape(polyline)
 vut_follow_trajectory = xosc.FollowTrajectoryAction(
     trajectory,
-    xosc.FollowingMode.position,
+    xosc.FollowMode.position,
     xosc.ReferenceContext.relative,
     1,
     0
