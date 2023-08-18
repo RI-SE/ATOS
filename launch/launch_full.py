@@ -7,24 +7,20 @@ sys.path.insert(0, os.path.join( # Need to modify the sys.path since we launch f
 import launch_utils.launch_base as launch_base
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch_graphical import get_graphical_nodes
+from launch_experimental import get_experimental_nodes
 
-def get_graphical_nodes():
-    files = launch_base.get_files()
-    return [
-        Node(
-            package='atos',
-            namespace='atos',
-            executable='pointcloud_publisher',
-            name='pointcloud_publisher',
-            parameters=[files["params"]]
-        )
-    ]
 
 def generate_launch_description():
+    files = launch_base.get_files()
     base_nodes = launch_base.get_base_nodes()
     graphical_nodes = get_graphical_nodes()
+    experimental_nodes = get_experimental_nodes()
 
-    for node in graphical_nodes:
-        base_nodes.append(node)
+    for node in graphical_nodes: 
+      base_nodes.append(node)
+		
+    for node in experimental_nodes:
+      base_nodes.append(node)
 
     return LaunchDescription(base_nodes)

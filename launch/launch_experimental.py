@@ -9,11 +9,9 @@ from launch import LaunchDescription
 import launch_utils.launch_base as launch_base
 
 
-def generate_launch_description():
+def get_experimental_nodes():
     files = launch_base.get_files()
-    base_nodes = launch_base.get_base_nodes()
-    
-    experimental_nodes = [
+    return [
         Node(
             package='atos',
             namespace='atos',
@@ -37,6 +35,11 @@ def generate_launch_description():
             parameters=[files["params"]]
         )
     ]
+
+def generate_launch_description():
+    base_nodes = launch_base.get_base_nodes()
+    
+    experimental_nodes = get_experimental_nodes()
 
     for node in experimental_nodes:
         base_nodes.append(node)
