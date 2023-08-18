@@ -9,9 +9,10 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 
-def generate_launch_description():   
+def generate_launch_description():
+    files = launch_base.get_files()
     base_nodes = launch_base.get_base_nodes()
-    base_nodes.append(
+    graphical_nodes = [
         Node(
             package='rviz2',
             namespace='atos',
@@ -25,5 +26,9 @@ def generate_launch_description():
             name='pointcloud_publisher',
             parameters=[files["params"]]
         )
-    )
+    ]
+    
+    for node in graphical_nodes: # I don't know why base_nodes.append(graphical_nodes) doesn't work, but this does
+        base_nodes.append(node)
+
     return LaunchDescription(base_nodes)
