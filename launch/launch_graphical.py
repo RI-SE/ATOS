@@ -14,12 +14,6 @@ def generate_launch_description():
     base_nodes = launch_base.get_base_nodes()
     graphical_nodes = [
         Node(
-            package='rviz2',
-            namespace='atos',
-            executable='rviz2',
-            name='rviz2'
-        ), 
-        Node(
             package='atos',
             namespace='atos',
             executable='pointcloud_publisher',
