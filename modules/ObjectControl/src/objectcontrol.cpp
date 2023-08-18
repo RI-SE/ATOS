@@ -169,13 +169,13 @@ void ObjectControl::onStopMessage(const Stop::message_type::SharedPtr){
 	this->tryHandleMessage(f_try,f_catch, Stop::topicName, get_logger());	
 }
 
-void ObjectControl::onAbortMessage(const Abort::message_type::SharedPtr){	
+void ObjectControl::onAbortMessage(const Abort::message_type::SharedPtr){
+  publishScenarioInfoToJournal(); // TODO: This should be moved to a state that occurs right after a test is finished
 	// Any exceptions here should crash the program
 	this->state->abortRequest(*this);
 }
 
 void ObjectControl::onAllClearMessage(const AllClear::message_type::SharedPtr){
-  publishScenarioInfoToJournal(); // TODO: This should be moved to a state that occurs right after a test is finished
 	COMMAND cmd = COMM_ABORT_DONE;
 	auto f_try = [&]() { this->state->allClearRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
