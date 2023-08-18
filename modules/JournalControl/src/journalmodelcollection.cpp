@@ -5,6 +5,8 @@
  */
 #include "journalmodelcollection.hpp"
 #include "journal.hpp"
+#include <regex>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <algorithm>
@@ -141,7 +143,28 @@ int JournalModelCollection::dumpToFile(std::string fileName) {
 	int retval = 0;
 	char journalDir[PATH_MAX] = {'\0'};
 
+	//TODO: Create a function for this. 
 	UtilGetJournalDirectoryPath(journalDir, sizeof (journalDir));
+	// If a filename with the same name exists, add a number to the end of the filename
+	int maxnum = 0;
+    for (const auto & entry : fs::directory_iterator(std::string(journalDir))){
+		auto entryFileName = entry.path().filename().string();
+		// Find the file with maximum number
+		if (entryFileName.find(fileName) != std::string::npos) {
+			std::regex re(fileName + R"(_(\d+))");
+			std::smatch match;
+			if (std::regex_search(entryFileName, match, re)) {
+				auto number = std::stoi(match[1].str());
+				if (number >= maxnum) {
+					maxnum = number + 1;
+				}
+			}
+		}
+	}
+	if (maxnum >= 0) {
+		fileName += "_" + std::to_string(maxnum);
+	}
+
 	fs::path journalDirPath(std::string(journalDir) + fileName + JOURNAL_FILE_ENDING);
 
 	std::ofstream ostrm(journalDirPath);
