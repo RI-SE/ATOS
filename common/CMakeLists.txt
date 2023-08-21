@@ -22,6 +22,10 @@ find_package(std_srvs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(foxglove_msgs REQUIRED)
 
 set(TIME_LIBRARY ATOSTime)
 set(SHARED_MEMORY_LIBRARY MaestroSHM)
@@ -39,7 +43,6 @@ get_target_property(ISO_22133_HEADERS ${ISO_22133_LIBRARY} INCLUDE_DIRECTORIES)
 add_library(${ATOS_UTIL_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/util.c
 	${CMAKE_CURRENT_SOURCE_DIR}/util/coordinateutils.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/datadictionary.c
 )
 
 add_library(${ATOS_COMMON_TARGET} SHARED
@@ -88,8 +91,13 @@ ament_target_dependencies(${ATOS_COMMON_TARGET}
   std_msgs
   std_srvs
   nav_msgs
-	sensor_msgs
+  sensor_msgs
   atos_interfaces
+  geometry_msgs
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
+  foxglove_msgs
 )
 
 # Exported headers
@@ -99,11 +107,7 @@ set_target_properties(${ATOS_UTIL_TARGET} PROPERTIES
 set_property(TARGET ${ATOS_UTIL_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/util/coordinateutils.hpp
 )
-set_property(TARGET ${ATOS_UTIL_TARGET} APPEND PROPERTY
-	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/datadictionary.h
-)
 
-#
 set_property(TARGET ${ATOS_COMMON_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/trajectory.hpp
 )

@@ -15,6 +15,7 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(atos_interfaces REQUIRED)
 find_package(PCL 1.10 REQUIRED)
+find_package(pcl_conversions REQUIRED)
 
 # Define target names
 set(POINTCLOUD_PUBLISHER_TARGET ${PROJECT_NAME})
@@ -46,6 +47,7 @@ ament_target_dependencies(${POINTCLOUD_PUBLISHER_TARGET}
   std_msgs
   sensor_msgs
   atos_interfaces
+  pcl_conversions
 )
 
 target_include_directories(${POINTCLOUD_PUBLISHER_TARGET} PUBLIC

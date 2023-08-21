@@ -19,7 +19,6 @@ class ATOSBase : public Module {
 
    private:
 	static inline std::string const moduleName = "atos_base";
-	rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr initDataDictionaryService;
 	rclcpp::Service<atos_interfaces::srv::GetObjectIds>::SharedPtr getObjectIdsService;
 	rclcpp::Service<atos_interfaces::srv::GetTestOrigin>::SharedPtr getTestOriginService;
 
@@ -27,8 +26,6 @@ class ATOSBase : public Module {
 	// Module only provides plumbing, no need to handle abort
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override{};
 
-	void onInitDataDictionary(const std::shared_ptr<std_srvs::srv::SetBool::Request>,
-							  std::shared_ptr<std_srvs::srv::SetBool::Response>);
 	void onRequestObjectIDs(const std::shared_ptr<atos_interfaces::srv::GetObjectIds::Request>,
 							std::shared_ptr<atos_interfaces::srv::GetObjectIds::Response>);
 	void onRequestTestOrigin(const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,

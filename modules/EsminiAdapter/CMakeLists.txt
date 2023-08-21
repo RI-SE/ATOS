@@ -20,7 +20,6 @@ set(ESMINI_ADAPTER_TARGET ${PROJECT_NAME})
 set(ATOS_COMMON_LIBRARY ATOSCommon)
 set(COREUTILS_LIBRARY ATOSCoreUtil)
 get_target_property(COMMON_HEADERS ${ATOS_COMMON_LIBRARY} INCLUDE_DIRECTORIES)
-
 include(GNUInstallDirs)
 
 # Create project main executable target

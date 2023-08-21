@@ -30,6 +30,7 @@ public:
 	ObjectConfig(rclcpp::Logger);
 	//ObjectConfig(const ObjectConfig&&);
 
+	void parseObjectIdFromConfigurationFile(const fs::path& file);
 	void parseConfigurationFile(const fs::path& file);
 
 	bool isAnchor() const { return isAnchorObject; }

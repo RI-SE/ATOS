@@ -9,7 +9,14 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "Enable verbose make")
 set(CMAKE_COLOR_MAKEFILE   ON)
-set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
+
+#Set preprocessor macros depending on used ros version
+if ($ENV{ROS_DISTRO} STREQUAL "foxy")
+  add_definitions(-DROS_FOXY)
+elseif($ENV{ROS_DISTRO} STREQUAL "humble")
+  add_definitions(-DROS_HUMBLE)
+endif()
+
 project(atos VERSION 1.0.0)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -91,10 +98,9 @@ ament_package()
 # Install configuration
 include(GNUInstallDirs)
 install(DIRECTORY launch DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/)
-file(GLOB CONF_FILES ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.conf)
-file(GLOB PARAMS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.yaml)
 file(GLOB VERSION_FILE ${CMAKE_CURRENT_SOURCE_DIR}/.VERSION)
-install(FILES ${CONF_FILES} ${PARAMS_FILE} ${VERSION_FILE} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
+install(FILES ${VERSION_FILE} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/conf/ DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
 
 # Add post install instructions
 add_subdirectory(cmake/cpack)

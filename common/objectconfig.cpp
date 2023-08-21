@@ -46,6 +46,27 @@ std::string ObjectConfig::toString() const {
 	return retval;
 }
 
+void ObjectConfig::parseObjectIdFromConfigurationFile(const fs::path& objectFile){
+	char setting[100];
+
+	// Get ID setting
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_ID, objectFile.c_str(),
+								 objectFile.string().length(),
+								 setting, sizeof (setting)) == -1) {
+		throw std::invalid_argument("Cannot find ID setting in file " + objectFile.string());
+	}
+	char *endptr;
+	uint32_t id = static_cast<uint32_t>(strtoul(setting, &endptr, 10));
+
+	if (endptr == setting) {
+		throw std::invalid_argument("ID " + std::string(setting) + " in file "
+									+ objectFile.string() + " is invalid");
+	}
+	this->transmitterID = id;
+}
+
+
+
 void ObjectConfig::parseConfigurationFile(
 		const fs::path &objectFile) {
 

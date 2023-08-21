@@ -7,6 +7,8 @@
 
 #include "roschannel.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
+#include "monitorchannel.hpp" // TODO: remove this when making translator node that translates monr to various other msg types..
+#include "util/coordinateutils.hpp" // TODO: also remove this
 
 namespace ROSChannels {
     namespace NavSatFix {
@@ -29,5 +31,23 @@ namespace ROSChannels {
                 objectId(id),
                 BaseSub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, callback, qos) {}
         };
+        // TODO: Remove below..
+        static message_type fromROSMonr(std::array<double,3> origin, const ROSChannels::Monitor::message_type &monr) {
+            sensor_msgs::msg::NavSatFix msg;
+            msg.header.stamp = monr.atos_header.header.stamp;
+
+            // Local coordinates to global coordinates
+            double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
+            double llh_0[3] = {origin[0], origin[1], origin[2]};
+            llhOffsetMeters(llh_0,offset);
+            msg.header.frame_id = "map"; // TODO
+
+            // Fill in the rest of the message
+            msg.latitude = llh_0[0];
+            msg.longitude = llh_0[1];
+            msg.altitude = llh_0[2];
+            msg.status.status = sensor_msgs::msg::NavSatStatus::STATUS_FIX;
+            return msg;
+        }
     }
 }

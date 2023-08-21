@@ -8,13 +8,23 @@ import launch_utils.launch_base as launch_base
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
+def get_graphical_nodes():
+    files = launch_base.get_files()
+    return [
+        Node(
+            package='atos',
+            namespace='atos',
+            executable='pointcloud_publisher',
+            name='pointcloud_publisher',
+            parameters=[files["params"]]
+        )
+    ]
 
-def generate_launch_description():   
+def generate_launch_description():
     base_nodes = launch_base.get_base_nodes()
-    base_nodes.append(Node(
-        package='rviz2',
-        namespace='atos',
-        executable='rviz2',
-        name='rviz2'
-    ))
+    graphical_nodes = get_graphical_nodes()
+
+    for node in graphical_nodes:
+        base_nodes.append(node)
+
     return LaunchDescription(base_nodes)

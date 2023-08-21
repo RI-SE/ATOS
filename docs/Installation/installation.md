@@ -1,26 +1,53 @@
 # Instructions
-Below are the steps for building ATOS for the first time with colcon.
+There are two ways of starting ATOS: using the docker image or building from source. The docker image is the easiest way to get started, but if you intend to make changes to ATOS, we recommend building from source.
 
-Prerequisites: C/C++ compiler, CMake (minimum version 3.10.2)
+## <a name="docker"></a> Using the docker image
+To run ATOS using docker compose, first [install docker](https://docs.docker.com/engine/install/) on your computer. Download the [ATOS repo](https://github.com/RI-SE/ATOS). Then, run the following command from the root repo directory:
+```bash
+docker compose up
+```
+or if you are not in the docker group:
+```bash
+sudo -E docker compose up
+```
 
+If you run Docker Engine you can start ATOS using the computers own network stack with
+```bash
+docker run --network="host"  --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
+```
+If you run Docker Desktop, special care must be taken to allow the container running in the Docker Desktop VM to communicate with clients running on the host network. If uncertain about this we suggest installing Docker Engine instead. 
 
-## <a name="ros2"></a> Installing ROS2
+Note: If no preexisting .astazero/ATOS folder is found, the docker image will create one. This folder will have root user permissions due to the way the docker image is built. For ease of use, change owner to your own user, run the following command on the host machine:
+```bash 
+sudo chown -R $USER:$USER ~/.astazero/ATOS/
+```
 
-ATOS is based on ROS2, and requires ROS2 to be installed on the host computer. The following instructions are for installing ROS2 on Ubuntu 20.04.
+## <a name="Installation script"></a> Using the installation script
+ATOS comes with an installation script that automates the installation process. It is intended for use on Ubuntu 20.04 or 22.04, and has been tested on a fresh install of Ubuntu 20.04. The script will install ROS 2, ATOS dependencies, and ATOS itself. It will also create a workspace and build ATOS. The script can be executed using the following command:
+```bash
+./install_atos.sh
+```
 
-Download ROS2 prerequisites:
+## <a name="Native build"></a> Building from source manually
+The following instructions are for installing ATOS manually on Ubuntu 20.04.
+
+## <a name="ros2"></a> Installing ROS 2
+
+ATOS is based on ROS 2, and requires ROS 2 to be installed on the host computer. The following instructions are for installing ROS 2 on Ubuntu 20.04.
+
+Download ROS 2 prerequisites:
 ```bash
 sudo apt update && sudo apt install curl gnupg2 lsb-release
 ```
 
-Authorize the ROS2 gpg key with apt:
+Authorize the ROS 2 gpg key with apt:
 ```bash
 sudo apt update && sudo apt install curl gnupg2 lsb-release
 sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key  \
 -o /usr/share/keyrings/ros-archive-keyring.gpg
 ```
 
-Add the ROS2 repo to sources list:
+Add the ROS 2 repo to sources list:
 
 ```bash
 echo "deb [arch=$(dpkg --print-architecture) \
@@ -29,8 +56,11 @@ http://packages.ros.org/ros2/ubuntu \
 $(source /etc/os-release && echo $UBUNTU_CODENAME) main" | \
 sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
 ```
+### Installing ROS 2 Foxy
+ATOS Supports both ROS 2 Foxy and ROS 2 Humble. Chose one of the versions, we recommend Foxy as the default choice.
+ Instructions for Humble follow in the next subsection.
 
-Install ros foxy for desktop and colcon
+ To install ROS 2 Foxy, do:
 ```bash
 sudo apt update
 sudo apt install ros-foxy-desktop python3-colcon-common-extensions ros-foxy-nav-msgs \
@@ -41,6 +71,21 @@ ros-foxy-rosbridge-suite ros-foxy-pcl-conversions
 source the setup script:
 ```bash
 source /opt/ros/foxy/setup.bash
+```
+Add the above line to ~/.bashrc or similar startup script to automate this process.
+
+### Installing ROS 2 Humble
+If you instead want to install ROS 2 Humble, do:
+```bash
+sudo apt update
+sudo apt install ros-humble-desktop python3-colcon-common-extensions ros-humble-nav-msgs \
+ros-humble-geographic-msgs ros-humble-foxglove-msgs ros-humble-sensor-msgs \
+ros-humble-rosbridge-suite ros-humble-pcl-conversions
+```
+
+and source the setup script:
+```bash
+source /opt/ros/humble/setup.bash
 ```
 Add the above line to ~/.bashrc or similar startup script to automate this process.
 
@@ -130,3 +175,4 @@ Launch ATOS
 ```bash
 ros2 launch atos launch_basic.py
 ```
+When running ATOS for the first time and the no pre-existing .astazero/ATOS folder is found, ATOS will create some barebone configuration files which you can read more about in the configuration section [here](../Usage/How-to/configuration.md).

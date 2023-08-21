@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "ATOSbase.hpp"
-#include "datadictionary.h"
 #include "objectconfig.hpp"
 #include <functional>
 
@@ -18,17 +17,11 @@ ATOSBase::ATOSBase()
     : Module(ATOSBase::moduleName),
 	exitSub(*this, std::bind(&ATOSBase::onExitMessage, this, _1))
 {
-	declare_parameter("test_origin_latitude");
-	declare_parameter("test_origin_longitude");
-	declare_parameter("test_origin_altitude");
-	declare_parameter("test_origin_rot");
+	declare_parameter("test_origin_latitude", 0.0);
+	declare_parameter("test_origin_longitude", 0.0);
+	declare_parameter("test_origin_altitude",0.0);
+	declare_parameter("test_origin_rot",0.0);
 
-	std::string installationPath = ament_index_cpp::get_package_prefix("atos");
-	if (UtilVerifyTestDirectory(installationPath.c_str()) == -1) {
-        throw std::runtime_error("Failed to verify test directory");
-  	}
-	initDataDictionaryService = create_service<SetBool>(ServiceNames::initDataDict,
-		std::bind(&ATOSBase::onInitDataDictionary, this, _1, _2));
 	getObjectIdsService = create_service<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds,
 		std::bind(&ATOSBase::onRequestObjectIDs, this, _1, _2));
 	getTestOriginService = create_service<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin,
@@ -37,46 +30,12 @@ ATOSBase::ATOSBase()
 
 ATOSBase::~ATOSBase()
 {
-	auto result = DataDictionaryDestructor();
-	if (result != WRITE_OK && result != READ_WRITE_OK) {
-		RCLCPP_ERROR(get_logger(), "Unable to clear shared memory space");
-	}
 }
 
-void ATOSBase::onInitDataDictionary(
-	const SetBool::Request::SharedPtr req,
-	SetBool::Response::SharedPtr res)
-{
-	RCLCPP_DEBUG(get_logger(), "Received request to initialize data dictionary, ignoring value %d", req->data);
-	
-	if (isInitialized) {
-		res->message = "Data dictionary already initialized";
-		res->success = true;
-		return;
-	}
-
-	isInitialized = DataDictionaryConstructor() == READ_WRITE_OK;
-	std::string message;
-	if (isInitialized) {
-		message = "Data dictionary successfully initialized";
-		RCLCPP_INFO(get_logger(), message.c_str());
-	}
-	else {
-		message = "Failed to initialize data dictionary";
-		RCLCPP_ERROR(get_logger(), message.c_str());
-		DataDictionaryDestructor();
-	}
-	res->success = isInitialized;
-	res->message = message;
-}
 
 void ATOSBase::onExitMessage(const Exit::message_type::SharedPtr)
 {
     RCLCPP_INFO(get_logger(), "Received exit message");
-    auto result = DataDictionaryDestructor();
-    if (result != WRITE_OK && result != READ_WRITE_OK) {
-        RCLCPP_ERROR(get_logger(), "Unable to clear shared memory space");
-    }
     rclcpp::shutdown();
 }
 
@@ -101,7 +60,7 @@ void ATOSBase::onRequestObjectIDs(
 		}
 
 		ObjectConfig conf(get_logger());
-		conf.parseConfigurationFile(entry.path());
+		conf.parseObjectIdFromConfigurationFile(entry.path());
 
 		RCLCPP_DEBUG(get_logger(), "Loaded configuration: %s", conf.toString().c_str());
 		// Check preexisting

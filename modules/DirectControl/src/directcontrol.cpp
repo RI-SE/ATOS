@@ -8,7 +8,6 @@
 #include "util.h"
 #include "tcphandler.hpp"
 #include "atosTime.h"
-#include "datadictionary.h"
 #include "atos_interfaces/msg/control_signal_percentage.hpp"
 
 using atos_interfaces::msg::ControlSignalPercentage;
@@ -215,7 +214,8 @@ size_t DirectControl::handleRDCAMessage(
 	ssize_t bytesRead = decodeRDCAMessage(byteData.data(), &recvMessage, byteData.size(), currentTime, false);
 	if (bytesRead >= 0) {
 		byteData.erase(byteData.begin(), byteData.begin() + bytesRead);
-		DataDictionarySetRequestedControlAction(recvMessage.executingID, &recvMessage);
+		//TODO: Implement equivalent of below line in using ROS2.
+		//DataDictionarySetRequestedControlAction(recvMessage.executingID, &recvMessage);
 		return static_cast<size_t>(bytesRead);
 	}
 	else {
@@ -228,25 +228,4 @@ size_t DirectControl::handleUnknownMessage(
 		std::vector<char> &byteData) {
 	std::fill(byteData.begin(), byteData.end(), 0);
 	return byteData.size();
-}
-
-/*!
- * \brief initializeModule Initializes this module by creating log,
- *			connecting to the message queue bus, setting up signal handers etc.
- * \return 0 on success, -1 otherwise
- */
-int DirectControl::initializeModule() {
-	int retval = 0;
-
-	if (requestDataDictInitialization()) {
-		if (DataDictionaryInitObjectData() != READ_OK) {
-			retval = -1;
-			RCLCPP_ERROR(get_logger(), "Preexisting data dictionary not found");
-		}
-	}
-	else{
-		retval = -1;
-		RCLCPP_ERROR(get_logger(), "Unable to initialize data dictionary");
-	}
-	return retval;
 }

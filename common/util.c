@@ -34,7 +34,6 @@
 
 #include "util.h"
 #include "atosTime.h"
-#include "datadictionary.h"
 
 
 /*------------------------------------------------------------
@@ -51,8 +50,6 @@
 #define SMALL_BUFFER_SIZE_64 64
 
 // File paths
-#define TEST_DIR_ENV_VARIABLE_NAME "ATOS_TEST_DIR"
-#define SYSCONF_DIR_NAME "/etc"
 #define JOURNAL_DIR_NAME "journal"
 #define ATOS_TEST_DIR_NAME ".astazero/ATOS"
 #define CONFIGURATION_DIR_NAME "conf"
@@ -647,44 +644,6 @@ int UtilAddNBytesMessageData(unsigned char *MessageBuffer, int StartIndex, int L
 }
 
 
-int iUtilGetParaConfFile(char *pcParameter, char *pcValue) {
-	FILE *filefd;
-	int iFindResult;
-	char pcTemp[512];
-	char confPathDir[MAX_FILE_PATH];
-
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcat(confPathDir, CONF_FILE_NAME);
-
-	iFindResult = 0;
-
-	filefd = fopen(confPathDir, "rb");
-
-	if (filefd == NULL) {
-		return 0;
-	}
-
-	while (fgets(pcTemp, 512, filefd) != NULL) {
-		if ((strstr(pcTemp, pcParameter)) != NULL) {
-
-			/* Does contain any value? */
-			if (strlen(pcTemp) > (strlen(pcParameter) + 1)) {
-				/* replace new line */
-				if (pcTemp[strlen(pcTemp) - 1] == '\n') {
-					pcTemp[strlen(pcTemp) - 1] = 0;
-				}
-				strcpy(pcValue, &pcTemp[strlen(pcParameter) + 1]);
-			}
-			iFindResult = 1;
-		}
-	}
-
-	if (filefd) {
-		fclose(filefd);
-	}
-
-	return 1;
-}
 
 
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint * ASP, FILE * filefd, char debug) {
@@ -1941,199 +1900,6 @@ C8 *UtilSearchTextFile(const C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result)
 }
 
 
-int iUtilGetIntParaConfFile(char *pcParameter, int *iValue) {
-	int iResult;
-	char pcValue[512];
-
-	bzero(pcValue, 512);
-	iResult = iUtilGetParaConfFile(pcParameter, pcValue);
-
-	if (iResult > 0) {
-		*iValue = atoi(pcValue);
-	}
-
-	return iResult;
-}
-
-/*------------------------------------------------------------
-  -- File system functions
-  ------------------------------------------------------------*/
-/*!
- * \brief UtilCopyFile Copies a file from source to destination
- * \param source File to be copied
- * \param sourceLen Length of path to file to be copied
- * \param dest Target path
- * \param destLen Length of path to target
- * \return 0 if successfully verified, -1 otherwise
- */
-int UtilCopyFile(
-	const char* source,
-	const size_t sourceLen,
-	const char* dest,
-	const size_t destLen)
-{
-	int fd_to, fd_from;
-    char buf[4096];
-    ssize_t nread;
-
-    fd_from = open(source, O_RDONLY);
-    if (fd_from < 0) {
-		fprintf(stderr, "Failed to open file %s\n", source);
-		return -1;
-	}
-
-    fd_to = open(dest, O_WRONLY | O_CREAT | O_EXCL, S_IWUSR | S_IRUSR | S_IWGRP | S_IRGRP | S_IROTH);
-    if (fd_to < 0) {
-		fprintf(stderr, "Failed to open file %s\n", dest);
-		close(fd_from);
-		return -1;
-	}
-
-    while ((nread = read(fd_from, buf, sizeof buf)) > 0) {
-        char *out_ptr = buf;
-
-        do {
-        	ssize_t nwritten = write(fd_to, out_ptr, nread);
-
-            if (nwritten >= 0) {
-                nread -= nwritten;
-                out_ptr += nwritten;
-            }
-            else if (errno != EINTR) {
-				close(fd_from);
-				close(fd_to);
-				fprintf(stderr, "Failed to write to file %s\n", dest);
-            }
-        } while (nread > 0);
-    }
-	close(fd_to);
-	close(fd_from);
-
-    if (nread == 0) {
-        return 0;
-	}
-	else {
-		fprintf(stderr, "Failed to read from file %s\n", source);
-		return -1;
-	}
-}
-
-/*!
- * \brief UtilVerifyTestDirectory Checks so that all the required directories exist
- * (i.e. traj, conf etc.) and that a configuration file exists.
- * \return 0 if successfully verified, -1 otherwise
- */
-int UtilVerifyTestDirectory(const char* installationPath) {
-	DIR *dir;
-	FILE *file;
-	char testDir[MAX_FILE_PATH];
-
-	const char expectedDirs[][MAX_FILE_PATH] = {
-		CONFIGURATION_DIR_NAME,
-		GEOFENCE_DIR_NAME,
-		JOURNAL_DIR_NAME,
-		TRAJECTORY_DIR_NAME,
-		OBJECT_DIR_NAME,
-		OPENDRIVE_DIR_NAME,
-		OPENSCENARIO_DIR_NAME,
-		POINTCLOUD_DIR_NAME
-	};
-	char *envVar;
-	int result;
-
-	// Get test directory from environment variable, or set it to the default
-	envVar = getenv(TEST_DIR_ENV_VARIABLE_NAME);
-	if (envVar == NULL) {
-		strcpy(testDir, getenv("HOME"));
-		strcat(testDir, "/");
-		strcat(testDir, ATOS_TEST_DIR_NAME);
-		fprintf(stderr, "Environment variable %s unset: defaulting to directory %s\n",
-				   TEST_DIR_ENV_VARIABLE_NAME, testDir);
-	}
-	else {
-		strcpy(testDir, envVar);
-		fprintf(stderr, "Environment variable ${%s} set: Using directory %s\n",
-			TEST_DIR_ENV_VARIABLE_NAME, testDir);
-	}
-
-	// Top level directory.
-	char astazeroDir[MAX_FILE_PATH];
-	strcpy(astazeroDir, testDir);
-
-	
-	// Check so that all expected directories exist
-	strcat(astazeroDir, "/");
-	for (unsigned int i = 0; i < sizeof (expectedDirs) / sizeof (expectedDirs[0]); ++i) {
-		char subDir[MAX_FILE_PATH];
-		strcpy(subDir, astazeroDir);
-		strcat(subDir, expectedDirs[i]);
-
-		dir = opendir(subDir);
-		if (dir) {	
-			closedir(dir);
-		}
-		else if (errno == ENOENT) {
-			// It did not exist: create it
-			fprintf(stderr, "Directory %s does not exist: creating it\n", subDir);
-			result = recursiveMkdir(subDir, 0755);
-			if (result < 0) {
-				fprintf(stderr, "Unable to create directory %s\n", subDir);
-				return -1;
-			}
-		}
-		else {
-			fprintf(stderr, "Error opening directory %s\n", subDir);
-			return -1;
-		}
-	}
-
-	// Check so that a configuration file exists
-	char confFile[MAX_FILE_PATH];
-	strcpy(confFile, astazeroDir);
-	strcat(confFile, CONFIGURATION_DIR_NAME "/" CONF_FILE_NAME);
-	file = fopen(confFile, "r+");
-
-	if (file != NULL) {
-		fclose(file);
-	}
-	else {
-		char sysConfDir[MAX_FILE_PATH];
-		strcpy(sysConfDir, installationPath);
-		strcat(sysConfDir, SYSCONF_DIR_NAME "/" CONF_FILE_NAME);
-		
-		fprintf(stderr, "Configuration file %s does not exist, copying default from %s\n",
-			confFile, sysConfDir);
-		if (UtilCopyFile(sysConfDir, sizeof(sysConfDir), confFile, sizeof(confFile)) < 0) {
-			fprintf(stderr, "Failed to copy file\n");
-			return -1;
-		}
-	}
-
-
-	// check so that a params.yaml file exists
-	char paramsFile[MAX_FILE_PATH];
-	strcpy(paramsFile, astazeroDir);
-	strcat(paramsFile, CONFIGURATION_DIR_NAME "/" PARAMS_FILE_NAME);
-	file = fopen(paramsFile, "r+");
-
-	if (file != NULL) {
-		fclose(file);
-	}
-	else {
-		char defaultParamsFilePath[MAX_FILE_PATH];
-		strcpy(defaultParamsFilePath, installationPath);
-		strcat(defaultParamsFilePath, SYSCONF_DIR_NAME "/" PARAMS_FILE_NAME);
-		
-		fprintf(stderr, "%s file does not exist, copying default from %s\n",
-							paramsFile, defaultParamsFilePath);
-		
-		if (UtilCopyFile(defaultParamsFilePath, sizeof(defaultParamsFilePath), paramsFile, sizeof(paramsFile)) < 0) {
-			fprintf(stderr, "Failed to copy file\n");
-			return -1;
-		}
-	}
-}
-
 /*!
  * \brief getTestDirectoryPath Gets the absolute path to the directory where subdirectories for
  * trajectories, geofences, configuration etc. are stored, ending with a forward slash. The
@@ -2736,50 +2502,6 @@ int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen) {
 	return retval;
 }
 
-/*------------------------------------------------------------
-  -- Function traj2ldm
-  --  converts a traj file format to a ldm:monitor_t
-  ------------------------------------------------------------*/
-
-void traj2ldm(float time, double x, double y, double z, float hdg, float vel, monitor_t * ldm) {
-
-	char pcTempBuffer[512];
-
-	double earth_radius = EARTH_EQUATOR_RADIUS_M;
-
-	double lat_origin = 0.0;
-	double lon_origin = 0.0;
-	double alt_origin = 0.0;
-	double lat = 0.0;
-	double lon = 0.0;
-	double alt = 0.0;
-
-	ldm->timestamp = (uint64_t) (time * 100);
-	ldm->speed = (uint16_t) (vel * 100);
-	ldm->heading = (uint16_t) (hdg * 100);
-
-	bzero(pcTempBuffer, 512);
-	iUtilGetParaConfFile("OrigoLatitude=", pcTempBuffer);
-	sscanf(pcTempBuffer, "%lf", &lat_origin);
-
-	bzero(pcTempBuffer, 512);
-	iUtilGetParaConfFile("OrigoLongitude=", pcTempBuffer);
-	sscanf(pcTempBuffer, "%lf", &lon_origin);
-
-	bzero(pcTempBuffer, 512);
-	iUtilGetParaConfFile("OrigoAltitude=", pcTempBuffer);
-	sscanf(pcTempBuffer, "%lf", &alt_origin);
-
-	lat = ((y * 180) / (M_PI * earth_radius)) + lat_origin;
-	lon =
-		((x * 180) / (M_PI * earth_radius)) * (1 / (cos((M_PI / 180) * (0.5 * (lat_origin + lat))))) + lon_origin;
-	alt = z + alt_origin;
-
-	ldm->latitude = (uint32_t) (lat * 10000000);
-	ldm->longitude = (uint32_t) (lon * 10000000);
-	ldm->altitude = (uint32_t) (alt * 100);
-
-}
 
 
 static void init_crc16_tab(void);
@@ -3288,269 +3010,6 @@ U16 UtilGetMillisecond(TimeType * GPSTime) {
 	return MilliU16;
 }
 
-
-/*
-UtilWriteConfigurationParameter updates parameters in the file test.conf.
-
-- *ParameterName the name of the parameter in test.conf
-- *NewValue the value of the parameter.
-- Debug enable(1)/disable(0) debug printouts
-*/
-int32_t UtilWriteConfigurationParameter(const enum ConfigurationFileParameter parameterName,
-										const char *newValue, const size_t bufferLength) {
-
-	int32_t RowCount, i;
-	char Parameter[SMALL_BUFFER_SIZE_64];
-	char Row[SMALL_BUFFER_SIZE_128];
-	char NewRow[SMALL_BUFFER_SIZE_128];
-	FILE *fd, *TempFd;
-	char *ptr1, *ptr2;
-	uint8_t ParameterFound = 0;
-	char confPathDir[MAX_FILE_PATH];
-	char tempConfPathDir[MAX_FILE_PATH];
-	const char TEMP_FILE_NAME[] = "temp-util.conf";
-
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcpy(tempConfPathDir, confPathDir);
-	strcat(confPathDir, CONF_FILE_NAME);
-	strcat(tempConfPathDir, TEMP_FILE_NAME);
-
-	memset(Parameter, 0, sizeof (Parameter));
-
-	UtilGetConfigurationParameterAsString(parameterName, Parameter, sizeof (Parameter));
-
-	strcat(Parameter, "=");
-
-	//Remove temporary file
-	remove(tempConfPathDir);
-
-	//Create temporary file
-	TempFd = fopen(tempConfPathDir, "w+");
-
-	//Open configuration file
-	fd = fopen(confPathDir, "r");
-
-	if (fd != NULL) {
-		RowCount = UtilCountFileRows(fd);
-		fclose(fd);
-		fd = fopen(confPathDir, "r");
-
-		for (i = 0; i < RowCount; i++) {
-			bzero(Row, SMALL_BUFFER_SIZE_128);
-			UtilReadLine(fd, Row);
-
-			ptr1 = strstr(Row, Parameter);
-			ptr2 = strstr(Row, "//");
-			if (ptr2 == NULL)
-				ptr2 = ptr1;	//No comment found
-			if (ptr1 != NULL && (U64) ptr2 >= (U64) ptr1 && ParameterFound == 0) {
-				ParameterFound = 1;
-				bzero(NewRow, SMALL_BUFFER_SIZE_128);
-				strncpy(NewRow, Row, (U64) ptr1 - (U64) Row + strlen(Parameter));
-				strncat(NewRow, newValue, bufferLength);
-				if ((U64) ptr2 > (U64) ptr1) {
-					strcat(NewRow, " ");	// Add space
-					strcat(NewRow, ptr2);	// Add the comment
-				}
-				fprintf("Changed parameter: %s\n", NewRow);
-
-				strcat(NewRow, "\n");
-				(void)fwrite(NewRow, 1, strlen(NewRow), TempFd);
-
-			}
-			else {
-				strcat(Row, "\n");
-				(void)fwrite(Row, 1, strlen(Row), TempFd);
-			}
-		}
-		fclose(TempFd);
-		fclose(fd);
-
-		//Remove test.conf
-		remove(confPathDir);
-
-		//Rename temp.conf to test.conf
-		rename(tempConfPathDir, confPathDir);
-
-		//Remove temporary file
-		remove(tempConfPathDir);
-	}
-	else {
-		fprintf(stderr, "Unable to open configuration file %s\n", confPathDir);
-	}
-
-	return (int32_t) ParameterFound;
-}
-
-int32_t UtilReadConfigurationParameter(const enum ConfigurationFileParameter parameter,
-									   char *returnValue, const size_t bufferLength) {
-
-	char TextBuffer[SMALL_BUFFER_SIZE_128];
-	char confPathDir[MAX_FILE_PATH];
-
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcat(confPathDir, CONF_FILE_NAME);
-
-	memset(TextBuffer, 0, sizeof (TextBuffer));
-	memset(returnValue, 0, bufferLength);
-
-	UtilGetConfigurationParameterAsString(parameter, TextBuffer, sizeof (TextBuffer));
-	strcat(TextBuffer, "=");
-
-	UtilSearchTextFile(confPathDir, TextBuffer, "", returnValue);
-
-	fprintf("Read parameter: %s%s\n", TextBuffer, returnValue);
-
-	return strnlen(returnValue, bufferLength);
-}
-
-char *UtilGetConfigurationParameterAsString(const enum ConfigurationFileParameter parameter,
-											char *returnValue, const size_t bufferLength) {
-	const char *outputString = NULL;
-
-	switch (parameter) {
-	case CONFIGURATION_PARAMETER_SCENARIO_NAME:
-		outputString = ParameterNameScenarioName;
-		break;
-	case CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE:
-		outputString = ParameterNameOriginLongitude;
-		break;
-	case CONFIGURATION_PARAMETER_ORIGIN_LATITUDE:
-		outputString = ParameterNameOriginLatitude;
-		break;
-	case CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE:
-		outputString = ParameterNameOriginAltitude;
-		break;
-	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
-		outputString = ParameterNameVisualizationServerName;
-		break;
-	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
-		outputString = ParameterNameASPMaxTimeDiff;
-		break;
-	case CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF:
-		outputString = ParameterNameASPMaxTrajDiff;
-		break;
-	case CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT:
-		outputString = ParameterNameASPStepBackCount;
-		break;
-	case CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL:
-		outputString = ParameterNameASPFilterLevel;
-		break;
-	case CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME:
-		outputString = ParameterNameASPMaxDeltaTime;
-		break;
-	case CONFIGURATION_PARAMETER_TIME_SERVER_IP:
-		outputString = ParameterNameTimeServerIP;
-		break;
-	case CONFIGURATION_PARAMETER_TIME_SERVER_PORT:
-		outputString = ParameterNameTimeServerPort;
-		break;
-	case CONFIGURATION_PARAMETER_SIMULATOR_IP:
-		outputString = ParameterNameSimulatorIP;
-		break;
-	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP:
-		outputString = ParameterNameSimulatorPortTCP;
-		break;
-	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP:
-		outputString = ParameterNameSimulatorPortUDP;
-		break;
-	case CONFIGURATION_PARAMETER_SIMULATOR_MODE:
-		outputString = ParameterNameSimulatorMode;
-		break;
-	case CONFIGURATION_PARAMETER_VOIL_RECEIVERS:
-		outputString = ParameterNameVOILReceivers;
-		break;
-	case CONFIGURATION_PARAMETER_DTM_RECEIVERS:
-		outputString = ParameterNameDTMReceivers;
-		break;
-	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP:
-		outputString = ParameterNameExternalSupervisorIP;
-		break;
-	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP:
-		outputString = ParameterNameExternalSupervisorPortTCP;
-		break;
-	case CONFIGURATION_PARAMETER_RVSS_CONFIG:
-		outputString = ParameterNameRVSSConfig;
-		break;
-	case CONFIGURATION_PARAMETER_RVSS_RATE:
-		outputString = ParameterNameRVSSRate;
-		break;
-	case CONFIGURATION_PARAMETER_MAX_PACKETS_LOST:
-		outputString = ParameterNameMaxPacketsLost;
-		break;
-	case CONFIGURATION_PARAMETER_TRANSMITTER_ID:
-		outputString = ParameterNameTransmitterID;
-		break;
-	case CONFIGURATION_PARAMETER_MISC_DATA:
-		outputString = ParameterNameMiscData;
-		break;
-	default:
-		fprintf(stderr, "No matching configuration parameter for enumerated input\n");
-		outputString = "";
-	}
-	if (strlen(outputString) + 1 > bufferLength) {
-		fprintf(stderr, "Buffer too small to hold configuration parameter name\n");
-		returnValue = "";
-	}
-	else {
-		strncpy(returnValue, outputString, bufferLength);
-	}
-	return returnValue;
-}
-
-
-enum ConfigurationFileParameter UtilParseConfigurationParameter(const char *parameter,
-																const size_t bufferLength) {
-	if (strncmp(ParameterNameScenarioName, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_SCENARIO_NAME;
-	if (strncmp(ParameterNameOriginLatitude, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ORIGIN_LATITUDE;
-	else if (strncmp(ParameterNameOriginLongitude, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE;
-	else if (strncmp(ParameterNameOriginAltitude, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE;
-	else if (strncmp(ParameterNameVisualizationServerName, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME;
-	else if (strncmp(ParameterNameASPMaxTimeDiff, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF;
-	else if (strncmp(ParameterNameASPMaxTrajDiff, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF;
-	else if (strncmp(ParameterNameASPStepBackCount, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT;
-	else if (strncmp(ParameterNameASPFilterLevel, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL;
-	else if (strncmp(ParameterNameASPMaxDeltaTime, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME;
-	else if (strncmp(ParameterNameTimeServerIP, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_TIME_SERVER_IP;
-	else if (strncmp(ParameterNameTimeServerPort, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_TIME_SERVER_PORT;
-	else if (strncmp(ParameterNameSimulatorIP, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_SIMULATOR_IP;
-	else if (strncmp(ParameterNameSimulatorPortTCP, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP;
-	else if (strncmp(ParameterNameSimulatorPortUDP, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP;
-	else if (strncmp(ParameterNameSimulatorMode, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_SIMULATOR_MODE;
-	else if (strncmp(ParameterNameVOILReceivers, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_VOIL_RECEIVERS;
-	else if (strncmp(ParameterNameDTMReceivers, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_DTM_RECEIVERS;
-	else if (strncmp(ParameterNameExternalSupervisorIP, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP;
-	else if (strncmp(ParameterNameExternalSupervisorPortTCP, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP;
-	else if (strncmp(ParameterNameMiscData, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_MISC_DATA;
-	else if (strncmp(ParameterNameRVSSConfig, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_RVSS_CONFIG;
-	else if (strncmp(ParameterNameRVSSRate, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_RVSS_RATE;
-	else
-		return CONFIGURATION_PARAMETER_INVALID;
-}
-
 /*!
  * \brief UtilGetObjectFileSetting Gets the specified setting from an object file
  * \param setting Setting to get
@@ -3647,27 +3106,27 @@ int UtilReadOriginConfiguration(GeoPositionType* origin) {
 	GeoPositionType retval;
 	char setting[20];
 	char* endptr;
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
-									   setting, sizeof (setting))) {
-		retval.Latitude = strtod(setting, &endptr);
-		if (endptr == setting) {
-			return -1;
-		}
-	}
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
-									   setting, sizeof (setting))) {
-		retval.Longitude = strtod(setting, &endptr);
-		if (endptr == setting) {
-			return -1;
-		}
-	}
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE,
-									   setting, sizeof (setting))) {
-		retval.Altitude = strtod(setting, &endptr);
-		if (endptr == setting) {
-			return -1;
-		}
-	}
+	// if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
+	// 								   setting, sizeof (setting))) {
+	// 	retval.Latitude = strtod(setting, &endptr);
+	// 	if (endptr == setting) {
+	// 		return -1;
+	// 	}
+	// }
+	// if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
+	// 								   setting, sizeof (setting))) {
+	// 	retval.Longitude = strtod(setting, &endptr);
+	// 	if (endptr == setting) {
+	// 		return -1;
+	// 	}
+	// }
+	// if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE,
+	// 								   setting, sizeof (setting))) {
+	// 	retval.Altitude = strtod(setting, &endptr);
+	// 	if (endptr == setting) {
+	// 		return -1;
+	// 	}
+	// }
 	retval.Heading = 0; // TODO
 	*origin = retval;
 	return 0;
