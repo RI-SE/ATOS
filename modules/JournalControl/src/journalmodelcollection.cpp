@@ -147,7 +147,7 @@ int JournalModelCollection::dumpToFile(std::string fileName) {
 	UtilGetJournalDirectoryPath(journalDir, sizeof (journalDir));
 	// If a filename with the same name exists, add a number to the end of the filename
 	int maxnum = 0;
-    for (const auto & entry : fs::directory_iterator(std::string(journalDir))){
+  for (const auto & entry : fs::directory_iterator(std::string(journalDir))) {
 		auto entryFileName = entry.path().filename().string();
 		// Find the file with maximum number
 		if (entryFileName.find(fileName) != std::string::npos) {
