@@ -116,7 +116,6 @@ class ObjectControl : public Module
 	friend class ObjectListener;
 
 public:
-	int initialize();
 	ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExecutor>);
 	typedef enum {
 		RELATIVE_KINEMATICS,	//!< Scenario executed relative to immobile VUT
@@ -325,5 +324,7 @@ private:
 	void injectObjectData(const MonitorMessage& monr);
 	//! \brief TODO
 	OsiHandler::LocalObjectGroundTruth_t buildOSILocalGroundTruth(const MonitorMessage&) const;
+	
+	void publishScenarioInfoToJournal();
 };
 

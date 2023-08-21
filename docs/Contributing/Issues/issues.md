@@ -34,7 +34,7 @@ your environment? What steps will reproduce the bug? What OS are you using, whic
 browser is used for the gui?What would you expect to be the outcome? All these
 details will help people to fix any potential bugs.
 
-The bug report template is present in the bug tab on gihub, a copy of it can be found [here](https://github.com/RI-SE/ATOS/blob/feature_bug_issue_template/.github/ISSUE_TEMPLATE/bug_report.md) 
+The bug report template is present in the bug tab on gihub, a copy of it can be found [here](https://github.com/RI-SE/ATOS/blob/dev/.github/ISSUE_TEMPLATE/bug_report.md) 
 
 
 

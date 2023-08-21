@@ -78,8 +78,6 @@ class Module : public rclcpp::Node {
 								 std::function<void()> executeIfFail,
 								 const std::string& topic,
 								 const rclcpp::Logger& logger);
-								 
-	bool requestDataDictInitialization(int maxRetries = 3);
 	
 	/*! \brief This helper function is performs a service call given a client and yields a response.
 	*  \tparam Srv The name of the service to request.

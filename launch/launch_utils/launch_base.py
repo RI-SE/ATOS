@@ -12,8 +12,11 @@ def print_version():
     version_file = open(atos_install_dir / Path(".VERSION"), 'r')
     logging.get_logger('launch').info("ATOS version: " + version_file.read())
 
+def get_files():
+    return validate_files()
+
 def get_base_nodes():
-    files = validate_files()
+    files = get_files()
     atos_conf_dir = os.path.join(os.path.expanduser('~'), '.astazero', 'ATOS')
     atos_install_dir = get_package_prefix('atos')
 
@@ -61,13 +64,7 @@ def get_base_nodes():
             package='atos',
             namespace='atos',
             executable='journal_control',
-            name='journal_control'
-        ),
-        Node(
-            package='atos',
-            namespace='atos',
-            executable='osi_adapter',
-            name='osi_adapter',
+            name='journal_control',
             parameters=[files["params"]]
         ),
         Node(
@@ -75,22 +72,6 @@ def get_base_nodes():
             namespace='atos',
             executable='esmini_adapter',
             name='esmini_adapter',
-            parameters=[files["params"]]
-        ),
-        Node(
-            package='atos',
-            namespace='atos',
-            executable='mqtt_bridge',
-            name='mqtt_bridge',
-            # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
-            parameters=[files["params"]],
-            # arguments=['--ros-args', '--log-level', "debug"] # To get RCL_DEBUG prints
-        ),
-        Node(
-            package='atos',
-            namespace='atos',
-            executable='pointcloud_publisher',
-            name='pointcloud_publisher',
             parameters=[files["params"]]
         )
     ]

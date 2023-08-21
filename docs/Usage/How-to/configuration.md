@@ -1,35 +1,29 @@
-# Configurations
+# Configuration
 
 ## The test directory
-After starting ATOS the first time, you will find the test directory in `~/.astazero/ATOS`. This directory will contain all test settings and will contain the following directories:
+After starting ATOS the first time, you will find the test directory `.astazero/ATOS` in your home folder on the host machine (or where you have specified it to be). 
+This directory contains all configuration settings and journals which are located in the the following directories:
 
 - **Catalogs**
-    - Explanation here: Catalog directory containing various OpenSCENARIO-files with settings and parameters used by esmini. 
-    - Supported file types: `.xosc`
+    - Explanation: Catalog directory containing various OpenSCENARIO-files with settings and parameters used by esmini. 
+        - Vehicle/VehicleCatalog.xosc - Contains object details about vehicles that can be used in a test.
+        Mandatory properties are the "ip" and "model_id". The "ip" is the IP-address of the vehicle and the "model_id" is the ID which must be the same as the ID in the object .opro file in the objects folder.
 - **certs**
-    - Explanation here: Directory containing the certificates used by e.g. the web-gui.
-    - Supported file types: `.pem`
+    - Explanation: Directory containing the certificates used by e.g. the web-gui.
 - **conf**
-    - Explanation here:  Directory containing the configuration files used to configure ATOS, i.e. the ROS parameters located in the file params.yaml.
-    - Supported file types: `.yaml`
+    - Explanation:  Directory containing the configuration files used to configure ATOS, i.e. the ROS parameters located in the file params.yaml. Find more information below.
 - **journal**
-    - Explanation here: Directory containing the journal files, i.e. recorded configuration/state/position of each object for the duration of a test.
-    - Supported file types: `.jnl`
+    - Explanation: Directory containing the journal files, i.e. recorded configuration/state/position of each object for the duration of a test.
 - **objects**
-    - Explanation here: Directory containing all objects that should be used in a test.
-    - Supported file types: `.opro`
+    - Explanation: Directory containing all objects that should be used in a test.
+        - Each object present in the test must have a corresponding .opro file in this directory. Each .opro file contains a row with the format 
+`ID={objetcID}` where `{objectID}` must be the same as the "model_id" in the VehicleCatalog.xosc file.
 - **odr**
-    - Explanation here: Directory containing OpenDRIVE-files.
-    - Supported file types: `.xodr`
+    - Explanation: Directory containing OpenDRIVE-files.
 - **osc**
-    - Explanation here: Directory containing the OpenSCENARIO-files.
-    - Supported file types: `.xosc`
+    - Explanation: Directory containing the OpenSCENARIO-files.
 - **pointclouds**
-    - Explanation here: Directory containing site scans as pointclouds.
-    - Supported file types: `.pcd`
-- **traj**
-    - Explanation here: Legacy directory containing trajectory files.
-    - Supported file types: `.traj`
+    - Explanation: Directory containing site scans as pointclouds.
 
 
 ## Changing ROS parameters

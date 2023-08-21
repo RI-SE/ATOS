@@ -37,6 +37,7 @@ public:
 	void initialize();
 private:
 	static inline std::string const moduleName = "journal_control";
+  std::string scenarioName;
 
 	JournalModelCollection journals;
 

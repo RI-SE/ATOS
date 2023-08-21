@@ -17,7 +17,6 @@
 #include "state.hpp"
 #include "util.h"
 #include "journal.hpp"
-#include "datadictionary.h"
 
 #include "objectcontrol.hpp"
 
@@ -56,51 +55,19 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory);
 	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp);
 	triggerClient = create_client<atos_interfaces::srv::GetObjectTriggerStart>(ServiceNames::getObjectTriggerStart);
-	if (this->initialize() == -1) {
-		throw std::runtime_error(std::string("Failed to initialize ") + get_name());
-	}
 	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(ServiceNames::getObjectControlState,
 		std::bind(&ObjectControl::onRequestState, this, _1, _2));
+
+	// Set the initial state
+	this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
+	// Create test journal
+	if (JournalInit(get_name(), get_logger()) == -1) {
+		RCLCPP_ERROR(get_logger(), "Unable to create test journal");
+	}
 };
 
 ObjectControl::~ObjectControl() {
 	delete state;
-}
-
-int ObjectControl::initialize() {
-	int retval = 0;
-
-	// Create test journal
-	if (JournalInit(get_name(), get_logger()) == -1) {
-		retval = -1;
-		RCLCPP_ERROR(get_logger(), "Unable to create test journal");
-	}
-
-	if (requestDataDictInitialization()) {
-		// Map state and object data into memory
-		if (DataDictionaryInitObjectData() != READ_OK) {
-			DataDictionaryFreeObjectData();
-			retval = -1;
-			RCLCPP_ERROR(get_logger(),
-						"Found no previously initialized shared memory for object data");
-		}
-		if (DataDictionaryInitStateData() != READ_OK) {
-			DataDictionaryFreeStateData();
-			retval = -1;
-			RCLCPP_ERROR(get_logger(),
-						"Found no previously initialized shared memory for state data");
-		}
-		else {
-			// Set state
-			this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
-			DataDictionarySetOBCState(this->state->asNumber());
-		}
-	}
-	else {
-		retval = -1;
-		RCLCPP_ERROR(get_logger(), "Unable to initialize data dictionary");
-	}
-	return retval;
 }
 
 void ObjectControl::onRequestState(
@@ -202,12 +169,13 @@ void ObjectControl::onStopMessage(const Stop::message_type::SharedPtr){
 	this->tryHandleMessage(f_try,f_catch, Stop::topicName, get_logger());	
 }
 
-void ObjectControl::onAbortMessage(const Abort::message_type::SharedPtr){	
+void ObjectControl::onAbortMessage(const Abort::message_type::SharedPtr){
+  publishScenarioInfoToJournal(); // TODO: This should be moved to a state that occurs right after a test is finished
 	// Any exceptions here should crash the program
 	this->state->abortRequest(*this);
 }
 
-void ObjectControl::onAllClearMessage(const AllClear::message_type::SharedPtr){	
+void ObjectControl::onAllClearMessage(const AllClear::message_type::SharedPtr){
 	COMMAND cmd = COMM_ABORT_DONE;
 	auto f_try = [&]() { this->state->allClearRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
@@ -346,13 +314,6 @@ void ObjectControl::loadScenario() {
 	auto request = std::make_shared<atos_interfaces::srv::GetObjectIds::Request>();
 	auto promise = idClient->async_send_request(request, idsCallback);
 	return;
-
-
-	this->loadObjectFiles();
-	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, std::shared_ptr<TestObject>> &o) {
-		auto data = o.second->getAsObjectData();
-		DataDictionarySetObjectData(&data);
-	});
 }
 
 void ObjectControl::loadObjectFiles() {
@@ -834,4 +795,45 @@ void ObjectControl::stopControlSignalSubscriber(){
 
 void ObjectControl::sendAbortNotification(){
 	this->scnAbortPub.publish(ROSChannels::Abort::message_type());
+}
+
+/**
+ * @brief Publishes scenario info to the journal
+ * 
+ */
+void ObjectControl::publishScenarioInfoToJournal() {
+	JournalRecordData(JOURNAL_RECORD_STRING, "--- Scenario Info ---");
+	std::stringstream ss;
+	int index = 1;
+	for (const auto& object : objects) {
+		auto testObject = object.second;
+		auto traj = testObject->getTrajectory();
+
+		// Convert binary IP to string for logging
+		auto ip = testObject->getAsObjectData().ClientIP;
+		char ip_str[INET_ADDRSTRLEN];
+		inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN);
+
+		ss << "\n> Object " << index << ": \n"
+			 << "\t - ID: " << object.first << "\n" 
+			 << "\t - IP: " << ip_str << "\n"
+			 << "\t - Origin: (" << testObject->getOrigin().latitude_deg << ", " << testObject->getOrigin().longitude_deg << ", " << testObject->getOrigin().altitude_m << ")\n"
+			 << "\t - Trajectory size: " << testObject->getTrajectory().size() << "\n"
+			 << "\t - Trajectory: \n";
+		for (const auto& point : traj.points) {
+			ss << "\t\t" << point.toString() << "\n";
+		}
+
+		++index;
+
+	}
+	JournalRecordData(JOURNAL_RECORD_STRING, ss.str().c_str());
+
+	// print params.yaml in journal
+	auto path = getenv("HOME") + std::string("/.astazero/ATOS/conf/params.yaml");
+	std::ifstream ifs(path);
+	std::stringstream params;
+	params << "Parameters from params.yaml: \n" << ifs.rdbuf();
+	JournalRecordData(JOURNAL_RECORD_STRING, params.str().c_str());
+	JournalRecordData(JOURNAL_RECORD_STRING, "--- End of Scenario Info ---");
 }

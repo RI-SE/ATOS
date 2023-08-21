@@ -24,3 +24,11 @@ services:
       - "443:443"
       - "9090:9090" 
     command: bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
+  isoObject:
+    image: astazero/iso_object_demo:latest
+    privileged: true
+    stdin_open: true
+    tty: true
+    ports: 
+      - "53240:53240/udp"
+      - "53241:53241/tcp"

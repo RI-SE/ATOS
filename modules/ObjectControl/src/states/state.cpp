@@ -5,7 +5,6 @@
  */
 #include "state.hpp"
 #include "type.h"
-#include "datadictionary.h"
 #include <exception>
 
 void ObjectControlState::setState(
@@ -21,7 +20,6 @@ void ObjectControlState::setState(
 	ObjectControlState* temp = handler.state;
 	handler.state = st;
 	delete temp;
-	DataDictionarySetOBCState(handler.state->asNumber());
 	// After replacing state, execute any enter behaviour
 	handler.state->onEnter(handler);
 }
