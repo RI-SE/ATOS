@@ -20,24 +20,24 @@ SCENARIO_NAME = "OvertakeScenario"
 SCENARIO_FILE_NAME = SCENARIO_NAME + ".xosc"
 
 # VUT
-vut_speed = 70 / 3.6  # m/s
+vut_speed = 25 / 3.6  # m/s
 vut_acceleration = 1.5  # m/s^2
-vut_retardation = 1.75  # m/s^2
+vut_retardation = 1.5  # m/s^2
 vut_starting_point = xosc.LanePosition(320, 0, 1, 1055000)
-vut_brake_position = xosc.LanePosition(14, 0, -1, 1057000)
-vut_limit_position = xosc.LanePosition(14, 0, -1, 1057000)
+vut_brake_position = xosc.LanePosition(750, 0, 1, 1055000)
+vut_limit_position = xosc.LanePosition(50, 0, -1, 1057000)
 
 # GVT
-gvt_speed = 90 / 3.6  # m/s
+gvt_speed = 40 / 3.6  # m/s
 gvt_acceleration = 2.5  # m/s^2
-gvt_retardation = 1.75  # m/s^2
+gvt_retardation = 1.5  # m/s^2
 # GVT starting point and trajectory, assuming no overtaking is triggered.
 gvt_starting_point = xosc.LanePosition(270, 0, 1, 1055000)
 gvt_second_traj_point = xosc.LanePosition(30, 0, -1, 1057000)
 # GVT limit point, assuming no overtaking is triggered.
-gvt_first_limit_point = xosc.LanePosition(720, 0, 1, 1055000)
+gvt_first_limit_point = xosc.LanePosition(750, 0, 1, 1055000)
 # GVT limit point, assuming overtaking is initialized.
-gvt_second_limit_point = xosc.LanePosition(14, 0, 1, 1057000)
+gvt_second_limit_point = xosc.LanePosition(0, 0, 1, 1057000)
 # GVT overtaking limit point, assuming overtaking is initialized and completed.
 gvt_third_limit_point = xosc.LanePosition(0, 0, -1, 1057000)
 # Speed the VUT need to reach to trigger the GVT to start moving.
@@ -47,17 +47,17 @@ gvt_vut_start_overtake_threshold = 20.0  # m
 # Time it takes for the GVT to reach the new lane after the overtaking is triggered.
 gvt_vut_start_overtake_change_time = 5.0  # s
 # Distance between the VUT and GVT to trigger the GVT to complete the overtaking.
-gvt_vut_end_overtake_threshold = 1  # m
+gvt_vut_end_overtake_threshold = 1.5  # m
 # Time it takes for the GVT to perform the lane change after the complete overtaking is triggered.
 gvt_vut_end_overtake_change_time = 2.0  # s
 
 # Drone
 drone_speed = 25 / 3.6  # m/s
 drone_acceleration = 1.5  # m/s^2
-drone_retardation = 1.75  # m/s^2
-drone_starting_point = xosc.LanePosition(675, 0, -1, 1055000)
-drone_brake_position = xosc.LanePosition(14, 0, -2, 1057000)
-drone_limit_position = xosc.LanePosition(14, 0, -2, 1057000)
+drone_retardation = 1.5  # m/s^2
+drone_starting_point = xosc.LanePosition(320, 0, -1, 1055000)
+drone_brake_position = xosc.LanePosition(750, 0, -1, 1055000)
+drone_limit_position = xosc.LanePosition(50, 0, -2, 1057000)
 
 
 # Preamble
@@ -128,7 +128,7 @@ vut_reach_stop_position = xosc.EntityTrigger(
 )
 vut_brake_event = xosc.Event(
     VUT_ID + ",brake_event",
-    xosc.Priority.overwrite
+    xosc.Priority.parallel
 )
 vut_brake_event.add_trigger(vut_reach_stop_position)
 vut_brake_event.add_action(VUT_ID + ",brake_to_stop", vut_brake)
@@ -316,7 +316,7 @@ gvt_reach_stop_position_1 = xosc.EntityTrigger(
 
 gvt_brake_event_1 = xosc.Event(
     GVT_ID + ",brake_event_1",
-    xosc.Priority.overwrite
+    xosc.Priority.parallel
 )
 gvt_brake_event_1.add_trigger(gvt_reach_stop_position_1)
 gvt_brake_event_1.add_action(GVT_ID + ",brake_to_stop", gvt_brake)
@@ -334,7 +334,7 @@ gvt_reach_stop_position_2 = xosc.EntityTrigger(
 
 gvt_brake_event_2 = xosc.Event(
     GVT_ID + ",brake_event_2",
-    xosc.Priority.overwrite
+    xosc.Priority.parallel
 )
 gvt_brake_event_2.add_trigger(gvt_reach_stop_position_2)
 gvt_brake_event_2.add_action(GVT_ID + ",brake_to_stop", gvt_brake)
@@ -350,7 +350,7 @@ gvt_reach_stop_position_3 = xosc.EntityTrigger(
 
 gvt_brake_event_3 = xosc.Event(
     GVT_ID + ",brake_event_3",
-    xosc.Priority.overwrite
+    xosc.Priority.parallel
 )
 gvt_brake_event_3.add_trigger(gvt_reach_stop_position_3)
 gvt_brake_event_3.add_action(GVT_ID + ",brake_to_stop", gvt_brake)
@@ -358,12 +358,90 @@ gvt_maneuver.add_event(gvt_brake_event_3)
 
 # ----------------------GVT end------------------------------
 
+# ------------------------ DRONE ------------------------
+# Add drone to scenario
+drone_maneuver_group = xosc.ManeuverGroup(DRONE_ID + ",maneuver_group")
+drone_maneuver = xosc.Maneuver(DRONE_ID + ",maneuver")
+drone_maneuver_group.add_actor(DRONE_ID)
+
+osc_entities.add_scenario_object(DRONE_ID, xosc.CatalogReference(CATALOG_NAME, "bicycle"))
+
+drone_start_teleport = xosc.TeleportAction(drone_starting_point)
+
+init.add_init_action(DRONE_ID, drone_start_teleport)
+
+# Actions and Events
+
+# VUT initial trajectory and speed.
+# accelerate to top speed,
+# follow a trajectory,
+# then decelerate to a stop
+times = []
+positions = [
+    drone_starting_point,
+    drone_limit_position
+]
+
+polyline = xosc.Polyline(times, positions)
+trajectory = xosc.Trajectory(DRONE_ID + ",start_follow_trajectory", closed=False)
+trajectory.add_shape(polyline)
+drone_follow_trajectory = xosc.FollowTrajectoryAction(
+    trajectory,
+    xosc.FollowingMode.position,
+    xosc.ReferenceContext.relative,
+    1,
+    0
+)
+drone_set_speed = xosc.AbsoluteSpeedAction(
+    drone_speed,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.linear,
+        xosc.DynamicsDimension.rate,
+        drone_acceleration
+    ),
+)
+drone_brake = xosc.AbsoluteSpeedAction(
+    0,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.linear,
+        xosc.DynamicsDimension.rate,
+        -drone_retardation
+    ),
+)
+drone_reach_stop_position = xosc.EntityTrigger(
+    name=DRONE_ID + ",reach_stop_position",
+    delay=0,
+    conditionedge=xosc.ConditionEdge.none,
+    entitycondition=xosc.ReachPositionCondition(drone_brake_position, 1),
+    triggerentity=DRONE_ID
+)
+drone_brake_event = xosc.Event(
+    DRONE_ID + ",brake_event",
+    xosc.Priority.parallel
+)
+drone_brake_event.add_trigger(drone_reach_stop_position)
+drone_brake_event.add_action(DRONE_ID + ",brake_to_stop", drone_brake)
+drone_maneuver.add_event(drone_brake_event)
+
+drone_move_event = xosc.Event(
+    DRONE_ID + ",start_move_event",
+    xosc.Priority.parallel
+)
+drone_move_event.add_action(DRONE_ID + ",start_follow_trajectory", drone_follow_trajectory)
+drone_move_event.add_action(DRONE_ID + ",set_speed", drone_set_speed)
+drone_maneuver.add_event(drone_move_event)
+
+
+# ------------------------ DRONE END ------------------------
+
 # Collect into a scenario and write to file
 vut_maneuver_group.add_maneuver(vut_maneuver)
 gvt_maneuver_group.add_maneuver(gvt_maneuver)
+drone_maneuver_group.add_maneuver(drone_maneuver)
 
 osc_act.add_maneuver_group(vut_maneuver_group)
 osc_act.add_maneuver_group(gvt_maneuver_group)
+osc_act.add_maneuver_group(drone_maneuver_group)
 
 osc_storyboard.add_act(osc_act)
 osc_file = xosc.Scenario(
