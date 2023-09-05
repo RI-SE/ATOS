@@ -62,7 +62,7 @@ echo "Installing nvm and Node.js..."
 if [ "$ROS_DISTRO" == "humble" ]; then 
     NODE_VERSION=16.20.0
 elif [ "$ROS_DISTRO" == "foxy" ]; then
-    NODE_VERSION=10.19.0
+    NODE_VERSION=12
 fi
 NVM_DIR="$HOME/.nvm"
 
