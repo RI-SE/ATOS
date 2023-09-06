@@ -7,11 +7,13 @@
 #include "iso22133.h"
 #include <cstring>
 #include "atosTime.h"
+#include "header.h"
 
 using namespace ROSChannels;
 
 Channel& operator<<(Channel& chnl, const HeabMessageDataType& heartbeat) {
-	auto nBytes = encodeHEABMessage(&heartbeat.dataTimestamp, heartbeat.controlCenterStatus,
+	MessageHeaderType header;
+	auto nBytes = encodeHEABMessage(chnl.populateHeaderType(&header), &heartbeat.dataTimestamp, heartbeat.controlCenterStatus,
 									chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to encode HEAB message: ") + strerror(errno));
@@ -24,7 +26,8 @@ Channel& operator<<(Channel& chnl, const HeabMessageDataType& heartbeat) {
 }
 
 Channel& operator<<(Channel& chnl, const ObjectSettingsType& settings) {
-	auto nBytes = encodeOSEMMessage(&settings, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
+	MessageHeaderType header;
+	auto nBytes = encodeOSEMMessage(chnl.populateHeaderType(&header), &settings, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to encode OSEM message: ") + strerror(errno));
 	}
@@ -39,7 +42,8 @@ Channel& operator<<(Channel& chnl, const ATOS::Trajectory& traj) {
 	ssize_t nBytes;
 
 	// TRAJ header
-	nBytes = encodeTRAJMessageHeader(
+	MessageHeaderType header;
+	nBytes = encodeTRAJMessageHeader(chnl.populateHeaderType(&header),
 				traj.id, TRAJECTORY_INFO_RELATIVE_TO_ORIGIN, traj.name.c_str(),traj.name.length(),
 				static_cast<uint32_t>(traj.points.size()), chnl.transmitBuffer.data(),
 				chnl.transmitBuffer.size(), false);
@@ -87,7 +91,8 @@ Channel& operator<<(Channel& chnl, const ATOS::Trajectory& traj) {
 }
 
 Channel& operator<<(Channel& chnl, const ObjectCommandType& cmd) {
-	auto nBytes = encodeOSTMMessage(cmd, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
+	MessageHeaderType header;
+	auto nBytes = encodeOSTMMessage(chnl.populateHeaderType(&header), cmd, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to encode OSTM message: ") + strerror(errno));
 	}
@@ -99,7 +104,8 @@ Channel& operator<<(Channel& chnl, const ObjectCommandType& cmd) {
 }
 
 Channel& operator<<(Channel& chnl, const StartMessageType& strt) {
-	auto nBytes = encodeSTRTMessage(&strt, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
+	MessageHeaderType header;
+	auto nBytes = encodeSTRTMessage(chnl.populateHeaderType(&header), &strt, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to encode STRT message: ") + strerror(errno));
 	}
@@ -115,8 +121,11 @@ Channel& operator>>(Channel& chnl, MonitorMessage& monitor) {
 	if (chnl.pendingMessageType() == MESSAGE_ID_MONR) {
 		struct timeval tv;
 		TimeSetToCurrentSystemTime(&tv);
+		HeaderType header;
+		decodeISOHeader(chnl.receiveBuffer.data(), chnl.receiveBuffer.size(), &header, false);
+		monitor.first = header.transmitterID;
 		auto nBytes = decodeMONRMessage(chnl.receiveBuffer.data(), chnl.receiveBuffer.size(), tv,
-										&monitor.first, &monitor.second, false);
+										&monitor.second, false);
 		if (nBytes < 0) {
 			throw std::invalid_argument("Failed to decode MONR message");
 		}
@@ -158,7 +167,9 @@ Channel& operator<<(Channel& chnl, const ControlSignal::message_type::SharedPtr 
 	rcmm.throttleManoeuvre.pct = csp->throttle;
 	rcmm.brakeManoeuvre.pct = csp->brake;
 	rcmm.steeringManoeuvre.pct = csp->steering_angle;
-	auto nBytes = encodeRCMMMessage(&rcmm, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
+
+	MessageHeaderType header;
+	auto nBytes = encodeRCMMMessage(chnl.populateHeaderType(&header),&rcmm, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to encode RCM message: ") + strerror(errno));
 	}
@@ -202,6 +213,14 @@ ISOMessageID Channel::pendingMessageType(bool awaitNext) {
 		}
 		return retval;
 	}
+}
+
+MessageHeaderType *Channel::populateHeaderType(MessageHeaderType *header) {
+	memset(header, 0, sizeof (MessageHeaderType));
+	header->transmitterID = this->transmitterId;
+	header->receiverID = this->objectId;
+	header->messageCounter = this->sentMessageCounter++;
+	return header;
 }
 
 void Channel::connect(

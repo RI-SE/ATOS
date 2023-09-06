@@ -19,16 +19,22 @@ struct MonitorMessage : std::pair<uint32_t,ObjectMonitorType> {};
 class Channel : public Loggable
 {
 public:
-	Channel(const size_t bufferLength, const int type, rclcpp::Logger log)
+	Channel(const size_t bufferLength, const int type, rclcpp::Logger log, int id = 0, int transmitter = 0)
 		: channelType(type),
 		  transmitBuffer(bufferLength, 0),
 		  receiveBuffer(bufferLength, 0),
-		  Loggable(log)
+		  Loggable(log),
+		  objectId(id),
+		  transmitterId(transmitter)
 	{}
-	Channel(int type, rclcpp::Logger log) : Channel(1024, type, log) {}
+	Channel(int type, rclcpp::Logger log, int id = 0) : Channel(1024, type, log, id) {}
 	struct sockaddr_in addr = {};
 	int socket = -1;
 	int channelType = 0; //!< SOCK_STREAM or SOCK_DGRAM
+	int objectId = 0;
+	int transmitterId = 0;
+	int sentMessageCounter = 0;
+	int receivedMessageCounter = 0;
 	std::vector<char> transmitBuffer;
 	std::vector<char> receiveBuffer;
 
@@ -49,5 +55,6 @@ public:
 
 	friend Channel& operator>>(Channel&,MonitorMessage&);
 	friend Channel& operator>>(Channel&,ObjectPropertiesType&);
-
+protected:
+	MessageHeaderType *populateHeaderType(MessageHeaderType *header);
 };
