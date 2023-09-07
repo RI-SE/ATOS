@@ -204,8 +204,8 @@ ATOS_PATH="$SCRIPT_DIR"
 ATOS_INTERFACES_PATH="$ATOS_PATH/atos_interfaces"
 
 # Create a workspace dir if it doesn't exist
-if [ ! -d "~/atos_ws" ]; then
-    mkdir -p ~/atos_ws
+if [ ! -d "~/atos_ws/src" ]; then
+    mkdir -p ~/atos_ws/src
 fi
 
 # Function to update symlink if it doesn't point to the correct location
