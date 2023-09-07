@@ -1,0 +1,30 @@
+name: ROS Build
+on:
+  push:
+    branches:
+      - feature_CI_tests  # Adjust this branch name as needed
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Set up ROS
+      uses: ros-tooling/setup-ros@v1
+      with:
+        rosdistro: foxy 
+        colcon: true
+
+    - name: Build
+      run: |
+        source /opt/ros/noetic/setup.bash
+        colcon build
+
+    - name: Run Tests
+      run: |
+        source /opt/ros/noetic/setup.bash
+        colcon test
