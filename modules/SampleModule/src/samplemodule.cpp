@@ -32,12 +32,22 @@ void SampleModule::onInitMessage(const Init::message_type::SharedPtr) {
 	ConnectedObjectIds::message_type connectedObjectIds;
 	// Wait for a single message containing a vector of ids, at most 1000ms
 	rclcpp::wait_for_message(connectedObjectIds, shared_from_this(), std::string(get_namespace()) + "/connected_object_ids", 1000ms);
-	// Do something with IDs
+	// Populate a list of object IDs
+	for (auto id : connectedObjectIds.ids) {
+		objectIds.push_back(id);
+	}
 }
 
 void SampleModule::onAbortMessage(const Abort::message_type::SharedPtr) {}
 
 void SampleModule::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
+
+/*! \brief  returns the object ids of the objects in the scenario
+ * \return a vector of object ids
+*/
+std::vector<std::uint32_t> SampleModule::getObjectIds() {
+	return objectIds;
+}
 
 /*! \brief This function is executed in a separate thread
  * It is used to handle incoming TCP connections
