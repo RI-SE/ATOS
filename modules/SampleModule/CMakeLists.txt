@@ -23,12 +23,14 @@ add_executable(${SAMPLE_MODULE_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/samplemodule.cpp
 )
 # Link project executable to common libraries
-target_link_libraries(${SAMPLE_MODULE_TARGET}
+set(TARGET_LIBRARIES
 	${COREUTILS_LIBRARY}
 	${SOCKET_LIBRARY}
 	${COMMON_LIBRARY}
 )
+target_link_libraries(${SAMPLE_MODULE_TARGET} ${TARGET_LIBRARIES})
 
+# Add include directories
 target_include_directories(${SAMPLE_MODULE_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
@@ -36,14 +38,27 @@ target_include_directories(${SAMPLE_MODULE_TARGET} PUBLIC
 
 # ROS specific rules
 ament_target_dependencies(${SAMPLE_MODULE_TARGET}
-  rclcpp
-  std_msgs
-  atos_interfaces
+	rclcpp
+	std_msgs
+	atos_interfaces
 )
+
+if(BUILD_TESTING)
+	find_package(ament_cmake_gtest REQUIRED)
+	file(GLOB TESTFILES "test/*.cpp")
+
+	ament_add_gtest(${SAMPLE_MODULE_TARGET}_test ${TESTFILES})
+	target_link_libraries(${SAMPLE_MODULE_TARGET}_test ${TARGET_LIBRARIES})
+	target_include_directories(${SAMPLE_MODULE_TARGET}_test PUBLIC
+		${CMAKE_CURRENT_SOURCE_DIR}/inc
+		${COMMON_HEADERS}
+	)
+	install(TARGETS ${SAMPLE_MODULE_TARGET}_test DESTINATION lib/${PROJECT_NAME})
+endif()
 
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${SAMPLE_MODULE_TARGET}\")")
-install(TARGETS ${SAMPLE_MODULE_TARGET} 
+install(TARGETS ${SAMPLE_MODULE_TARGET}
 	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/atos"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
