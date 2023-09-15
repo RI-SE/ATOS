@@ -20,6 +20,7 @@
 #include "string_utility.hpp"
 #include "util.h"
 #include "util/coordinateutils.hpp"
+#include "proj.h"
 
 
 using namespace ROSChannels;
@@ -388,9 +389,20 @@ ATOS::Trajectory EsminiAdapter::getTrajectory(
 		double currLatVel = state.speed * sin(state.wheel_angle);
 		double prevLonVel = prevState.speed * cos(prevState.wheel_angle);
 		double prevLatVel = prevState.speed * sin(prevState.wheel_angle);
-		tp.setXCoord(state.x);
-		tp.setYCoord(state.y);
-		tp.setZCoord(state.z);
+
+		// Print print traj points as llh
+		std::string projStringFROM = "+proj=tmerc +lat_0=0 +lon_0=15 +k=0.9996 +x_0=132600 +y_0=-6406600 +ellps=WGS84 +units=m +no_defs";
+		std::string projStringTO = "+proj=tmerc +lat_0=57.781788736318816 +lon_0=12.769999997038758 +k=0.9996 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs";
+		
+		std::unique_ptr<PJ_CONTEXT, std::function<void(PJ_CONTEXT*)>> ctxt = std::unique_ptr<PJ_CONTEXT, std::function<void(PJ_CONTEXT*)>>(proj_context_create(), [](PJ_CONTEXT* ctxt){ proj_context_destroy(ctxt); });
+		std::unique_ptr<PJ, std::function<void(PJ*)>> projection = std::unique_ptr<PJ, std::function<void(PJ*)>>(proj_create_crs_to_crs(ctxt.get(), projStringFROM.c_str(), projStringTO.c_str(), nullptr), [](PJ* proj){ proj_destroy(proj); });
+
+		PJ_COORD in = proj_coord(state.x, state.y, state.z, 0);
+		PJ_COORD out = proj_trans(projection.get(), PJ_FWD, in);
+
+		tp.setXCoord(out.xyz.x);
+		tp.setYCoord(out.xyz.y);
+		tp.setZCoord(out.xyz.z);
 		tp.setHeading(state.h);
 		tp.setTime(state.timestamp);
 		tp.setCurvature(0); // TODO: implement support for different curvature, now only support straight lines
@@ -537,7 +549,10 @@ void EsminiAdapter::InitializeEsmini()
 	// Register callbacks to figure out what actions need to be taken
 	SE_RegisterStoryBoardElementStateChangeCallback(&collectStartAction);
 
+	RCLCPP_INFO(me->get_logger(), "Starting extracting trajs");
 	me->extractTrajectories(0.1, me->idToTraj);
+	RCLCPP_INFO(me->get_logger(), "Done extracting trajs");
+
 
 	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", me->idToTraj.size());
 	RCLCPP_INFO(me->get_logger(), "Number of objects with triggered start: %d", me->delayedStartIds.size());
@@ -568,14 +583,14 @@ void EsminiAdapter::InitializeEsmini()
 
 		// Publish the trajectory as a path
 		me->pathPublishers.emplace(id, ROSChannels::Path::Pub(*me, id));
-		me->pathPublishers.at(id).publish(traj.toPath());
+		me->pathPublishers.at(id).publish(traj.toPath());		
 
 		// below is for dumping the trajectory points to the console
-		/*
+		
 		for (auto& tp : traj.points){
 			RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
 		}
-		*/
+		
 	}
 }
 

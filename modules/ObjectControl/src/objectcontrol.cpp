@@ -313,6 +313,7 @@ void ObjectControl::loadScenario() {
 	// TODO query scenario participants from scenario manager
 	auto request = std::make_shared<atos_interfaces::srv::GetObjectIds::Request>();
 	auto promise = idClient->async_send_request(request, idsCallback);
+	promise.wait_for(std::chrono::seconds(10));
 	return;
 }
 
