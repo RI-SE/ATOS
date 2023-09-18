@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(integration_testing)
+project(integration_testing_handler)
 
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -26,6 +26,8 @@ include(GNUInstallDirs)
 # Create project main executable target
 add_executable(${INTEGRATION_TESTING_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/integrationtestinghandler.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/integrationtestingfactory.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/integrationtesting.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/scenarioexecution.cpp
 )

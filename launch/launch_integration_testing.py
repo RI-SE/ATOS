@@ -15,7 +15,7 @@ def get_integration_test_nodes():
         Node(
             package='atos',
             namespace='atos',
-            executable='integration_testing',
+            executable='integration_testing_handler',
             parameters=[files["params"]]
         )
     ]

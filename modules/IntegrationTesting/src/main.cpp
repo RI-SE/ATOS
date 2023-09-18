@@ -3,12 +3,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-#include "integrationtesting.hpp"
+#include "integrationtestinghandler.hpp"
 
 int main(int argc, char **argv) {
 	rclcpp::init(argc, argv);
-	auto integrationTestingNode = std::make_shared<IntegrationTesting>();
-	rclcpp::spin(integrationTestingNode);
+	auto integrationTestingHandlerNode = std::make_shared<IntegrationTestingHandler>();
+	rclcpp::spin(integrationTestingHandlerNode);
 	rclcpp::shutdown();
 	return 0;
 }

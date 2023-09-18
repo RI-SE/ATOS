@@ -38,6 +38,6 @@ atos:
   pointcloud_publisher:
     ros__parameters:
       pointcloud_files: [""]
-  integration_testing:
+  integration_testing_handler:
     ros__parameters:
       scenario_execution: true

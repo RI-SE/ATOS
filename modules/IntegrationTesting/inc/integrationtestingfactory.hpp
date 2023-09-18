@@ -6,15 +6,17 @@
 #pragma once
 
 #include "integrationtesting.hpp"
+#include "scenarioexecution.hpp"
 
 
-class ScenarioExecution : public IntegrationTesting {
+class IntegrationTestingFactory {
 
 	public:
-		ScenarioExecution();
-		~ScenarioExecution();
+		IntegrationTestingFactory();
+		~IntegrationTestingFactory();
+
+		std::shared_ptr<IntegrationTesting> createIntegrationTestExecution();
 
 	private:
-	  static inline std::string const moduleName = "scenario_execution";
 
 };
