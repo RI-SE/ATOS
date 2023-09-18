@@ -15,7 +15,7 @@ class IntegrationTestingFactory {
 		IntegrationTestingFactory();
 		~IntegrationTestingFactory();
 
-		std::shared_ptr<IntegrationTesting> createIntegrationTestExecution();
+		std::shared_ptr<IntegrationTesting> createIntegrationTestExecution(const std::string& testName);
 
 	private:
 

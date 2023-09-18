@@ -26,7 +26,7 @@ void IntegrationTestingHandler::executeIntegrationTests() {
 		if (testEnabled) {
 			auto executor = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
 			auto integrationTestFactory = std::make_shared<IntegrationTestingFactory>();
-			auto integrationTest = integrationTestFactory->createIntegrationTestExecution();
+			auto integrationTest = integrationTestFactory->createIntegrationTestExecution(testName);
 			executor->add_node(integrationTest);
 			executor->spin_once();
 		}

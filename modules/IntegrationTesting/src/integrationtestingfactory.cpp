@@ -9,6 +9,11 @@ IntegrationTestingFactory::IntegrationTestingFactory() {}
 
 IntegrationTestingFactory::~IntegrationTestingFactory() {}
 
-std::shared_ptr<IntegrationTesting> IntegrationTestingFactory::createIntegrationTestExecution() {
-	return std::make_shared<ScenarioExecution>();
+std::shared_ptr<IntegrationTesting> IntegrationTestingFactory::createIntegrationTestExecution(const std::string& testName) {
+	if (testName == "scenario_execution") {
+		return std::make_shared<ScenarioExecution>();
+	}
+	else {
+		throw std::runtime_error("Unknown integration test: " + testName);
+	}
 }
