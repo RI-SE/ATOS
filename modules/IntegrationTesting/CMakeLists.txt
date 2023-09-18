@@ -26,6 +26,7 @@ include(GNUInstallDirs)
 # Create project main executable target
 add_executable(${INTEGRATION_TESTING_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/integrationtesting.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/scenarioexecution.cpp
 )
 # Link project executable to util libraries

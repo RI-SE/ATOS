@@ -3,12 +3,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
+
 #include "integrationtesting.hpp"
 
-int main(int argc, char **argv) {
-	rclcpp::init(argc, argv);
-	auto integrationTestingNode = std::make_shared<IntegrationTesting>();
-	rclcpp::spin(integrationTestingNode);
-	rclcpp::shutdown();
-	return 0;
+
+IntegrationTesting::IntegrationTesting() : Module(moduleName) {
+	RCLCPP_INFO(get_logger(), "Initializing module %s", moduleName.c_str());
 }
+
+IntegrationTesting::~IntegrationTesting() {}

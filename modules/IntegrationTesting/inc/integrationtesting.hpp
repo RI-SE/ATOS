@@ -5,16 +5,17 @@
  */
 #pragma once
 
-#include "integrationtesting.hpp"
+#include "module.hpp"
+#include "roschannels/commandchannels.hpp"
 
 
-class ScenarioExecution : public IntegrationTesting {
+class IntegrationTesting : public Module {
 
 	public:
-		ScenarioExecution();
-		~ScenarioExecution();
+		IntegrationTesting();
+		~IntegrationTesting();
 
 	private:
-	  static inline std::string const moduleName = "scenario_execution";
+	  static inline std::string const moduleName = "integration_testing";
 
 };

@@ -7,7 +7,7 @@
 #include "scenarioexecution.hpp"
 
 
-ScenarioExecution::ScenarioExecution() : Module(moduleName) {
+ScenarioExecution::ScenarioExecution() : IntegrationTesting() {
 	RCLCPP_INFO(get_logger(), "Initializing module %s", moduleName.c_str());
 }
 
