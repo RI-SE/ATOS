@@ -17,5 +17,8 @@ class IntegrationTesting : public Module {
 
 	private:
 	  static inline std::string const moduleName = "integration_testing";
+		std::map<std::string, bool> integrationTests;
+
+		void getIntegrationTests();
 
 };

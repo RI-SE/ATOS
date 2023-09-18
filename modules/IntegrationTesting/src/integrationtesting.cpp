@@ -9,6 +9,13 @@
 
 IntegrationTesting::IntegrationTesting() : Module(moduleName) {
 	RCLCPP_INFO(get_logger(), "Initializing module %s", moduleName.c_str());
+	getIntegrationTests();
 }
 
 IntegrationTesting::~IntegrationTesting() {}
+
+
+void IntegrationTesting::getIntegrationTests() {
+	declare_parameter("scenario_execution", false);
+	get_parameter("scenario_execution", integrationTests["scenario_execution"]);
+}
