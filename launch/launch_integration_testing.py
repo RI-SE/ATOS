@@ -9,7 +9,7 @@ from launch import LaunchDescription
 import launch_utils.launch_base as launch_base
 
 
-def get_experimental_nodes():
+def get_integration_test_nodes():
     files = launch_base.get_files()
     return [
         Node(
@@ -23,9 +23,9 @@ def get_experimental_nodes():
 def generate_launch_description():
     base_nodes = launch_base.get_base_nodes()
     
-    experimental_nodes = get_experimental_nodes()
+    integration_test_nodes = get_integration_test_nodes()
 
-    for node in experimental_nodes:
+    for node in integration_test_nodes:
         base_nodes.append(node)
         
     return LaunchDescription(base_nodes)
