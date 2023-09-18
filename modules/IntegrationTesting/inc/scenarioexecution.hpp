@@ -5,10 +5,11 @@
  */
 #pragma once
 
-#include "integrationtesting.hpp"
+#include "module.hpp"
+#include "roschannels/commandchannels.hpp"
 
 
-class ScenarioExecution : public IntegrationTesting {
+class ScenarioExecution : public Module {
 
 	public:
 		ScenarioExecution();

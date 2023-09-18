@@ -20,5 +20,6 @@ class IntegrationTesting : public Module {
 		std::map<std::string, bool> integrationTests;
 
 		void getIntegrationTests();
+		void executeIntegrationTests();
 
 };
