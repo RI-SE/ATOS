@@ -22,6 +22,9 @@ void IntegrationTestingHandler::getIntegrationTests() {
 }
 
 void IntegrationTestingHandler::executeIntegrationTests() {
+	// sleep thread to allow other nodes to start
+	std::this_thread::sleep_for(std::chrono::seconds(3));
+
 	for (auto const& [testName, testEnabled] : integrationTests) {
 		if (testEnabled) {
 			auto executor = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();

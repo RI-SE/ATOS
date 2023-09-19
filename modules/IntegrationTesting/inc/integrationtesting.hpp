@@ -7,6 +7,7 @@
 
 #include "module.hpp"
 #include "roschannels/commandchannels.hpp"
+#include "atos_interfaces/srv/get_object_control_state.hpp"
 
 
 class IntegrationTesting : public Module {
@@ -15,6 +16,20 @@ class IntegrationTesting : public Module {
 		IntegrationTesting(const std::string& moduleName);
 		~IntegrationTesting();
 
-	private:
+	protected:
+		static inline std::string const moduleName = "scenario_execution";
+	  static inline std::string const initTopic = "/atos/init";
+	  static inline std::string const connectTopic = "/atos/connect";
+	  static inline std::string const armTopic = "/atos/arm";
+	  static inline std::string const startTopic = "/atos/start";
+		std::shared_ptr<rclcpp::Publisher<std_msgs::msg::Empty>> initPub;
+		std::shared_ptr<rclcpp::Publisher<std_msgs::msg::Empty>> connectPub;
+		std::shared_ptr<rclcpp::Publisher<std_msgs::msg::Empty>> armPub;
+		std::shared_ptr<rclcpp::Publisher<std_msgs::msg::Empty>> startPub;
+		std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetObjectControlState>> getObjectControlStateClient;
+
+		int getObjectControlState();
+		bool checkState(const std::string& command, int& state);
+
 
 };

@@ -6,6 +6,7 @@
 #pragma once
 
 #include "integrationtesting.hpp"
+#include "atos_interfaces/srv/get_object_control_state.hpp"
 
 
 class ScenarioExecution : public IntegrationTesting {
@@ -15,6 +16,7 @@ class ScenarioExecution : public IntegrationTesting {
 		~ScenarioExecution();
 
 	private:
-	  static inline std::string const moduleName = "scenario_execution";
+		std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetObjectControlState>> getObjectControlStateClient;
 
+		void runScenario();
 };
