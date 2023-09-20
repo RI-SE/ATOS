@@ -31,7 +31,7 @@ class IntegrationTesting : public Module {
 
 		
 		int getObjectControlState();
-		bool checkState(const std::string& command, int& state);
+		void checkState(const std::string& command);
 
 
 };

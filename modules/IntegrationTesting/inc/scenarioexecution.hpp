@@ -23,6 +23,7 @@ class ScenarioExecution : public IntegrationTesting {
 
 		void runIntegrationTest() override;
 		std::vector<std::pair<double, double>> getTrajectoryPoints();
-		void monitorCallback(const atos_interfaces::msg::Monitor::SharedPtr msg);
+		void checkTrajectory();
+		void placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr msg);
 
 };

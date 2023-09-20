@@ -26,20 +26,26 @@ int IntegrationTesting::getObjectControlState() {
 }
 
 
-bool IntegrationTesting::checkState(const std::string& command, int& state) {
+void IntegrationTesting::checkState(const std::string& command) {
+	auto state = getObjectControlState();
+	int expectedState;
 	if (command == initTopic) {
-		return state == OBCState_t::OBC_STATE_INITIALIZED;
+		expectedState = OBCState_t::OBC_STATE_INITIALIZED;
 	}
 	else if (command == connectTopic) {
-		return state == OBCState_t::OBC_STATE_CONNECTED;
+		expectedState = OBCState_t::OBC_STATE_CONNECTED;
 	}
 	else if (command == armTopic) {
-		return state == OBCState_t::OBC_STATE_ARMED;
+		expectedState = OBCState_t::OBC_STATE_ARMED;
 	}
 	else if (command == startTopic) {
-		return state == OBCState_t::OBC_STATE_RUNNING;
+		expectedState = OBCState_t::OBC_STATE_RUNNING;
+	}
+
+	if(state != expectedState) {
+			RCLCPP_ERROR(get_logger(), "State is not correct. State is %d, expected state %d", state, expectedState);
 	}
 	else {
-		return false;
+		RCLCPP_INFO(get_logger(), "State is correct. State is %d, expected state %d", state, expectedState);
 	}
 }

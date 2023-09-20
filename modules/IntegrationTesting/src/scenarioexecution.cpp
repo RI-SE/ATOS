@@ -23,56 +23,23 @@ void ScenarioExecution::runIntegrationTest() {
 	auto msg = std_msgs::msg::Empty();
 
 	initPub->publish(msg);
-	auto state = getObjectControlState();
-	auto isStateCorrect = checkState(initTopic, state);
-	if (!isStateCorrect) {
-		RCLCPP_ERROR(get_logger(), "State is not correct");
-		RCLCPP_ERROR(get_logger(), "State is %d", state);
-	}
+	std::this_thread::sleep_for(std::chrono::seconds(1)); // sleep to allow the object to initialize
+	checkState(initTopic);
 
-	// sleep to allow the object to initialize
-	std::this_thread::sleep_for(std::chrono::seconds(1));
+	
 	connectPub->publish(msg);
-	state = getObjectControlState();
-	isStateCorrect = checkState(connectTopic, state);
-	if (!isStateCorrect) {
-		RCLCPP_ERROR(get_logger(), "State is not correct");
-		RCLCPP_ERROR(get_logger(), "State is %d", state);
-	}
+	std::this_thread::sleep_for(std::chrono::seconds(1)); // sleep to allow the object to connect
+	checkState(connectTopic);
 
-	// sleep to allow the object to connect
-	std::this_thread::sleep_for(std::chrono::seconds(1));
 	armPub->publish(msg);
-	state = getObjectControlState();
-	isStateCorrect = checkState(armTopic, state);
-	if (!isStateCorrect) {
-		RCLCPP_ERROR(get_logger(), "State is not correct");
-		RCLCPP_ERROR(get_logger(), "State is %d", state);
-	}
+	std::this_thread::sleep_for(std::chrono::seconds(1)); // sleep to allow the object to arm
+	checkState(armTopic);
 
-	// sleep to allow the object to arm
-	std::this_thread::sleep_for(std::chrono::seconds(1));
 	startPub->publish(msg);
-	state = getObjectControlState();
-	isStateCorrect = checkState(startTopic, state);
-	if (!isStateCorrect) {
-		RCLCPP_ERROR(get_logger(), "State is not correct");
-		RCLCPP_ERROR(get_logger(), "State is %d", state);
-	}
+	std::this_thread::sleep_for(std::chrono::seconds(1)); // sleep to allow the object to start
+	checkState(startTopic);
 
-	auto trajectory = getTrajectoryPoints();
-	std::pair<double, double> lastPoint;
-	auto isObjectMoving = true;
-	while(isObjectMoving) {
-		atos_interfaces::msg::Monitor monr;
-		monitorSub = this->create_subscription<atos_interfaces::msg::Monitor>("/atos/object_1/object_monitor", 10, std::bind(&ScenarioExecution::monitorCallback, this, std::placeholders::_1));
-		rclcpp::wait_for_message(monr, monitorSub, this->get_node_base_interface()->get_context(), 50ms);
-		std::cerr << "POINT: " << monr.pose.pose.position.x << " " << monr.pose.pose.position.y << std::endl;
-		if (monr.velocity.twist.linear.x == 0 && monr.velocity.twist.linear.y == 0) {
-			lastPoint = std::make_pair(monr.pose.pose.position.x, monr.pose.pose.position.y);
-			isObjectMoving = false;
-		}
-	}
+	checkTrajectory();
 }	
 
 
@@ -89,5 +56,30 @@ std::vector<std::pair<double, double>> ScenarioExecution::getTrajectoryPoints() 
 	return trajectory;
 }
 
+void ScenarioExecution::checkTrajectory() {
+	auto trajectory = getTrajectoryPoints();
+	std::pair<double, double> lastPoint;
+	auto isObjectMoving = true;
+	while(isObjectMoving) {
+		atos_interfaces::msg::Monitor monr;
+		monitorSub = this->create_subscription<atos_interfaces::msg::Monitor>("/atos/object_1/object_monitor", 10, std::bind(&ScenarioExecution::placeholderCallback, this, std::placeholders::_1));
+		rclcpp::wait_for_message(monr, monitorSub, this->get_node_base_interface()->get_context(), 50ms);
+		if (monr.velocity.twist.linear.x == 0 && monr.velocity.twist.linear.y == 0) {
+			lastPoint = std::make_pair(monr.pose.pose.position.x, monr.pose.pose.position.y);
+			isObjectMoving = false;
+		}
+	}
 
-void ScenarioExecution::monitorCallback(const atos_interfaces::msg::Monitor::SharedPtr msg) {}
+	auto distanceX = lastPoint.first - trajectory.back().first;
+	auto distanceY = lastPoint.second - trajectory.back().second;
+	auto distanceThreshold = 1.0;
+	if (abs(distanceX) < distanceThreshold && abs(distanceY) < distanceThreshold) {
+		RCLCPP_INFO(get_logger(), "Object followed trajectory succesfully");
+	}
+	else {
+		RCLCPP_ERROR(get_logger(), "Object did not follow trajectory succesfully. Distance from end point of trajectory is x: %f, y: %f", distanceX, distanceY);
+	}
+}
+
+
+void ScenarioExecution::placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr msg) {}
