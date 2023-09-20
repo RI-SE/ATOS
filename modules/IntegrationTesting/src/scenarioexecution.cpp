@@ -31,7 +31,7 @@ void ScenarioExecution::runIntegrationTest() {
 	}
 
 	// sleep to allow the object to initialize
-	std::this_thread::sleep_for(std::chrono::seconds(2));
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 	connectPub->publish(msg);
 	state = getObjectControlState();
 	isStateCorrect = checkState(connectTopic, state);
@@ -41,7 +41,7 @@ void ScenarioExecution::runIntegrationTest() {
 	}
 
 	// sleep to allow the object to connect
-	std::this_thread::sleep_for(std::chrono::seconds(2));
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 	armPub->publish(msg);
 	state = getObjectControlState();
 	isStateCorrect = checkState(armTopic, state);
@@ -51,7 +51,7 @@ void ScenarioExecution::runIntegrationTest() {
 	}
 
 	// sleep to allow the object to arm
-	std::this_thread::sleep_for(std::chrono::seconds(2));
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 	startPub->publish(msg);
 	state = getObjectControlState();
 	isStateCorrect = checkState(startTopic, state);
@@ -60,18 +60,19 @@ void ScenarioExecution::runIntegrationTest() {
 		RCLCPP_ERROR(get_logger(), "State is %d", state);
 	}
 
-	// get object position
-	// call service /atos/get_object_trajectory
-	// then check if postion from topic /atos/object_1/object_monitor is the same
-	// if so, go to aborting
-	// also, write function to check if passes all checks and save it somewhere
-
 	auto trajectory = getTrajectoryPoints();
-	// monitorSub = this->create_subscription<atos_interfaces::msg::Monitor>("/atos/object_1/object_monitor", 10, std::bind(&ScenarioExecution::monitorCallback, this, std::placeholders::_1));
-	// atos_interfaces::msg::Monitor monr;
-	// auto a = "/atos/object_1/object_monitor";
-	// rclcpp::wait_for_message(monr, this->shared_from_this(), "/atos/object_1/object_monitor", 1000ms);
-	// std::cerr << "AAAAAAAAAAAAAAAA: " << monr.pose.pose.position.x << std::endl;
+	std::pair<double, double> lastPoint;
+	auto isObjectMoving = true;
+	while(isObjectMoving) {
+		atos_interfaces::msg::Monitor monr;
+		monitorSub = this->create_subscription<atos_interfaces::msg::Monitor>("/atos/object_1/object_monitor", 10, std::bind(&ScenarioExecution::monitorCallback, this, std::placeholders::_1));
+		rclcpp::wait_for_message(monr, monitorSub, this->get_node_base_interface()->get_context(), 50ms);
+		std::cerr << "POINT: " << monr.pose.pose.position.x << " " << monr.pose.pose.position.y << std::endl;
+		if (monr.velocity.twist.linear.x == 0 && monr.velocity.twist.linear.y == 0) {
+			lastPoint = std::make_pair(monr.pose.pose.position.x, monr.pose.pose.position.y);
+			isObjectMoving = false;
+		}
+	}
 }	
 
 
@@ -89,6 +90,4 @@ std::vector<std::pair<double, double>> ScenarioExecution::getTrajectoryPoints() 
 }
 
 
-void ScenarioExecution::monitorCallback(const atos_interfaces::msg::Monitor::SharedPtr msg) {
-	RCLCPP_INFO(get_logger(), "Monitor callback: %f, %f", msg->pose.pose.position.x, msg->pose.pose.position.y);
-}
+void ScenarioExecution::monitorCallback(const atos_interfaces::msg::Monitor::SharedPtr msg) {}
