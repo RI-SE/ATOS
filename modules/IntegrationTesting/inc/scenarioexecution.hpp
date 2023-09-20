@@ -6,7 +6,8 @@
 #pragma once
 
 #include "integrationtesting.hpp"
-#include "atos_interfaces/srv/get_object_control_state.hpp"
+#include "atos_interfaces/msg/monitor.hpp"
+#include "atos_interfaces/srv/get_object_trajectory.hpp"
 
 
 class ScenarioExecution : public IntegrationTesting {
@@ -16,7 +17,12 @@ class ScenarioExecution : public IntegrationTesting {
 		~ScenarioExecution();
 
 	private:
-		std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetObjectControlState>> getObjectControlStateClient;
+		std::shared_ptr<rclcpp::Subscription<atos_interfaces::msg::Monitor>> monitorSub;
+		std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>> getObjectTrajectoryClient;
 
-		void runScenario();
+
+		void runIntegrationTest() override;
+		std::vector<std::pair<double, double>> getTrajectoryPoints();
+		void monitorCallback(const atos_interfaces::msg::Monitor::SharedPtr msg);
+
 };

@@ -6,7 +6,6 @@
 #pragma once
 
 #include "module.hpp"
-#include "roschannels/commandchannels.hpp"
 #include "atos_interfaces/srv/get_object_control_state.hpp"
 
 
@@ -15,6 +14,8 @@ class IntegrationTesting : public Module {
 	public:
 		IntegrationTesting(const std::string& moduleName);
 		~IntegrationTesting();
+
+		virtual void runIntegrationTest() = 0;
 
 	protected:
 		static inline std::string const moduleName = "scenario_execution";
@@ -28,6 +29,7 @@ class IntegrationTesting : public Module {
 		std::shared_ptr<rclcpp::Publisher<std_msgs::msg::Empty>> startPub;
 		std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetObjectControlState>> getObjectControlStateClient;
 
+		
 		int getObjectControlState();
 		bool checkState(const std::string& command, int& state);
 
