@@ -8,6 +8,14 @@
 
 using namespace std::chrono_literals;
 
+
+/**
+ * @brief Base class for all integration tests. This class contains functionality such as creating publishers for
+ * sending commands to change state, and getting the current state.
+ * 
+ * 
+ * @param moduleName 
+ */
 IntegrationTesting::IntegrationTesting(const std::string& moduleName) : Module(moduleName) {
 	initPub = this->create_publisher<std_msgs::msg::Empty>(initTopic, 10);
 	connectPub = this->create_publisher<std_msgs::msg::Empty>(connectTopic, 10);
@@ -16,9 +24,19 @@ IntegrationTesting::IntegrationTesting(const std::string& moduleName) : Module(m
 	getObjectControlStateClient = this->create_client<atos_interfaces::srv::GetObjectControlState>("/atos/get_object_control_state");
 }
 
+
+/**
+ * @brief Destructor.
+ * 
+ */
 IntegrationTesting::~IntegrationTesting() {}
 
 
+/**
+ * @brief Get the current state of the object.
+ * 
+ * @return int Current state of the object.
+ */
 int IntegrationTesting::getObjectControlState() {
 	std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Response> response;
 	this->callService(1000ms, getObjectControlStateClient, response);
@@ -26,6 +44,12 @@ int IntegrationTesting::getObjectControlState() {
 }
 
 
+/**
+ * @brief Check if the current state of the object is the same as the expected state.
+ * This function also saves the result for printing later.
+ * 
+ * @param command The command sent in order to change state, e.g. "/atos/init".
+ */
 void IntegrationTesting::checkState(const std::string& command) {
 	auto state = getObjectControlState();
 	int expectedState;

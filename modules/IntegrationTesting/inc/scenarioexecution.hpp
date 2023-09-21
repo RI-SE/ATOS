@@ -26,5 +26,4 @@ class ScenarioExecution : public IntegrationTesting {
 		std::vector<std::pair<double, double>> getTrajectoryPoints();
 		void checkTrajectory();
 		void placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr msg);
-
 };

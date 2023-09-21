@@ -21,5 +21,4 @@ class IntegrationTestingHandler : public Module {
 
 		void getIntegrationTests();
 		void executeIntegrationTests();
-
 };

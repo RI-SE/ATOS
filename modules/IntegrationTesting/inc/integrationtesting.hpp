@@ -15,10 +15,10 @@ class IntegrationTesting : public Module {
 		IntegrationTesting(const std::string& moduleName);
 		~IntegrationTesting();
 
+		static inline std::string const testName = "scenario_execution";
 		virtual void runIntegrationTest() = 0;
 
 	protected:
-		static inline std::string const moduleName = "scenario_execution";
 	  static inline std::string const initTopic = "/atos/init";
 	  static inline std::string const connectTopic = "/atos/connect";
 	  static inline std::string const armTopic = "/atos/arm";
@@ -33,6 +33,4 @@ class IntegrationTesting : public Module {
 		virtual void printResult() = 0;
 		int getObjectControlState();
 		void checkState(const std::string& command);
-
-
 };

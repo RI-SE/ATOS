@@ -8,22 +8,39 @@
 #include "scenarioexecution.hpp"
 
 
+/**
+ * @brief Class for creating integration tests. The idea is to set which integrations tests to run in
+ * params.yaml, and this class will read the params and create the integration tests.
+ * 
+ */
 IntegrationTestingHandler::IntegrationTestingHandler() : Module(moduleName) {
 	getIntegrationTests();
 	executeIntegrationTests();
 }
 
+/**
+ * @brief Destructor.
+ * 
+ */
 IntegrationTestingHandler::~IntegrationTestingHandler() {}
 
 
+/**
+ * @brief Get the integration tests to run from params.yaml.
+ * 
+ */
 void IntegrationTestingHandler::getIntegrationTests() {
 	declare_parameter("scenario_execution", false);
 	get_parameter("scenario_execution", integrationTests["scenario_execution"]);
 }
 
+
+/**
+ * @brief Execute the selected integration tests. Each integration test is run in a separate node.
+ * 
+ */
 void IntegrationTestingHandler::executeIntegrationTests() {
-	// sleep thread to allow other nodes to start
-	std::this_thread::sleep_for(std::chrono::seconds(3));
+	std::this_thread::sleep_for(std::chrono::seconds(3)); // sleep thread to allow other nodes to start
 
 	for (auto const& [testName, testEnabled] : integrationTests) {
 		if (testEnabled) {

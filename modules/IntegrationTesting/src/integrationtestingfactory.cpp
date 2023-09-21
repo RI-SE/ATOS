@@ -5,12 +5,28 @@
  */
 #include "integrationtestingfactory.hpp"
 
+/**
+ * @brief Factory class for creating integration tests.
+ * 
+ */
 IntegrationTestingFactory::IntegrationTestingFactory() {}
 
+
+/**
+ * @brief Destructor.
+ * 
+ */
 IntegrationTestingFactory::~IntegrationTestingFactory() {}
 
+
+/**
+ * @brief Create an integration test object.
+ * 
+ * @param testName Which integration test to create.
+ * @return std::shared_ptr<IntegrationTesting> New integration test object.
+ */
 std::shared_ptr<IntegrationTesting> IntegrationTestingFactory::createIntegrationTestExecution(const std::string& testName) {
-	if (testName == "scenario_execution") {
+	if (testName == ScenarioExecution::testName) {
 		return std::make_shared<ScenarioExecution>();
 	}
 	else {

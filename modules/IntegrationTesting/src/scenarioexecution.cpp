@@ -7,18 +7,33 @@
 #include "scenarioexecution.hpp"
 #include "rclcpp/wait_for_message.hpp"
 
-
 using namespace std::chrono_literals;
 
-ScenarioExecution::ScenarioExecution() : IntegrationTesting(moduleName) {
-	RCLCPP_INFO(get_logger(), "Started integration test: %s", moduleName.c_str());
+/**
+ * @brief An integration test for scenario execution. This test will run a scenario execution for one object,
+ * and check that all states are correct and that it follows the trajectory.
+ * 
+ */
+ScenarioExecution::ScenarioExecution() : IntegrationTesting(testName) {
+	RCLCPP_INFO(get_logger(), "Started integration test: %s", testName.c_str());
 	getObjectTrajectoryClient = this->create_client<atos_interfaces::srv::GetObjectTrajectory>("/atos/get_object_trajectory");
 	runIntegrationTest();
 }
 
+
+/**
+ * @brief Destructor.
+ * 
+ */
 ScenarioExecution::~ScenarioExecution() {}
 
 
+/**
+ * @brief Run the integration test. This integration test will initialize a scenario, connect to object 1,
+ * arm the object, and then start it. It will check that all states are correct, and that the object follows
+ * the trajectory.
+ * 
+ */
 void ScenarioExecution::runIntegrationTest() {
 	RCLCPP_INFO(get_logger(), "Running scenario");
 	auto msg = std_msgs::msg::Empty();
@@ -44,6 +59,11 @@ void ScenarioExecution::runIntegrationTest() {
 }	
 
 
+/**
+ * @brief Get the x- and y-coordinates of the trajectory points for object 1.
+ * 
+ * @return std::vector<std::pair<double, double>> Trajectory points.
+ */
 std::vector<std::pair<double, double>> ScenarioExecution::getTrajectoryPoints() {
 	auto request = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
 	request->id = 1;
@@ -57,6 +77,11 @@ std::vector<std::pair<double, double>> ScenarioExecution::getTrajectoryPoints() 
 	return trajectory;
 }
 
+
+/**
+ * @brief Check that the object ends up near the end point of the trajectory.
+ * 
+ */
 void ScenarioExecution::checkTrajectory() {
 	auto trajectory = getTrajectoryPoints();
 	std::pair<double, double> lastPoint;
@@ -85,6 +110,10 @@ void ScenarioExecution::checkTrajectory() {
 }
 
 
+/**
+ * @brief Print the result of the integration test.
+ * 
+ */
 void ScenarioExecution::printResult() {
 	std::stringstream ss;
 	auto width = 20;
@@ -112,4 +141,9 @@ void ScenarioExecution::printResult() {
 }
 
 
+/**
+ * @brief This is a placeholder callback function. It is needed in order to create a topic subscriber.
+ * 
+ * @param msg Message.
+ */
 void ScenarioExecution::placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr msg) {}
