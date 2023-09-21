@@ -19,9 +19,10 @@ class ScenarioExecution : public IntegrationTesting {
 	private:
 		std::shared_ptr<rclcpp::Subscription<atos_interfaces::msg::Monitor>> monitorSub;
 		std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>> getObjectTrajectoryClient;
-
+		bool followedTrajectory;
 
 		void runIntegrationTest() override;
+		void printResult() override;
 		std::vector<std::pair<double, double>> getTrajectoryPoints();
 		void checkTrajectory();
 		void placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr msg);

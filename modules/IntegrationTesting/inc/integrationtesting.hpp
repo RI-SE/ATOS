@@ -28,8 +28,9 @@ class IntegrationTesting : public Module {
 		std::shared_ptr<rclcpp::Publisher<std_msgs::msg::Empty>> armPub;
 		std::shared_ptr<rclcpp::Publisher<std_msgs::msg::Empty>> startPub;
 		std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetObjectControlState>> getObjectControlStateClient;
+		std::vector<std::pair<int, int>> stateResult;
 
-		
+		virtual void printResult() = 0;
 		int getObjectControlState();
 		void checkState(const std::string& command);
 

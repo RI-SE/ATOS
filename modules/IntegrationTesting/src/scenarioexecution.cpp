@@ -3,6 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
+#include <iomanip>
 #include "scenarioexecution.hpp"
 #include "rclcpp/wait_for_message.hpp"
 
@@ -25,7 +26,6 @@ void ScenarioExecution::runIntegrationTest() {
 	initPub->publish(msg);
 	std::this_thread::sleep_for(std::chrono::seconds(1)); // sleep to allow the object to initialize
 	checkState(initTopic);
-
 	
 	connectPub->publish(msg);
 	std::this_thread::sleep_for(std::chrono::seconds(1)); // sleep to allow the object to connect
@@ -40,6 +40,7 @@ void ScenarioExecution::runIntegrationTest() {
 	checkState(startTopic);
 
 	checkTrajectory();
+	printResult();
 }	
 
 
@@ -74,11 +75,40 @@ void ScenarioExecution::checkTrajectory() {
 	auto distanceY = lastPoint.second - trajectory.back().second;
 	auto distanceThreshold = 1.0;
 	if (abs(distanceX) < distanceThreshold && abs(distanceY) < distanceThreshold) {
+		followedTrajectory = true;
 		RCLCPP_INFO(get_logger(), "Object followed trajectory succesfully");
 	}
 	else {
+		followedTrajectory = false;
 		RCLCPP_ERROR(get_logger(), "Object did not follow trajectory succesfully. Distance from end point of trajectory is x: %f, y: %f", distanceX, distanceY);
 	}
+}
+
+
+void ScenarioExecution::printResult() {
+	std::stringstream ss;
+	auto width = 20;
+	ss << "State change results:\n";
+	ss << std::setfill('-') << std::setw(width * 3) << "-" << std::endl;
+	ss << std::left << std::setfill(' ') << std::setw(width) << "State" 
+		 << std::setw(width) << "Expected state" 
+		 << std::setw(width) << "Pass" << std::endl;
+	ss << std::setfill('-') << std::setw(width * 3) << "-" << std::endl;
+
+	for (auto const& [state, expectedState] : stateResult) {
+		auto pass = (state == expectedState) ? "OK" : "NOT OK";
+		ss << std::left << std::setfill(' ') << std::setw(width) << state 
+			 << std::setw(width) << expectedState 
+			 << std::setw(width) << pass << std::endl;
+	}
+	ss << std::setfill('-') << std::setw(width * 3) << "-" << std::endl;
+	ss << std::setfill(' ');
+
+	ss << "\nScenario Execution result: ";
+	auto pass = (followedTrajectory) ? "OK" : "NOT OK";
+	ss << pass << "\n";
+
+	RCLCPP_INFO(get_logger(), ss.str().c_str());
 }
 
 

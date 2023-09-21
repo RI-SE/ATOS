@@ -48,4 +48,6 @@ void IntegrationTesting::checkState(const std::string& command) {
 	else {
 		RCLCPP_INFO(get_logger(), "State is correct. State is %d, expected state %d", state, expectedState);
 	}
+
+	stateResult.push_back(std::make_pair(state, expectedState));
 }
