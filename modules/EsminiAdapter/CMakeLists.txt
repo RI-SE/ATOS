@@ -12,6 +12,7 @@ project(esmini_adapter)
 find_package(atos_interfaces REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(esminiLib REQUIRED)
+find_package(esminiRMLib REQUIRED)
 find_package(foxglove_msgs REQUIRED)
 find_package(PROJ REQUIRED)
 
@@ -35,12 +36,14 @@ target_link_libraries(${ESMINI_ADAPTER_TARGET}
 	${COREUTILS_LIBRARY}
 	${ATOS_COMMON_LIBRARY}
 	${esminiLib_LIBRARIES}
+	${esminiRMLib_LIBRARIES}
 )
 
 target_include_directories(${ESMINI_ADAPTER_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
 	${esminiLib_INCLUDE_DIRS}
+	${esminiRMLib_INCLUDE_DIRS}
 )
 
 # ROS specific rules
