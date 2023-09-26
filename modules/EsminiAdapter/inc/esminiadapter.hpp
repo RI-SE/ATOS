@@ -64,12 +64,14 @@ private:
 	static void reportObjectPosition(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
 	static void executeActionIfStarted(const char* name, int type, int state);
 	static std::filesystem::path getOpenScenarioFileParameter();
+	static std::filesystem::path getOpenDriveFile();
 	static void setOpenScenarioFile(const std::filesystem::path&);
 	static void handleStoryBoardElementChange(const char* name, int type, int state);
 	static void handleActionElementStateChange(const char* name, int state);
 	static void InitializeEsmini();
 	static void getObjectStates(double timeStep, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
-	static ATOS::Trajectory getTrajectory(uint32_t,std::vector<SE_ScenarioObjectState>& states);
+	static ATOS::Trajectory getTrajectoryFromObjectState(uint32_t,std::vector<SE_ScenarioObjectState>& states);
+	static void convertToISOTrajectory(ATOS::Trajectory& traj);
 	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(double timeStep, std::map<uint32_t,ATOS::Trajectory>& idToTraj);
 	static std::pair<uint32_t, std::string> parseAction(const std::string& action);
 	static bool isStartAction(const std::string& action);
