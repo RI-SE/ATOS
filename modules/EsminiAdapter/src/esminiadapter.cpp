@@ -50,11 +50,8 @@ geographic_msgs::msg::GeoPose EsminiAdapter::testOrigin = geographic_msgs::msg::
 EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	startObjectPub(*this),
 	v2xPub(*this),
-	initSub(*this, &EsminiAdapter::onStaticInitMessage),
-	startSub(*this, &EsminiAdapter::onStaticStartMessage),
-	abortSub(*this, &EsminiAdapter::onStaticAbortMessage),
-	exitSub(*this, &EsminiAdapter::onStaticExitMessage),
 	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage),
+	exitSub(*this, &EsminiAdapter::onStaticExitMessage),
 	stateChangeSub(*this, &EsminiAdapter::onStaticStateChangeMessage)
  {
 	declare_parameter("open_scenario_file","");
@@ -105,9 +102,6 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 		me = std::shared_ptr<EsminiAdapter>(new EsminiAdapter());
 		// Start listening to connected object ids
 		me->connectedObjectIdsSub = ROSChannels::ConnectedObjectIds::Sub(*me,&EsminiAdapter::onConnectedObjectIdsMessage);
-		me->initSub = ROSChannels::Init::Sub(*me,&EsminiAdapter::onStaticInitMessage);
-		me->startSub = ROSChannels::Start::Sub(*me,&EsminiAdapter::onStaticStartMessage);
-		me->abortSub = ROSChannels::Abort::Sub(*me,&EsminiAdapter::onStaticAbortMessage);
 		me->exitSub = ROSChannels::Exit::Sub(*me,&EsminiAdapter::onStaticExitMessage);
 		me->stateChangeSub = ROSChannels::StateChange::Sub(*me,&EsminiAdapter::onStaticStateChangeMessage);
 		// Start V2X publisher
@@ -129,22 +123,35 @@ void EsminiAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::messag
 	}
 }
 
-//! Message queue callbacks
+/**
+ * @brief To ensure that EsminiAdapter follows the states, we execute actions only when going from IDLE to INITIALIZED,
+ * from ARMED to RUNNING and from any state to ABORTING. We do this instead of subscribing to "/init", "/start", etc.,
+ * because we only want to execute the actions once when changing to these states.
+ * 
+ * @param msg StateChange message
+ */
+void EsminiAdapter::onStaticStateChangeMessage(const ROSChannels::StateChange::message_type::SharedPtr msg) {
+	int prevState = msg->prev_state;
+	int currentState = msg->current_state;
 
-void EsminiAdapter::onStaticStateChangeMessage(const ROSChannels::StateChange::message_type::SharedPtr) {
-	std::cerr << "State changed!\n";
+	if (prevState == OBCState_t::OBC_STATE_IDLE && currentState == OBC_STATE_INITIALIZED) {
+		me->handleInitCommand();
+	}
+	else if (prevState == OBCState_t::OBC_STATE_ARMED && currentState == OBCState_t::OBC_STATE_RUNNING) {
+		me->handleStartCommand();
+	}
+	else if (currentState == OBCState_t::OBC_STATE_ABORTING) {
+		me->handleAbortCommand();
+	}
 }
 
 
-
-
-void EsminiAdapter::onStaticAbortMessage(const Abort::message_type::SharedPtr) {
+void EsminiAdapter::handleAbortCommand() {
 	SE_Close();
 	RCLCPP_INFO(me->get_logger(), "Esmini ScenarioEngine stopped due to Abort");
 }
 
-void EsminiAdapter::onStaticInitMessage(
-	const Init::message_type::SharedPtr)
+void EsminiAdapter::handleInitCommand()
 {
 	try {
 		setOpenScenarioFile(getOpenScenarioFileParameter());
@@ -172,17 +179,14 @@ void EsminiAdapter::onStaticInitMessage(
 	});
 }
 
-void EsminiAdapter::onStaticExitMessage(
-	const Exit::message_type::SharedPtr)
+void EsminiAdapter::onStaticExitMessage(const ROSChannels::Exit::message_type::SharedPtr)
 {
 	SE_Close();
 	RCLCPP_DEBUG(me->get_logger(),"Received exit command");
 	rclcpp::shutdown();
 }
 
-// !!TODO!!: Make sure that we are in the correct OBC state before starting ScenarioEngine
-void EsminiAdapter::onStaticStartMessage(
-	const Start::message_type::SharedPtr)
+void EsminiAdapter::handleStartCommand()
 {
 	if (SE_Init(me->oscFilePath.c_str(),0,0,0,0) < 0) {
 		throw std::runtime_error("Failed to initialize esmini with scenario file " + me->oscFilePath.string());

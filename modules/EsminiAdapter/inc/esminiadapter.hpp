@@ -41,9 +41,6 @@ private:
 	ROSChannels::StartObject::Pub startObjectPub;
 	ROSChannels::V2X::Pub v2xPub;
 	ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;
-	ROSChannels::Init::Sub initSub;
-	ROSChannels::Start::Sub startSub;
-	ROSChannels::Abort::Sub abortSub;
 	ROSChannels::Exit::Sub exitSub;
 	ROSChannels::StateChange::Sub stateChangeSub;
 	std::unordered_map<uint32_t,ROSChannels::Path::Pub> pathPublishers;
@@ -57,9 +54,9 @@ private:
 
 	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
 	// Below is a quickfix, fix properly later
-	static void onStaticInitMessage(const ROSChannels::Init::message_type::SharedPtr);
-	static void onStaticStartMessage(const ROSChannels::Start::message_type::SharedPtr);
-	static void onStaticAbortMessage(const ROSChannels::Abort::message_type::SharedPtr);
+	static void handleInitCommand();
+	static void handleStartCommand();
+	static void handleAbortCommand();
 	static void onStaticExitMessage(const ROSChannels::Exit::message_type::SharedPtr);
 	static void onStaticStateChangeMessage(const ROSChannels::StateChange::message_type::SharedPtr);
 
