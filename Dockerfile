@@ -68,18 +68,6 @@ RUN cd $TEMP_SRC_PATH && \
     sudo ldconfig && \
     sudo rm -rf $TEMP_SRC_PATH/open-simulation-interface
 
-# Install ad-xolib
-RUN cd $TEMP_SRC_PATH && \
-    git clone https://github.com/javedulu/ad-xolib.git && \
-    cd ad-xolib && \
-    git submodule update --init --recursive && \
-    mkdir -p build && cd build && \
-    cmake .. -DBUILD_EMBED_TARGETS=OFF && make -j4 && \
-    sudo make install && \
-    sudo ldconfig && \
-    sudo rm -rf $TEMP_SRC_PATH/ad-xolib
-
-
 # Install esmini
 RUN cd $TEMP_SRC_PATH && \
     git clone https://github.com/esmini/esmini && \
