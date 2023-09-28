@@ -54,7 +54,8 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	startSub(*this, &EsminiAdapter::onStaticStartMessage),
 	abortSub(*this, &EsminiAdapter::onStaticAbortMessage),
 	exitSub(*this, &EsminiAdapter::onStaticExitMessage),
-	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage)
+	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage),
+	stateChangeSub(*this, &EsminiAdapter::onStaticStateChangeMessage)
  {
 	declare_parameter("open_scenario_file","");
 }
@@ -108,6 +109,7 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 		me->startSub = ROSChannels::Start::Sub(*me,&EsminiAdapter::onStaticStartMessage);
 		me->abortSub = ROSChannels::Abort::Sub(*me,&EsminiAdapter::onStaticAbortMessage);
 		me->exitSub = ROSChannels::Exit::Sub(*me,&EsminiAdapter::onStaticExitMessage);
+		me->stateChangeSub = ROSChannels::StateChange::Sub(*me,&EsminiAdapter::onStaticStateChangeMessage);
 		// Start V2X publisher
 		me->v2xPub = ROSChannels::V2X::Pub(*me);
 		
@@ -128,6 +130,13 @@ void EsminiAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::messag
 }
 
 //! Message queue callbacks
+
+void EsminiAdapter::onStaticStateChangeMessage(const ROSChannels::StateChange::message_type::SharedPtr) {
+	std::cerr << "State changed!\n";
+}
+
+
+
 
 void EsminiAdapter::onStaticAbortMessage(const Abort::message_type::SharedPtr) {
 	SE_Close();

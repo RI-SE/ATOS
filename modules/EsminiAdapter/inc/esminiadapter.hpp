@@ -11,6 +11,7 @@
 #include "roschannels/pathchannel.hpp"
 #include "roschannels/monitorchannel.hpp"
 #include "roschannels/gnsspathchannel.hpp"
+#include "roschannels/statechange.hpp"
 #include <unordered_map>
 #include <filesystem>
 #include "esmini/esminiLib.hpp"
@@ -44,6 +45,7 @@ private:
 	ROSChannels::Start::Sub startSub;
 	ROSChannels::Abort::Sub abortSub;
 	ROSChannels::Exit::Sub exitSub;
+	ROSChannels::StateChange::Sub stateChangeSub;
 	std::unordered_map<uint32_t,ROSChannels::Path::Pub> pathPublishers;
 	std::unordered_map<uint32_t,ROSChannels::GNSSPath::Pub> gnssPathPublishers;
 
@@ -59,6 +61,7 @@ private:
 	static void onStaticStartMessage(const ROSChannels::Start::message_type::SharedPtr);
 	static void onStaticAbortMessage(const ROSChannels::Abort::message_type::SharedPtr);
 	static void onStaticExitMessage(const ROSChannels::Exit::message_type::SharedPtr);
+	static void onStaticStateChangeMessage(const ROSChannels::StateChange::message_type::SharedPtr);
 
 	static void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
 	static void reportObjectPosition(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
