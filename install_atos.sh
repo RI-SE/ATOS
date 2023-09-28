@@ -307,7 +307,7 @@ case "$SHELL" in
     */bash)
         add_source_line_if_needed ~/.bashrc "bash" "${atos_setup_script}"
         add_source_line_if_needed ~/.bashrc "bash" "${ros2_setup_script}"
-        source $HOME/.bashrc
+        source $HOME/.bashrc 
     ;;
     */zsh)
         add_source_line_if_needed ~/.zshrc "zsh" "${atos_setup_script}"
