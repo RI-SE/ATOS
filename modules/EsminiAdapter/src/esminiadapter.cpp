@@ -524,11 +524,13 @@ void EsminiAdapter::InitializeEsmini()
 	me->idToIp.clear();
 	me->pathPublishers.clear();
 	me->gnssPathPublishers.clear();
+	auto logFilePath = std::string(getenv("HOME")) + std::string("/.astazero/ATOS/logs/esmini.log");
+	SE_SetLogFilePath(logFilePath.c_str());
 	SE_Close(); // Stop ScenarioEngine in case it is running
 
 	RCLCPP_INFO(me->get_logger(), "Initializing esmini with scenario file %s", me->oscFilePath.c_str());
 	if (SE_Init(me->oscFilePath.c_str(),1,0,0,0) < 0) { // Disable controllers, let DefaultController be used
-		throw std::runtime_error("Failed to initialize esmini with scenario file " + me->oscFilePath.string());
+		throw std::runtime_error("Failed to initialize esmini with scenario file " + me->oscFilePath.string() + ". For more information, see " + logFilePath + ".");
 	}
 	
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
