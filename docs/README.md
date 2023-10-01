@@ -1,5 +1,5 @@
 ## System architecture
-
+![image](https://github.com/RI-SE/ATOS/assets/97448034/b0eb4128-163f-42e5-88e4-4818d0c8ea87)
 
 
 ## Docs
