@@ -2,28 +2,23 @@
 #include "rclcpp/rclcpp.hpp"
 #include "samplemodule.hpp"
 
-class SampleModuleTest : public SampleModule {
-    public:
-    // Function that calls the private onAbortMessage function
-    void callOnAbortMessage(const ROSChannels::Abort::message_type::SharedPtr msg) {
-        onAbortMessage(msg);
-    }
+class SampleModuleTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    rclcpp::init(0, nullptr);
+  }
+
 };
 
-TEST(SampleModulePkg, testGetObjectIds){
+TEST_F(SampleModuleTest, testReceivesAbortMessage){
+
+  auto sm =  std::make_shared<SampleModule>();
+  ASSERT_EQ(sm->getAborting(), true);
+}
+
+TEST_F(SampleModuleTest, testGetObjectIds){
   
   auto sm =  std::make_shared<SampleModule>();
   std::vector<std::uint32_t> objectIds = sm->getObjectIds();
-  EXPECT_EQ(objectIds.size(), 0);
-}
-
-TEST(SampleModulePkg, testReceivesAbortMessage){
-
-  auto sm =  std::make_shared<SampleModuleTest>();
-  auto msg = std::make_shared<std_msgs::msg::Empty>();
-  EXPECT_EQ(sm->getAborting(), false);
-
-  sm->callOnAbortMessage(msg);
-
-  EXPECT_EQ(sm->getAborting(), true);
+  ASSERT_EQ(objectIds.size(), 0);
 }

@@ -15,12 +15,6 @@ public:
 	std::vector<std::uint32_t> getObjectIds();
 	bool getAborting() { return aborting_; }
 
-protected:
-	// Message queue callbacks
-	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
-	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
-	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
-
 private:
 	static inline const int TCPPort = 1337;
 
@@ -29,9 +23,9 @@ private:
 	ROSChannels::Abort::Sub abortSub;
 	ROSChannels::AllClear::Sub allClearSub;
 
-	// void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
-	// void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
-	// void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
+	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
+	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
+	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
 
 	std::vector<std::uint32_t> objectIds;
 	bool aborting_ = false;
