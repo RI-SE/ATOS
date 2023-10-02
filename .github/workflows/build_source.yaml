@@ -16,7 +16,7 @@ jobs:
     steps:
     - name: Setup ROS 2
       uses: ros-tooling/setup-ros@0.7.0
-    with:
+      with:
         required-ros-distributions: foxy
 
     - name: Run Tests
