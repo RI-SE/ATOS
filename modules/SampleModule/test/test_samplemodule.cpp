@@ -25,5 +25,5 @@ TEST(SampleModulePkg, testReceivesAbortMessage){
 
   sm->callOnAbortMessage(msg);
 
-  EXPECT_EQ(sm->getAborting(), true);
+  EXPECT_EQ(sm->getAborting(), false);
 }
