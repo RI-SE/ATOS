@@ -80,7 +80,6 @@ add_subdirectory(common/osihandler)
 add_subdirectory(common/sockets)
 add_subdirectory(common)
 add_subdirectory(modules/ATOSBase)
-add_subdirectory(modules/SampleModule)
 
 foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})
@@ -89,6 +88,7 @@ endforeach()
 add_subdirectory(gui)
 
 if(BUILD_TESTING)
+  add_subdirectory(modules/SampleModule)
   find_package(ament_lint_auto REQUIRED)
 #   ament_lint_auto_find_test_dependencies() # Comment this out for now to avoid linting errors
 endif()

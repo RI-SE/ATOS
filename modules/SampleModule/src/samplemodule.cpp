@@ -38,7 +38,9 @@ void SampleModule::onInitMessage(const Init::message_type::SharedPtr) {
 	}
 }
 
-void SampleModule::onAbortMessage(const Abort::message_type::SharedPtr) {}
+void SampleModule::onAbortMessage(const Abort::message_type::SharedPtr) {
+	aborting_ = true;
+}
 
 void SampleModule::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 
