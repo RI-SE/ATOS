@@ -14,6 +14,8 @@
 #include <unordered_map>
 #include <filesystem>
 #include "esmini/esminiLib.hpp"
+#include "esmini/esminiRMLib.hpp"
+#include "CRSTransformation.hpp"
 
 #include "trajectory.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
@@ -71,7 +73,7 @@ private:
 	static void InitializeEsmini();
 	static void getObjectStates(double timeStep, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
 	static ATOS::Trajectory getTrajectoryFromObjectState(uint32_t,std::vector<SE_ScenarioObjectState>& states);
-	static void convertToISOTrajectory(ATOS::Trajectory& traj);
+	static std::string createProjectionStringFromGeoReference(RM_GeoReference& geoRef);
 	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(double timeStep, std::map<uint32_t,ATOS::Trajectory>& idToTraj);
 	static std::pair<uint32_t, std::string> parseAction(const std::string& action);
 	static bool isStartAction(const std::string& action);
@@ -98,6 +100,9 @@ private:
 	static std::map<uint32_t,ATOS::Trajectory> idToTraj;
 	static std::map<uint32_t,std::string> idToIp;
 	static std::vector<uint32_t> delayedStartIds;
+
+	std::shared_ptr<CRSTransformation> crsTransformation;
+	bool applyTrajTransform;
 
 	static geographic_msgs::msg::GeoPose testOrigin;
 

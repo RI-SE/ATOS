@@ -30,6 +30,7 @@ include(GNUInstallDirs)
 add_executable(${ESMINI_ADAPTER_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/esminiadapter.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/CRSTransformation.cpp
 )
 # Link project executable to util libraries
 target_link_libraries(${ESMINI_ADAPTER_TARGET}

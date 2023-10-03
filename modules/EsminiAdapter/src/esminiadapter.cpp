@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "esminiadapter.hpp"
-#include "esmini/esminiRMLib.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <algorithm>
@@ -20,7 +19,6 @@
 #include "string_utility.hpp"
 #include "util.h"
 #include "util/coordinateutils.hpp"
-#include "proj.h"
 
 
 using namespace ROSChannels;
@@ -55,7 +53,8 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	startSub(*this, &EsminiAdapter::onStaticStartMessage),
 	abortSub(*this, &EsminiAdapter::onStaticAbortMessage),
 	exitSub(*this, &EsminiAdapter::onStaticExitMessage),
-	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage)
+	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage),
+	applyTrajTransform(false)
  {
 	declare_parameter("open_scenario_file","");
 }
@@ -170,18 +169,19 @@ void EsminiAdapter::onStaticInitMessage(
 		RCLCPP_ERROR(me->get_logger(), e.what());
 		return;
 	}
-	me->InitializeEsmini();
+
 	auto request = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
-	me->testOriginClient->async_send_request(request, [](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
+	auto result = me->testOriginClient->async_send_request(request, [](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
 		auto response = future.get();
 		if (!response->success) {
 			RCLCPP_ERROR(me->get_logger(), "Failed to get test origin from test origin service");
 			return; // TODO communicate failure
 		}
-		// Publish GNSSPath trajectories when we receive the origin
 		me->testOrigin = response->origin;
-		std::array<double,3> llh_0 = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
 
+		me->InitializeEsmini();
+
+		std::array<double,3> llh_0 = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
 		for (auto& it : me->idToTraj) {
 			me->gnssPathPublishers.emplace(it.first, ROSChannels::GNSSPath::Pub(*me, it.first));
 			me->gnssPathPublishers.at(it.first).publish(it.second.toGeoJSON(llh_0));
@@ -458,135 +458,72 @@ ATOS::Trajectory EsminiAdapter::getTrajectoryFromObjectState(
 }
 
 /*!
- * \brief Given a trajectory, applies a transformation from any geo-reference specified in the OpenDRIVE file to ISO standard WGS84.
- * \param traj The trajectory to transform
- * \return The transformed WGS84 trajectory
+ * \brief Given a RM_georeference converts into a proj string
+ * \param geoRef The geo reference to convert
+ * \return The proj string
  */
-void EsminiAdapter::convertToISOTrajectory(
-	ATOS::Trajectory& traj)
-{
-	PJ_CONTEXT *c;
-    PJ *p;
-	int errn;
-    const char *errstr;
-	RCLCPP_DEBUG(me->get_logger(), "Converting trajectory to ISO specification");
-
-	std::string projStringTO = "+proj=tmerc +lat_0=57.781788736318816 +lon_0=12.769999997038758 +k=0.9996 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs";
-
-	// Call RM_GetOpenDriveGeoReference to get the RM_GeoReference struct
-	RM_GeoReference geoRef;
-	if (RM_GetOpenDriveGeoReference(&geoRef) != 0) {
-		RCLCPP_DEBUG(me->get_logger(), "Failed to get OpenDRIVE geo reference");
+std::string EsminiAdapter::createProjectionStringFromGeoReference(RM_GeoReference& geoRef) {
+	std::string projStringFROM = "+proj=";
+	if (strlen(geoRef.proj_) != 0) {
+		projStringFROM += std::string(geoRef.proj_) + " ";
 	}
-
-    // Create a projection string from the defined values in the RM_GeoReference struct
-    std::string projStringFROM = "+proj=";
-    if (strlen(geoRef.proj_) != 0) {
-        projStringFROM += std::string(geoRef.proj_) + " ";
-    }
-    if (!std::isnan(geoRef.lat_0_)) {
-        projStringFROM += "+lat_0=" + std::to_string(geoRef.lat_0_) + " ";
-    }
-    if (!std::isnan(geoRef.lon_0_)) {
-        projStringFROM += "+lon_0=" + std::to_string(geoRef.lon_0_) + " ";
-    }
-    if (!std::isnan(geoRef.k_)) {
-        projStringFROM += "+k=" + std::to_string(geoRef.k_) + " ";
-    }
-    if (!std::isnan(geoRef.k_0_)) {
-        projStringFROM += "+k_0=" + std::to_string(geoRef.k_0_) + " ";
-    }
-    if (!std::isnan(geoRef.x_0_)) {
-        projStringFROM += "+x_0=" + std::to_string(geoRef.x_0_) + " ";
-    }
-    if (!std::isnan(geoRef.y_0_)) {
-        projStringFROM += "+y_0=" + std::to_string(geoRef.y_0_) + " ";
-    }
-    if (strlen(geoRef.ellps_) != 0) {
-        projStringFROM += "+ellps=" + std::string(geoRef.ellps_) + " ";
-    }
-    if (strlen(geoRef.units_) != 0) {
-        projStringFROM += "+units=" + std::string(geoRef.units_) + " ";
-    }
-    if (strlen(geoRef.vunits_) != 0) {
-        projStringFROM += "+vunits=" + std::string(geoRef.vunits_) + " ";
-    }
-    if (strlen(geoRef.datum_) != 0) {
-        projStringFROM += "+datum=" + std::string(geoRef.datum_) + " ";
-    }
-    if (strlen(geoRef.geo_id_grids_) != 0) {
-        projStringFROM += "+geoidgrids=" + std::string(geoRef.geo_id_grids_) + " ";
-    }
-    if (!std::isnan(geoRef.zone_)) {
-        projStringFROM += "+zone=" + std::to_string(geoRef.zone_) + " ";
-    }
-    if (geoRef.towgs84_ != 0) {
-        projStringFROM += "+towgs84=" + std::to_string(geoRef.towgs84_) + " ";
-    }
-    if (strlen(geoRef.axis_) != 0) {
-        projStringFROM += "+axis=" + std::string(geoRef.axis_) + " ";
-    }
-    if (!std::isnan(geoRef.lon_wrap_)) {
-        projStringFROM += "+lon_wrap=" + std::to_string(geoRef.lon_wrap_) + " ";
-    }
-    if (!std::isnan(geoRef.over_)) {
-        projStringFROM += "+over=" + std::to_string(geoRef.over_) + " ";
-    }
-    if (strlen(geoRef.pm_) != 0) {
-        projStringFROM += "+pm=" + std::string(geoRef.pm_) + " ";
-    }
-    projStringFROM += "+no_defs";
-
-	RCLCPP_DEBUG(me->get_logger(), "projStringFROM: %s", projStringFROM.c_str());
-
-	c = proj_context_create();
-	p = proj_create_crs_to_crs(c, projStringFROM.c_str(), projStringTO.c_str(), nullptr);
-
-	if (p == 0) {
-		/* Something is wrong, let's try to get details ... */
-		errn = proj_context_errno(c);
-		if (errn == 0) {
-			/* This should be impossible. */
-			RCLCPP_ERROR(me->get_logger(), "Failed to create transformation, reason unknown.");
-		} else {
-			errstr = proj_context_errno_string(c, errn);
-			RCLCPP_ERROR(me->get_logger(), "Failed to create transformation: %s.", errstr);
-		}
-		proj_context_destroy(c);
-		return;
+	else {
+		throw std::runtime_error("No projection found in geo reference");
 	}
-	
-	// Create the proj context and projection
-	std::unique_ptr<PJ_CONTEXT, std::function<void(PJ_CONTEXT*)>> ctxt = 
-														std::unique_ptr<PJ_CONTEXT, std::function<void(PJ_CONTEXT*)>>
-														(c, 
-														[](PJ_CONTEXT* ctxt){ proj_context_destroy(ctxt); });
-	std::unique_ptr<PJ, std::function<void(PJ*)>> projection = 
-														std::unique_ptr<PJ, std::function<void(PJ*)>>
-														(p, 
-														[](PJ* proj){ proj_destroy(proj); });
-
-	// Put TrajPoints into array of PJ_POINTS
-	PJ_COORD in[traj.points.size()];
-	auto arraySize = sizeof(in) / sizeof(in[0]);
-	RCLCPP_DEBUG(me->get_logger(), "Putting trajectory with %d points into PJ_COORD array", arraySize);
-	for (int i = 0; i < arraySize; i++){
-		in[i].xyz.x = traj.points[i].getXCoord();
-		in[i].xyz.y = traj.points[i].getYCoord();
-		in[i].xyz.z = traj.points[i].getZCoord();
+	if (!std::isnan(geoRef.lat_0_)) {
+		projStringFROM += "+lat_0=" + std::to_string(geoRef.lat_0_) + " ";
 	}
-
-	RCLCPP_DEBUG(me->get_logger(), "Converting trajectory with %d points", arraySize);
-	if (0 != proj_trans_array(projection.get(), PJ_FWD, arraySize, in)){
-		throw std::runtime_error("Failed to convert trajectory");
+	if (!std::isnan(geoRef.lon_0_)) {
+		projStringFROM += "+lon_0=" + std::to_string(geoRef.lon_0_) + " ";
 	}
-
-	// Put transformed PJ_POINTS back into TrajPoints
-	for (int i = 0; i < arraySize; i++){
-		traj.points[i].setXCoord(in[i].xyz.x);
-		traj.points[i].setYCoord(in[i].xyz.y);
-		traj.points[i].setZCoord(in[i].xyz.z);
+	if (!std::isnan(geoRef.k_)) {
+		projStringFROM += "+k=" + std::to_string(geoRef.k_) + " ";
 	}
+	if (!std::isnan(geoRef.k_0_)) {
+		projStringFROM += "+k_0=" + std::to_string(geoRef.k_0_) + " ";
+	}
+	if (!std::isnan(geoRef.x_0_)) {
+		projStringFROM += "+x_0=" + std::to_string(geoRef.x_0_) + " ";
+	}
+	if (!std::isnan(geoRef.y_0_)) {
+		projStringFROM += "+y_0=" + std::to_string(geoRef.y_0_) + " ";
+	}
+	if (strlen(geoRef.ellps_) != 0) {
+		projStringFROM += "+ellps=" + std::string(geoRef.ellps_) + " ";
+	}
+	if (strlen(geoRef.units_) != 0) {
+		projStringFROM += "+units=" + std::string(geoRef.units_) + " ";
+	}
+	if (strlen(geoRef.vunits_) != 0) {
+		projStringFROM += "+vunits=" + std::string(geoRef.vunits_) + " ";
+	}
+	if (strlen(geoRef.datum_) != 0) {
+		projStringFROM += "+datum=" + std::string(geoRef.datum_) + " ";
+	}
+	if (strlen(geoRef.geo_id_grids_) != 0) {
+		projStringFROM += "+geoidgrids=" + std::string(geoRef.geo_id_grids_) + " ";
+	}
+	if (!std::isnan(geoRef.zone_)) {
+		projStringFROM += "+zone=" + std::to_string(geoRef.zone_) + " ";
+	}
+	if (geoRef.towgs84_ != 0) {
+		projStringFROM += "+towgs84=" + std::to_string(geoRef.towgs84_) + " ";
+	}
+	if (strlen(geoRef.axis_) != 0) {
+		projStringFROM += "+axis=" + std::string(geoRef.axis_) + " ";
+	}
+	if (!std::isnan(geoRef.lon_wrap_)) {
+		projStringFROM += "+lon_wrap=" + std::to_string(geoRef.lon_wrap_) + " ";
+	}
+	if (!std::isnan(geoRef.over_)) {
+		projStringFROM += "+over=" + std::to_string(geoRef.over_) + " ";
+	}
+	if (strlen(geoRef.pm_) != 0) {
+		projStringFROM += "+pm=" + std::string(geoRef.pm_) + " ";
+	}
+	projStringFROM += "+no_defs";
+	RCLCPP_DEBUG(me->get_logger(), "Created proj string: %s", projStringFROM.c_str());
+	return projStringFROM;
 }
 
 /*!
@@ -667,7 +604,11 @@ std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(
 		auto id = os.first;
 		auto objectStates = os.second;
 		auto traj = getTrajectoryFromObjectState(id, objectStates);
-		convertToISOTrajectory(traj);
+		// Apply CRS transform if OpenDrive CRS Transformation is defined
+		if (me->applyTrajTransform){
+			RCLCPP_DEBUG(me->get_logger(), "Applying CRS transformation to trajectory for object %d", id);
+			me->crsTransformation->apply(traj.points);
+		}
 		idToTraj.insert(std::pair<uint32_t,ATOS::Trajectory>(id, traj));
 	}
 	return idToTraj;
@@ -695,6 +636,26 @@ void EsminiAdapter::InitializeEsmini()
 	if (RM_Init(odrFile.c_str()) < 0) {
 		throw std::runtime_error(std::string("Failed to initialize with odr file ").append(odrFile));
 	}
+
+	std::string projStringTO = "+proj=tmerc +lat_0=" + std::to_string(me->testOrigin.position.latitude) + 
+											" +lon_0=" + std::to_string(me->testOrigin.position.longitude) + 
+											" +datum=WGS84 +units=m +no_defs";
+	
+	// Call RM_GetOpenDriveGeoReference to get the RM_GeoReference struct
+	RM_GeoReference geoRef;
+	if (RM_GetOpenDriveGeoReference(&geoRef) == 0) {
+		try {
+			std::string projStringFROM = createProjectionStringFromGeoReference(geoRef);
+			me->crsTransformation = std::make_shared<CRSTransformation>(projStringFROM, projStringTO);
+			me->applyTrajTransform = true;
+		} 
+		catch (std::exception& e) {
+			RCLCPP_ERROR(me->get_logger(), e.what());
+			return;
+		}
+	} else {
+		RCLCPP_WARN(me->get_logger(), "Failed to get OpenDRIVE geo reference from RoadManager");
+	}
 	
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
 		//SE_SetAlignModeZ(SE_GetId(j), 0); // Disable Z-alignment not implemented in esmini yet
@@ -703,7 +664,8 @@ void EsminiAdapter::InitializeEsmini()
 	SE_RegisterStoryBoardElementStateChangeCallback(&collectStartAction);
 
 	RCLCPP_INFO(me->get_logger(), "Starting extracting trajs");
-	me->extractTrajectories(0.1, me->idToTraj);
+	double timeStep = 0.1;
+	me->extractTrajectories(timeStep, me->idToTraj);
 	RCLCPP_INFO(me->get_logger(), "Done extracting trajs");
 
 
@@ -739,10 +701,9 @@ void EsminiAdapter::InitializeEsmini()
 		me->pathPublishers.at(id).publish(traj.toPath());		
 
 		// below is for dumping the trajectory points to the console
-		
-		for (auto& tp : traj.points){
-			RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
-		}
+		// for (auto& tp : traj.points){
+		// 	RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
+		// }
 		
 	}
 }
