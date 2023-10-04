@@ -27,6 +27,7 @@
 #include "atos_interfaces/srv/get_object_trigger_start.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
 #include "atos_interfaces/srv/get_object_control_state.hpp"
+#include "atos_interfaces/srv/get_object_return_trajectory.hpp"
 
 // Forward declarations
 class ObjectControlState;
@@ -44,6 +45,7 @@ namespace AbstractKinematics {
 	class Disarming;
 	class Done;
 	class RemoteControlled;
+	class Resetting;
 }
 
 namespace RelativeKinematics {
@@ -57,6 +59,7 @@ namespace RelativeKinematics {
 	class Disarming;
 	class Done;
 	class RemoteControlled;
+	class Resetting;
 }
 
 namespace AbsoluteKinematics {
@@ -70,6 +73,7 @@ namespace AbsoluteKinematics {
 	class Disarming;
 	class Done;
 	class RemoteControlled;
+	class Resetting;
 }
 
 /*!
@@ -207,6 +211,7 @@ public:
 	void stopControlSignalSubscriber();
 
 private:
+	bool isResetting;
 	std::mutex stateMutex;
 	std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> exec;
 	static inline std::string const moduleName = "object_control";
@@ -218,6 +223,8 @@ private:
 	void onStartObjectMessage(const ROSChannels::StartObject::message_type::SharedPtr) override;
 	void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr) override;
 	void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) override;
+	void onResetTestMessage(const ROSChannels::ResetTest::message_type::SharedPtr) override;
+	void onReloadSettingsMessage(const ROSChannels::ReloadSettings::message_type::SharedPtr) override;
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
 	void onRemoteControlEnableMessage(const ROSChannels::RemoteControlEnable::message_type::SharedPtr);
@@ -258,6 +265,8 @@ private:
 	ROSChannels::GetStatus::Sub getStatusSub;				//!< Subscriber to scenario get status requests
 	ROSChannels::ObjectStateChange::Sub objectStateChangeSub;	//!< Subscriber to object state changes
 	std::shared_ptr<ROSChannels::ControlSignal::Sub> controlSignalSub;	//!< Pointer to subscriber to receive control signal messages with percentage
+	ROSChannels::ResetTest::Sub scnResetTestSub;	//!< Subscriber to scenario reset test requests
+	ROSChannels::ReloadSettings::Sub scnReloadSettingsSub;	//!< Subscriber to scenario reset test requests
 
 	rclcpp::TimerBase::SharedPtr objectsConnectedTimer;	//!< Timer to periodically publish connected objects
 
@@ -270,6 +279,7 @@ private:
 	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr trajectoryClient;	//!< Client to request object trajectories
 	rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedPtr ipClient;	//!< Client to request object IPs
 	rclcpp::Client<atos_interfaces::srv::GetObjectTriggerStart>::SharedPtr triggerClient;	//!< Client to request object trigger start
+	rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedPtr returnTrajectoryClient;	//!< Client to request object return trajectory
 	rclcpp::Service<atos_interfaces::srv::GetObjectControlState>::SharedPtr stateService;	//!< Service to request object control state
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
@@ -303,6 +313,8 @@ private:
 	//! \brief Transform the scenario trajectories relative to the trajectory of the
 	//!			specified object.
 	void transformScenarioRelativeTo(const uint32_t objectID);
+	//! \brief Upload the configuration in the ScenarioHandler to all connected objects.
+	void uploadAllConfigurations();
 	//! \brief Upload the configuration in the ScenarioHandler to the connected obj	std::unique_ptr<ScenarioHandler> scenarioHandler;
 	void uploadObjectConfiguration(const uint32_t id);
 	//! \brief Clear loaded data and object list.
@@ -314,6 +326,12 @@ private:
 	void disarmObjects();
 	//! \brief
 	void startScenario();
+	//! \brief TODO
+	void resetTest();
+	//! \brief TODO
+	void reloadScenarioTrajectories();
+	//! \brief If resetting, this function will also send the new trajectory to the object. If not resetting, it will only set the trajectory locally.
+	void setObjectTrajectory(uint32_t id);
 	//! \brief
 	void startObject(uint32_t id, std::chrono::system_clock::time_point startTime = std::chrono::system_clock::now());
 	//! \brief
