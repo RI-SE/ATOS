@@ -9,32 +9,40 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(back_to_start)
+find_package(rclcpp REQUIRED)
+find_package(atos_interfaces REQUIRED)
 
 # Define target names
 set(BACK_TO_START ${PROJECT_NAME})
 
-set(COREUTILS_LIBRARY ATOSCoreUtil)
-set(ISO_22133_LIBRARY MaestroISO22133)
-set(POSITIONING_LIBRARY MaestroPositioning)
-set(TIME_LIBRARY ATOSTime)
+# set(COREUTILS_LIBRARY ATOSCoreUtil)
+# set(ISO_22133_LIBRARY MaestroISO22133)
+# set(POSITIONING_LIBRARY MaestroPositioning)
+# set(TIME_LIBRARY ATOSTime)
 set(ATOS_COMMON_LIBRARY ATOSCommon)
-set(LOGGING_LIBRARY MaestroLogging)
-set(MESSAGE_BUS_LIBRARY MaestroMQ)
-set(ATOS_COMMON_LIBRARY ATOSCommon)
+# set(LOGGING_LIBRARY MaestroLogging)
+# set(MESSAGE_BUS_LIBRARY MaestroMQ)
 
 include(GNUInstallDirs)
 
 # Create project main executable target
 add_executable(${BACK_TO_START}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/backtostart.cpp
 )
+
+ament_target_dependencies(${BACK_TO_START}
+  rclcpp
+  atos_interfaces
+)
+
 # Link project executable to util libraries
-target_link_libraries(${BACK_TO_START} LINK_PUBLIC
-	${TIME_LIBRARY}
-	${COREUTILS_LIBRARY}
-	${LOGGING_LIBRARY}
-        ${FILESYSTEM_LIBRARY}
-        ${ATOS_COMMON_LIBRARY}
+target_link_libraries(${BACK_TO_START}
+	# ${TIME_LIBRARY}
+	# ${COREUTILS_LIBRARY}
+	# ${LOGGING_LIBRARY}
+    # ${FILESYSTEM_LIBRARY}
+    ${ATOS_COMMON_LIBRARY}
 )
 target_include_directories(${BACK_TO_START} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
@@ -43,7 +51,7 @@ target_include_directories(${BACK_TO_START} PUBLIC
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${BACK_TO_START}\")")
 install(TARGETS ${BACK_TO_START} 
-	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/atos"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
