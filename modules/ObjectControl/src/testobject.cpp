@@ -292,6 +292,10 @@ void TestObject::sendSettings() {
 	objSettings.timeServer.port = 0;
 
 	this->comms.cmd << objSettings;
+	this->sendTrajectory();
+}
+
+void TestObject::sendTrajectory() {
 	this->comms.cmd << conf.getTrajectory();
 }
 

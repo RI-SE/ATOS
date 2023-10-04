@@ -82,6 +82,7 @@ public:
 	}
 
 	virtual void sendSettings();
+	virtual void sendTrajectory();
 	virtual void sendHeartbeat(const ControlCenterStatusType ccStatus);
 	virtual void sendArm();
 	virtual void sendDisarm();
