@@ -19,6 +19,7 @@ const std::string getTestOrigin = "get_test_origin";
 const std::string getObjectTrajectory = "get_object_trajectory";
 const std::string getObjectTriggerStart = "get_object_trigger_start";
 const std::string getObjectControlState = "get_object_control_state";
+const std::string getObjectReturnTrajectory = "get_object_return_trajectory";
 }
 
 // TODO move somewhere else? also make generic to allow more args (variadic template)?
@@ -72,6 +73,8 @@ class Module : public rclcpp::Node {
 	virtual void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr){};
 	virtual void onReplayMessage(const ROSChannels::Replay::message_type::SharedPtr){};
 	virtual void onExitMessage(const ROSChannels::Exit::message_type::SharedPtr);
+	virtual void onResetTestMessage(const ROSChannels::ResetTest::message_type::SharedPtr){};
+	virtual void onReloadSettingsMessage(const ROSChannels::ReloadSettings::message_type::SharedPtr){};
 
 
 	static void tryHandleMessage(std::function<void()> tryExecute,
