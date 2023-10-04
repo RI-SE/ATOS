@@ -3,6 +3,8 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 cmake_minimum_required(VERSION 3.8)
+include(FindPkgConfig)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
@@ -14,7 +16,7 @@ find_package(tf2 REQUIRED)
 find_package(esminiLib REQUIRED)
 find_package(esminiRMLib REQUIRED)
 find_package(foxglove_msgs REQUIRED)
-find_package(PROJ REQUIRED)
+pkg_check_modules(PROJ REQUIRED proj)
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/PROJOptions.cmake")
 
