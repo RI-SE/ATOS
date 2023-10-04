@@ -52,7 +52,7 @@ void TrajectoryletStreamer::loadObjectFiles() {
 		return;
 	} else {
 		chunkLength = std::chrono::milliseconds(static_cast<int>(res * 1000.0));
-		RCLCPP_INFO(get_logger(), "Chunk duration: %d ms", chunkLength.count());
+		RCLCPP_INFO(get_logger(), "Chunk duration: %ld ms", chunkLength.count());
 	}
 	RCLCPP_INFO(get_logger(), "Loading trajectories");
 	auto idsCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFuture future) {
@@ -70,7 +70,7 @@ void TrajectoryletStreamer::loadObjectFiles() {
 					ATOS::Trajectory traj(get_logger());
 					traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
 					trajectories[trajResponse->id] = std::make_unique<ATOS::Trajectory>(traj);
-					RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %d points",
+					RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %ld points",
 								trajResponse->id, trajectories[trajResponse->id]->size());
 				};
 			auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
