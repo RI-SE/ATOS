@@ -10,7 +10,7 @@ class CRSTransformation {
 
     CRSTransformation(const std::string &fromCRS, const std::string &toCRS);
     void apply(std::vector<ATOS::Trajectory::TrajectoryPoint> &traj);
-
+    static const std::vector<double> projToLLH(const std::string &projString, const std::string &datum);
 
   private:
 

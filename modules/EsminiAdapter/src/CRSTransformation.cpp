@@ -48,3 +48,26 @@ void CRSTransformation::apply(std::vector<ATOS::Trajectory::TrajectoryPoint> &tr
 		trajPoints[i].setZCoord(in[i].xyz.z);
 	}
 }
+
+/**
+ * @brief Get the origin lat, lon, height in the given datum from a proh string
+ * 
+ * @parameter: projString proj string to transform
+ * @parameter: datum datum to transform to 
+ * @return std::vector<double> Vector with lat, lon, height
+ */
+const std::vector<double>
+CRSTransformation::projToLLH(const std::string &projString, const std::string &datum) {
+    auto pjSrc = proj_create_crs_to_crs(NULL, projString.c_str(), datum.c_str(), NULL);
+    if (pjSrc == NULL) {
+        throw std::runtime_error("Failed to create projPJ object");
+    }
+
+    PJ_COORD src = proj_coord(0, 0, 0, 0);
+    PJ_COORD dst = proj_trans(pjSrc, PJ_FWD, src);
+
+	std::vector<double> result = {dst.xyz.x, dst.xyz.y, dst.xyz.z};
+    proj_destroy(pjSrc);
+
+    return result;
+}

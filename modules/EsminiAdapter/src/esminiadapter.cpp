@@ -462,68 +462,68 @@ ATOS::Trajectory EsminiAdapter::getTrajectoryFromObjectState(
  * \param geoRef The geo reference to convert
  * \return The proj string
  */
-std::string EsminiAdapter::createProjectionStringFromGeoReference(RM_GeoReference& geoRef) {
-	std::string projStringFROM = "+proj=";
+std::string EsminiAdapter::projStrFromGeoReference(RM_GeoReference& geoRef) {
+	std::string projStringFrom = "+proj=";
 	if (strlen(geoRef.proj_) != 0) {
-		projStringFROM += std::string(geoRef.proj_) + " ";
+		projStringFrom += std::string(geoRef.proj_) + " ";
 	}
 	else {
 		throw std::runtime_error("No projection found in geo reference");
 	}
 	if (!std::isnan(geoRef.lat_0_)) {
-		projStringFROM += "+lat_0=" + std::to_string(geoRef.lat_0_) + " ";
+		projStringFrom += "+lat_0=" + std::to_string(geoRef.lat_0_) + " ";
 	}
 	if (!std::isnan(geoRef.lon_0_)) {
-		projStringFROM += "+lon_0=" + std::to_string(geoRef.lon_0_) + " ";
+		projStringFrom += "+lon_0=" + std::to_string(geoRef.lon_0_) + " ";
 	}
 	if (!std::isnan(geoRef.k_)) {
-		projStringFROM += "+k=" + std::to_string(geoRef.k_) + " ";
+		projStringFrom += "+k=" + std::to_string(geoRef.k_) + " ";
 	}
 	if (!std::isnan(geoRef.k_0_)) {
-		projStringFROM += "+k_0=" + std::to_string(geoRef.k_0_) + " ";
+		projStringFrom += "+k_0=" + std::to_string(geoRef.k_0_) + " ";
 	}
 	if (!std::isnan(geoRef.x_0_)) {
-		projStringFROM += "+x_0=" + std::to_string(geoRef.x_0_) + " ";
+		projStringFrom += "+x_0=" + std::to_string(geoRef.x_0_) + " ";
 	}
 	if (!std::isnan(geoRef.y_0_)) {
-		projStringFROM += "+y_0=" + std::to_string(geoRef.y_0_) + " ";
+		projStringFrom += "+y_0=" + std::to_string(geoRef.y_0_) + " ";
 	}
 	if (strlen(geoRef.ellps_) != 0) {
-		projStringFROM += "+ellps=" + std::string(geoRef.ellps_) + " ";
+		projStringFrom += "+ellps=" + std::string(geoRef.ellps_) + " ";
 	}
 	if (strlen(geoRef.units_) != 0) {
-		projStringFROM += "+units=" + std::string(geoRef.units_) + " ";
+		projStringFrom += "+units=" + std::string(geoRef.units_) + " ";
 	}
 	if (strlen(geoRef.vunits_) != 0) {
-		projStringFROM += "+vunits=" + std::string(geoRef.vunits_) + " ";
+		projStringFrom += "+vunits=" + std::string(geoRef.vunits_) + " ";
 	}
 	if (strlen(geoRef.datum_) != 0) {
-		projStringFROM += "+datum=" + std::string(geoRef.datum_) + " ";
+		projStringFrom += "+datum=" + std::string(geoRef.datum_) + " ";
 	}
 	if (strlen(geoRef.geo_id_grids_) != 0) {
-		projStringFROM += "+geoidgrids=" + std::string(geoRef.geo_id_grids_) + " ";
+		projStringFrom += "+geoidgrids=" + std::string(geoRef.geo_id_grids_) + " ";
 	}
 	if (!std::isnan(geoRef.zone_)) {
-		projStringFROM += "+zone=" + std::to_string(geoRef.zone_) + " ";
+		projStringFrom += "+zone=" + std::to_string(geoRef.zone_) + " ";
 	}
 	if (geoRef.towgs84_ != 0) {
-		projStringFROM += "+towgs84=" + std::to_string(geoRef.towgs84_) + " ";
+		projStringFrom += "+towgs84=" + std::to_string(geoRef.towgs84_) + " ";
 	}
 	if (strlen(geoRef.axis_) != 0) {
-		projStringFROM += "+axis=" + std::string(geoRef.axis_) + " ";
+		projStringFrom += "+axis=" + std::string(geoRef.axis_) + " ";
 	}
 	if (!std::isnan(geoRef.lon_wrap_)) {
-		projStringFROM += "+lon_wrap=" + std::to_string(geoRef.lon_wrap_) + " ";
+		projStringFrom += "+lon_wrap=" + std::to_string(geoRef.lon_wrap_) + " ";
 	}
 	if (!std::isnan(geoRef.over_)) {
-		projStringFROM += "+over=" + std::to_string(geoRef.over_) + " ";
+		projStringFrom += "+over=" + std::to_string(geoRef.over_) + " ";
 	}
 	if (strlen(geoRef.pm_) != 0) {
-		projStringFROM += "+pm=" + std::string(geoRef.pm_) + " ";
+		projStringFrom += "+pm=" + std::string(geoRef.pm_) + " ";
 	}
-	projStringFROM += "+no_defs";
-	RCLCPP_DEBUG(me->get_logger(), "Created proj string: %s", projStringFROM.c_str());
-	return projStringFROM;
+	projStringFrom += "+no_defs";
+	RCLCPP_DEBUG(me->get_logger(), "Created proj string: %s", projStringFrom.c_str());
+	return projStringFrom;
 }
 
 /*!
@@ -637,16 +637,21 @@ void EsminiAdapter::InitializeEsmini()
 		throw std::runtime_error(std::string("Failed to initialize with odr file ").append(odrFile));
 	}
 
-	std::string projStringTO = "+proj=tmerc +lat_0=" + std::to_string(me->testOrigin.position.latitude) + 
-											" +lon_0=" + std::to_string(me->testOrigin.position.longitude) + 
-											" +datum=WGS84 +units=m +no_defs";
 	
 	// Call RM_GetOpenDriveGeoReference to get the RM_GeoReference struct
 	RM_GeoReference geoRef;
 	if (RM_GetOpenDriveGeoReference(&geoRef) == 0) {
 		try {
-			std::string projStringFROM = createProjectionStringFromGeoReference(geoRef);
-			me->crsTransformation = std::make_shared<CRSTransformation>(projStringFROM, projStringTO);
+			std::string projStringFrom = projStrFromGeoReference(geoRef);
+			std::string toDatum = "WGS84";
+			auto llh_0 = CRSTransformation::projToLLH(projStringFrom, toDatum);
+			RCLCPP_INFO(me->get_logger(), "llh origin: %lf, %lf, %lf", llh_0[0], llh_0[1], llh_0[2]);
+
+			std::string projStringTo = "+proj=tmerc +lat_0=" + std::to_string(llh_0[0]) + 
+													" +lon_0=" + std::to_string(llh_0[1]) + 
+													" +datum="+ toDatum + " +units=m +no_defs";
+
+			me->crsTransformation = std::make_shared<CRSTransformation>(projStringFrom, projStringTo);
 			me->applyTrajTransform = true;
 		} 
 		catch (std::exception& e) {
