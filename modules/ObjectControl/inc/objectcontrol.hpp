@@ -21,6 +21,7 @@
 #include "roschannels/pathchannel.hpp"
 #include "roschannels/controlsignalchannel.hpp"
 #include "roschannels/objstatechangechannel.hpp"
+#include "roschannels/statechange.hpp"
 #include "atos_interfaces/srv/get_object_ids.hpp"
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "atos_interfaces/srv/get_object_ip.hpp"
@@ -265,6 +266,7 @@ private:
 	ROSChannels::Abort::Pub scnAbortPub;					//!< Publisher to scenario abort reports
 	ROSChannels::ObjectsConnected::Pub objectsConnectedPub;	//!< Publisher to report that objects have been connected
 	ROSChannels::ConnectedObjectIds::Pub connectedObjectIdsPub;	//!< Publisher to periodically report connected object ids
+	ROSChannels::StateChange::Pub stateChangePub;	//!< Publisher to report state changes
 	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr idClient;	//!< Client to request object ids
 	rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedPtr originClient;	//!< Client to request object status
 	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr trajectoryClient;	//!< Client to request object trajectories
