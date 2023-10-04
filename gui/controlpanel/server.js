@@ -68,23 +68,27 @@ rclnodejs.init().then(() => {
   const node = new rclnodejs.Node('simple_control','atos');
 
   // Publishers
-  const resetTestPub = node.createPublisher('std_msgs/msg/Empty', '/atos/disconnect');
   const initPub = node.createPublisher('std_msgs/msg/Empty', '/atos/init');
   const connectPub = node.createPublisher('std_msgs/msg/Empty', '/atos/connect');
+  const disconnectPub = node.createPublisher('std_msgs/msg/Empty', '/atos/disconnect');
   const armPub = node.createPublisher('std_msgs/msg/Empty', '/atos/arm');
   const disarmPub = node.createPublisher('std_msgs/msg/Empty', '/atos/disarm');
   const startPub = node.createPublisher('std_msgs/msg/Empty', '/atos/start');
   const abortPub = node.createPublisher('std_msgs/msg/Empty', '/atos/abort');
   const allClearPub = node.createPublisher('std_msgs/msg/Empty', '/atos/all_clear');
+  const resetTestPub = node.createPublisher('std_msgs/msg/Empty', '/atos/reset_test');
+  const reloadSettingsPub = node.createPublisher('std_msgs/msg/Empty', '/atos/reload_settings');
   var commandToPublisher = {
-    "send_reset_test": resetTestPub,
     "send_init": initPub,
     "send_connect": connectPub,
+    "send_disconnect": disconnectPub,
     "send_arm": armPub,
     "send_disarm": disarmPub,
     "send_start": startPub,
     "send_abort": abortPub,
-    "send_all_clear": allClearPub
+    "send_all_clear": allClearPub,
+    "send_reset_test": resetTestPub,
+    "send_reload_settings": reloadSettingsPub
   };
 
   // Service Clients

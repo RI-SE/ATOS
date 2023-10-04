@@ -68,14 +68,14 @@ function updateATOSStatusIcon(status, new_text) {
   }
 
 // HTML-Button callbacks
-function sendResetTest(){
-    sendCommand("send_reset_test", ws);
-}
 function sendInit(){
     sendCommand("send_init", ws);
 }
 function sendConnect(){
     sendCommand("send_connect", ws);
+}
+function sendDisconnect(){
+    sendCommand("send_disconnect", ws);
 }
 function sendArm(){
     sendCommand("send_arm", ws);
@@ -91,6 +91,12 @@ function sendAbort(){
 }
 function sendAllClear(){
     sendCommand("send_all_clear", ws);
+}
+function sendResetTest(){
+    sendCommand("send_reset_test", ws);
+}
+function sendReloadSettings(){
+    sendCommand("send_reload_settings", ws);
 }
 
 // Websocket callbacks and reconnect functionality
