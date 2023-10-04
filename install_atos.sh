@@ -180,23 +180,6 @@ else
     check_command_failed $? "Failed ldconfig after installing OpenSimulationInterface."
 fi
 
-# Install ad-xolib but first check if the library is already installed
-if [ -d "/usr/local/include/ad-xolib" ]; then
-    echo "ad-xolib already installed, skipping installation..."
-else
-    echo "Installing ad-xolib..."
-    git clone https://github.com/javedulu/ad-xolib.git $SOURCE_PATH/ad-xolib
-    cd $SOURCE_PATH/ad-xolib
-    git submodule update --init --recursive
-    mkdir -p build && cd build
-    cmake .. -DBUILD_EMBED_TARGETS=OFF && make
-    check_command_failed $? "Failed to build ad-xolib."
-    sudo make install
-    check_command_failed $? "Failed to install ad-xolib."
-    sudo ldconfig
-    check_command_failed $? "Failed ldconfig after installing ad-xolib."
-fi
-
 # Install esmini but first check if the library is already installed
 if [ -d "/usr/local/include/esmini" ]; then
     echo "esmini already installed, skipping installation..."
@@ -307,12 +290,12 @@ case "$SHELL" in
     */bash)
         add_source_line_if_needed ~/.bashrc "bash" "${atos_setup_script}"
         add_source_line_if_needed ~/.bashrc "bash" "${ros2_setup_script}"
-        source ~/.bashrc
+        source $HOME/.bashrc 
     ;;
     */zsh)
         add_source_line_if_needed ~/.zshrc "zsh" "${atos_setup_script}"
         add_source_line_if_needed ~/.zshrc "zsh" "${ros2_setup_script}"
-        source ~/.zshrc
+        source $HOME/.zshrc
     ;;
     *)
         echo "Unsupported shell detected! Please use either bash or zsh shells to run ATOS"
