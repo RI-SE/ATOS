@@ -11,7 +11,6 @@ BackToStart::BackToStart() : Module(BackToStart::moduleName),
 {
 	getObjectReturnTrajectoryService = create_service<atos_interfaces::srv::GetObjectReturnTrajectory>(ServiceNames::getObjectReturnTrajectory,
 		std::bind(&BackToStart::onReturnTrajectoryRequest, this, _1, _2));
-	originClient = create_client<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin);
 }
 void BackToStart::onExitMessage(const ROSChannels::Exit::message_type::SharedPtr)
 {
@@ -47,26 +46,6 @@ void BackToStart::onReturnTrajectoryRequest(const std::shared_ptr<atos_interface
     response->trajectory = b2sTraj.toCartesianTrajectory();
     response->success = true;
     RCLCPP_INFO(get_logger(), "Calculated return trajectory for object %u with %lu points", response->id, response->trajectory.points.size());
-
-    this->pathPublishers.emplace(id, ROSChannels::Path::Pub(*this, id));
-    this->pathPublishers.at(id).publish(b2sTraj.toPath());
-
-    // Get test origin
-    auto originCallback = [id, b2sTraj, this](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
-        auto originResponse = future.get();
-        if (!originResponse->success) {
-            RCLCPP_ERROR(get_logger(), "Get origin service call failed for object %u", id);
-            return;
-        }
-        auto origin_pos = originResponse->origin.position;
-        RCLCPP_INFO(get_logger(), "Loaded test origin for object. lat: %f, lon: %f, alt: %f", 
-                    origin_pos.latitude, origin_pos.longitude, origin_pos.altitude);
-        std::array<double,3> llh_0 = {origin_pos.latitude, origin_pos.longitude, origin_pos.altitude};
-        this->gnssPathPublishers.emplace(id, ROSChannels::GNSSPath::Pub(*this, id));
-        this->gnssPathPublishers.at(id).publish(b2sTraj.toGeoJSON(llh_0));
-    };
-    auto originRequest = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
-    auto originPromise = originClient->async_send_request(originRequest, originCallback);
 };
 
 

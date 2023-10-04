@@ -740,6 +740,17 @@ void ObjectControl::reloadScenarioTrajectories() {
 	RCLCPP_INFO(get_logger(), "All objects received scenario trajectories");
 }
 
+void ObjectControl::updateTrajectoryGUI(uint32_t id){
+	ATOS::Trajectory traj = objects.at(id)->getTrajectory();
+	this->pathPublishers.emplace(id, ROSChannels::Path::Pub(*this, id));
+	this->pathPublishers.at(id).publish(traj.toPath());
+
+	GeographicPositionType origin = objects.at(id)->getOrigin();
+	std::array<double,3> llh_0 = {origin.latitude_deg, origin.longitude_deg, origin.altitude_m};
+	this->gnssPathPublishers.emplace(id, ROSChannels::GNSSPath::Pub(*this, id));
+	this->gnssPathPublishers.at(id).publish(traj.toGeoJSON(llh_0));
+}
+
 void ObjectControl::setObjectTrajectory(uint32_t id){
 	auto returnTrajectoryCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future) {
 		auto returnTrajResponse = future.get();
@@ -751,6 +762,7 @@ void ObjectControl::setObjectTrajectory(uint32_t id){
 		traj.initializeFromCartesianTrajectory(returnTrajResponse->trajectory);
 		objects.at(id)->setTrajectory(traj);
 		objects.at(id)->sendTrajectory();
+		this->updateTrajectoryGUI(id);
 		RCLCPP_INFO(get_logger(), "Loaded return trajectory for object %u with %lu points", id, traj.size());
 	};
 
@@ -764,6 +776,7 @@ void ObjectControl::setObjectTrajectory(uint32_t id){
 		traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
 		objects.at(id)->setTrajectory(traj);
 		objects.at(id)->sendTrajectory();
+		this->updateTrajectoryGUI(id);
 		RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %lu points", id, traj.size());
 	};
 
@@ -784,7 +797,7 @@ void ObjectControl::setObjectTrajectory(uint32_t id){
 		auto promise = trajectoryClient->async_send_request(trajRequest, trajectoryCallback);
 		promise.wait_for(std::chrono::milliseconds(100)); // Sleep for a short time to allow the service to respond
 	}
-	sleep(0.5);
+	sleep(0.5); // Allow time for the trajectory to be sent, otherwise the thread goes out of context for some reason.
 }
 
 void ObjectControl::startObject(

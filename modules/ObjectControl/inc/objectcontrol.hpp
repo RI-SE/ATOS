@@ -10,6 +10,9 @@
 #include <chrono>
 #include <mutex>
 #include <memory>
+#include <unordered_map>
+
+#include "geographic_msgs/msg/geo_point.hpp"
 
 #include "module.hpp"
 #include "atosTime.h"
@@ -19,6 +22,7 @@
 #include "roschannels/monitorchannel.hpp"
 #include "roschannels/remotecontrolchannels.hpp"
 #include "roschannels/pathchannel.hpp"
+#include "roschannels/gnsspathchannel.hpp"
 #include "roschannels/controlsignalchannel.hpp"
 #include "roschannels/objstatechangechannel.hpp"
 #include "atos_interfaces/srv/get_object_ids.hpp"
@@ -212,6 +216,7 @@ public:
 
 private:
 	bool isResetting;
+	geographic_msgs::msg::GeoPoint origin_pos; //!< Test origin
 	std::mutex stateMutex;
 	std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> exec;
 	static inline std::string const moduleName = "object_control";
@@ -274,6 +279,8 @@ private:
 	ROSChannels::Abort::Pub scnAbortPub;					//!< Publisher to scenario abort reports
 	ROSChannels::ObjectsConnected::Pub objectsConnectedPub;	//!< Publisher to report that objects have been connected
 	ROSChannels::ConnectedObjectIds::Pub connectedObjectIdsPub;	//!< Publisher to periodically report connected object ids
+	std::unordered_map<uint32_t,ROSChannels::Path::Pub> pathPublishers;
+	std::unordered_map<uint32_t,ROSChannels::GNSSPath::Pub> gnssPathPublishers;
 	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr idClient;	//!< Client to request object ids
 	rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedPtr originClient;	//!< Client to request object status
 	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr trajectoryClient;	//!< Client to request object trajectories
@@ -330,7 +337,9 @@ private:
 	void resetTest();
 	//! \brief TODO
 	void reloadScenarioTrajectories();
-	//! \brief If resetting, this function will also send the new trajectory to the object. If not resetting, it will only set the trajectory locally.
+	//! \brief TODO
+	void updateTrajectoryGUI(uint32_t id);
+	//! \brief This function will set and send the trajectory to the object depending on the current state (resetting).
 	void setObjectTrajectory(uint32_t id);
 	//! \brief
 	void startObject(uint32_t id, std::chrono::system_clock::time_point startTime = std::chrono::system_clock::now());
