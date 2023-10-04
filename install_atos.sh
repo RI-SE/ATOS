@@ -63,16 +63,11 @@ fi
 ###### Install ATOS dependencies ######
 #######################################
 
-# Update and install required dependencies
-echo "Updating apt and installing dependencies..."
-sudo apt update && sudo apt install -y \
-    libsystemd-dev \
-    libprotobuf-dev \
-    protobuf-compiler \
-    libeigen3-dev \
-    nlohmann-json3-dev \
-    python3-pip \
-    python3-colcon-common-extensions
+# Update and install required dependencies specified in dependencies.txt file
+apt_deps=$(cat dependencies.txt | tr '\n' ' ')
+echo "Installing dependencies... $apt_deps"
+sudo apt update && sudo apt install -y ${apt_deps}
+
 # Check if apt failed to install dependencies
 check_command_failed $? "Failed to install dependencies."
 
