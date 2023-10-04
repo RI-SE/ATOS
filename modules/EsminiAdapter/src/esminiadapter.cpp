@@ -42,8 +42,8 @@ std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAd
 std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>> EsminiAdapter::objectTrajectoryService = std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>>();
 std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>> EsminiAdapter::startOnTriggerService = std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>>();
 std::shared_ptr<rclcpp::Service<ObjectIpSrv>> EsminiAdapter::objectIpService = std::shared_ptr<rclcpp::Service<ObjectIpSrv>>();
+std::shared_ptr<rclcpp::Service<TestOriginSrv>> EsminiAdapter::testOriginService = std::shared_ptr<rclcpp::Service<TestOriginSrv>>();
 std::vector<uint32_t> EsminiAdapter::delayedStartIds = std::vector<uint32_t>();
-std::shared_ptr<rclcpp::Client<TestOriginSrv>> EsminiAdapter::testOriginClient = nullptr;
 geographic_msgs::msg::GeoPose EsminiAdapter::testOrigin = geographic_msgs::msg::GeoPose();
 
 EsminiAdapter::EsminiAdapter() : Module(moduleName),
@@ -54,7 +54,8 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	abortSub(*this, &EsminiAdapter::onStaticAbortMessage),
 	exitSub(*this, &EsminiAdapter::onStaticExitMessage),
 	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage),
-	applyTrajTransform(false)
+	applyTrajTransform(false),
+	testOriginSet(false)
  {
 	declare_parameter("open_scenario_file","");
 }
@@ -170,23 +171,13 @@ void EsminiAdapter::onStaticInitMessage(
 		return;
 	}
 
-	auto request = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
-	auto result = me->testOriginClient->async_send_request(request, [](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
-		auto response = future.get();
-		if (!response->success) {
-			RCLCPP_ERROR(me->get_logger(), "Failed to get test origin from test origin service");
-			return; // TODO communicate failure
-		}
-		me->testOrigin = response->origin;
+	me->InitializeEsmini();
 
-		me->InitializeEsmini();
-
-		std::array<double,3> llh_0 = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
-		for (auto& it : me->idToTraj) {
-			me->gnssPathPublishers.emplace(it.first, ROSChannels::GNSSPath::Pub(*me, it.first));
-			me->gnssPathPublishers.at(it.first).publish(it.second.toGeoJSON(llh_0));
-		}
-	});
+	std::array<double,3> llh_0 = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
+	for (auto& it : me->idToTraj) {
+		me->gnssPathPublishers.emplace(it.first, ROSChannels::GNSSPath::Pub(*me, it.first));
+		me->gnssPathPublishers.at(it.first).publish(it.second.toGeoJSON(llh_0));
+	}
 }
 
 void EsminiAdapter::onStaticExitMessage(
@@ -320,8 +311,6 @@ void EsminiAdapter::handleActionElementStateChange(
 			RCLCPP_INFO(me->get_logger(), "Running send DENM action triggered by object %d", objectId);
 			ROSChannels::Monitor::message_type monr;
 			rclcpp::wait_for_message(monr, me, std::string(me->get_namespace()) + "/object_" + std::to_string(objectId) + "/object_monitor", 10ms);
-			TestOriginSrv::Response::SharedPtr response;
-			// me->callService(5ms ,me->testOriginClient, response);
 			double llh[3] = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
 			double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
 			llhOffsetMeters(llh, offset);
@@ -646,6 +635,10 @@ void EsminiAdapter::InitializeEsmini()
 			std::string toDatum = "WGS84";
 			auto llh_0 = CRSTransformation::projToLLH(projStringFrom, toDatum);
 			RCLCPP_INFO(me->get_logger(), "llh origin: %lf, %lf, %lf", llh_0[0], llh_0[1], llh_0[2]);
+			me->testOrigin.position.latitude = llh_0[0];
+			me->testOrigin.position.longitude = llh_0[1];
+			me->testOrigin.position.altitude = llh_0[2];
+			me->testOriginSet = true;
 
 			std::string projStringTo = "+proj=tmerc +lat_0=" + std::to_string(llh_0[0]) + 
 													" +lon_0=" + std::to_string(llh_0[1]) + 
@@ -728,6 +721,20 @@ void EsminiAdapter::onRequestObjectTrajectory(
 	}
 }
 
+void EsminiAdapter::onRequestTestOrigin(
+	const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request> req,
+	std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response> res)
+{
+	while (me->testOriginSet == false){
+		RCLCPP_DEBUG(me->get_logger(), "Waiting for test origin to be available");
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+	}
+	res->origin.position.latitude = me->testOrigin.position.latitude;
+	res->origin.position.longitude = me->testOrigin.position.longitude;
+	res->origin.position.altitude = me->testOrigin.position.altitude;
+}
+
+
 void EsminiAdapter::onRequestObjectStartOnTrigger(
 	const std::shared_ptr<ObjectTriggerSrv::Request> req,
 	std::shared_ptr<ObjectTriggerSrv::Response> res)
@@ -763,9 +770,6 @@ void EsminiAdapter::onRequestObjectIP(
  */
 int EsminiAdapter::initializeModule() {
 	int retval = 0;
-	
-	// Calling services
-	me->testOriginClient = me->nTimesWaitForService<TestOriginSrv>(3, 1s, ServiceNames::getTestOrigin);
 
 	// Providing services
 	me->startOnTriggerService = me->create_service<ObjectTriggerSrv>(ServiceNames::getObjectTriggerStart,
@@ -774,7 +778,8 @@ int EsminiAdapter::initializeModule() {
 		std::bind(&EsminiAdapter::onRequestObjectIP, _1, _2));
 	me->objectTrajectoryService = me->create_service<ObjectTrajectorySrv>(ServiceNames::getObjectTrajectory,
 		std::bind(&EsminiAdapter::onRequestObjectTrajectory, _1, _2));
-
+	me->testOriginService = me->create_service<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin,
+		std::bind(&EsminiAdapter::onRequestTestOrigin, _1, _2));
 
 	return retval;
 }

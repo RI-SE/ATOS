@@ -53,6 +53,7 @@ private:
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> objectTrajectoryService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTriggerStart>> startOnTriggerService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectIp>> objectIpService;
+	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetTestOrigin>> testOriginService;
 
 
 	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
@@ -92,6 +93,9 @@ private:
 	static void onRequestObjectIP(
 		const std::shared_ptr<atos_interfaces::srv::GetObjectIp::Request> req,
 		std::shared_ptr<atos_interfaces::srv::GetObjectIp::Response> res);
+
+	static void onRequestTestOrigin(const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,
+							std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response>);
 	
 
 	static std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> testOriginClient;
@@ -103,6 +107,7 @@ private:
 
 	std::shared_ptr<CRSTransformation> crsTransformation;
 	bool applyTrajTransform;
+	bool testOriginSet;
 
 	static geographic_msgs::msg::GeoPose testOrigin;
 
