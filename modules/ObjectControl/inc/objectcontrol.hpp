@@ -254,6 +254,8 @@ private:
 
 	std::shared_future<void> connStopReqFuture;	//!< Request to stop a connection attempt
 	std::promise<void> connStopReqPromise;		//!< Promise that the above value will be emitted
+	atos_interfaces::srv::GetObjectTrajectory::Response::SharedPtr trajResponse;
+	atos_interfaces::srv::GetObjectReturnTrajectory::Response::SharedPtr returnTrajResponse;
 
 	ROSChannels::Init::Sub scnInitSub;			//!< Subscriber to scenario initialization requests
 	ROSChannels::Start::Sub scnStartSub;		//!< Subscriber to scenario start requests
@@ -339,6 +341,10 @@ private:
 	void reloadScenarioTrajectories();
 	//! \brief TODO
 	void updateTrajectoryGUI(uint32_t id);
+	//! \brief TODO
+	void trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future, uint32_t id);
+	//! \brief TODO
+	void returnTrajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future, uint32_t id);
 	//! \brief This function will set and send the trajectory to the object depending on the current state (resetting).
 	void setObjectTrajectory(uint32_t id);
 	//! \brief

@@ -724,7 +724,6 @@ void ObjectControl::resetTest() {
 	for (auto& id : getVehicleIDs()) {
 		this->setObjectTrajectory(id);
 	}
-	RCLCPP_INFO(get_logger(), "All objects received return trajectories");
 }
 
 void ObjectControl::reloadScenarioTrajectories() {
@@ -737,7 +736,6 @@ void ObjectControl::reloadScenarioTrajectories() {
 	for (auto& id : getVehicleIDs()) {
 		this->setObjectTrajectory(id);
 	}
-	RCLCPP_INFO(get_logger(), "All objects received scenario trajectories");
 }
 
 void ObjectControl::updateTrajectoryGUI(uint32_t id){
@@ -751,35 +749,37 @@ void ObjectControl::updateTrajectoryGUI(uint32_t id){
 	this->gnssPathPublishers.at(id).publish(traj.toGeoJSON(llh_0));
 }
 
+void ObjectControl::trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future, uint32_t id) {
+	this->trajResponse = future.get();
+	if (!trajResponse->success) {
+		RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
+		return;
+	}
+
+	ATOS::Trajectory traj(get_logger());
+	traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
+	objects.at(id)->setTrajectory(traj);
+	objects.at(id)->sendTrajectory();
+	this->updateTrajectoryGUI(id);
+	RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %lu points", id, traj.size());
+};
+
+void ObjectControl::returnTrajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future, uint32_t id) {
+	this->returnTrajResponse = future.get();
+	if (!returnTrajResponse->success) {
+		RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
+		return;
+	}
+
+	ATOS::Trajectory traj(get_logger());
+	traj.initializeFromCartesianTrajectory(returnTrajResponse->trajectory);
+	objects.at(id)->setTrajectory(traj);
+	objects.at(id)->sendTrajectory();
+	this->updateTrajectoryGUI(id);
+	RCLCPP_INFO(get_logger(), "Loaded return trajectory for object %u with %lu points", id, traj.size());
+};
+
 void ObjectControl::setObjectTrajectory(uint32_t id){
-	auto returnTrajectoryCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future) {
-		auto returnTrajResponse = future.get();
-		if (!returnTrajResponse->success) {
-			RCLCPP_ERROR(get_logger(), "Get return trajectory service call failed for object %u", id);
-			return;
-		}
-		ATOS::Trajectory traj(get_logger());
-		traj.initializeFromCartesianTrajectory(returnTrajResponse->trajectory);
-		objects.at(id)->setTrajectory(traj);
-		objects.at(id)->sendTrajectory();
-		this->updateTrajectoryGUI(id);
-		RCLCPP_INFO(get_logger(), "Loaded return trajectory for object %u with %lu points", id, traj.size());
-	};
-
-	auto trajectoryCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
-		auto trajResponse = future.get();
-		if (!trajResponse->success) {
-			RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
-			return;
-		}
-		ATOS::Trajectory traj(get_logger());
-		traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
-		objects.at(id)->setTrajectory(traj);
-		objects.at(id)->sendTrajectory();
-		this->updateTrajectoryGUI(id);
-		RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %lu points", id, traj.size());
-	};
-
 	if (this->isResetting) {
 		auto returnTrajectoryRequest = std::make_shared<atos_interfaces::srv::GetObjectReturnTrajectory::Request>();
 		returnTrajectoryRequest->id = id;
@@ -788,16 +788,24 @@ void ObjectControl::setObjectTrajectory(uint32_t id){
 		returnTrajectoryRequest->position.x = pos.xCoord_m;
 		returnTrajectoryRequest->position.y = pos.yCoord_m;
 		returnTrajectoryRequest->position.z = pos.zCoord_m;
-		auto promise = returnTrajectoryClient->async_send_request(returnTrajectoryRequest, returnTrajectoryCallback);
-		promise.wait_for(std::chrono::milliseconds(100)); // Sleep for a short time to allow the service to respond
+		
+		auto func1 = [id, this] (rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future){
+			this->returnTrajectoryCallback(future, id);
+		};
+		auto future = returnTrajectoryClient->async_send_request(returnTrajectoryRequest, func1);
+		future.wait_for(std::chrono::milliseconds(200)); // Sleep for a short time to allow the service to respond (b2s service takes longer than esmini service)
 	}
 	else {
 		auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
 		trajRequest->id = id;
-		auto promise = trajectoryClient->async_send_request(trajRequest, trajectoryCallback);
-		promise.wait_for(std::chrono::milliseconds(100)); // Sleep for a short time to allow the service to respond
+
+		auto func2 = [id, this] (rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future){
+			this->trajectoryCallback(future, id);
+		};
+		auto future = trajectoryClient->async_send_request(trajRequest, func2);
+		future.wait_for(std::chrono::milliseconds(100)); // Sleep for a short time to allow the service to respond
 	}
-	sleep(0.5); // Allow time for the trajectory to be sent, otherwise the thread goes out of context for some reason.
+	// sleep(1); // Allow time for the trajectory to be sent, otherwise the thread goes out of context for some reason.
 }
 
 void ObjectControl::startObject(
