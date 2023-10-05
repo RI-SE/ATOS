@@ -265,6 +265,8 @@ void TestObject::sendHeartbeat(
 void TestObject::sendSettings() {
 
 	ObjectSettingsType objSettings;
+	objSettings.testMode = TEST_MODE_PREPLANNED;
+
 	objSettings.desiredID.transmitter = conf.getTransmitterID();
 	objSettings.desiredID.controlCentre = ::getTransmitterID();
 	objSettings.desiredID.subTransmitter = 0;
