@@ -11,14 +11,10 @@ class SampleModule : public Module{
 public:
 	static inline std::string const moduleName = "sample_module";
 	SampleModule();
-	~SampleModule();
 	std::vector<std::uint32_t> getObjectIds();
 	bool getAborting() { return aborting_; }
 
 private:
-	static inline const int TCPPort = 1337;
-
-	void tcpSocketProcedure();
 	ROSChannels::Init::Sub initSub;
 	ROSChannels::Abort::Sub abortSub;
 	ROSChannels::AllClear::Sub allClearSub;
@@ -29,7 +25,4 @@ private:
 
 	std::vector<std::uint32_t> objectIds;
 	bool aborting_ = false;
-	std::unique_ptr<std::thread> tcpThread;
-	TCPServer tcpServer;
-	bool quit = false;
 };

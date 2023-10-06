@@ -10,18 +10,8 @@ SampleModule::SampleModule() :
 	Module(moduleName),
 	initSub(*this, std::bind(&SampleModule::onInitMessage, this, _1)),
 	abortSub(*this, std::bind(&SampleModule::onAbortMessage, this, _1)),
-	allClearSub(*this, std::bind(&SampleModule::onAllClearMessage, this, _1)),
-	tcpServer("0.0.0.0",TCPPort)
+	allClearSub(*this, std::bind(&SampleModule::onAllClearMessage, this, _1))
 {
-	tcpThread = std::make_unique<std::thread>(&SampleModule::tcpSocketProcedure, this);
-}
-
-SampleModule::~SampleModule() {
-	// When the SampleModule object is destroyed, make sure that socket thread is joined
-	quit = true;
-	if (tcpThread != nullptr) {
-		tcpThread->join();
-	}
 }
 
 //! Message queue callbacks
@@ -49,18 +39,4 @@ void SampleModule::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 */
 std::vector<std::uint32_t> SampleModule::getObjectIds() {
 	return objectIds;
-}
-
-/*! \brief This function is executed in a separate thread
- * It is used to handle incoming TCP connections
- * and receive data from them
-*/
-void SampleModule::tcpSocketProcedure() {
-	while (!quit) {
-		auto socket = tcpServer.await();
-		auto bytes = socket.recv();
-		for (auto b : bytes) {
-			RCLCPP_INFO(get_logger(), "Received byte: %d", b);
-		}
-	}
 }
