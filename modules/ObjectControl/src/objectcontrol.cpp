@@ -749,8 +749,9 @@ void ObjectControl::updateTrajectoryGUI(uint32_t id){
 	this->gnssPathPublishers.at(id).publish(traj.toGeoJSON(llh_0));
 }
 
-void ObjectControl::trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future, uint32_t id) {
+void ObjectControl::trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
 	this->trajResponse = future.get();
+	auto id = returnTrajResponse->id;
 	if (!trajResponse->success) {
 		RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
 		return;
@@ -764,10 +765,11 @@ void ObjectControl::trajectoryCallback(const rclcpp::Client<atos_interfaces::srv
 	RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %lu points", id, traj.size());
 };
 
-void ObjectControl::returnTrajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future, uint32_t id) {
+void ObjectControl::returnTrajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future) {
 	this->returnTrajResponse = future.get();
+	auto id = returnTrajResponse->id;
 	if (!returnTrajResponse->success) {
-		RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
+		RCLCPP_ERROR(get_logger(), "Get return trajectory service call failed for object %u", id);
 		return;
 	}
 
@@ -788,24 +790,13 @@ void ObjectControl::setObjectTrajectory(uint32_t id){
 		returnTrajectoryRequest->position.x = pos.xCoord_m;
 		returnTrajectoryRequest->position.y = pos.yCoord_m;
 		returnTrajectoryRequest->position.z = pos.zCoord_m;
-		
-		auto func1 = [id, this] (rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future){
-			this->returnTrajectoryCallback(future, id);
-		};
-		auto future = returnTrajectoryClient->async_send_request(returnTrajectoryRequest, func1);
-		future.wait_for(std::chrono::milliseconds(200)); // Sleep for a short time to allow the service to respond (b2s service takes longer than esmini service)
+		returnTrajectoryClient->async_send_request(returnTrajectoryRequest, std::bind(&ObjectControl::returnTrajectoryCallback, this, _1));
 	}
 	else {
 		auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
 		trajRequest->id = id;
-
-		auto func2 = [id, this] (rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future){
-			this->trajectoryCallback(future, id);
-		};
-		auto future = trajectoryClient->async_send_request(trajRequest, func2);
-		future.wait_for(std::chrono::milliseconds(100)); // Sleep for a short time to allow the service to respond
+		trajectoryClient->async_send_request(trajRequest, std::bind(&ObjectControl::trajectoryCallback, this, _1));
 	}
-	// sleep(1); // Allow time for the trajectory to be sent, otherwise the thread goes out of context for some reason.
 }
 
 void ObjectControl::startObject(

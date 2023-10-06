@@ -342,9 +342,9 @@ private:
 	//! \brief TODO
 	void updateTrajectoryGUI(uint32_t id);
 	//! \brief TODO
-	void trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future, uint32_t id);
+	void trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future);
 	//! \brief TODO
-	void returnTrajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future, uint32_t id);
+	void returnTrajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future);
 	//! \brief This function will set and send the trajectory to the object depending on the current state (resetting).
 	void setObjectTrajectory(uint32_t id);
 	//! \brief
