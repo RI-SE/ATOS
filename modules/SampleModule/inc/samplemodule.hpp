@@ -4,6 +4,31 @@
 #include "module.hpp"
 #include "server.hpp"
 
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+#pragma once
+
+// Module specific publisher/subscriber
+namespace ROSChannels {
+    namespace SmOnInitResponse {
+        const std::string topicName = "smOnInitResponse";
+        using message_type = std_msgs::msg::Empty;
+		const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
+        class Pub : public BasePub<message_type> {
+        public:
+            Pub(rclcpp::Node& node, const rclcpp::QoS& qos = defaultQoS) : BasePub<message_type>(node, topicName, qos) {}
+        };
+
+		class Sub : public BaseSub<message_type> {
+		public:
+			Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback, const rclcpp::QoS& qos = defaultQoS) : BaseSub<message_type>(node, topicName, callback, qos) {}
+		};
+    }
+}
+
 /*!
  * \brief The SampleModule is a ros2 node that demonstrates how to use the Module class 
  */
@@ -18,6 +43,7 @@ private:
 	ROSChannels::Init::Sub initSub;
 	ROSChannels::Abort::Sub abortSub;
 	ROSChannels::AllClear::Sub allClearSub;
+	ROSChannels::SmOnInitResponse::Pub smOnInitResponsePub;
 
 	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;

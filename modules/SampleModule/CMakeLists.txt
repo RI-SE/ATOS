@@ -10,10 +10,12 @@ find_package(atos_interfaces REQUIRED)
 # Define target names
 set(SAMPLE_MODULE_TARGET ${PROJECT_NAME})
 
+set(COREUTILS_LIBRARY ATOSCoreUtil)
 set(COMMON_LIBRARY ATOSCommon) # Common library for ATOS with e.g. Trajectory class
 set(SOCKET_LIBRARY TCPUDPSocket) # Socket library for TCP/UDP communication
 
 get_target_property(COMMON_HEADERS ${COMMON_LIBRARY} INCLUDE_DIRECTORIES)
+get_target_property(COREUTILS_HEADERS ${COREUTILS_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
@@ -34,6 +36,7 @@ target_link_libraries(${SAMPLE_MODULE_TARGET} ${TARGET_LIBRARIES})
 target_include_directories(${SAMPLE_MODULE_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
+	${COREUTILS_HEADERS}
 )
 
 # ROS specific rules
