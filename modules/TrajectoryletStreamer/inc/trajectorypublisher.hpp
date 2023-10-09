@@ -5,6 +5,7 @@
  */
 #include "objectconfig.hpp"
 #include "roschannels/pathchannel.hpp"
+#include "roschannels/cartesiantrajectorychannel.hpp"
 #include <memory>
 #include <thread>
 #include <mutex>
@@ -30,7 +31,8 @@ public:
 		this->chunkLength = chunkLength;
 	}
 private:
-	ROSChannels::Path::Pub pub;
+	ROSChannels::Path::Pub pathPub;
+	ROSChannels:: CartesianTrajectory::Pub trajPub;
 	std::shared_ptr<rclcpp::TimerBase> timer;
 
 	std::chrono::milliseconds chunkLength = std::chrono::milliseconds(0);
@@ -42,6 +44,7 @@ private:
 	Chunk lastPublishedChunk;
 
 	void publishChunk();
+	atos_interfaces::msg::CartesianTrajectory chunkToTrajectory(Chunk chunk);
 	nav_msgs::msg::Path chunkToPath(Chunk chunk, std::chrono::steady_clock::time_point);
 	Chunk extractChunk(std::chrono::steady_clock::duration beginTime, std::chrono::steady_clock::duration endTime);
 

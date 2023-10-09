@@ -17,7 +17,8 @@ TrajectoryPublisher::TrajectoryPublisher(
 	const uint32_t objectId,
 	const std::chrono::milliseconds chunkLength)
 	: traj(std::make_unique<const Trajectory>(_traj)),
-	pub(node, objectId),
+	pathPub(node, objectId),
+	trajPub(node, objectId),
 	lastPublishedChunk(traj->points.end(), traj->points.end()),
 	chunkLength(chunkLength)
 {
@@ -40,8 +41,10 @@ void TrajectoryPublisher::publishChunk()
 	}
 	if (chunk != lastPublishedChunk ||
 		(chunkLength == 0ms && now - lastPublishTime > 1s)) {
-		auto trajMsg = chunkToPath(chunk, trajTimeOffset);
-		pub.publish(trajMsg);
+		auto pathMsg = chunkToPath(chunk, trajTimeOffset);
+		auto trajMsg = chunkToTrajectory(chunk);
+		pathPub.publish(pathMsg);
+		trajPub.publish(trajMsg);
 		lastPublishedChunk = chunk;
 		lastPublishTime = now;
 	}
@@ -103,4 +106,43 @@ nav_msgs::msg::Path TrajectoryPublisher::chunkToPath(
 		pose.header.frame_id = ret.header.frame_id;
 	}
 	return ret;
+}
+
+
+atos_interfaces::msg::CartesianTrajectory TrajectoryPublisher::chunkToTrajectory(Chunk chunk) {
+	atos_interfaces::msg::CartesianTrajectory trajMsg;
+		
+		// TODO: Can this be made from a ATOS::Trajectory instead?
+		for (auto it = chunk.first; it != chunk.second; ++it) {
+			auto point = *it;
+			atos_interfaces::msg::CartesianTrajectoryPoint pointMsg;
+			// Time
+			auto millis = point.getTime().count();
+			pointMsg.time_from_start.sec = millis/1000;
+			pointMsg.time_from_start.nanosec = (millis%1000)*1000000;
+
+			// Position
+			pointMsg.pose.position.x = point.getPosition().x();
+			pointMsg.pose.position.y = point.getPosition().y();
+			pointMsg.pose.position.z = point.getPosition().z();
+
+			// Rotation
+			tf2::Quaternion q;
+			q.setRPY(0, 0, point.getHeading());
+			tf2::convert(q, pointMsg.pose.orientation);
+
+			// Velocity TODO convert longitudinal / lateral into xyz coordinate system
+			pointMsg.twist.linear.x = point.getLongitudinalVelocity();
+			pointMsg.twist.linear.y = point.getLateralVelocity();
+			pointMsg.twist.linear.z = 0; // TODO: Support for drones etc..
+
+			// Acceleration TODO convert longitudinal / lateral into xyz coordinate system
+			pointMsg.acceleration.linear.x = point.getLongitudinalAcceleration();
+			pointMsg.acceleration.linear.y = point.getLateralAcceleration();
+			pointMsg.acceleration.linear.z = 0; // TODO: Support for drones etc..
+
+			trajMsg.points.push_back(pointMsg);
+		}
+
+		return trajMsg;
 }
