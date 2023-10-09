@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include "CRSTransformation.hpp"
 
 /**
@@ -7,6 +12,8 @@
  * @param fromCRS Coordinate reference system from
  * @param toCRS Coordinate reference system to
  */
+
+
 CRSTransformation::CRSTransformation(const std::string &fromCRS, const std::string &toCRS) :
  ctxt(proj_context_create(), [](PJ_CONTEXT* ctxt){ proj_context_destroy(ctxt); }),
 	projection(proj_create_crs_to_crs(ctxt.get(), fromCRS.c_str(), toCRS.c_str(), nullptr),
@@ -29,7 +36,6 @@ void CRSTransformation::apply(std::vector<ATOS::Trajectory::TrajectoryPoint> &tr
 	// Put TrajPoints into array of PJ_POINTS
 	PJ_COORD in[trajPoints.size()];
 	auto arraySize = sizeof(in) / sizeof(in[0]);
-	RCLCPP_DEBUG(logger, "Putting trajectory with %d points into PJ_COORD array", arraySize);
 	for (int i = 0; i < arraySize; i++){
 		in[i].xyz.x = trajPoints[i].getXCoord();
 		in[i].xyz.y = trajPoints[i].getYCoord();
@@ -50,15 +56,14 @@ void CRSTransformation::apply(std::vector<ATOS::Trajectory::TrajectoryPoint> &tr
 }
 
 /**
- * @brief Get the origin lat, lon, height in the given datum from a proh string
+ * @brief Get the origin lat, lon, height in the given datum from a proj string
  * 
  * @parameter: projString proj string to transform
  * @parameter: datum datum to transform to 
  * @return std::vector<double> Vector with lat, lon, height
  */
-const std::vector<double>
-CRSTransformation::projToLLH(const std::string &projString, const std::string &datum) {
-    auto pjSrc = proj_create_crs_to_crs(NULL, projString.c_str(), datum.c_str(), NULL);
+std::vector<double> CRSTransformation::projToLLH(const std::string &projString, const std::string &datum) {
+    auto *pjSrc = proj_create_crs_to_crs(NULL, projString.c_str(), datum.c_str(), NULL);
     if (pjSrc == NULL) {
         throw std::runtime_error("Failed to create projPJ object");
     }
@@ -70,4 +75,20 @@ CRSTransformation::projToLLH(const std::string &projString, const std::string &d
     proj_destroy(pjSrc);
 
     return result;
+}
+
+/**
+ * @brief Returns a new latitude, longitude, height after offsetting x, y, z meters
+ * 
+ * @param llh The latitude, longitude, height [degrees, degrees, meters]
+ * @param xyzOffset Meters offset from llh [meters, meters, meters]
+ */
+void CRSTransformation::llhOffsetMeters(double *llh, const double *xyzOffset) {
+	constexpr double EARTH_EQUATOR_RADIUS_M = 6378137.0;	// earth semimajor axis (WGS84) (m)
+	const auto [lat, lon, hgt] = std::make_tuple(llh[0], llh[1], llh[2]);
+	const auto [dx, dy, dz] = std::make_tuple(xyzOffset[0], xyzOffset[1], xyzOffset[2]);
+
+	llh[0] = lat + (dy / EARTH_EQUATOR_RADIUS_M) * (180 / M_PI);
+	llh[1] = lon + (dx / EARTH_EQUATOR_RADIUS_M) * (180 / M_PI) / std::cos(lat * M_PI / 180.0);
+	llh[2] = hgt + dz;
 }

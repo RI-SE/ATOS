@@ -3,7 +3,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 cmake_minimum_required(VERSION 3.8)
-include(FindPkgConfig)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,9 +15,6 @@ find_package(tf2 REQUIRED)
 find_package(esminiLib REQUIRED)
 find_package(esminiRMLib REQUIRED)
 find_package(foxglove_msgs REQUIRED)
-pkg_check_modules(PROJ REQUIRED proj)
-
-include("${CMAKE_CURRENT_SOURCE_DIR}/PROJOptions.cmake")
 
 # Define target names
 set(ESMINI_ADAPTER_TARGET ${PROJECT_NAME})
@@ -32,7 +28,6 @@ include(GNUInstallDirs)
 add_executable(${ESMINI_ADAPTER_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/esminiadapter.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/CRSTransformation.cpp
 )
 # Link project executable to util libraries
 target_link_libraries(${ESMINI_ADAPTER_TARGET}
@@ -56,7 +51,6 @@ ament_target_dependencies(${ESMINI_ADAPTER_TARGET}
   atos_interfaces
   foxglove_msgs
   tf2
-  PROJ
 )
 
 # Installation rules

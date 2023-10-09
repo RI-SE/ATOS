@@ -1,1 +1,0 @@
-set(BUILD_TESTING OFF CACHE BOOL "Build tests" FORCE)

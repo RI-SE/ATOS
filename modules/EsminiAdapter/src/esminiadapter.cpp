@@ -18,7 +18,6 @@
 #include "trajectory.hpp"
 #include "string_utility.hpp"
 #include "util.h"
-#include "util/coordinateutils.hpp"
 
 
 using namespace ROSChannels;
@@ -326,7 +325,7 @@ void EsminiAdapter::handleActionElementStateChange(
 			rclcpp::wait_for_message(monr, me, std::string(me->get_namespace()) + "/object_" + std::to_string(objectId) + "/object_monitor", 10ms);
 			double llh[3] = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
 			double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
-			llhOffsetMeters(llh, offset);
+			CRSTransformation::llhOffsetMeters(llh, offset);
 			me->v2xPub.publish(denmFromMonitor(monr, llh));
 		}
 		else {

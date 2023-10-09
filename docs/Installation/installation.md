@@ -99,7 +99,7 @@ cd ATOS
 git submodule update --init --recursive
 ```
 
-Install the dependencies (Stand in the repo directory):
+Install the dependencies (Stand in the repo directory where the dependencies.txt file is located):
 ```bash
 ```bash
 apt_deps=$(cat dependencies.txt | tr '\n' ' ') | sudo apt update && sudo apt install -y ${apt_deps}
