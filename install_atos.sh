@@ -168,7 +168,7 @@ if [ -d "/usr/local/lib/osi3" ]; then
     echo "OpenSimulationInterface already installed, skipping installation..."
 else
     echo "Installing OpenSimulationInterface..."
-    git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git -b v3.4.0 $SOURCE_PATH/open-simulation-interface
+    git clone --depth 1 --branch v3.4.0 https://github.com/OpenSimulationInterface/open-simulation-interface.git $SOURCE_PATH/open-simulation-interface
     cd $SOURCE_PATH/open-simulation-interface
     mkdir -p build && cd build
     cmake .. && make
@@ -185,7 +185,7 @@ if [ -d "/usr/local/include/esmini" ]; then
     echo "esmini already installed, skipping installation..."
 else
     echo "Installing esmini..."
-    git clone https://github.com/esmini/esmini.git $SOURCE_PATH/esmini
+    git clone --depth 1 --branch v2.32.0 https://github.com/esmini/esmini.git $SOURCE_PATH/esmini
     cd $SOURCE_PATH/esmini
     mkdir -p build && cd build
     cmake .. && make
