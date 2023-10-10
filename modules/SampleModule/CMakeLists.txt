@@ -47,11 +47,11 @@ ament_target_dependencies(${SAMPLE_MODULE_TARGET}
 )
 
 if(BUILD_TESTING)
-	find_package(ament_cmake_gtest REQUIRED)
+	find_package(ament_cmake_ros REQUIRED)
 	file(GLOB TESTFILES "test/*.cpp")
 	set(SRCFILES "src/samplemodule.cpp")
 
-	ament_add_gtest(${SAMPLE_MODULE_TARGET}_test ${TESTFILES} ${SRCFILES})
+	ament_add_ros_isolated_gtest(${SAMPLE_MODULE_TARGET}_test ${TESTFILES} ${SRCFILES})
 	target_link_libraries(${SAMPLE_MODULE_TARGET}_test ${TARGET_LIBRARIES})
 	target_include_directories(${SAMPLE_MODULE_TARGET}_test PUBLIC
 		${CMAKE_CURRENT_SOURCE_DIR}/inc
