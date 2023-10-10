@@ -1,7 +1,7 @@
 # Testing
 
 ## Unit Tests
-Unit tests for c++ code in ATOS are written in gtest. New modules are expected to have unit tests covering at least the most important functionality. All unit tests will run automatically on every pull request. 
+Unit tests for c++ code in ATOS are written in gtest. New modules are expected to have unit tests covering at least the core functionality. All unit tests will run automatically on every pull request. 
 
 To run individual unit tests, run the following command from the your atos build folder in your workspace:
 ```bash
@@ -15,3 +15,10 @@ colcon test --event-handlers console_cohesion+
 ```
 from the root folder of your workspace.
 
+colcon and cmake switches if test should be built with the BUILD_TESTING flag. This should be set to ON by default. If not you can set it manually with
+```bash
+colcon build --cmake-args -DBUILD_TESTING=ON
+```
+
+## Sample code
+In the Sample Module you will find a sample node and a sample test. This is a good starting point for new modules. 
