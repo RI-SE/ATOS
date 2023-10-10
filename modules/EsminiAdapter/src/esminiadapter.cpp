@@ -89,6 +89,7 @@ std::filesystem::path EsminiAdapter::getOpenDriveFile()
 	std::filesystem::path odrPath;
 	if (SE_GetODRFilename() != nullptr) {
 		odrPath = std::filesystem::path(SE_GetODRFilename()); 
+		RCLCPP_INFO(me->get_logger(), "Found ODR file %s", odrPath.string().c_str());
 	}
 	else {
 		RCLCPP_DEBUG(me->get_logger(), "No ODR file found");
@@ -630,6 +631,7 @@ void EsminiAdapter::InitializeEsmini()
 	auto logFilePath = std::string(getenv("HOME")) + std::string("/.astazero/ATOS/logs/esmini.log");
 	SE_SetLogFilePath(logFilePath.c_str());
 	SE_Close(); // Stop ScenarioEngine in case it is running
+	RM_Close(); // Stop RoadManager in case it is running
 
 	RCLCPP_INFO(me->get_logger(), "Initializing esmini with scenario file %s", me->oscFilePath.c_str());
 	if (SE_Init(me->oscFilePath.c_str(),1,0,0,0) < 0) { // Disable controllers, let DefaultController be used
@@ -668,6 +670,7 @@ void EsminiAdapter::InitializeEsmini()
 	} else {
 		RCLCPP_WARN(me->get_logger(), "Failed to get OpenDRIVE geo reference from RoadManager");
 	}
+	RM_Close();
 	
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
 		//SE_SetAlignModeZ(SE_GetId(j), 0); // Disable Z-alignment not implemented in esmini yet
