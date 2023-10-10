@@ -35,21 +35,24 @@ TEST_F(SampleModuleTest, testGetObjectIds){
 }
 
 TEST_F(SampleModuleTest, testOnAbortCallback){
+  // Setup
   auto sampleModule = std::make_shared<SampleModule>();
   auto helperNode = rclcpp::Node::make_shared("testOnAbortCallback_node");
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(sampleModule);
   executor.add_node(helperNode);
-
   auto abortPublisher = ROSChannels::Abort::Pub(*helperNode);
+  
+  // Act
   abortPublisher.publish(ROSChannels::Abort::message_type());
-
   executor.spin_some(std::chrono::milliseconds(300));
 
+  // Assert
   ASSERT_EQ(sampleModule->getAborting(), true);
 }
 
 TEST_F(SampleModuleTest, testOnInitResponse){
+  // Setup
   auto sampleModule = std::make_shared<SampleModule>();
   auto helperNode = rclcpp::Node::make_shared("testOnInitResponse_node");
   rclcpp::executors::SingleThreadedExecutor executor;
@@ -69,12 +72,13 @@ TEST_F(SampleModuleTest, testOnInitResponse){
   std::string topicname = std::string(sampleModule->get_namespace()) + ROSChannels::SmOnInitResponse::topicName;
   auto sub = ROSChannels::SmOnInitResponse::Sub(*helperNode, smOnInitResponseCallback);
 
+  // Act
   auto initPublisher = ROSChannels::Init::Pub(*helperNode);
   initPublisher.publish(ROSChannels::Init::message_type());
-
   // wait for discovery and the subscriber to connect
   test_rclcpp::wait_for_subscriber(helperNode, topicname);
   test_rclcpp::wait_for_future(executor, sub_called_future, fail_after_timeout);
 
+  // Assert
   ASSERT_EQ(receivedMsg, true);
 }
