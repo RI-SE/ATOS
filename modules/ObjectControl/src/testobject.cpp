@@ -19,12 +19,20 @@ TestObject::TestObject(uint32_t id) :
 	conf(get_logger())
 	 {
 		pathSub = std::make_shared<ROSChannels::Path::Sub>(*this, id, std::bind(&TestObject::onPathMessage, this, _1, id));
+		trajSub = std::make_shared<ROSChannels::CartesianTrajectory::Sub>(*this, id, std::bind(&TestObject::onTrajMessage, this, _1, id));
 		monrPub = std::make_shared<ROSChannels::Monitor::Pub>(*this, id);
 		navSatFixPub = std::make_shared<ROSChannels::NavSatFix::Pub>(*this, id);
 		stateChangePub = std::make_shared<ROSChannels::ObjectStateChange::Pub>(*this);
 }
 void TestObject::onPathMessage(const ROSChannels::Path::message_type::SharedPtr msg, int id){
 	;
+}
+
+void TestObject::onTrajMessage(const ROSChannels::CartesianTrajectory::message_type::SharedPtr msg, int id){
+	ATOS::Trajectory traj(this->get_logger());
+	traj.initializeFromCartesianTrajectory(*msg);
+	conf.setTrajectory(traj);
+	this->comms.cmd << conf.getTrajectory();
 }
 
 TestObject::TestObject(TestObject&& other) :
@@ -171,6 +179,9 @@ void TestObject::handleISOMessage(bool awaitNext) {
 	case MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO:
 		this->parseObjectPropertyMessage();
 		break;
+	case MESSAGE_ID_GREM:
+		this->parseGremMessage();
+		break;
 	default:
 		RCLCPP_WARN(get_logger(), "Received unknown message type");
 		break;
@@ -265,7 +276,8 @@ void TestObject::sendHeartbeat(
 void TestObject::sendSettings() {
 
 	ObjectSettingsType objSettings;
-	objSettings.testMode = TEST_MODE_PREPLANNED;
+	// objSettings.testMode = TEST_MODE_PREPLANNED;
+	objSettings.testMode = TEST_MODE_ONLINE;
 
 	objSettings.desiredID.transmitter = conf.getTransmitterID();
 	objSettings.desiredID.controlCentre = ::getTransmitterID();
@@ -294,7 +306,7 @@ void TestObject::sendSettings() {
 	objSettings.timeServer.port = 0;
 
 	this->comms.cmd << objSettings;
-	this->comms.cmd << conf.getTrajectory();
+	// this->comms.cmd << conf.getTrajectory();
 }
 
 void TestObject::sendArm() {

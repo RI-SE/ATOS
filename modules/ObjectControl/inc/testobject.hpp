@@ -18,6 +18,7 @@
 #include "roschannels/pathchannel.hpp"
 #include "roschannels/monitorchannel.hpp"
 #include "roschannels/objstatechangechannel.hpp"
+#include "roschannels/cartesiantrajectorychannel.hpp"
 
 #include "loggable.hpp"
 
@@ -120,6 +121,12 @@ public:
 		RCLCPP_DEBUG(get_logger(), "Ignoring object properties message");
 		return retval;
 	}
+	virtual GeneralResponseMessageType parseGremMessage() {
+		GeneralResponseMessageType retval;
+		this->comms.cmd >> retval;
+		RCLCPP_DEBUG(get_logger(), "Ignoring general response message");
+		return retval;
+	}
 	virtual void handleISOMessage(bool awaitNext = false);
 
 protected:
@@ -130,10 +137,12 @@ protected:
 	std::shared_ptr<ROSChannels::Monitor::Pub> monrPub;
 	std::shared_ptr<ROSChannels::NavSatFix::Pub> navSatFixPub;
 	std::shared_ptr<ROSChannels::Path::Sub> pathSub;
+	std::shared_ptr<ROSChannels::CartesianTrajectory::Sub> trajSub;
 	std::shared_ptr<ROSChannels::ObjectStateChange::Pub> stateChangePub;
 	std::shared_ptr<ROSChannels::Path::message_type> lastReceivedPath;
 
 	virtual void onPathMessage(const ROSChannels::Path::message_type::SharedPtr msg, int id);
+	virtual void onTrajMessage(const ROSChannels::CartesianTrajectory::message_type::SharedPtr msg, int id);
 	virtual void publishMonitor(MonitorMessage& monr);
 	virtual void publishStateChange(ObjectStateType &prevObjState);
 

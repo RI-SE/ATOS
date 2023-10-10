@@ -582,8 +582,8 @@ void EsminiAdapter::InitializeEsmini()
 		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
 
 		// Publish the trajectory as a path
-		me->pathPublishers.emplace(id, ROSChannels::Path::Pub(*me, id));
-		me->pathPublishers.at(id).publish(traj.toPath());
+		// me->pathPublishers.emplace(id, ROSChannels::Path::Pub(*me, id));
+		// me->pathPublishers.at(id).publish(traj.toPath());
 
 		// below is for dumping the trajectory points to the console
 		/*
