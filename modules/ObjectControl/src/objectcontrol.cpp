@@ -180,7 +180,7 @@ void ObjectControl::onResetTestMessage(const ResetTest::message_type::SharedPtr)
 }
 
 void ObjectControl::onReloadSettingsMessage(const ReloadSettings::message_type::SharedPtr) {
-	COMMAND cmd = COMM_BACKTOSTART_CALL;
+	COMMAND cmd = COMM_OSEM;
 	auto f_try = [&]() { this->state->reloadSettingsRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, ReloadSettings::topicName, get_logger());
