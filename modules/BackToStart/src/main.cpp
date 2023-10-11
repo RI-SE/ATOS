@@ -8,7 +8,7 @@
 
 int main(int argc, char** argv){
 	rclcpp::init(argc, argv);
-	static std::shared_ptr<BackToStart> bts_node = std::make_shared<BackToStart>();
-	rclcpp::spin(bts_node);
+	std::shared_ptr<BackToStart> btsNode = std::make_shared<BackToStart>();
+	rclcpp::spin(btsNode);
 	return 0;
 }
