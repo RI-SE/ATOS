@@ -33,13 +33,13 @@ void TrajectoryletStreamer::onObjectsConnectedMessage(const ObjectsConnected::me
 	// TODO setup and first chunk transmission
 	RCLCPP_INFO(get_logger(), "Starting trajectory publishers");
 	for (const auto& [id, traj] : trajectories) {
-		publishers.emplace_back(*this, *traj, id, chunkLength);
+		publishers.emplace_back(std::make_shared<TrajectoryPublisher>(*this, *traj, id, chunkLength));
 	}
 }
 
 void TrajectoryletStreamer::onStartMessage(const std_msgs::msg::Empty::SharedPtr) {
 	for (auto& pub : publishers) {
-		pub.handleStart();
+		pub->handleStart();
 	}
 }
 

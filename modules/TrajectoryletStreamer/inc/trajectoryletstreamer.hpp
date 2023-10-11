@@ -42,7 +42,7 @@ class TrajectoryletStreamer : public Module {
 	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr
 		trajectoryClient;  //!< Client to request object trajectories
 
-	std::vector<TrajectoryPublisher> publishers;
+	std::vector<std::shared_ptr<TrajectoryPublisher>> publishers;
 
 	std::map<uint32_t, std::unique_ptr<ATOS::Trajectory>> trajectories;
 
