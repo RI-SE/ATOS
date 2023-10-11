@@ -15,13 +15,7 @@ find_package(atos_interfaces REQUIRED)
 # Define target names
 set(BACK_TO_START ${PROJECT_NAME})
 
-# set(COREUTILS_LIBRARY ATOSCoreUtil)
-# set(ISO_22133_LIBRARY MaestroISO22133)
-# set(POSITIONING_LIBRARY MaestroPositioning)
-# set(TIME_LIBRARY ATOSTime)
 set(ATOS_COMMON_LIBRARY ATOSCommon)
-# set(LOGGING_LIBRARY MaestroLogging)
-# set(MESSAGE_BUS_LIBRARY MaestroMQ)
 
 include(GNUInstallDirs)
 
@@ -38,10 +32,6 @@ ament_target_dependencies(${BACK_TO_START}
 
 # Link project executable to util libraries
 target_link_libraries(${BACK_TO_START}
-	# ${TIME_LIBRARY}
-	# ${COREUTILS_LIBRARY}
-	# ${LOGGING_LIBRARY}
-    # ${FILESYSTEM_LIBRARY}
     ${ATOS_COMMON_LIBRARY}
 )
 target_include_directories(${BACK_TO_START} PUBLIC
