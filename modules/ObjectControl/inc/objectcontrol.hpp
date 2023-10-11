@@ -335,17 +335,17 @@ private:
 	void disarmObjects();
 	//! \brief
 	void startScenario();
-	//! \brief TODO
+	//! \brief Resets the test by offering a back to start trajectory. Still needs arm and start commands to execute the reset.
 	void resetTest();
-	//! \brief TODO
+	//! \brief Reloads the scenario trajectories for each object.
 	void reloadScenarioTrajectories();
-	//! \brief TODO
+	//! \brief Updates the paths in the GUI to reflect the new trajectories.
 	void updateTrajectoryGUI(uint32_t id);
-	//! \brief TODO
+	//! \brief Callback for the trajectory request. Sends the new trajectory to the object.
 	void trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future);
-	//! \brief TODO
+	//! \brief Callback for the return trajectory request. Sends the new trajectory to the object.
 	void returnTrajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future);
-	//! \brief This function will set and send the trajectory to the object depending on the current state (resetting).
+	//! \brief Requests a new trajectory to the object depending on the current state (resetting).
 	void setObjectTrajectory(uint32_t id);
 	//! \brief
 	void startObject(uint32_t id, std::chrono::system_clock::time_point startTime = std::chrono::system_clock::now());
