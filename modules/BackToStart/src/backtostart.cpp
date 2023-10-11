@@ -23,9 +23,7 @@ void BackToStart::onReturnTrajectoryRequest(const std::shared_ptr<atos_interface
     ATOS::Trajectory currentTraj(get_logger());
     currentTraj.initializeFromCartesianTrajectory(request->trajectory);
     uint32_t id = request->id;
-    // object_position = request->position;
 
-    // auto trajShortened = cutOffTraj(request->trajectory, object_position);
     ATOS::Trajectory b2sTraj(get_logger());
 
     //Add first turn
@@ -46,17 +44,3 @@ void BackToStart::onReturnTrajectoryRequest(const std::shared_ptr<atos_interface
     response->success = true;
     RCLCPP_INFO(get_logger(), "Calculated return trajectory for object %u with %lu points", response->id, response->trajectory.points.size());
 };
-
-
-// Need to double check this function
-/*
-using namespace atos_interfaces::msg;
-CartesianTrajectory BackToStart::cutOffTraj(const CartesianTrajectory& traj, const CartesianPosition& point) {
-    CartesianTrajectory trajShortened;
-    auto it = std::find_if(traj.begin(), traj.end(), [point](const CartesianPoint& p) {
-        return p.getTime() > point.getTime();
-    });
-    trajShortened.insert(trajShortened.end(), it, traj.end());
-    return trajShortened;
-}
-*/
