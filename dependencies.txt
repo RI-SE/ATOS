@@ -1,0 +1,10 @@
+    curl
+    libsystemd-dev
+    libprotobuf-dev
+    protobuf-compiler
+    libeigen3-dev
+    nlohmann-json3-dev
+    gnupg2
+    lsb-release
+    python3-pip
+    proj-bin
