@@ -146,6 +146,22 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 	return chnl;
 }
 
+Channel& operator>>(Channel& chnl, GeneralResponseMessageType& grem) {
+	if (chnl.pendingMessageType() == MESSAGE_ID_GREM) {
+		auto nBytes = decodeGREMMessage(chnl.receiveBuffer.data(), chnl.receiveBuffer.size(), &grem, false);
+		if (nBytes < 0) {
+			throw std::invalid_argument(strerror(errno));
+		}
+		else {
+			nBytes = recv(chnl.socket, chnl.receiveBuffer.data(), static_cast<size_t>(nBytes), 0);
+			if (nBytes <= 0) {
+				throw std::runtime_error("Unable to clear from socket buffer");
+			}
+		}
+	}
+	return chnl;
+}
+
 Channel& operator<<(Channel& chnl, const ControlSignal::message_type::SharedPtr csp) {
 	RemoteControlManoeuvreMessageType rcmm;
 	rcmm.command = MANOEUVRE_NONE;

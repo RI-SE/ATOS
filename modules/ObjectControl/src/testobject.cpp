@@ -171,6 +171,9 @@ void TestObject::handleISOMessage(bool awaitNext) {
 	case MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO:
 		this->parseObjectPropertyMessage();
 		break;
+	case MESSAGE_ID_GREM:
+		this->parseGremMessage();
+		break;
 	default:
 		RCLCPP_WARN(get_logger(), "Received unknown message type");
 		break;
