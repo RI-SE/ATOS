@@ -12,10 +12,6 @@ BackToStart::BackToStart() : Module(BackToStart::moduleName),
 	getObjectReturnTrajectoryService = create_service<atos_interfaces::srv::GetObjectReturnTrajectory>(ServiceNames::getObjectReturnTrajectory,
 		std::bind(&BackToStart::onReturnTrajectoryRequest, this, _1, _2));
 }
-void BackToStart::onExitMessage(const ROSChannels::Exit::message_type::SharedPtr) {
-    RCLCPP_INFO(get_logger(), "Received exit message");
-    rclcpp::shutdown();
-}
 
 
 void BackToStart::onReturnTrajectoryRequest(const std::shared_ptr<atos_interfaces::srv::GetObjectReturnTrajectory::Request> request, 

@@ -23,7 +23,6 @@ private:
 
 	rclcpp::Service<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedPtr getObjectReturnTrajectoryService; //!< Service to request object return trajectory
 
-	void onExitMessage(const ROSChannels::ResetTest::message_type::SharedPtr) override;
     void onReturnTrajectoryRequest(const std::shared_ptr<atos_interfaces::srv::GetObjectReturnTrajectory::Request>,
                             std::shared_ptr<atos_interfaces::srv::GetObjectReturnTrajectory::Response>);
     // atos_interfaces::msg::CartesianTrajectory cutOffTraj(const CartesianTrajectory& traj, const CartesianPosition& point);

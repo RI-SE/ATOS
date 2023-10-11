@@ -10,5 +10,6 @@ int main(int argc, char** argv){
 	rclcpp::init(argc, argv);
 	std::shared_ptr<BackToStart> btsNode = std::make_shared<BackToStart>();
 	rclcpp::spin(btsNode);
+	rclcpp::shutdown();
 	return 0;
 }
