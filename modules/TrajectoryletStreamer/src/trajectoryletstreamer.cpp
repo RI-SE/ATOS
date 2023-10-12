@@ -15,7 +15,6 @@ TrajectoryletStreamer::TrajectoryletStreamer()
 	: Module(TrajectoryletStreamer::moduleName),
 	  initSub(*this, std::bind(&TrajectoryletStreamer::onInitMessage, this, _1)),
 	  connectedSub(*this, std::bind(&TrajectoryletStreamer::onObjectsConnectedMessage, this, _1)),
-	  startSub(*this, std::bind(&TrajectoryletStreamer::onStartMessage, this, _1)),
 	  stopSub(*this, std::bind(&TrajectoryletStreamer::onStopMessage, this, _1)),
 	  abortSub(*this, std::bind(&TrajectoryletStreamer::onAbortMessage, this, _1)) {
 	declare_parameter("chunk_duration", 0.0);
@@ -37,11 +36,6 @@ void TrajectoryletStreamer::onObjectsConnectedMessage(const ObjectsConnected::me
 	}
 }
 
-void TrajectoryletStreamer::onStartMessage(const std_msgs::msg::Empty::SharedPtr) {
-	for (auto& pub : publishers) {
-		pub->handleStart();
-	}
-}
 
 void TrajectoryletStreamer::loadObjectFiles() {
 	clearScenario();

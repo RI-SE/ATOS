@@ -25,7 +25,6 @@ class TrajectoryletStreamer : public Module {
 	static inline std::string const moduleName = "trajectorylet_streamer";
 	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr);
 	void onObjectsConnectedMessage(const ROSChannels::ObjectsConnected::message_type::SharedPtr);
-	void onStartMessage(const ROSChannels::Start::message_type::SharedPtr);
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) override;
 
@@ -34,7 +33,6 @@ class TrajectoryletStreamer : public Module {
 
 	ROSChannels::Init::Sub initSub;
 	ROSChannels::ObjectsConnected::Sub connectedSub;
-	ROSChannels::Start::Sub startSub;
 	ROSChannels::Abort::Sub abortSub;
 	ROSChannels::Stop::Sub stopSub;
 
