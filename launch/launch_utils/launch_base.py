@@ -73,6 +73,5 @@ def get_base_nodes():
             executable='esmini_adapter',
             name='esmini_adapter',
             parameters=[files["params"]]
-            # prefix="xterm -e gdb --args" #Useful for debugging
         )
     ]

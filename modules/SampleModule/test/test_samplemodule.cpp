@@ -64,13 +64,13 @@ TEST_F(SampleModuleTest, testOnInitResponse){
   auto fail_after_timeout = std::chrono::milliseconds(5000);
 
   bool receivedMsg = false; 
-  auto smOnInitResponseCallback = [&receivedMsg, &sub_called](const ROSChannels::SmOnInitResponse::message_type::SharedPtr msg) {
+  auto smOnInitResponseCallback = [&receivedMsg, &sub_called](const ROSChannels::SampleModuleTestForInitResponce::message_type::SharedPtr msg) {
     receivedMsg = true;
     sub_called.set_value();
   };
 
-  std::string topicname = std::string(sampleModule->get_namespace()) + ROSChannels::SmOnInitResponse::topicName;
-  auto sub = ROSChannels::SmOnInitResponse::Sub(*helperNode, smOnInitResponseCallback);
+  std::string topicname = std::string(sampleModule->get_namespace()) + ROSChannels::SampleModuleTestForInitResponce::topicName;
+  auto sub = ROSChannels::SampleModuleTestForInitResponce::Sub(*helperNode, smOnInitResponseCallback);
 
   // Act
   auto initPublisher = ROSChannels::Init::Pub(*helperNode);
