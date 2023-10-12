@@ -3,6 +3,7 @@
 #include "tests/rclcpp_utils.hpp"
 #include "atos_interfaces/srv/get_object_return_trajectory.hpp"
 #include "atos_interfaces/msg/cartesian_trajectory_point.hpp"
+#include "geometry_msgs/msg/pose.hpp"
 #include "backtostart.hpp"
 
 class BackToStartTest : public ::testing::Test {
@@ -82,8 +83,10 @@ TEST_F(BackToStartTest, testServiceCallWithTrajectory){
   auto fail_after_timeout = std::chrono::milliseconds(5000);
 
   bool receivedResponse = false; 
-  auto returnTrajResponseCallback = [&receivedResponse, &service_called](const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future) {
+  geometry_msgs::msg::Pose returnTrajEndPoint;
+  auto returnTrajResponseCallback = [&receivedResponse, &returnTrajEndPoint, &service_called](const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future) {
     receivedResponse = future.get()->success;
+    returnTrajEndPoint = future.get()->trajectory.points.back().pose;
     service_called.set_value();
   };
 
@@ -104,6 +107,7 @@ TEST_F(BackToStartTest, testServiceCallWithTrajectory){
     trajPoint.twist.linear.z = 0;
     returnTrajectoryRequest->trajectory.points.push_back(trajPoint);
   }
+  auto trajStartPoint = returnTrajectoryRequest->trajectory.points[0].pose;
 
   //  wait for service
   while (!returnTrajectoryClient->wait_for_service(std::chrono::seconds(1))) {
@@ -121,4 +125,11 @@ TEST_F(BackToStartTest, testServiceCallWithTrajectory){
 
   // Assert
   ASSERT_EQ(receivedResponse, true);
+  ASSERT_EQ(returnTrajEndPoint.position.x, trajStartPoint.position.x);
+  ASSERT_EQ(returnTrajEndPoint.position.y, trajStartPoint.position.y);
+  ASSERT_EQ(returnTrajEndPoint.position.z, trajStartPoint.position.z);
+  ASSERT_EQ(returnTrajEndPoint.orientation.x, trajStartPoint.orientation.x);
+  ASSERT_EQ(returnTrajEndPoint.orientation.y, trajStartPoint.orientation.y);
+  ASSERT_EQ(returnTrajEndPoint.orientation.z, trajStartPoint.orientation.z);
+  ASSERT_EQ(returnTrajEndPoint.orientation.w, trajStartPoint.orientation.w);
 }

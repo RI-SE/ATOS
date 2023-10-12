@@ -11,6 +11,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 project(back_to_start)
 find_package(rclcpp REQUIRED)
 find_package(atos_interfaces REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 # Define target names
 set(BACK_TO_START ${PROJECT_NAME})
@@ -27,11 +28,6 @@ include(GNUInstallDirs)
 add_executable(${BACK_TO_START}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/backtostart.cpp
-)
-
-ament_target_dependencies(${BACK_TO_START}
-  rclcpp
-  atos_interfaces
 )
 
 set(TARGET_LIBRARIES
@@ -53,6 +49,7 @@ target_include_directories(${BACK_TO_START} PUBLIC
 ament_target_dependencies(${BACK_TO_START}
 	rclcpp
 	atos_interfaces
+	geometry_msgs
 )
 
 if(BUILD_TESTING)
@@ -70,8 +67,9 @@ if(BUILD_TESTING)
 
 	# ROS specific rules
 	ament_target_dependencies(${BACK_TO_START}_test
-	rclcpp
-	atos_interfaces
+		rclcpp
+		atos_interfaces
+		geometry_msgs
 	)
 endif()
 
