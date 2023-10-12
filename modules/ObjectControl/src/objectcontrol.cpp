@@ -46,6 +46,7 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	scnAbortPub(*this),
 	objectsConnectedPub(*this),
 	connectedObjectIdsPub(*this),
+	stateChangePub(*this),
 	exec(exec)
 {
 	int queueSize=0;
@@ -111,37 +112,59 @@ void ObjectControl::handleExecuteActionCommand(
 
 void ObjectControl::onInitMessage(const Init::message_type::SharedPtr){
 	COMMAND cmd = COMM_INIT;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->initializeRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Init::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	// Don't publish until we are actually initialized
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onConnectMessage(const Connect::message_type::SharedPtr){	
 	COMMAND cmd = COMM_CONNECT;
+	// TO DO: Fix publishing correct data to stateChangeMsg
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->connectRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Connect::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onArmMessage(const Arm::message_type::SharedPtr){	
 	COMMAND cmd = COMM_ARM;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->armRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Arm::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onDisarmMessage(const Disarm::message_type::SharedPtr){	
 	COMMAND cmd = COMM_DISARM;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->disarmRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Disarm::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onStartMessage(const Start::message_type::SharedPtr){	
 	COMMAND cmd = COMM_STRT;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->startRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Start::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onStartObjectMessage(const StartObject::message_type::SharedPtr strtObj){
@@ -154,32 +177,48 @@ void ObjectControl::onStartObjectMessage(const StartObject::message_type::Shared
 
 void ObjectControl::onDisconnectMessage(const Disconnect::message_type::SharedPtr){	
 	COMMAND cmd = COMM_DISCONNECT;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->disconnectRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Disconnect::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onStopMessage(const Stop::message_type::SharedPtr){
 	COMMAND cmd = COMM_STOP;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->stopRequest(*this); };
 	auto f_catch = [&]() {
 			failurePub.publish(msgCtr1<Failure::message_type>(cmd));
 			scnAbortPub.publish(Abort::message_type());
 	};
 	this->tryHandleMessage(f_try,f_catch, Stop::topicName, get_logger());	
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onAbortMessage(const Abort::message_type::SharedPtr){
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
   publishScenarioInfoToJournal(); // TODO: This should be moved to a state that occurs right after a test is finished
 	// Any exceptions here should crash the program
 	this->state->abortRequest(*this);
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onAllClearMessage(const AllClear::message_type::SharedPtr){
 	COMMAND cmd = COMM_ABORT_DONE;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->allClearRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, AllClear::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onRemoteControlEnableMessage(const RemoteControlEnable::message_type::SharedPtr){

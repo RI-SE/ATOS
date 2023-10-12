@@ -4,10 +4,24 @@
 ###### Pre-installation checks ######
 #####################################
 
+# Get the script location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+
 # Function to get Ubuntu distribution codename
 get_ubuntu_codename() {
     source /etc/os-release
     echo $UBUNTU_CODENAME
+}
+
+# Function that checks if command failed
+check_command_failed() {
+    local exitcode="$1"
+    local error_message="$2"
+
+    if [ $exitcode -ne 0 ]; then
+        echo "$error_message"
+        exit 1
+    fi
 }
 
 # Check if running on Ubuntu
@@ -39,20 +53,23 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 1
 fi
 
+# Check internet connection
+if ! ping -q -c 1 -W 1 google.com >/dev/null; then
+    echo "No internet connection detected. Please connect to the internet and try again."
+    exit 1
+fi
+
 #######################################
 ###### Install ATOS dependencies ######
 #######################################
 
-# Update and install required dependencies
-echo "Updating apt and installing dependencies..."
-sudo apt update && sudo apt install -y \
-    libsystemd-dev \
-    libprotobuf-dev \
-    protobuf-compiler \
-    libeigen3-dev \
-    nlohmann-json3-dev \
-    python3-pip \
-    python3-colcon-common-extensions
+# Update and install required dependencies specified in dependencies.txt file
+apt_deps=$(cat dependencies.txt | tr '\n' ' ')
+echo "Installing dependencies... $apt_deps"
+sudo apt update && sudo apt install -y ${apt_deps}
+
+# Check if apt failed to install dependencies
+check_command_failed $? "Failed to install dependencies."
 
 ################################################
 ###### Install Control Panel dependencies ######
@@ -70,6 +87,7 @@ if ! command -v nvm &> /dev/null; then
     echo "nvm not found, installing..."
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
     . "$NVM_DIR/nvm.sh"
+    check_command_failed $? "Failed to install nvm."
 else 
     echo "nvm already installed, skipping installation..."
 fi
@@ -118,6 +136,7 @@ sudo apt install -y \
     ros-${ROS_DISTRO}-foxglove-msgs \
     ros-${ROS_DISTRO}-pcl-conversions \
     ros-${ROS_DISTRO}-rosbridge-suite
+check_command_failed $? "Failed to install ROS2 packages."
 
 if [ "$ROS_DISTRO" == "humble" ]; then
     sudo apt install -y libpaho-mqtt-dev
@@ -130,14 +149,14 @@ fi
 ###########################################
 
 # Set custom path for source installation, first check if it exists
-SOURCE_PATH=~/.astazero/temp_atos_install
+SOURCE_PATH=~/temp/atos_install
 if [ -d "$SOURCE_PATH" ]; then
-    echo "Temporary path for source installation already exists. Please remove it before running this script."
-    exit 1
-else
-    echo "Creating custom path for source installation at $SOURCE_PATH"
-    mkdir -p $SOURCE_PATH
+    echo "Removing preexisting path ${SOURCE_PATH} for source installation..."
+    sudo rm -rf $SOURCE_PATH
 fi
+
+echo "Creating custom path for source installation at $SOURCE_PATH"
+mkdir -p $SOURCE_PATH
 
 # Install OpenSimulationInterface but first check if the library is already installed
 if [ -d "/usr/local/lib/osi3" ]; then
@@ -148,23 +167,12 @@ else
     cd $SOURCE_PATH/open-simulation-interface
     mkdir -p build && cd build
     cmake .. && make
+    check_command_failed $? "Failed to  build OpenSimulationInterface."
     sudo make install
+    check_command_failed $? "Failed to install OpenSimulationInterface."
     sudo sh -c "echo '/usr/local/lib/osi3' > /etc/ld.so.conf.d/osi3.conf"
     sudo ldconfig
-fi
-
-# Install ad-xolib but first check if the library is already installed
-if [ -d "/usr/local/include/ad-xolib" ]; then
-    echo "ad-xolib already installed, skipping installation..."
-else
-    echo "Installing ad-xolib..."
-    git clone https://github.com/javedulu/ad-xolib.git $SOURCE_PATH/ad-xolib
-    cd $SOURCE_PATH/ad-xolib
-    git submodule update --init --recursive
-    mkdir -p build && cd build
-    cmake .. -DBUILD_EMBED_TARGETS=OFF && make
-    sudo make install
-    sudo ldconfig
+    check_command_failed $? "Failed ldconfig after installing OpenSimulationInterface."
 fi
 
 # Install esmini but first check if the library is already installed
@@ -176,37 +184,39 @@ else
     cd $SOURCE_PATH/esmini
     mkdir -p build && cd build
     cmake .. && make
+    check_command_failed $? "Failed to build esmini."
     sudo make install
+    check_command_failed $? "Failed to install esmini."
     sudo cp ../bin/libesminiLib.so /usr/local/lib
     sudo cp ../bin/libesminiRMLib.so /usr/local/lib
     sudo mkdir -p /usr/local/include/esmini/
     sudo cp ../EnvironmentSimulator/Libraries/esminiLib/esminiLib.hpp /usr/local/include/esmini/
     sudo cp ../EnvironmentSimulator/Libraries/esminiRMLib/esminiRMLib.hpp /usr/local/include/esmini
     sudo ldconfig
+    check_command_failed $? "Failed ldconfig after installing esmini." 
 fi
 
 # Remove custom path for source installation
 echo "Removing custom path for source installation..."
-rm -rf $SOURCE_PATH
+sudo rm -rf $SOURCE_PATH
+check_command_failed $? "Failed to remove ${$SOURCE_PATH} path for source installation."
 
 ########################################
 ###### Start installation of ATOS ######
 ########################################
 
 echo "Installing ATOS..."
-# Get the script location
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+# Create a workspace dir if it doesn't exist
+if [ ! -d "~/atos_ws/src" ]; then
+    mkdir -p ~/atos_ws/src
+fi
+cd ~/atos_ws
 
 # Set ATOS_PATH to the script location
 ATOS_PATH="$SCRIPT_DIR"
 
 # Set ATOS_INTERFACES_PATH using ATOS_PATH
 ATOS_INTERFACES_PATH="$ATOS_PATH/atos_interfaces"
-
-# Create a workspace dir if it doesn't exist
-if [ ! -d "~/atos_ws" ]; then
-    mkdir -p ~/atos_ws
-fi
 
 # Function to update symlink if it doesn't point to the correct location
 update_symlink() {
@@ -248,6 +258,7 @@ cd -
 echo "Building ATOS..."
 cd ~/atos_ws
 MAKEFLAGS=-j8 && colcon build --symlink-install
+check_command_failed $? "Failed to build ATOS."
 cd -
 
 #####################################
@@ -274,10 +285,12 @@ case "$SHELL" in
     */bash)
         add_source_line_if_needed ~/.bashrc "bash" "${atos_setup_script}"
         add_source_line_if_needed ~/.bashrc "bash" "${ros2_setup_script}"
+        source $HOME/.bashrc 
     ;;
     */zsh)
         add_source_line_if_needed ~/.zshrc "zsh" "${atos_setup_script}"
         add_source_line_if_needed ~/.zshrc "zsh" "${ros2_setup_script}"
+        source $HOME/.zshrc
     ;;
     *)
         echo "Unsupported shell detected! Please use either bash or zsh shells to run ATOS"

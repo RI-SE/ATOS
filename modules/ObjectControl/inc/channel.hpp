@@ -55,6 +55,8 @@ public:
 
 	friend Channel& operator>>(Channel&,MonitorMessage&);
 	friend Channel& operator>>(Channel&,ObjectPropertiesType&);
+	friend Channel& operator>>(Channel&,GeneralResponseMessageType&);
+
 protected:
 	MessageHeaderType *populateHeaderType(MessageHeaderType *header);
 };

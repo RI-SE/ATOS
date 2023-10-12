@@ -171,6 +171,9 @@ void TestObject::handleISOMessage(bool awaitNext) {
 	case MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO:
 		this->parseObjectPropertyMessage();
 		break;
+	case MESSAGE_ID_GREM:
+		this->parseGremMessage();
+		break;
 	default:
 		RCLCPP_WARN(get_logger(), "Received unknown message type");
 		break;
@@ -265,6 +268,8 @@ void TestObject::sendHeartbeat(
 void TestObject::sendSettings() {
 
 	ObjectSettingsType objSettings;
+	objSettings.testMode = TEST_MODE_PREPLANNED;
+
 	objSettings.desiredID.transmitter = conf.getTransmitterID();
 	objSettings.desiredID.controlCentre = 0;
 	objSettings.desiredID.subTransmitter = 0;

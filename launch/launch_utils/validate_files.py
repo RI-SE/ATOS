@@ -45,7 +45,7 @@ def validate_certs(directory_path):
 
 def validate_files():
     atos_dir = os.path.join(os.path.expanduser('~'), '.astazero', 'ATOS')
-    dirs_to_validate = ["conf", "pointclouds"]
+    dirs_to_validate = ["conf", "pointclouds", "logs"]
     for dir_to_validate in dirs_to_validate:
         validate_directory(atos_dir / Path(dir_to_validate))
 
