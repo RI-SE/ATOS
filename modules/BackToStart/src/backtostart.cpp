@@ -6,8 +6,7 @@
 #include "backtostart.hpp"
 using std::placeholders::_1, std::placeholders::_2;
 
-BackToStart::BackToStart() : Module(BackToStart::moduleName), 
-	exitSub(*this, std::bind(&BackToStart::onExitMessage, this, _1))
+BackToStart::BackToStart() : Module(BackToStart::moduleName)
 {
 	getObjectReturnTrajectoryService = create_service<atos_interfaces::srv::GetObjectReturnTrajectory>(ServiceNames::getObjectReturnTrajectory,
 		std::bind(&BackToStart::onReturnTrajectoryRequest, this, _1, _2));
@@ -16,6 +15,12 @@ BackToStart::BackToStart() : Module(BackToStart::moduleName),
 
 void BackToStart::onReturnTrajectoryRequest(const std::shared_ptr<atos_interfaces::srv::GetObjectReturnTrajectory::Request> request, 
                                             std::shared_ptr<atos_interfaces::srv::GetObjectReturnTrajectory::Response> response) {
+    
+    if (request->trajectory.points.size() == 0) {
+        RCLCPP_ERROR(get_logger(), "Received empty trajectory");
+        response->success = false;
+        return;
+    }
     ATOS::Trajectory currentTraj(get_logger());
     currentTraj.initializeFromCartesianTrajectory(request->trajectory);
     uint32_t id = request->id;

@@ -16,6 +16,10 @@ find_package(atos_interfaces REQUIRED)
 set(BACK_TO_START ${PROJECT_NAME})
 
 set(ATOS_COMMON_LIBRARY ATOSCommon)
+set(COREUTILS_LIBRARY ATOSCoreUtil)
+
+get_target_property(COMMON_HEADERS ${ATOS_COMMON_LIBRARY} INCLUDE_DIRECTORIES)
+get_target_property(COREUTILS_HEADERS ${COREUTILS_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
@@ -30,13 +34,46 @@ ament_target_dependencies(${BACK_TO_START}
   atos_interfaces
 )
 
+set(TARGET_LIBRARIES
+	${ATOS_COMMON_LIBRARY}
+	${COREUTILS_LIBRARY}
+)
+
 # Link project executable to util libraries
 target_link_libraries(${BACK_TO_START}
-    ${ATOS_COMMON_LIBRARY}
+    ${TARGET_LIBRARIES}
 )
 target_include_directories(${BACK_TO_START} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
+	${COMMON_HEADERS}
+	${COREUTILS_HEADERS}
 )
+
+# ROS specific rules
+ament_target_dependencies(${BACK_TO_START}
+	rclcpp
+	atos_interfaces
+)
+
+if(BUILD_TESTING)
+	find_package(ament_cmake_ros REQUIRED)
+	file(GLOB TESTFILES "tests/*.cpp")
+	set(SRCFILES "src/backtostart.cpp")
+
+	ament_add_ros_isolated_gtest(${BACK_TO_START}_test ${TESTFILES} ${SRCFILES})
+	target_link_libraries(${BACK_TO_START}_test ${TARGET_LIBRARIES})
+	target_include_directories(${BACK_TO_START}_test PUBLIC
+		${CMAKE_CURRENT_SOURCE_DIR}/inc
+		${COMMON_HEADERS}
+		${COREUTILS_HEADERS}
+	)
+
+	# ROS specific rules
+	ament_target_dependencies(${BACK_TO_START}_test
+	rclcpp
+	atos_interfaces
+	)
+endif()
 
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${BACK_TO_START}\")")

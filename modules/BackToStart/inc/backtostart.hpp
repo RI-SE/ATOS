@@ -8,8 +8,6 @@
 #include "module.hpp"
 #include "trajectory.hpp"
 #include "atos_interfaces/srv/get_object_return_trajectory.hpp"
-#include "atos_interfaces/srv/get_test_origin.hpp"
-#include "roschannels/commandchannels.hpp"
 
 /*!
  * \brief The BackToStart class offers services to calculate a trajectory to return test objects to start position.
@@ -25,7 +23,4 @@ private:
 
     void onReturnTrajectoryRequest(const std::shared_ptr<atos_interfaces::srv::GetObjectReturnTrajectory::Request>,
                             std::shared_ptr<atos_interfaces::srv::GetObjectReturnTrajectory::Response>);
-    // atos_interfaces::msg::CartesianTrajectory cutOffTraj(const CartesianTrajectory& traj, const CartesianPosition& point);
-
-	ROSChannels::Exit::Sub exitSub;
 };
