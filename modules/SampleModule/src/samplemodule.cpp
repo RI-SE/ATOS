@@ -13,6 +13,8 @@ SampleModule::SampleModule() :
 	allClearSub(*this, std::bind(&SampleModule::onAllClearMessage, this, _1)),
 	smOnInitResponsePub(*this)
 {
+    service_server = create_service<std_srvs::srv::SetBool>(
+        "/sample_module_test_service", std::bind(&SampleModule::OnCallbackSetBool, this, _1, _2));
 }
 
 //! Message queue callbacks
@@ -35,6 +37,14 @@ void SampleModule::onAbortMessage(const Abort::message_type::SharedPtr) {
 }
 
 void SampleModule::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
+
+
+void SampleModule::OnCallbackSetBool(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+											std::shared_ptr<std_srvs::srv::SetBool::Response> response)
+{
+	response->message = "succeeded";
+	response->success = true;
+}
 
 /*! \brief  returns the object ids of the objects in the scenario
  * \return a vector of object ids

@@ -7,6 +7,7 @@
 #pragma once
 
 #include <thread>
+#include <std_srvs/srv/set_bool.hpp>
 #include "module.hpp"
 #include "server.hpp"
 
@@ -38,17 +39,20 @@ public:
 	static inline std::string const moduleName = "sample_module";
 	SampleModule();
 	std::vector<std::uint32_t> getObjectIds();
-	bool getAborting() { return aborting_; }
+	bool getAborting() const { return aborting_; }
 
 private:
 	ROSChannels::Init::Sub initSub;
 	ROSChannels::Abort::Sub abortSub;
 	ROSChannels::AllClear::Sub allClearSub;
 	ROSChannels::SampleModuleTestForInitResponce::Pub smOnInitResponsePub;
+	rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr service_server;
 
-	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
-	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
-	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
+	void onInitMessage(ROSChannels::Init::message_type::SharedPtr) override;
+	void onAbortMessage(ROSChannels::Abort::message_type::SharedPtr) override;
+	void onAllClearMessage(ROSChannels::AllClear::message_type::SharedPtr) override;
+	void OnCallbackSetBool(const std::shared_ptr<std_srvs::srv::SetBool::Request> request, 
+								std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
 	std::vector<std::uint32_t> objectIds;
 	bool aborting_ = false;

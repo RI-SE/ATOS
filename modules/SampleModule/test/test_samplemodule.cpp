@@ -7,40 +7,50 @@ public:
   static void SetUpTestCase()
   {
     rclcpp::init(0, nullptr);
+    
   }
 
   static void TearDownTestCase()
   {
+
+
     rclcpp::shutdown();
   }
-protected:
+
+  protected:
+
+  std::shared_ptr<SampleModule> sampleModule;
+  std::shared_ptr<rclcpp::Node> helperNode;
+  rclcpp::executors::SingleThreadedExecutor executor;
+
   void SetUp() override
   {
+    helperNode = rclcpp::Node::make_shared("SampleModuleTestHelper_node");
+    sampleModule = std::make_shared<SampleModule>();
+    executor.add_node(helperNode);
+    executor.add_node(sampleModule);
   }
 
   void TearDown() override
   {
+    executor.remove_node(helperNode);
+    executor.remove_node(sampleModule);
+    helperNode.reset();
+    sampleModule.reset();
   }
 };
 
 TEST_F(SampleModuleTest, testReceivesAbortMessage){
-  auto sm = std::make_shared<SampleModule>();
-  ASSERT_EQ(sm->getAborting(), false);
+  ASSERT_EQ(sampleModule->getAborting(), false);
 }
 
 TEST_F(SampleModuleTest, testGetObjectIds){
-  auto sm = std::make_shared<SampleModule>();
-  std::vector<std::uint32_t> objectIds = sm->getObjectIds();
+  std::vector<std::uint32_t> objectIds = sampleModule->getObjectIds();
   ASSERT_EQ(objectIds.size(), 0);
 }
 
 TEST_F(SampleModuleTest, testOnAbortCallback){
   // Setup
-  auto sampleModule = std::make_shared<SampleModule>();
-  auto helperNode = rclcpp::Node::make_shared("testOnAbortCallback_node");
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(sampleModule);
-  executor.add_node(helperNode);
   auto abortPublisher = ROSChannels::Abort::Pub(*helperNode);
   
   // Act
@@ -53,12 +63,6 @@ TEST_F(SampleModuleTest, testOnAbortCallback){
 
 TEST_F(SampleModuleTest, testOnInitResponse){
   // Setup
-  auto sampleModule = std::make_shared<SampleModule>();
-  auto helperNode = rclcpp::Node::make_shared("testOnInitResponse_node");
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(sampleModule);
-  executor.add_node(helperNode);
-
   std::promise<void> sub_called;
   std::shared_future<void> sub_called_future(sub_called.get_future());
   auto fail_after_timeout = std::chrono::milliseconds(5000);
@@ -81,4 +85,29 @@ TEST_F(SampleModuleTest, testOnInitResponse){
 
   // Assert
   ASSERT_EQ(receivedMsg, true);
+}
+
+TEST_F(SampleModuleTest, testServiceCalled){
+  // Setup
+  std::promise<void> service_called;
+  std::shared_future<void> service_called_future(service_called.get_future());
+  auto fail_after_timeout = std::chrono::milliseconds(1000);
+  bool receivedReq = false; 
+
+  auto getObjectIdsClient = helperNode->create_client<std_srvs::srv::SetBool>("/sample_module_test_service");
+  auto getObjectIdsRequest = std::make_shared<std_srvs::srv::SetBool::Request>();
+
+  auto testServiceCalledCallback = [&receivedReq, &service_called](const rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture response) {
+    receivedReq = response.get()->success;
+    service_called.set_value();
+  };
+
+  // Act
+  getObjectIdsClient->async_send_request(getObjectIdsRequest, testServiceCalledCallback);
+  // wait for the service to be available and for it to process the request
+  test_rclcpp::wait_for_service(getObjectIdsClient, std::chrono::milliseconds(1000));
+  test_rclcpp::wait_for_future(executor, service_called_future, fail_after_timeout);
+
+  // Assert
+  ASSERT_EQ(receivedReq, true);
 }

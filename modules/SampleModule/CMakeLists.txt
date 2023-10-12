@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(sample_module)
 find_package(atos_interfaces REQUIRED)
+find_package(std_srvs REQUIRED)
 
 # Define target names
 set(SAMPLE_MODULE_TARGET ${PROJECT_NAME})
@@ -43,6 +44,7 @@ target_include_directories(${SAMPLE_MODULE_TARGET} PUBLIC
 ament_target_dependencies(${SAMPLE_MODULE_TARGET}
 	rclcpp
 	std_msgs
+	std_srvs
 	atos_interfaces
 )
 
@@ -62,6 +64,7 @@ if(BUILD_TESTING)
 	ament_target_dependencies(${SAMPLE_MODULE_TARGET}_test
 	rclcpp
 	std_msgs
+	std_srvs
 	atos_interfaces
 	)
 endif()
