@@ -52,6 +52,11 @@ fi
 #######################################
 echo "Installing ATOS dependencies..."
 ${REPO_DIR}/scripts/install_deps.sh ${REPO_DIR}
+
+if [ $? -ne 0 ]; then
+    echo "Failed to install dependencies."
+    exit 1
+fi
 ########################################
 ###### Start installation of ATOS ######
 ########################################
@@ -61,6 +66,11 @@ if [ "$INSTALL_ATOS" = false ]; then
 fi
 echo "Installing ATOS..."
 ${REPO_DIR}/scripts/install_atos.sh ${REPO_DIR}
+
+if [ $? -ne 0 ]; then
+    echo "Failed to install ATOS."
+    exit 1
+fi
 
 echo "ATOS installation and setup is complete. You can now test run ATOS by running the following command:"
 echo "ros2 launch atos launch_basic.py"
