@@ -28,7 +28,7 @@ if ! (dpkg -l | grep -q "ros-$ROS_DISTRO-desktop"); then
     echo "Adding the ROS2 $ROS_DISTRO apt repository..."
 
     # Install ROS2 prerequisites
-    sudo apt update && sudo apt install curl gnupg2 lsb-release
+    sudo apt update && sudo apt install -y lsb-release ros-dev-tools
 
     # Authorize the ROS2 gpg key with apt
     sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
