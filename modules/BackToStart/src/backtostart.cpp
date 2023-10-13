@@ -21,10 +21,12 @@ void BackToStart::onReturnTrajectoryRequest(const std::shared_ptr<atos_interface
         response->success = false;
         return;
     }
+    // Load the trajectory in a Trajectory object
     ATOS::Trajectory currentTraj(get_logger());
     currentTraj.initializeFromCartesianTrajectory(request->trajectory);
     uint32_t id = request->id;
 
+    // Create a new trajectory object for the return trajectory
     ATOS::Trajectory b2sTraj(get_logger());
 
     //Add first turn
@@ -40,6 +42,7 @@ void BackToStart::onReturnTrajectoryRequest(const std::shared_ptr<atos_interface
     turn2 = turn2.delayed(b2sTraj.points.back().getTime());
     b2sTraj.points.insert(b2sTraj.points.end(), std::begin(turn2.points), turn2.points.end());
 
+    // Fill the response message
     response->id = id;
     response->trajectory = b2sTraj.toCartesianTrajectory();
     response->success = true;

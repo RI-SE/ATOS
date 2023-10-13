@@ -715,34 +715,40 @@ void ObjectControl::startScenario() {
 }
 
 void ObjectControl::resetTest() {
+	// Check if we are already resetting
 	if (this->isResetting) {
 		RCLCPP_INFO(get_logger(), "Test already resetting");
 		return;
 	}
-	this->isResetting = true;
 	RCLCPP_INFO(get_logger(), "Resetting test by offering return trajectories");
+	// Request a new return trajectory for each object
 	for (auto& id : getVehicleIDs()) {
 		this->setObjectTrajectory(id);
 	}
+	this->isResetting = true;
 }
 
 void ObjectControl::reloadScenarioTrajectories() {
+	// Check if we already have loaded the scenario trajectories
 	if (!this->isResetting) {
 		RCLCPP_INFO(get_logger(), "Scenario trajectories already loaded");
 		return;
 	}
-	this->isResetting = false;
 	RCLCPP_INFO(get_logger(), "Reloading scenario trajectories");
+	// Request the scenario trajectory for each object
 	for (auto& id : getVehicleIDs()) {
 		this->setObjectTrajectory(id);
 	}
+	this->isResetting = false;
 }
 
 void ObjectControl::updateTrajectoryGUI(uint32_t id){
+	// Update the GUI with the new trajectory in local coordinates
 	ATOS::Trajectory traj = objects.at(id)->getTrajectory();
 	this->pathPublishers.emplace(id, ROSChannels::Path::Pub(*this, id));
 	this->pathPublishers.at(id).publish(traj.toPath());
 
+	// Update the GUI with the new trajectory in global coordinates
 	GeographicPositionType origin = objects.at(id)->getOrigin();
 	std::array<double,3> llh_0 = {origin.latitude_deg, origin.longitude_deg, origin.altitude_m};
 	this->gnssPathPublishers.emplace(id, ROSChannels::GNSSPath::Pub(*this, id));
@@ -752,15 +758,18 @@ void ObjectControl::updateTrajectoryGUI(uint32_t id){
 void ObjectControl::trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
 	this->trajResponse = future.get();
 	auto id = returnTrajResponse->id;
+	// Check if the return trajectory service call was successful
 	if (!trajResponse->success) {
 		RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
 		return;
 	}
 
+	// Fill the trajectory class with the received trajectory and send to the object
 	ATOS::Trajectory traj(get_logger());
 	traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
 	objects.at(id)->setTrajectory(traj);
 	objects.at(id)->sendTrajectory();
+	// Update the GUI with the new trajectory
 	this->updateTrajectoryGUI(id);
 	RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %lu points", id, traj.size());
 };
@@ -768,21 +777,26 @@ void ObjectControl::trajectoryCallback(const rclcpp::Client<atos_interfaces::srv
 void ObjectControl::returnTrajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future) {
 	this->returnTrajResponse = future.get();
 	auto id = returnTrajResponse->id;
+	// Check if the return trajectory service call was successful
 	if (!returnTrajResponse->success) {
 		RCLCPP_ERROR(get_logger(), "Get return trajectory service call failed for object %u", id);
 		return;
 	}
 
+	// Fill the trajectory class with the received trajectory and send to the object
 	ATOS::Trajectory traj(get_logger());
 	traj.initializeFromCartesianTrajectory(returnTrajResponse->trajectory);
 	objects.at(id)->setTrajectory(traj);
 	objects.at(id)->sendTrajectory();
+	// Update the GUI with the new trajectory
 	this->updateTrajectoryGUI(id);
 	RCLCPP_INFO(get_logger(), "Loaded return trajectory for object %u with %lu points", id, traj.size());
 };
 
 void ObjectControl::setObjectTrajectory(uint32_t id){
+	// Check if object is in resetting "state". If so, offer return trajectory instead of normal trajectory
 	if (this->isResetting) {
+		// Get the current trajectory and create a request for the return trajectory service
 		auto returnTrajectoryRequest = std::make_shared<atos_interfaces::srv::GetObjectReturnTrajectory::Request>();
 		returnTrajectoryRequest->id = id;
 		returnTrajectoryRequest->trajectory = objects.at(id)->getTrajectory().toCartesianTrajectory();
@@ -790,9 +804,11 @@ void ObjectControl::setObjectTrajectory(uint32_t id){
 		returnTrajectoryRequest->position.x = pos.xCoord_m;
 		returnTrajectoryRequest->position.y = pos.yCoord_m;
 		returnTrajectoryRequest->position.z = pos.zCoord_m;
+		// Send the request to the return trajectory service asynchronously and bind the callback function for when the response is received
 		returnTrajectoryClient->async_send_request(returnTrajectoryRequest, std::bind(&ObjectControl::returnTrajectoryCallback, this, _1));
 	}
 	else {
+		// Request the scenario trajectory from the esminiAdapter
 		auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
 		trajRequest->id = id;
 		trajectoryClient->async_send_request(trajRequest, std::bind(&ObjectControl::trajectoryCallback, this, _1));
