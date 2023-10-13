@@ -1,3 +1,10 @@
+## Software architecture
+
+![image](res/ATOS_architecture.drawio.png)
+
+
+## Docs
+
 Docs generated with mkdocs/doxygen and hosted on Read The Docs
 
 When editing locally, install deps with 
