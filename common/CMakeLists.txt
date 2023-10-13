@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(ATOSCommon LANGUAGES C CXX)
 
 include(GNUInstallDirs)
+include(FindPkgConfig)
 
 set(ATOS_COMMON_TARGET ${TARGET_NAMESPACE}${PROJECT_NAME})
 set(ATOS_UTIL_TARGET ${TARGET_NAMESPACE}ATOSCoreUtil)
@@ -26,6 +27,7 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(foxglove_msgs REQUIRED)
+pkg_check_modules(PROJ REQUIRED proj)
 
 set(TIME_LIBRARY ATOSTime)
 set(SHARED_MEMORY_LIBRARY MaestroSHM)
@@ -42,7 +44,6 @@ get_target_property(ISO_22133_HEADERS ${ISO_22133_LIBRARY} INCLUDE_DIRECTORIES)
 # Built targets
 add_library(${ATOS_UTIL_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/util.c
-	${CMAKE_CURRENT_SOURCE_DIR}/util/coordinateutils.cpp
 )
 
 add_library(${ATOS_COMMON_TARGET} SHARED
@@ -51,6 +52,7 @@ add_library(${ATOS_COMMON_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/module.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/journal.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/type.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/CRSTransformation.cpp
 )
 
 # Includes
@@ -59,7 +61,7 @@ target_include_directories(${ATOS_UTIL_TARGET} PUBLIC
 	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 	${TIME_HEADERS}
 	${MESSAGE_BUS_HEADERS}
-  ${ISO_22133_HEADERS}
+    ${ISO_22133_HEADERS}
 	${SHARED_MEMORY_HEADERS}
 	${rclcpp_INCLUDE_DIRS}
 )
@@ -98,14 +100,15 @@ ament_target_dependencies(${ATOS_COMMON_TARGET}
   tf2_ros
   tf2_geometry_msgs
   foxglove_msgs
+  PROJ
 )
 
 # Exported headers
 set_target_properties(${ATOS_UTIL_TARGET} PROPERTIES
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/util.h
 )
-set_property(TARGET ${ATOS_UTIL_TARGET} APPEND PROPERTY
-	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/util/coordinateutils.hpp
+set_property(TARGET ${ATOS_COMMON_TARGET} APPEND PROPERTY
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/CRSTransformation.hpp
 )
 set_property(TARGET ${ATOS_UTIL_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/tests/rclcpp_utils.hpp
