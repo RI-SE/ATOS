@@ -15,7 +15,7 @@ using std::placeholders::_1;
 TestObject::TestObject(uint32_t id) :
 	Node("object_" + std::to_string(id)),
 	osiChannel(SOCK_STREAM, get_logger()),
-	comms(get_logger()),
+	comms(get_logger(), id),
 	conf(get_logger())
 	 {
 		pathSub = std::make_shared<ROSChannels::Path::Sub>(*this, id, std::bind(&TestObject::onPathMessage, this, _1, id));
@@ -29,7 +29,7 @@ void TestObject::onPathMessage(const ROSChannels::Path::message_type::SharedPtr 
 
 TestObject::TestObject(TestObject&& other) :
 	osiChannel(SOCK_STREAM, other.get_logger()),
-	comms(other.get_logger()),
+	comms(other.get_logger(), other.getTransmitterID()),
 	state(other.state),
 	conf(other.conf),
 	lastMonitor(other.lastMonitor),
@@ -271,7 +271,7 @@ void TestObject::sendSettings() {
 	objSettings.testMode = TEST_MODE_PREPLANNED;
 
 	objSettings.desiredID.transmitter = conf.getTransmitterID();
-	objSettings.desiredID.controlCentre = ::getTransmitterID();
+	objSettings.desiredID.controlCentre = 0;
 	objSettings.desiredID.subTransmitter = 0;
 
 	objSettings.coordinateSystemOrigin = conf.getOrigin();
