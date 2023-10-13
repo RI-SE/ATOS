@@ -16,5 +16,5 @@ This module provides a service to reverse the test object's trajectory and gener
 
 The service is only allowed in `CONNECTED` state and does not result in a state change. Images below show before pressing `Reset Test` (left) and after (right), the state remains in `CONNECTED`.
 
-<img align="left" width="675" height="700" src="../../Images/BackToStart_before.png">
-<img align="right" width="675" height="700" src="../../Images/BackToStart_after.png">
+<img width="275" height="300" src="../../Images/BackToStart_before.png">
+<img width="275" height="300" src="../../Images/BackToStart_after.png">
