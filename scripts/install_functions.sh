@@ -44,6 +44,7 @@ add_source_line_if_needed() {
     if ! grep -qF "$source_line" "$file"; then
         echo "Adding the following line to your shells config file: $file"
         echo "$source_line"
+        echo "# Line below added by ATOS setup script" >> "$file"
         echo "$source_line" >> "$file"
     fi
 }
