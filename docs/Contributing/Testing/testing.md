@@ -21,4 +21,4 @@ colcon build --cmake-args -DBUILD_TESTING=ON
 ```
 
 ## Sample code
-In the Sample Module you will find a sample node and a sample test. This is a good starting point for new modules. 
+In the Sample Module you will find a sample node and a some tests that triggers message callbacks and service routines. Use this as inspiration when testing your modules. 
