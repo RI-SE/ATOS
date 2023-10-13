@@ -5,7 +5,7 @@ Run the following docker command to start the GUI:
 Open a browser and navigate to `http://localhost:8080`
 
 ## Connect to ATOS
-In order to connect to ATOS in Foxglove Studio, ATOS first needs to be running. Then, in Foxglove Studio, go to `Data source -> New connection -> Open connection -> FoxGlove Websocket` and enter `wss://ATOS_host_address:9090`.
+In order to connect to ATOS in Foxglove Studio, ATOS first needs to be running. Then, in Foxglove Studio, go to `Data source -> New connection -> Open connection -> FoxGlove Websocket` and enter `wss://ATOS_host_address:8765`.
 
 ## Extensions
 In order for everything to be displayed correctly, some extensions needs to be added. The extensions for ATOS are found [here](https://github.com/RI-SE/ATOS/tree/dev/plugins/foxglove) with the file type `.foxe`. In Foxglove Studio, go to `Extensions` and then drag and drop the extensions.
