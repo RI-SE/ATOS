@@ -15,8 +15,8 @@
 // Module specific publisher/subscriber. 
 // When creating channels for non-test modules, put them in a namespace under common/roschannels instead.
 namespace ROSChannels {
-    namespace SampleModuleTestForInitResponce {
-        const std::string topicName = "sample_module_test_for_init_responce";
+    namespace SampleModuleTestForInitResponse {
+        const std::string topicName = "sample_module_test_for_init_response";
         using message_type = std_msgs::msg::Empty;
 		const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
         class Pub : public BasePub<message_type> {
