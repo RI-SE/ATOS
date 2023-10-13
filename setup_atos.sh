@@ -18,10 +18,10 @@ fi
 # Set ROS_DISTRO based on Ubuntu distribution
 case "$(get_ubuntu_codename)" in
     "focal")
-        ROS_DISTRO=foxy
+        export ROS_DISTRO=foxy
     ;;
     "jammy")
-        ROS_DISTRO=humble
+        export ROS_DISTRO=humble
     ;;
     *)
         echo "Unsupported Ubuntu distribution. Only 20.04 (focal) and 22.04 (jammy) are supported."
@@ -39,11 +39,12 @@ if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
     echo "  -h, --help      Show this help message and exit"
     echo "  -d              Only install dependencies"              
     exit 0
-# Add yes to all option
+
+# Only install dependencies
 elif [ "$1" == "-d" ]; then
-    INSTALL_ATOS=true
-else
     INSTALL_ATOS=false
+else
+    INSTALL_ATOS=true
 fi
 
 #######################################
