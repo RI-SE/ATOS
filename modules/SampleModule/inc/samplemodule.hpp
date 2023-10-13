@@ -45,7 +45,7 @@ private:
 	ROSChannels::Init::Sub initSub;
 	ROSChannels::Abort::Sub abortSub;
 	ROSChannels::AllClear::Sub allClearSub;
-	ROSChannels::SampleModuleTestForInitResponce::Pub smOnInitResponsePub;
+	ROSChannels::SampleModuleTestForInitResponse::Pub smOnInitResponsePub;
 	rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr service_server;
 
 	void onInitMessage(ROSChannels::Init::message_type::SharedPtr) override;
