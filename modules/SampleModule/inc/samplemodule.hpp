@@ -8,28 +8,9 @@
 
 #include <thread>
 #include <std_srvs/srv/set_bool.hpp>
+#include "roschannels/test_channels.hpp"
 #include "module.hpp"
 #include "server.hpp"
-
-
-// Module specific publisher/subscriber. 
-// When creating channels for non-test modules, put them in a namespace under common/roschannels instead.
-namespace ROSChannels {
-    namespace SampleModuleTestForInitResponse {
-        const std::string topicName = "sample_module_test_for_init_response";
-        using message_type = std_msgs::msg::Empty;
-		const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
-        class Pub : public BasePub<message_type> {
-        public:
-            Pub(rclcpp::Node& node, const rclcpp::QoS& qos = defaultQoS) : BasePub<message_type>(node, topicName, qos) {}
-        };
-
-		class Sub : public BaseSub<message_type> {
-		public:
-			Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback, const rclcpp::QoS& qos = defaultQoS) : BaseSub<message_type>(node, topicName, callback, qos) {}
-		};
-    }
-}
 
 /*!
  * \brief The SampleModule is a ros2 node that demonstrates how to use the Module class 
