@@ -1,5 +1,5 @@
 # Instructions
-There are two ways of starting ATOS: using the docker image or building from source. The docker image is the easiest way to get started, but if you intend to make changes to ATOS, we recommend building from source.
+There are two ways of starting ATOS: using the docker image or building from source. The docker image is the easiest way to get started, but if you intend to make changes to ATOS, we recommend building from source with the setup_atos.sh script.
 
 ## <a name="docker"></a> Using the docker image
 To run ATOS using docker compose, first [install docker](https://docs.docker.com/engine/install/) on your computer. Download the [ATOS repo](https://github.com/RI-SE/ATOS). Then, run the following command from the root repo directory:
