@@ -135,7 +135,7 @@ sudo apt install -y \
     ros-${ROS_DISTRO}-geographic-msgs \
     ros-${ROS_DISTRO}-foxglove-msgs \
     ros-${ROS_DISTRO}-pcl-conversions \
-    ros-${ROS_DISTRO}-rosbridge-suite \
+    ros-${ROS_DISTRO}-rosbridge-suite
 check_command_failed $? "Failed to install ROS2 packages."
 
 if [ "$ROS_DISTRO" == "humble" ]; then
