@@ -2,8 +2,8 @@
 import os
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_prefix
-from launch.substitutions import LaunchConfiguration, PythonExpression
-from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration, PythonExpression, FindExecutable
+from launch.actions import DeclareLaunchArgument, ExecuteProcess
 from launch.conditions import IfCondition
 import subprocess
 from pathlib import Path
@@ -20,14 +20,10 @@ def get_files():
 
 def get_base_nodes():
     files = get_files()
-    atos_conf_dir = os.path.join(os.path.expanduser('~'), '.astazero', 'ATOS')
     atos_install_dir = get_package_prefix('atos')
 
-    # control-gui logging
-    control_gui_log = open(atos_conf_dir / Path("webgui.log"), 'w')
     # start control-gui server
     control_gui_dir = Path(atos_install_dir) / Path("controlpanel/")
-    subprocess.Popen("npm start --prefix " + str(control_gui_dir),shell=True, stdout=control_gui_log, stderr=control_gui_log)
 
     insecure_websockets = LaunchConfiguration('insecure')
     foxbridge = LaunchConfiguration('foxbridge')
@@ -38,6 +34,16 @@ def get_base_nodes():
     return [
         foxbridge_launch_arg,
         insecure_launch_arg,
+        ExecuteProcess(
+            name='control_gui',
+            output={'both': 'log'}, #print to log to avoid cluttering the terminal
+            cmd=[[
+                FindExecutable(name='npm'),
+                ' start --prefix ',
+                str(control_gui_dir)
+            ]],
+            shell=True
+        ),
         Node(
             package='atos',
             namespace='atos',
