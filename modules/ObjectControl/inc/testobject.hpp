@@ -121,6 +121,12 @@ public:
 		RCLCPP_DEBUG(get_logger(), "Ignoring object properties message");
 		return retval;
 	}
+	virtual GeneralResponseMessageType parseGremMessage() {
+		GeneralResponseMessageType retval;
+		this->comms.cmd >> retval;
+		RCLCPP_DEBUG(get_logger(), "Ignoring general response message");
+		return retval;
+	}
 	virtual void handleISOMessage(bool awaitNext = false);
 
 protected:

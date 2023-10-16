@@ -63,16 +63,11 @@ fi
 ###### Install ATOS dependencies ######
 #######################################
 
-# Update and install required dependencies
-echo "Updating apt and installing dependencies..."
-sudo apt update && sudo apt install -y \
-    libsystemd-dev \
-    libprotobuf-dev \
-    protobuf-compiler \
-    libeigen3-dev \
-    nlohmann-json3-dev \
-    python3-pip \
-    python3-colcon-common-extensions
+# Update and install required dependencies specified in dependencies.txt file
+apt_deps=$(cat dependencies.txt | tr '\n' ' ')
+echo "Installing dependencies... $apt_deps"
+sudo apt update && sudo apt install -y ${apt_deps}
+
 # Check if apt failed to install dependencies
 check_command_failed $? "Failed to install dependencies."
 
@@ -178,23 +173,6 @@ else
     sudo sh -c "echo '/usr/local/lib/osi3' > /etc/ld.so.conf.d/osi3.conf"
     sudo ldconfig
     check_command_failed $? "Failed ldconfig after installing OpenSimulationInterface."
-fi
-
-# Install ad-xolib but first check if the library is already installed
-if [ -d "/usr/local/include/ad-xolib" ]; then
-    echo "ad-xolib already installed, skipping installation..."
-else
-    echo "Installing ad-xolib..."
-    git clone https://github.com/javedulu/ad-xolib.git $SOURCE_PATH/ad-xolib
-    cd $SOURCE_PATH/ad-xolib
-    git submodule update --init --recursive
-    mkdir -p build && cd build
-    cmake .. -DBUILD_EMBED_TARGETS=OFF && make
-    check_command_failed $? "Failed to build ad-xolib."
-    sudo make install
-    check_command_failed $? "Failed to install ad-xolib."
-    sudo ldconfig
-    check_command_failed $? "Failed ldconfig after installing ad-xolib."
 fi
 
 # Install esmini but first check if the library is already installed
@@ -307,12 +285,12 @@ case "$SHELL" in
     */bash)
         add_source_line_if_needed ~/.bashrc "bash" "${atos_setup_script}"
         add_source_line_if_needed ~/.bashrc "bash" "${ros2_setup_script}"
-        source ~/.bashrc
+        source $HOME/.bashrc 
     ;;
     */zsh)
         add_source_line_if_needed ~/.zshrc "zsh" "${atos_setup_script}"
         add_source_line_if_needed ~/.zshrc "zsh" "${ros2_setup_script}"
-        source ~/.zshrc
+        source $HOME/.zshrc
     ;;
     *)
         echo "Unsupported shell detected! Please use either bash or zsh shells to run ATOS"

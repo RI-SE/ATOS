@@ -5,6 +5,7 @@
  */
 #include "objectconfig.hpp"
 #include "roschannels/pathchannel.hpp"
+#include "roschannels/commandchannels.hpp"
 #include <memory>
 #include <thread>
 #include <mutex>
@@ -24,13 +25,13 @@ public:
 		const uint32_t objectId,
 		const std::chrono::milliseconds chunkLength
 			= std::chrono::milliseconds(0));
-	void handleStart();
 
 	void setChunkLength(std::chrono::milliseconds chunkLength) {
 		this->chunkLength = chunkLength;
 	}
 private:
 	ROSChannels::Path::Pub pub;
+	ROSChannels::StartObject::Sub	startObjectSub;
 	std::shared_ptr<rclcpp::TimerBase> timer;
 
 	std::chrono::milliseconds chunkLength = std::chrono::milliseconds(0);
@@ -42,6 +43,7 @@ private:
 	Chunk lastPublishedChunk;
 
 	void publishChunk();
+	void getStartObjectMsg(const atos_interfaces::msg::ObjectTriggerStart::SharedPtr msg);
 	nav_msgs::msg::Path chunkToPath(Chunk chunk, std::chrono::steady_clock::time_point);
 	Chunk extractChunk(std::chrono::steady_clock::duration beginTime, std::chrono::steady_clock::duration endTime);
 

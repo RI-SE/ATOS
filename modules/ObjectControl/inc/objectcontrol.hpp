@@ -25,6 +25,7 @@
 #include "roschannels/gnsspathchannel.hpp"
 #include "roschannels/controlsignalchannel.hpp"
 #include "roschannels/objstatechangechannel.hpp"
+#include "roschannels/statechange.hpp"
 #include "atos_interfaces/srv/get_object_ids.hpp"
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "atos_interfaces/srv/get_object_ip.hpp"
@@ -281,6 +282,7 @@ private:
 	ROSChannels::Abort::Pub scnAbortPub;					//!< Publisher to scenario abort reports
 	ROSChannels::ObjectsConnected::Pub objectsConnectedPub;	//!< Publisher to report that objects have been connected
 	ROSChannels::ConnectedObjectIds::Pub connectedObjectIdsPub;	//!< Publisher to periodically report connected object ids
+	ROSChannels::StateChange::Pub stateChangePub;			//!< Publisher to report state changes
 	std::unordered_map<uint32_t,ROSChannels::Path::Pub> pathPublishers;
 	std::unordered_map<uint32_t,ROSChannels::GNSSPath::Pub> gnssPathPublishers;
 	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr idClient;	//!< Client to request object ids

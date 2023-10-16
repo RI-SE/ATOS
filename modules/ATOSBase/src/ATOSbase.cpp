@@ -17,15 +17,9 @@ ATOSBase::ATOSBase()
     : Module(ATOSBase::moduleName),
 	exitSub(*this, std::bind(&ATOSBase::onExitMessage, this, _1))
 {
-	declare_parameter("test_origin_latitude", 0.0);
-	declare_parameter("test_origin_longitude", 0.0);
-	declare_parameter("test_origin_altitude",0.0);
-	declare_parameter("test_origin_rot",0.0);
 
 	getObjectIdsService = create_service<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds,
 		std::bind(&ATOSBase::onRequestObjectIDs, this, _1, _2));
-	getTestOriginService = create_service<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin,
-		std::bind(&ATOSBase::onRequestTestOrigin, this, _1, _2));
 }
 
 ATOSBase::~ATOSBase()
@@ -76,20 +70,4 @@ void ATOSBase::onRequestObjectIDs(
 	}
 
 	res->ids = objectIDs;
-}
-
-void ATOSBase::onRequestTestOrigin(
-	const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request> req,
-	std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response> res)
-{
-	double rotation;
-	get_parameter("test_origin_latitude", res->origin.position.latitude);
-	get_parameter("test_origin_longitude", res->origin.position.longitude);
-	get_parameter("test_origin_altitude", res->origin.position.altitude);
-	get_parameter("test_origin_rot", rotation);
-	// TODO
-	res->origin.orientation.x = 0;
-	res->origin.orientation.y = 0;
-	res->origin.orientation.z = 0;
-	res->origin.orientation.w = 1;
 }

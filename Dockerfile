@@ -8,21 +8,10 @@ FROM ${FROM_IMAGE} AS cacher
 ENV DEBIAN_FRONTEND=noninteractive
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
 
-# Install system libs
-RUN \
-    --mount=type=cache,target=/var/cache/apt \
-    apt update && apt install -y \
-    curl \
-    libsystemd-dev \
-    libprotobuf-dev \
-    protobuf-compiler \
-    libeigen3-dev \
-    nlohmann-json3-dev \
-    libpaho-mqtt-dev \
-    gnupg2 \
-    lsb-release \
-    python3-pip \
-    libpaho-mqtt-dev
+# Install system deps
+COPY dependencies.txt /tmp/dependencies.txt
+RUN apt update && apt install -y libpaho-mqtt-dev \
+    $(cat /tmp/dependencies.txt | tr '\n' ' ')
 
 RUN pip install pyOpenSSL
 
@@ -67,18 +56,6 @@ RUN cd $TEMP_SRC_PATH && \
     sudo sh -c "echo '/usr/local/lib/osi3' > /etc/ld.so.conf.d/osi3.conf" && \
     sudo ldconfig && \
     sudo rm -rf $TEMP_SRC_PATH/open-simulation-interface
-
-# Install ad-xolib
-RUN cd $TEMP_SRC_PATH && \
-    git clone https://github.com/javedulu/ad-xolib.git && \
-    cd ad-xolib && \
-    git submodule update --init --recursive && \
-    mkdir -p build && cd build && \
-    cmake .. -DBUILD_EMBED_TARGETS=OFF && make -j4 && \
-    sudo make install && \
-    sudo ldconfig && \
-    sudo rm -rf $TEMP_SRC_PATH/ad-xolib
-
 
 # Install esmini
 RUN cd $TEMP_SRC_PATH && \

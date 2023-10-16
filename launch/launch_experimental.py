@@ -16,7 +16,8 @@ def get_experimental_nodes():
             package='atos',
             namespace='atos',
             executable='trajectorylet_streamer',
-            name='trajectorylet_streamer'
+            name='trajectorylet_streamer',
+            parameters=[files["params"]]
         ),
         Node(
             package='atos',

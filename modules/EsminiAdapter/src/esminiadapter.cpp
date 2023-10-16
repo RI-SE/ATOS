@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "esminiadapter.hpp"
-#include "esmini/esminiLib.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <algorithm>
@@ -19,7 +18,6 @@
 #include "trajectory.hpp"
 #include "string_utility.hpp"
 #include "util.h"
-#include "util/coordinateutils.hpp"
 
 
 using namespace ROSChannels;
@@ -43,18 +41,18 @@ std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAd
 std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>> EsminiAdapter::objectTrajectoryService = std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>>();
 std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>> EsminiAdapter::startOnTriggerService = std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>>();
 std::shared_ptr<rclcpp::Service<ObjectIpSrv>> EsminiAdapter::objectIpService = std::shared_ptr<rclcpp::Service<ObjectIpSrv>>();
+std::shared_ptr<rclcpp::Service<TestOriginSrv>> EsminiAdapter::testOriginService = std::shared_ptr<rclcpp::Service<TestOriginSrv>>();
 std::vector<uint32_t> EsminiAdapter::delayedStartIds = std::vector<uint32_t>();
-std::shared_ptr<rclcpp::Client<TestOriginSrv>> EsminiAdapter::testOriginClient = nullptr;
 geographic_msgs::msg::GeoPose EsminiAdapter::testOrigin = geographic_msgs::msg::GeoPose();
 
 EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	startObjectPub(*this),
 	v2xPub(*this),
-	initSub(*this, &EsminiAdapter::onStaticInitMessage),
-	startSub(*this, &EsminiAdapter::onStaticStartMessage),
-	abortSub(*this, &EsminiAdapter::onStaticAbortMessage),
+	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage),
 	exitSub(*this, &EsminiAdapter::onStaticExitMessage),
-	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage)
+	stateChangeSub(*this, &EsminiAdapter::onStaticStateChangeMessage),
+	applyTrajTransform(false),
+	testOriginSet(false)
  {
 	declare_parameter("open_scenario_file","");
 }
@@ -83,6 +81,32 @@ std::filesystem::path EsminiAdapter::getOpenScenarioFileParameter()
 }
 
 /*!
+ * \brief Fetches the open drive file path from the open scenario file parameter
+ * \return Configured path
+*/
+std::filesystem::path EsminiAdapter::getOpenDriveFile()
+{
+	std::filesystem::path odrPath;
+	if (SE_GetODRFilename() != nullptr) {
+		odrPath = std::filesystem::path(SE_GetODRFilename()); 
+		RCLCPP_INFO(me->get_logger(), "Found ODR file %s", odrPath.string().c_str());
+	}
+	else {
+		RCLCPP_DEBUG(me->get_logger(), "No ODR file found");
+	}
+
+	if (odrPath.is_absolute()) {
+		return odrPath;
+	}
+	else {
+		char path[MAX_FILE_PATH];
+		UtilGetConfDirectoryPath(path, MAX_FILE_PATH);
+		return std::string(path) + odrPath.string();
+	}
+
+}
+
+/*!
  * \brief Sets the OpenSCENARIO file path to use
  * \param path OpenSCENARIO file path
 */
@@ -104,10 +128,8 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 		me = std::shared_ptr<EsminiAdapter>(new EsminiAdapter());
 		// Start listening to connected object ids
 		me->connectedObjectIdsSub = ROSChannels::ConnectedObjectIds::Sub(*me,&EsminiAdapter::onConnectedObjectIdsMessage);
-		me->initSub = ROSChannels::Init::Sub(*me,&EsminiAdapter::onStaticInitMessage);
-		me->startSub = ROSChannels::Start::Sub(*me,&EsminiAdapter::onStaticStartMessage);
-		me->abortSub = ROSChannels::Abort::Sub(*me,&EsminiAdapter::onStaticAbortMessage);
 		me->exitSub = ROSChannels::Exit::Sub(*me,&EsminiAdapter::onStaticExitMessage);
+		me->stateChangeSub = ROSChannels::StateChange::Sub(*me,&EsminiAdapter::onStaticStateChangeMessage);
 		// Start V2X publisher
 		me->v2xPub = ROSChannels::V2X::Pub(*me);
 		
@@ -127,15 +149,35 @@ void EsminiAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::messag
 	}
 }
 
-//! Message queue callbacks
+/**
+ * @brief To ensure that EsminiAdapter follows the states, we execute actions only when going from IDLE to INITIALIZED,
+ * from ARMED to RUNNING and from any state to ABORTING. We do this instead of subscribing to "/init", "/start", etc.,
+ * because we only want to execute the actions once when changing to these states.
+ * 
+ * @param msg StateChange message
+ */
+void EsminiAdapter::onStaticStateChangeMessage(const ROSChannels::StateChange::message_type::SharedPtr msg) {
+	int prevState = msg->prev_state;
+	int currentState = msg->current_state;
 
-void EsminiAdapter::onStaticAbortMessage(const Abort::message_type::SharedPtr) {
+	if (prevState == OBCState_t::OBC_STATE_IDLE && currentState == OBC_STATE_INITIALIZED) {
+		me->handleInitCommand();
+	}
+	else if (prevState == OBCState_t::OBC_STATE_ARMED && currentState == OBCState_t::OBC_STATE_RUNNING) {
+		me->handleStartCommand();
+	}
+	else if (currentState == OBCState_t::OBC_STATE_ABORTING) {
+		me->handleAbortCommand();
+	}
+}
+
+
+void EsminiAdapter::handleAbortCommand() {
 	SE_Close();
 	RCLCPP_INFO(me->get_logger(), "Esmini ScenarioEngine stopped due to Abort");
 }
 
-void EsminiAdapter::onStaticInitMessage(
-	const Init::message_type::SharedPtr)
+void EsminiAdapter::handleInitCommand()
 {
 	try {
 		setOpenScenarioFile(getOpenScenarioFileParameter());
@@ -144,36 +186,24 @@ void EsminiAdapter::onStaticInitMessage(
 		RCLCPP_ERROR(me->get_logger(), e.what());
 		return;
 	}
-	me->InitializeEsmini();
-	auto request = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
-	me->testOriginClient->async_send_request(request, [](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
-		auto response = future.get();
-		if (!response->success) {
-			RCLCPP_ERROR(me->get_logger(), "Failed to get test origin from test origin service");
-			return; // TODO communicate failure
-		}
-		// Publish GNSSPath trajectories when we receive the origin
-		me->testOrigin = response->origin;
-		std::array<double,3> llh_0 = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
 
-		for (auto& it : me->idToTraj) {
-			me->gnssPathPublishers.emplace(it.first, ROSChannels::GNSSPath::Pub(*me, it.first));
-			me->gnssPathPublishers.at(it.first).publish(it.second.toGeoJSON(llh_0));
-		}
-	});
+	me->InitializeEsmini();
+
+	std::array<double,3> llh_0 = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
+	for (auto& it : me->idToTraj) {
+		me->gnssPathPublishers.emplace(it.first, ROSChannels::GNSSPath::Pub(*me, it.first));
+		me->gnssPathPublishers.at(it.first).publish(it.second.toGeoJSON(llh_0));
+	}
 }
 
-void EsminiAdapter::onStaticExitMessage(
-	const Exit::message_type::SharedPtr)
+void EsminiAdapter::onStaticExitMessage(const ROSChannels::Exit::message_type::SharedPtr)
 {
 	SE_Close();
 	RCLCPP_DEBUG(me->get_logger(),"Received exit command");
 	rclcpp::shutdown();
 }
 
-// !!TODO!!: Make sure that we are in the correct OBC state before starting ScenarioEngine
-void EsminiAdapter::onStaticStartMessage(
-	const Start::message_type::SharedPtr)
+void EsminiAdapter::handleStartCommand()
 {
 	if (SE_Init(me->oscFilePath.c_str(),0,0,0,0) < 0) {
 		throw std::runtime_error("Failed to initialize esmini with scenario file " + me->oscFilePath.string());
@@ -294,11 +324,9 @@ void EsminiAdapter::handleActionElementStateChange(
 			RCLCPP_INFO(me->get_logger(), "Running send DENM action triggered by object %d", objectId);
 			ROSChannels::Monitor::message_type monr;
 			rclcpp::wait_for_message(monr, me, std::string(me->get_namespace()) + "/object_" + std::to_string(objectId) + "/object_monitor", 10ms);
-			TestOriginSrv::Response::SharedPtr response;
-			// me->callService(5ms ,me->testOriginClient, response);
 			double llh[3] = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
 			double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
-			llhOffsetMeters(llh, offset);
+			CRSTransformation::llhOffsetMeters(llh, offset);
 			me->v2xPub.publish(denmFromMonitor(monr, llh));
 		}
 		else {
@@ -372,7 +400,7 @@ void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr
  * \param states A vector of object states
  * \return A trajectory consisting of trajectory points, one for each state.
  */
-ATOS::Trajectory EsminiAdapter::getTrajectory(
+ATOS::Trajectory EsminiAdapter::getTrajectoryFromObjectState(
 	uint32_t id,
 	std::vector<SE_ScenarioObjectState>& states)
 {
@@ -382,12 +410,14 @@ ATOS::Trajectory EsminiAdapter::getTrajectory(
 		return trajectory;
 	}
 
+	RCLCPP_DEBUG(me->get_logger(), "Creating trajectory for object %d", id);
 	auto saveTp = [&](auto& state, auto& prevState) {
 		ATOS::Trajectory::TrajectoryPoint tp(me->get_logger());
 		double currLonVel = state.speed * cos(state.wheel_angle);
 		double currLatVel = state.speed * sin(state.wheel_angle);
 		double prevLonVel = prevState.speed * cos(prevState.wheel_angle);
 		double prevLatVel = prevState.speed * sin(prevState.wheel_angle);
+
 		tp.setXCoord(state.x);
 		tp.setYCoord(state.y);
 		tp.setZCoord(state.z);
@@ -427,6 +457,75 @@ ATOS::Trajectory EsminiAdapter::getTrajectory(
 		tp.setTime(tp.getTime() - startTime);
 	}
 	return trajectory;
+}
+
+/*!
+ * \brief Given a RM_georeference converts into a proj string
+ * \param geoRef The geo reference to convert
+ * \return The proj string
+ */
+std::string EsminiAdapter::projStrFromGeoReference(RM_GeoReference& geoRef) {
+	std::string projStringFrom = "+proj=";
+	if (strlen(geoRef.proj_) != 0) {
+		projStringFrom += std::string(geoRef.proj_) + " ";
+	}
+	else {
+		throw std::runtime_error("No projection found in geo reference");
+	}
+	if (!std::isnan(geoRef.lat_0_)) {
+		projStringFrom += "+lat_0=" + std::to_string(geoRef.lat_0_) + " ";
+	}
+	if (!std::isnan(geoRef.lon_0_)) {
+		projStringFrom += "+lon_0=" + std::to_string(geoRef.lon_0_) + " ";
+	}
+	if (!std::isnan(geoRef.k_)) {
+		projStringFrom += "+k=" + std::to_string(geoRef.k_) + " ";
+	}
+	if (!std::isnan(geoRef.k_0_)) {
+		projStringFrom += "+k_0=" + std::to_string(geoRef.k_0_) + " ";
+	}
+	if (!std::isnan(geoRef.x_0_)) {
+		projStringFrom += "+x_0=" + std::to_string(geoRef.x_0_) + " ";
+	}
+	if (!std::isnan(geoRef.y_0_)) {
+		projStringFrom += "+y_0=" + std::to_string(geoRef.y_0_) + " ";
+	}
+	if (strlen(geoRef.ellps_) != 0) {
+		projStringFrom += "+ellps=" + std::string(geoRef.ellps_) + " ";
+	}
+	if (strlen(geoRef.units_) != 0) {
+		projStringFrom += "+units=" + std::string(geoRef.units_) + " ";
+	}
+	if (strlen(geoRef.vunits_) != 0) {
+		projStringFrom += "+vunits=" + std::string(geoRef.vunits_) + " ";
+	}
+	if (strlen(geoRef.datum_) != 0) {
+		projStringFrom += "+datum=" + std::string(geoRef.datum_) + " ";
+	}
+	if (strlen(geoRef.geo_id_grids_) != 0) {
+		projStringFrom += "+geoidgrids=" + std::string(geoRef.geo_id_grids_) + " ";
+	}
+	if (!std::isnan(geoRef.zone_)) {
+		projStringFrom += "+zone=" + std::to_string(geoRef.zone_) + " ";
+	}
+	if (geoRef.towgs84_ != 0) {
+		projStringFrom += "+towgs84=" + std::to_string(geoRef.towgs84_) + " ";
+	}
+	if (strlen(geoRef.axis_) != 0) {
+		projStringFrom += "+axis=" + std::string(geoRef.axis_) + " ";
+	}
+	if (!std::isnan(geoRef.lon_wrap_)) {
+		projStringFrom += "+lon_wrap=" + std::to_string(geoRef.lon_wrap_) + " ";
+	}
+	if (!std::isnan(geoRef.over_)) {
+		projStringFrom += "+over=" + std::to_string(geoRef.over_) + " ";
+	}
+	if (strlen(geoRef.pm_) != 0) {
+		projStringFrom += "+pm=" + std::string(geoRef.pm_) + " ";
+	}
+	projStringFrom += "+no_defs";
+	RCLCPP_DEBUG(me->get_logger(), "Created proj string: %s", projStringFrom.c_str());
+	return projStringFrom;
 }
 
 /*!
@@ -506,7 +605,12 @@ std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(
 	for (auto& os : idToStates) {
 		auto id = os.first;
 		auto objectStates = os.second;
-		auto traj = getTrajectory(id, objectStates);
+		auto traj = getTrajectoryFromObjectState(id, objectStates);
+		// Apply CRS transform if OpenDrive CRS Transformation is defined
+		if (me->applyTrajTransform){
+			RCLCPP_DEBUG(me->get_logger(), "Applying CRS transformation to trajectory for object %d", id);
+			me->crsTransformation->apply(traj.points);
+		}
 		idToTraj.insert(std::pair<uint32_t,ATOS::Trajectory>(id, traj));
 	}
 	return idToTraj;
@@ -524,12 +628,49 @@ void EsminiAdapter::InitializeEsmini()
 	me->idToIp.clear();
 	me->pathPublishers.clear();
 	me->gnssPathPublishers.clear();
+	auto logFilePath = std::string(getenv("HOME")) + std::string("/.astazero/ATOS/logs/esmini.log");
+	SE_SetLogFilePath(logFilePath.c_str());
 	SE_Close(); // Stop ScenarioEngine in case it is running
+	RM_Close(); // Stop RoadManager in case it is running
 
 	RCLCPP_INFO(me->get_logger(), "Initializing esmini with scenario file %s", me->oscFilePath.c_str());
 	if (SE_Init(me->oscFilePath.c_str(),1,0,0,0) < 0) { // Disable controllers, let DefaultController be used
-		throw std::runtime_error("Failed to initialize esmini with scenario file " + me->oscFilePath.string());
+		throw std::runtime_error("Failed to initialize esmini with scenario file " + me->oscFilePath.string() + ". For more information, see " + logFilePath + ".");
 	}
+	auto odrFile = getOpenDriveFile();
+	if (RM_Init(odrFile.c_str()) < 0) {
+		throw std::runtime_error(std::string("Failed to initialize with odr file ").append(odrFile));
+	}
+
+	
+	// Call RM_GetOpenDriveGeoReference to get the RM_GeoReference struct
+	RM_GeoReference geoRef;
+	if (RM_GetOpenDriveGeoReference(&geoRef) == 0) {
+		try {
+			std::string projStringFrom = projStrFromGeoReference(geoRef);
+			std::string toDatum = "WGS84";
+			auto llh_0 = CRSTransformation::projToLLH(projStringFrom, toDatum);
+			RCLCPP_INFO(me->get_logger(), "llh origin: %lf, %lf, %lf", llh_0[0], llh_0[1], llh_0[2]);
+			me->testOrigin.position.latitude = llh_0[0];
+			me->testOrigin.position.longitude = llh_0[1];
+			me->testOrigin.position.altitude = llh_0[2];
+			me->testOriginSet = true;
+
+			std::string projStringTo = "+proj=tmerc +lat_0=" + std::to_string(llh_0[0]) + 
+													" +lon_0=" + std::to_string(llh_0[1]) + 
+													" +datum="+ toDatum + " +units=m +no_defs";
+
+			me->crsTransformation = std::make_shared<CRSTransformation>(projStringFrom, projStringTo);
+			me->applyTrajTransform = true;
+		} 
+		catch (std::exception& e) {
+			RCLCPP_ERROR(me->get_logger(), e.what());
+			return;
+		}
+	} else {
+		RCLCPP_WARN(me->get_logger(), "Failed to get OpenDRIVE geo reference from RoadManager");
+	}
+	RM_Close();
 	
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
 		//SE_SetAlignModeZ(SE_GetId(j), 0); // Disable Z-alignment not implemented in esmini yet
@@ -537,7 +678,11 @@ void EsminiAdapter::InitializeEsmini()
 	// Register callbacks to figure out what actions need to be taken
 	SE_RegisterStoryBoardElementStateChangeCallback(&collectStartAction);
 
-	me->extractTrajectories(0.1, me->idToTraj);
+	RCLCPP_INFO(me->get_logger(), "Starting extracting trajs");
+	double timeStep = 0.1;
+	me->extractTrajectories(timeStep, me->idToTraj);
+	RCLCPP_INFO(me->get_logger(), "Done extracting trajs");
+
 
 	RCLCPP_INFO(me->get_logger(), "Extracted %ld trajectories", me->idToTraj.size());
 	RCLCPP_INFO(me->get_logger(), "Number of objects with triggered start: %ld", me->delayedStartIds.size());
@@ -568,14 +713,13 @@ void EsminiAdapter::InitializeEsmini()
 
 		// Publish the trajectory as a path
 		me->pathPublishers.emplace(id, ROSChannels::Path::Pub(*me, id));
-		me->pathPublishers.at(id).publish(traj.toPath());
+		me->pathPublishers.at(id).publish(traj.toPath());		
 
 		// below is for dumping the trajectory points to the console
-		/*
-		for (auto& tp : traj.points){
-			RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
-		}
-		*/
+		// for (auto& tp : traj.points){
+		// 	RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
+		// }
+		
 	}
 }
 
@@ -593,6 +737,20 @@ void EsminiAdapter::onRequestObjectTrajectory(
 		res->success = false;
 	}
 }
+
+void EsminiAdapter::onRequestTestOrigin(
+	const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request> req,
+	std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response> res)
+{
+	while (me->testOriginSet == false){
+		RCLCPP_DEBUG(me->get_logger(), "Waiting for test origin to be available");
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+	}
+	res->origin.position.latitude = me->testOrigin.position.latitude;
+	res->origin.position.longitude = me->testOrigin.position.longitude;
+	res->origin.position.altitude = me->testOrigin.position.altitude;
+}
+
 
 void EsminiAdapter::onRequestObjectStartOnTrigger(
 	const std::shared_ptr<ObjectTriggerSrv::Request> req,
@@ -629,9 +787,6 @@ void EsminiAdapter::onRequestObjectIP(
  */
 int EsminiAdapter::initializeModule() {
 	int retval = 0;
-	
-	// Calling services
-	me->testOriginClient = me->nTimesWaitForService<TestOriginSrv>(3, 1s, ServiceNames::getTestOrigin);
 
 	// Providing services
 	me->startOnTriggerService = me->create_service<ObjectTriggerSrv>(ServiceNames::getObjectTriggerStart,
@@ -640,7 +795,8 @@ int EsminiAdapter::initializeModule() {
 		std::bind(&EsminiAdapter::onRequestObjectIP, _1, _2));
 	me->objectTrajectoryService = me->create_service<ObjectTrajectorySrv>(ServiceNames::getObjectTrajectory,
 		std::bind(&EsminiAdapter::onRequestObjectTrajectory, _1, _2));
-
+	me->testOriginService = me->create_service<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin,
+		std::bind(&EsminiAdapter::onRequestTestOrigin, _1, _2));
 
 	return retval;
 }
