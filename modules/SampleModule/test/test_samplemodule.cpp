@@ -1,19 +1,16 @@
 #include "gtest/gtest.h"
 #include "rclcpp/rclcpp.hpp"
-#include "tests/rclcpp_utils.hpp"
+#include "testUtils/testUtils.hpp"
 #include "samplemodule.hpp"
 class SampleModuleTest : public ::testing::Test {
 public:
   static void SetUpTestCase()
   {
     rclcpp::init(0, nullptr);
-    
   }
 
   static void TearDownTestCase()
   {
-
-
     rclcpp::shutdown();
   }
 
@@ -40,16 +37,16 @@ public:
   }
 };
 
-TEST_F(SampleModuleTest, testReceivesAbortMessage){
+TEST_F(SampleModuleTest, testModuleDoesNotAbortOnStartup){
   ASSERT_EQ(sampleModule->getAborting(), false);
 }
 
-TEST_F(SampleModuleTest, testGetObjectIds){
+TEST_F(SampleModuleTest, testObjectIdsEmptyOnStartup){
   std::vector<std::uint32_t> objectIds = sampleModule->getObjectIds();
   ASSERT_EQ(objectIds.size(), 0);
 }
 
-TEST_F(SampleModuleTest, testOnAbortCallback){
+TEST_F(SampleModuleTest, testSetsAbortingWhenAbortMessagePublished){
   // Setup
   auto abortPublisher = ROSChannels::Abort::Pub(*helperNode);
   
@@ -61,16 +58,16 @@ TEST_F(SampleModuleTest, testOnAbortCallback){
   ASSERT_EQ(sampleModule->getAborting(), true);
 }
 
-TEST_F(SampleModuleTest, testOnInitResponse){
+TEST_F(SampleModuleTest, testPublishesOnInitResponseWhenInitIsPublished){
   // Setup
-  std::promise<void> sub_called;
-  std::shared_future<void> sub_called_future(sub_called.get_future());
-  auto fail_after_timeout = std::chrono::milliseconds(5000);
+  std::promise<void> subCalled;
+  std::shared_future<void> subCalledFuture(subCalled.get_future());
+  auto failAfterTimeout = std::chrono::milliseconds(5000);
 
   bool receivedMsg = false; 
-  auto smOnInitResponseCallback = [&receivedMsg, &sub_called](const ROSChannels::SampleModuleTestForInitResponse::message_type::SharedPtr msg) {
+  auto smOnInitResponseCallback = [&receivedMsg, &subCalled](const ROSChannels::SampleModuleTestForInitResponse::message_type::SharedPtr msg) {
     receivedMsg = true;
-    sub_called.set_value();
+    subCalled.set_value();
   };
 
   std::string topicname = std::string(sampleModule->get_namespace()) + ROSChannels::SampleModuleTestForInitResponse::topicName;
@@ -80,33 +77,33 @@ TEST_F(SampleModuleTest, testOnInitResponse){
   auto initPublisher = ROSChannels::Init::Pub(*helperNode);
   initPublisher.publish(ROSChannels::Init::message_type());
   // wait for discovery and the subscriber to connect
-  test_rclcpp::wait_for_subscriber(helperNode, topicname);
-  test_rclcpp::wait_for_future(executor, sub_called_future, fail_after_timeout);
+  testUtils::waitForSubscriber(helperNode, topicname);
+  testUtils::waitForFuture(executor, subCalledFuture, failAfterTimeout);
 
   // Assert
   ASSERT_EQ(receivedMsg, true);
 }
 
-TEST_F(SampleModuleTest, testServiceCalled){
+TEST_F(SampleModuleTest, testThatServiceResponseIsSetToSuccessWhenServiceIsCalled){
   // Setup
-  std::promise<void> service_called;
-  std::shared_future<void> service_called_future(service_called.get_future());
-  auto fail_after_timeout = std::chrono::milliseconds(1000);
+  std::promise<void> serviceCalled;
+  std::shared_future<void> serviceCalledFuture(serviceCalled.get_future());
+  auto failAfterTimeout = std::chrono::milliseconds(1000);
   bool receivedReq = false; 
 
   auto getObjectIdsClient = helperNode->create_client<std_srvs::srv::SetBool>("/sample_module_test_service");
   auto getObjectIdsRequest = std::make_shared<std_srvs::srv::SetBool::Request>();
 
-  auto testServiceCalledCallback = [&receivedReq, &service_called](const rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture response) {
+  auto testServiceCalledCallback = [&receivedReq, &serviceCalled](const rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture response) {
     receivedReq = response.get()->success;
-    service_called.set_value();
+    serviceCalled.set_value();
   };
 
   // Act
   getObjectIdsClient->async_send_request(getObjectIdsRequest, testServiceCalledCallback);
   // wait for the service to be available and for it to process the request
-  test_rclcpp::wait_for_service(getObjectIdsClient, std::chrono::milliseconds(1000));
-  test_rclcpp::wait_for_future(executor, service_called_future, fail_after_timeout);
+  testUtils::waitForService(getObjectIdsClient, std::chrono::milliseconds(1000));
+  testUtils::waitForFuture(executor, serviceCalledFuture, failAfterTimeout);
 
   // Assert
   ASSERT_EQ(receivedReq, true);
