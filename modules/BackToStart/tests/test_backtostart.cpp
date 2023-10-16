@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 #include "rclcpp/rclcpp.hpp"
-#include "tests/rclcpp_utils.hpp"
+#include "testUtils/testUtils.hpp"
 #include "atos_interfaces/srv/get_object_return_trajectory.hpp"
 #include "atos_interfaces/msg/cartesian_trajectory_point.hpp"
 #include "geometry_msgs/msg/pose.hpp"
@@ -17,33 +17,41 @@ public:
   {
     rclcpp::shutdown();
   }
-protected:
+
+  protected:
+
+  std::shared_ptr<BackToStart> backToStart;
+  std::shared_ptr<rclcpp::Node> helperNode;
+  rclcpp::executors::SingleThreadedExecutor executor;
+
   void SetUp() override
   {
+    helperNode = rclcpp::Node::make_shared("BackToStartTestHelper_node");
+    backToStart = std::make_shared<BackToStart>();
+    executor.add_node(helperNode);
+    executor.add_node(backToStart);
   }
 
   void TearDown() override
   {
+    executor.remove_node(helperNode);
+    executor.remove_node(backToStart);
+    helperNode.reset();
+    backToStart.reset();
   }
 };
 
 
 TEST_F(BackToStartTest, testServiceCallWithoutTrajectory){
   // Setup
-  auto backToStart = std::make_shared<BackToStart>();
-  auto helperNode = rclcpp::Node::make_shared("testGetObjectReturnTrajectoryService_node");
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(backToStart);
-  executor.add_node(helperNode);
-
-  std::promise<void> service_called;
-  std::shared_future service_called_future(service_called.get_future());
-  auto fail_after_timeout = std::chrono::milliseconds(5000);
+  std::promise<void> serviceCalled;
+  std::shared_future serviceCalledFuture(serviceCalled.get_future());
+  auto failAfterTimeout = std::chrono::milliseconds(5000);
 
   bool receivedResponse = false; 
-  auto returnTrajResponseCallback = [&receivedResponse, &service_called](const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future) {
+  auto returnTrajResponseCallback = [&receivedResponse, &serviceCalled](const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future) {
     receivedResponse = future.get()->success;
-    service_called.set_value();
+    serviceCalled.set_value();
   };
 
   std::string serviceName = ServiceNames::getObjectReturnTrajectory;
@@ -51,20 +59,12 @@ TEST_F(BackToStartTest, testServiceCallWithoutTrajectory){
   returnTrajectoryClient = helperNode->create_client<atos_interfaces::srv::GetObjectReturnTrajectory>(serviceName);
   
   auto returnTrajectoryRequest = std::make_shared<atos_interfaces::srv::GetObjectReturnTrajectory::Request>();
-
-  //  wait for service
-  while (!returnTrajectoryClient->wait_for_service(std::chrono::seconds(1))) {
-    if (!rclcpp::ok()) {
-      RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
-      return;
-    }
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
-  }
+  testUtils::waitForService(returnTrajectoryClient, std::chrono::milliseconds(1000));
 
   // Act
   returnTrajectoryClient->async_send_request(returnTrajectoryRequest, returnTrajResponseCallback);
   // wait for service to respond and callback to execute
-  test_rclcpp::wait_for_future(executor, service_called_future, fail_after_timeout);
+  testUtils::waitForFuture(executor, serviceCalledFuture, failAfterTimeout);
 
   // Assert
   ASSERT_EQ(receivedResponse, false);
@@ -72,22 +72,16 @@ TEST_F(BackToStartTest, testServiceCallWithoutTrajectory){
 
 TEST_F(BackToStartTest, testServiceCallWithTrajectory){
   // Setup
-  auto backToStart = std::make_shared<BackToStart>();
-  auto helperNode = rclcpp::Node::make_shared("testGetObjectReturnTrajectoryService_node");
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(backToStart);
-  executor.add_node(helperNode);
-
-  std::promise<void> service_called;
-  std::shared_future service_called_future(service_called.get_future());
-  auto fail_after_timeout = std::chrono::milliseconds(5000);
+  std::promise<void> serviceCalled;
+  std::shared_future serviceCalledFuture(serviceCalled.get_future());
+  auto failAfterTimeout = std::chrono::milliseconds(5000);
 
   bool receivedResponse = false; 
   geometry_msgs::msg::Pose returnTrajEndPoint;
-  auto returnTrajResponseCallback = [&receivedResponse, &returnTrajEndPoint, &service_called](const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future) {
+  auto returnTrajResponseCallback = [&receivedResponse, &returnTrajEndPoint, &serviceCalled](const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future) {
     receivedResponse = future.get()->success;
     returnTrajEndPoint = future.get()->trajectory.points.back().pose;
-    service_called.set_value();
+    serviceCalled.set_value();
   };
 
   std::string serviceName = ServiceNames::getObjectReturnTrajectory;
@@ -108,20 +102,12 @@ TEST_F(BackToStartTest, testServiceCallWithTrajectory){
     returnTrajectoryRequest->trajectory.points.push_back(trajPoint);
   }
   auto trajStartPoint = returnTrajectoryRequest->trajectory.points[0].pose;
-
-  //  wait for service
-  while (!returnTrajectoryClient->wait_for_service(std::chrono::seconds(1))) {
-    if (!rclcpp::ok()) {
-      RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
-      return;
-    }
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
-  }
+  testUtils::waitForService(returnTrajectoryClient, std::chrono::milliseconds(1000));
 
   // Act
   returnTrajectoryClient->async_send_request(returnTrajectoryRequest, returnTrajResponseCallback);
   // wait for service to respond and callback to execute
-  test_rclcpp::wait_for_future(executor, service_called_future, fail_after_timeout);
+  testUtils::waitForFuture(executor, serviceCalledFuture, failAfterTimeout);
 
   // Assert
   ASSERT_EQ(receivedResponse, true);
