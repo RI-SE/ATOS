@@ -3,7 +3,7 @@
 ## Unit Tests
 Unit tests for C++ code in ATOS are written in gtest. New modules must have unit tests covering at least the core functionality. All unit tests for a each module are executed automatically each time a pull request is submitted. 
 
-To run individual unit tests, run the following command from the your atos build folder in your workspace:
+To run individual unit tests, run the following command from the ATOS build folder in your workspace:
 ```bash
 cd ~/atos_ws/build/atos
 ctest -R <test_name>
