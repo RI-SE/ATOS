@@ -4,7 +4,8 @@ A module for generating an object's return trajectory.
 WARNING: It is up to the operator to determine if the new trajectories are possible to execute or not since the generated trajectories doesn't take other objects' trajectories into consideration.
 
 ## About the module
-This module provides a service to reverse the test object's trajectory and generate a Williamson turn at the start and end to let the object return to its starting point after a test has been executed.
+This module provides a service that enables resetting test objects to their starting position after a completed test.
+The service calculates Williamson turns on both ends of the original trajectory, which if followed by the test object will lead it back to the start of the original trajectory, with a correct heading.
 
 1. Init your test: `Init`->`Connect`.
 2. Execute test: `Arm`->`Start`.
