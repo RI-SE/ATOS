@@ -42,7 +42,7 @@ public:
 };
 
 
-TEST_F(BackToStartTest, testServiceCallWithoutTrajectory){
+TEST_F(BackToStartTest, testServiceReturnsFalseWhenCalledWithoutTrajectory){
   // Setup
   std::promise<void> serviceCalled;
   std::shared_future serviceCalledFuture(serviceCalled.get_future());
@@ -70,7 +70,7 @@ TEST_F(BackToStartTest, testServiceCallWithoutTrajectory){
   ASSERT_EQ(receivedResponse, false);
 }
 
-TEST_F(BackToStartTest, testServiceCallWithTrajectory){
+TEST_F(BackToStartTest, testServiceReturnsTrajWithEndPointAtInputTrajStartPoint){
   // Setup
   std::promise<void> serviceCalled;
   std::shared_future serviceCalledFuture(serviceCalled.get_future());
