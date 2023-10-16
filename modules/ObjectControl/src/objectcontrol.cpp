@@ -118,6 +118,7 @@ void ObjectControl::onInitMessage(const Init::message_type::SharedPtr){
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Init::topicName, get_logger());
 	stateChangeMsg.current_state = this->state->asNumber();
+	// Don't publish until we are actually initialized
 	stateChangePub.publish(stateChangeMsg);
 }
 

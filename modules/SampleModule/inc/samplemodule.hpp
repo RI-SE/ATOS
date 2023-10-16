@@ -1,6 +1,14 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #pragma once
 
 #include <thread>
+#include <std_srvs/srv/set_bool.hpp>
+#include "roschannels/test_channels.hpp"
 #include "module.hpp"
 #include "server.hpp"
 
@@ -11,21 +19,22 @@ class SampleModule : public Module{
 public:
 	static inline std::string const moduleName = "sample_module";
 	SampleModule();
-	~SampleModule();
+	std::vector<std::uint32_t> getObjectIds();
+	bool getAborting() const { return aborting_; }
 
 private:
-	static inline const int TCPPort = 1337;
-
-	void tcpSocketProcedure();
 	ROSChannels::Init::Sub initSub;
 	ROSChannels::Abort::Sub abortSub;
 	ROSChannels::AllClear::Sub allClearSub;
+	ROSChannels::SampleModuleTestForInitResponse::Pub smOnInitResponsePub;
+	rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr service_server;
 
-	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
-	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
-	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
+	void onInitMessage(ROSChannels::Init::message_type::SharedPtr) override;
+	void onAbortMessage(ROSChannels::Abort::message_type::SharedPtr) override;
+	void onAllClearMessage(ROSChannels::AllClear::message_type::SharedPtr) override;
+	void OnCallbackSetBool(const std::shared_ptr<std_srvs::srv::SetBool::Request> request, 
+								std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
-	std::unique_ptr<std::thread> tcpThread;
-	TCPServer tcpServer;
-	bool quit = false;
+	std::vector<std::uint32_t> objectIds;
+	bool aborting_ = false;
 };

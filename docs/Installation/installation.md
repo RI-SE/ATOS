@@ -99,10 +99,10 @@ cd ATOS
 git submodule update --init --recursive
 ```
 
-Install the dependencies:
+Install the dependencies (Stand in the repo directory where the dependencies.txt file is located):
 ```bash
-sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler \
-libeigen3-dev ros-foxy-paho-mqtt-c nlohmann-json3-dev npm nodejs libpcl-dev
+```bash
+apt_deps=$(cat dependencies.txt | tr '\n' ' ') | sudo apt update && sudo apt install -y ${apt_deps}
 ```
 
 

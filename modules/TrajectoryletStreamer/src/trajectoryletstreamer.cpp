@@ -15,7 +15,6 @@ TrajectoryletStreamer::TrajectoryletStreamer()
 	: Module(TrajectoryletStreamer::moduleName),
 	  initSub(*this, std::bind(&TrajectoryletStreamer::onInitMessage, this, _1)),
 	  connectedSub(*this, std::bind(&TrajectoryletStreamer::onObjectsConnectedMessage, this, _1)),
-	  startSub(*this, std::bind(&TrajectoryletStreamer::onStartMessage, this, _1)),
 	  stopSub(*this, std::bind(&TrajectoryletStreamer::onStopMessage, this, _1)),
 	  abortSub(*this, std::bind(&TrajectoryletStreamer::onAbortMessage, this, _1)) {
 	declare_parameter("chunk_duration", 0.0);
@@ -33,15 +32,10 @@ void TrajectoryletStreamer::onObjectsConnectedMessage(const ObjectsConnected::me
 	// TODO setup and first chunk transmission
 	RCLCPP_INFO(get_logger(), "Starting trajectory publishers");
 	for (const auto& [id, traj] : trajectories) {
-		publishers.emplace_back(*this, *traj, id, chunkLength);
+		publishers.emplace_back(std::make_shared<TrajectoryPublisher>(*this, *traj, id, chunkLength));
 	}
 }
 
-void TrajectoryletStreamer::onStartMessage(const std_msgs::msg::Empty::SharedPtr) {
-	for (auto& pub : publishers) {
-		pub.handleStart();
-	}
-}
 
 void TrajectoryletStreamer::loadObjectFiles() {
 	clearScenario();
