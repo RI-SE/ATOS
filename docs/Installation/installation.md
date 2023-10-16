@@ -1,5 +1,5 @@
 # Instructions
-There are two ways of starting ATOS: using the docker image or building from source. The docker image is the easiest way to get started, but if you intend to make changes to ATOS, we recommend building from source.
+There are two ways of starting ATOS: using the docker image or building from source. The docker image is the easiest way to get started, but if you intend to make changes to ATOS, we recommend building from source with the setup_atos.sh script.
 
 ## <a name="docker"></a> Using the docker image
 To run ATOS using docker compose, first [install docker](https://docs.docker.com/engine/install/) on your computer. Download the [ATOS repo](https://github.com/RI-SE/ATOS). Then, run the following command from the root repo directory:
@@ -23,9 +23,9 @@ sudo chown -R $USER:$USER ~/.astazero/ATOS/
 ```
 
 ## <a name="Installation script"></a> Using the installation script
-ATOS comes with an installation script that automates the installation process. It is intended for use on Ubuntu 20.04 or 22.04, and has been tested on a fresh install of Ubuntu 20.04. The script will install ROS 2, ATOS dependencies, and ATOS itself. It will also create a workspace and build ATOS. The script can be executed using the following command:
+ATOS comes with an installation script that automates the installation process. It is intended for use on Ubuntu 20.04 or 22.04, and has been tested on a fresh install of Ubuntu 22.04. The script will install ROS 2, ATOS dependencies, and ATOS itself. It will also create a workspace and build ATOS. The script can be executed using the following command:
 ```bash
-./install_atos.sh
+./setup_atos.sh
 ```
 
 ## <a name="Native build"></a> Building from source manually
