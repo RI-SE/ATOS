@@ -22,6 +22,7 @@ check_command_failed $? "Failed to install dependencies."
 #######################################
 ###### Install ROS2 dependencies ######
 #######################################
+ROS_DISTRO=humble
 
 # Check if the ROS2 repository is already added
 if ! (dpkg -l | grep -q "ros-$ROS_DISTRO-desktop"); then
@@ -54,12 +55,6 @@ sudo apt install -y \
     ros-${ROS_DISTRO}-pcl-conversions \
     ros-${ROS_DISTRO}-rosbridge-suite
 check_command_failed $? "Failed to install ROS2 packages."
-
-if [ "$ROS_DISTRO" == "humble" ]; then
-    sudo apt install -y libpaho-mqtt-dev
-elif [ "$ROS_DISTRO" == "foxy" ]; then
-    sudo apt install -y ros-foxy-paho-mqtt-c
-fi
 
 ###########################################
 ###### Install some deps from source ######

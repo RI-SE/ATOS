@@ -3,6 +3,7 @@
     unzip
     libsystemd-dev
     libprotobuf-dev
+    libpaho-mqtt-dev
     protobuf-compiler
     libeigen3-dev
     nlohmann-json3-dev

@@ -18,14 +18,12 @@ fi
 # Set ROS_DISTRO based on Ubuntu distribution
 case "$(get_ubuntu_codename)" in
     "focal")
-        export ROS_DISTRO=foxy
     ;;
     "jammy")
-        export ROS_DISTRO=humble
     ;;
     *)
-        echo "Unsupported Ubuntu distribution. Only 20.04 (focal) and 22.04 (jammy) are supported."
-        exit 1
+    echo "Unsupported Ubuntu distribution. Only 20.04 (focal) and 22.04 (jammy) are supported."
+    exit 1
     ;;
 esac
 
@@ -33,7 +31,6 @@ esac
 if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
     echo "Usage: ./setup_atos.sh [single option]"
     echo "This script will install all necessary dependencies, setup the ROS workspace at ~/atos_ws and install ATOS. Please open and inspect this script for further details."
-    echo "Your ROS distribution: $ROS_DISTRO"
     #Show options
     echo "Options:"
     echo "  -h, --help      Show this help message and exit"

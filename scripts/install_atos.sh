@@ -11,17 +11,14 @@ fi
 # Take the first argument as the PATH to the ATOS git repo
 ATOS_REPO_PATH="$1"
 source "${ATOS_REPO_PATH}/scripts/install_functions.sh"
+check_command_failed $? "Failed to source ${ATOS_REPO_PATH}/scripts/install_functions.sh"
 
 ################################################
 ###### Install Control Panel dependencies ######
 ################################################
 
 echo "Installing nvm and Node.js..."
-if [ "$ROS_DISTRO" == "humble" ]; then 
-    NODE_VERSION=16.20.0    # Also specified in the Dockerfile
-elif [ "$ROS_DISTRO" == "foxy" ]; then
-    NODE_VERSION=12
-fi
+NODE_VERSION=16.20.0    # Also specified in the Dockerfile
 NVM_DIR="$HOME/.nvm"
 
 if ! command -v nvm &> /dev/null; then
@@ -75,7 +72,7 @@ cd -
 echo "Building ATOS..."
 cd $HOME/atos_ws
 source /opt/ros/$ROS_DISTRO/setup.bash
-MAKEFLAGS=-j4 && colcon build --symlink-install
+MAKEFLAGS=-j4 colcon build --symlink-install
 check_command_failed $? "Failed to build ATOS."
 cd -
 
