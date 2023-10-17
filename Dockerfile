@@ -21,3 +21,4 @@ RUN --mount=type=cache,target=/var/cache/apt \
         ./scripts/install_deps.sh ${REPO_DIR}
 COPY . .
 RUN ./scripts/install_atos.sh ${REPO_DIR}
+WORKDIR /root/atos_ws
