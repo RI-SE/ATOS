@@ -37,4 +37,4 @@ jobs:
 
     - name: Run colcon test on docker image
       run: |
-        docker run --rm -it ${{ env.TEST_TAG }} bash -c "colcon test --return-code-on-test-failure --event-handlers console_cohesion+"
+        docker run --rm ${{ env.TEST_TAG }} bash -c "colcon test --return-code-on-test-failure --event-handlers console_cohesion+"
