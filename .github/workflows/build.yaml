@@ -2,9 +2,13 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "dev*" ]
+    branches: [ "dev*", "master" ]
   pull_request:
     branches: [ "dev" ]
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
 
 env:
   TEST_TAG: astazero/atos_docker_env:test
@@ -33,4 +37,4 @@ jobs:
 
     - name: Run colcon test on docker image
       run: |
-        docker run --rm -it ${{ env.TEST_TAG }} bash -c "colcon test --event-handlers console_cohesion+"
+        docker run --rm -it ${{ env.TEST_TAG }} bash -c "colcon test --return-code-on-test-failure --event-handlers console_cohesion+"
