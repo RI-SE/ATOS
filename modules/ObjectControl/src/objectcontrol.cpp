@@ -203,6 +203,11 @@ void ObjectControl::onStopMessage(const Stop::message_type::SharedPtr){
 	stateChangePub.publish(stateChangeMsg);
 }
 
+/**
+ * @brief Resets the test objects to the scenario starting positions
+ * 
+ * @param msg Trigger message for resetting test objects (std_msgs/msg/Empty)
+*/
 void ObjectControl::onResetTestObjectsMessage(const ResetTestObjects::message_type::SharedPtr) {
 	COMMAND cmd = COMM_BACKTOSTART_CALL;
 	auto f_try = [&]() { this->state->resetTestObjectsRequest(*this); };
@@ -210,6 +215,11 @@ void ObjectControl::onResetTestObjectsMessage(const ResetTestObjects::message_ty
 	this->tryHandleMessage(f_try,f_catch, ResetTestObjects::topicName, get_logger());
 }
 
+/**
+ * @brief Reloads the object settings from the configuration file
+ * 
+ * @param msg Trigger message for reloading object settings (std_msgs/msg/Empty)
+*/
 void ObjectControl::onReloadObjectSettingsMessage(const ReloadObjectSettings::message_type::SharedPtr) {
 	COMMAND cmd = COMM_OSEM;
 	auto f_try = [&]() { this->state->reloadObjectSettingsRequest(*this); };
@@ -753,6 +763,11 @@ void ObjectControl::startScenario() {
 	}
 }
 
+/**
+ * @brief Resets the scenario by offering return trajectories for all objects
+ * 
+ * @param isResetting state-flag to indicate if the reset procedure is currently running
+*/
 void ObjectControl::resetTestObjects() {
 	// Check if we are already resetting
 	if (this->isResetting) {
@@ -767,6 +782,11 @@ void ObjectControl::resetTestObjects() {
 	}
 }
 
+/**
+ * @brief Reloads the scenario trajectories for all objects
+ * 
+ * @param isResetting state-flag to indicate if the reset procedure is currently running
+ */
 void ObjectControl::reloadScenarioTrajectories() {
 	// Check if we already have loaded the scenario trajectories
 	if (!this->isResetting) {
@@ -781,6 +801,11 @@ void ObjectControl::reloadScenarioTrajectories() {
 	}
 }
 
+/**
+ * @brief Republishes the trajectory paths for a given object
+ * 
+ * @param id the object id
+*/
 void ObjectControl::republishTrajectoryPaths(uint32_t id){
 	// Update the GUI with the new trajectory in local coordinates
 	ATOS::Trajectory traj = objects.at(id)->getTrajectory();
@@ -794,6 +819,11 @@ void ObjectControl::republishTrajectoryPaths(uint32_t id){
 	this->gnssPathPublishers.at(id).publish(traj.toGeoJSON(llh_0));
 }
 
+/**
+ * @brief Callback function for the trajectory service call. Sets the new trajectory for the object in ATOS and sends it to the object
+ * 
+ * @param future the future object containing the response from the trajectory service call
+*/
 void ObjectControl::trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
 	this->trajResponse = future.get();
 	auto id = returnTrajResponse->id;
@@ -813,6 +843,11 @@ void ObjectControl::trajectoryCallback(const rclcpp::Client<atos_interfaces::srv
 	RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %lu points", id, traj.size());
 };
 
+/**
+ * @brief Callback function for the return trajectory service call. Sets the new trajectory for the object in ATOS and sends it to the object
+ * 
+ * @param future the future object containing the response from the return trajectory service call
+*/
 void ObjectControl::returnTrajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future) {
 	this->returnTrajResponse = future.get();
 	auto id = returnTrajResponse->id;
@@ -832,6 +867,11 @@ void ObjectControl::returnTrajectoryCallback(const rclcpp::Client<atos_interface
 	RCLCPP_INFO(get_logger(), "Loaded return trajectory for object %u with %lu points", id, traj.size());
 };
 
+/**
+ * @brief Sets the trajectory for a given object by requesting it from the esminiAdapter or BackToStart module depending on the current state (resetting)
+ * 
+ * @param id the object id
+*/
 void ObjectControl::setObjectTrajectory(uint32_t id){
 	// Check if object is in resetting "state". If so, offer return trajectory instead of normal trajectory
 	if (this->isResetting) {

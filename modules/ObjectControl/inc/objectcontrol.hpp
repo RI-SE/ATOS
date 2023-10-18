@@ -344,7 +344,7 @@ private:
 	void trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future);
 	//! \brief Callback for the return trajectory request. Sends the new trajectory to the object.
 	void returnTrajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future);
-	//! \brief Requests a new trajectory to the object depending on the current state (resetting).
+	//! \brief Requests a new trajectory and sends it to the object.
 	void setObjectTrajectory(uint32_t id);
 	//! \brief
 	void startObject(uint32_t id, std::chrono::system_clock::time_point startTime = std::chrono::system_clock::now());
