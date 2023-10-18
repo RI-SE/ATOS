@@ -564,6 +564,10 @@ void EsminiAdapter::getObjectStates(
 	constexpr double MAX_SCENARIO_TIME = 3600.0;
 	bool stopSimulation = false;
 	while (!stopSimulation) {
+		if (SE_GetQuitFlag() != 0) {
+			break;
+		}
+		
 		SE_StepDT(timeStep);
 		accumTime += timeStep;
 		for (int j = 0; j < SE_GetNumberOfObjects(); j++){
