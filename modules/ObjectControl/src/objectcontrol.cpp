@@ -781,7 +781,7 @@ void ObjectControl::reloadScenarioTrajectories() {
 	}
 }
 
-void ObjectControl::updateTrajectoryGUI(uint32_t id){
+void ObjectControl::republishTrajectoryPaths(uint32_t id){
 	// Update the GUI with the new trajectory in local coordinates
 	ATOS::Trajectory traj = objects.at(id)->getTrajectory();
 	this->pathPublishers.emplace(id, ROSChannels::Path::Pub(*this, id));
@@ -809,7 +809,7 @@ void ObjectControl::trajectoryCallback(const rclcpp::Client<atos_interfaces::srv
 	objects.at(id)->setTrajectory(traj);
 	objects.at(id)->sendTrajectory();
 	// Update the GUI with the new trajectory
-	this->updateTrajectoryGUI(id);
+	this->republishTrajectoryPaths(id);
 	RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %lu points", id, traj.size());
 };
 
@@ -828,7 +828,7 @@ void ObjectControl::returnTrajectoryCallback(const rclcpp::Client<atos_interface
 	objects.at(id)->setTrajectory(traj);
 	objects.at(id)->sendTrajectory();
 	// Update the GUI with the new trajectory
-	this->updateTrajectoryGUI(id);
+	this->republishTrajectoryPaths(id);
 	RCLCPP_INFO(get_logger(), "Loaded return trajectory for object %u with %lu points", id, traj.size());
 };
 

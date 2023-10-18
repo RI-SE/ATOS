@@ -339,7 +339,7 @@ private:
 	//! \brief Reloads the scenario trajectories for each object.
 	void reloadScenarioTrajectories();
 	//! \brief Updates the paths in the GUI to reflect the new trajectories.
-	void updateTrajectoryGUI(uint32_t id);
+	void republishTrajectoryPaths(uint32_t id);
 	//! \brief Callback for the trajectory request. Sends the new trajectory to the object.
 	void trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future);
 	//! \brief Callback for the return trajectory request. Sends the new trajectory to the object.
