@@ -286,8 +286,8 @@ namespace ROSChannels {
         };
     }
 
-    namespace ResetTest {
-        const std::string topicName = "reset_test";
+    namespace ResetTestObjects {
+        const std::string topicName = "reset_test_objects";
         using message_type = std_msgs::msg::Empty;
         const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
@@ -302,8 +302,8 @@ namespace ROSChannels {
         };
     }
 
-    namespace ReloadSettings {
-        const std::string topicName = "reload_settings";
+    namespace ReloadObjectSettings {
+        const std::string topicName = "reload_object_settings";
         using message_type = std_msgs::msg::Empty;
         const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 

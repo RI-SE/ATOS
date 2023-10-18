@@ -42,8 +42,8 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	scnRemoteControlEnableSub(*this, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1)),
 	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
 	objectStateChangeSub(*this, std::bind(&ObjectControl::onObjectStateChangeMessage, this, _1)),
-	scnResetTestSub(*this, std::bind(&ObjectControl::onResetTestMessage, this, _1)),
-	scnReloadSettingsSub(*this, std::bind(&ObjectControl::onReloadSettingsMessage, this, _1)),
+	scnResetTestObjectsSub(*this, std::bind(&ObjectControl::onResetTestObjectsMessage, this, _1)),
+	scnReloadObjectSettingsSub(*this, std::bind(&ObjectControl::onReloadObjectSettingsMessage, this, _1)),
 	failurePub(*this),
 	scnAbortPub(*this),
 	objectsConnectedPub(*this),
@@ -203,18 +203,18 @@ void ObjectControl::onStopMessage(const Stop::message_type::SharedPtr){
 	stateChangePub.publish(stateChangeMsg);
 }
 
-void ObjectControl::onResetTestMessage(const ResetTest::message_type::SharedPtr) {
+void ObjectControl::onResetTestObjectsMessage(const ResetTestObjects::message_type::SharedPtr) {
 	COMMAND cmd = COMM_BACKTOSTART_CALL;
-	auto f_try = [&]() { this->state->resetRequest(*this); };
+	auto f_try = [&]() { this->state->resetTestObjectsRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, ResetTest::topicName, get_logger());
+	this->tryHandleMessage(f_try,f_catch, ResetTestObjects::topicName, get_logger());
 }
 
-void ObjectControl::onReloadSettingsMessage(const ReloadSettings::message_type::SharedPtr) {
+void ObjectControl::onReloadObjectSettingsMessage(const ReloadObjectSettings::message_type::SharedPtr) {
 	COMMAND cmd = COMM_OSEM;
-	auto f_try = [&]() { this->state->reloadSettingsRequest(*this); };
+	auto f_try = [&]() { this->state->reloadObjectSettingsRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, ReloadSettings::topicName, get_logger());
+	this->tryHandleMessage(f_try,f_catch, ReloadObjectSettings::topicName, get_logger());
 }
 
 void ObjectControl::onAbortMessage(const Abort::message_type::SharedPtr){
@@ -753,18 +753,18 @@ void ObjectControl::startScenario() {
 	}
 }
 
-void ObjectControl::resetTest() {
+void ObjectControl::resetTestObjects() {
 	// Check if we are already resetting
 	if (this->isResetting) {
 		RCLCPP_INFO(get_logger(), "Test already resetting");
 		return;
 	}
-	RCLCPP_INFO(get_logger(), "Resetting test by offering return trajectories");
+	this->isResetting = true;
+	RCLCPP_INFO(get_logger(), "Resetting test by offering return trajectories for all objects");
 	// Request a new return trajectory for each object
 	for (auto& id : getVehicleIDs()) {
 		this->setObjectTrajectory(id);
 	}
-	this->isResetting = true;
 }
 
 void ObjectControl::reloadScenarioTrajectories() {
@@ -773,12 +773,12 @@ void ObjectControl::reloadScenarioTrajectories() {
 		RCLCPP_INFO(get_logger(), "Scenario trajectories already loaded");
 		return;
 	}
+	this->isResetting = false;
 	RCLCPP_INFO(get_logger(), "Reloading scenario trajectories");
 	// Request the scenario trajectory for each object
 	for (auto& id : getVehicleIDs()) {
 		this->setObjectTrajectory(id);
 	}
-	this->isResetting = false;
 }
 
 void ObjectControl::updateTrajectoryGUI(uint32_t id){

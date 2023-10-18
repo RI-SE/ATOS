@@ -76,8 +76,8 @@ rclnodejs.init().then(() => {
   const startPub = node.createPublisher('std_msgs/msg/Empty', '/atos/start');
   const abortPub = node.createPublisher('std_msgs/msg/Empty', '/atos/abort');
   const allClearPub = node.createPublisher('std_msgs/msg/Empty', '/atos/all_clear');
-  const resetTestPub = node.createPublisher('std_msgs/msg/Empty', '/atos/reset_test');
-  const reloadSettingsPub = node.createPublisher('std_msgs/msg/Empty', '/atos/reload_settings');
+  const resetTestObjectsPub = node.createPublisher('std_msgs/msg/Empty', '/atos/reset_test_objects');
+  const reloadObjectSettingsPub = node.createPublisher('std_msgs/msg/Empty', '/atos/reload_object_settings');
   var commandToPublisher = {
     "send_init": initPub,
     "send_connect": connectPub,
@@ -87,8 +87,8 @@ rclnodejs.init().then(() => {
     "send_start": startPub,
     "send_abort": abortPub,
     "send_all_clear": allClearPub,
-    "send_reset_test": resetTestPub,
-    "send_reload_settings": reloadSettingsPub
+    "send_reset_test_objects": resetTestObjectsPub,
+    "send_reload_object_settings": reloadObjectSettingsPub
   };
 
   // Service Clients

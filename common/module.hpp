@@ -73,8 +73,8 @@ class Module : public rclcpp::Node {
 	virtual void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr){};
 	virtual void onReplayMessage(const ROSChannels::Replay::message_type::SharedPtr){};
 	virtual void onExitMessage(const ROSChannels::Exit::message_type::SharedPtr);
-	virtual void onResetTestMessage(const ROSChannels::ResetTest::message_type::SharedPtr){};
-	virtual void onReloadSettingsMessage(const ROSChannels::ReloadSettings::message_type::SharedPtr){};
+	virtual void onResetTestObjectsMessage(const ROSChannels::ResetTestObjects::message_type::SharedPtr){};
+	virtual void onReloadObjectSettingsMessage(const ROSChannels::ReloadObjectSettings::message_type::SharedPtr){};
 
 
 	static void tryHandleMessage(std::function<void()> tryExecute,

@@ -50,7 +50,6 @@ namespace AbstractKinematics {
 	class Disarming;
 	class Done;
 	class RemoteControlled;
-	class Resetting;
 }
 
 namespace RelativeKinematics {
@@ -64,7 +63,6 @@ namespace RelativeKinematics {
 	class Disarming;
 	class Done;
 	class RemoteControlled;
-	class Resetting;
 }
 
 namespace AbsoluteKinematics {
@@ -78,7 +76,6 @@ namespace AbsoluteKinematics {
 	class Disarming;
 	class Done;
 	class RemoteControlled;
-	class Resetting;
 }
 
 /*!
@@ -229,8 +226,8 @@ private:
 	void onStartObjectMessage(const ROSChannels::StartObject::message_type::SharedPtr) override;
 	void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr) override;
 	void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) override;
-	void onResetTestMessage(const ROSChannels::ResetTest::message_type::SharedPtr) override;
-	void onReloadSettingsMessage(const ROSChannels::ReloadSettings::message_type::SharedPtr) override;
+	void onResetTestObjectsMessage(const ROSChannels::ResetTestObjects::message_type::SharedPtr) override;
+	void onReloadObjectSettingsMessage(const ROSChannels::ReloadObjectSettings::message_type::SharedPtr) override;
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
 	void onRemoteControlEnableMessage(const ROSChannels::RemoteControlEnable::message_type::SharedPtr);
@@ -273,8 +270,8 @@ private:
 	ROSChannels::GetStatus::Sub getStatusSub;				//!< Subscriber to scenario get status requests
 	ROSChannels::ObjectStateChange::Sub objectStateChangeSub;	//!< Subscriber to object state changes
 	std::shared_ptr<ROSChannels::ControlSignal::Sub> controlSignalSub;	//!< Pointer to subscriber to receive control signal messages with percentage
-	ROSChannels::ResetTest::Sub scnResetTestSub;	//!< Subscriber to scenario reset test requests
-	ROSChannels::ReloadSettings::Sub scnReloadSettingsSub;	//!< Subscriber to scenario reset test requests
+	ROSChannels::ResetTestObjects::Sub scnResetTestObjectsSub;	//!< Subscriber to scenario reset test requests
+	ROSChannels::ReloadObjectSettings::Sub scnReloadObjectSettingsSub;	//!< Subscriber to scenario reset test requests
 
 	rclcpp::TimerBase::SharedPtr objectsConnectedTimer;	//!< Timer to periodically publish connected objects
 
@@ -338,7 +335,7 @@ private:
 	//! \brief
 	void startScenario();
 	//! \brief Resets the test by offering a back to start trajectory. Still needs arm and start commands to execute the reset.
-	void resetTest();
+	void resetTestObjects();
 	//! \brief Reloads the scenario trajectories for each object.
 	void reloadScenarioTrajectories();
 	//! \brief Updates the paths in the GUI to reflect the new trajectories.

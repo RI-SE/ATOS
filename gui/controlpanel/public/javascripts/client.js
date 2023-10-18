@@ -92,11 +92,11 @@ function sendAbort(){
 function sendAllClear(){
     sendCommand("send_all_clear", ws);
 }
-function sendResetTest(){
-    sendCommand("send_reset_test", ws);
+function sendResetTestObjects(){
+    sendCommand("send_reset_test_objects", ws);
 }
-function sendReloadSettings(){
-    sendCommand("send_reload_settings", ws);
+function sendReloadObjectSettings(){
+    sendCommand("send_reload_object_settings", ws);
 }
 
 // Websocket callbacks and reconnect functionality
