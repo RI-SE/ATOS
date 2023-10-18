@@ -12,7 +12,12 @@ BackToStart::BackToStart() : Module(BackToStart::moduleName)
 		std::bind(&BackToStart::onReturnTrajectoryRequest, this, _1, _2));
 }
 
-
+/**
+ * @brief Callback for the get_object_return_trajectory service
+ * 
+ * @param request Includes the id of the object and the trajectory
+ * @param response Includes the id of the object and the return trajectory
+*/
 void BackToStart::onReturnTrajectoryRequest(const std::shared_ptr<atos_interfaces::srv::GetObjectReturnTrajectory::Request> request, 
                                             std::shared_ptr<atos_interfaces::srv::GetObjectReturnTrajectory::Response> response) {
     
