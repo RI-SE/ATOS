@@ -49,6 +49,7 @@ CMakeFiles*/
 # Autosave files
 *.save
 *.autosave
+*log.txt
 
 # CMake
 CMakeCache.txt

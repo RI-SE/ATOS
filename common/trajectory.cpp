@@ -598,10 +598,10 @@ Trajectory Trajectory::createWilliamsonTurn(
 	auto v1 = -1/radius*Eigen::ArrayXd::Ones(n0);
 	auto v2 = -1/radius*Eigen::ArrayXd::Ones(n1);
 	auto v3 = -1/radius*Eigen::ArrayXd::Zero(n2);
-	std::cout << curvatureArray.rows() << ", "  << curvatureArray.cols() << std::endl;
-	std::cout << v1.rows() << ", "  << v1.cols() << std::endl;
-	std::cout << v2.rows() << ", "  << v2.cols() << std::endl;
-	std::cout << v3.rows() << ", "  << v3.cols() << std::endl;
+	RCLCPP_DEBUG(startPoint.get_logger(), "curvatureArray rows: %d, cols: %d", curvatureArray.rows(), curvatureArray.cols());
+	RCLCPP_DEBUG(startPoint.get_logger(), "v1 rows: %d, cols: %d", v1.rows(), v1.cols());
+	RCLCPP_DEBUG(startPoint.get_logger(), "v2 rows: %d, cols: %d", v2.rows(), v2.cols());
+	RCLCPP_DEBUG(startPoint.get_logger(), "v3 rows: %d, cols: %d", v3.rows(), v3.cols());
 	curvatureArray << -1/radius*Eigen::ArrayXd::Ones(n0), 1/radius*Eigen::ArrayXd::Ones(n1), Eigen::ArrayXd::Zero(n2);
 
 	//create trajectory points

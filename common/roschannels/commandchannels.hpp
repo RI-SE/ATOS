@@ -285,4 +285,37 @@ namespace ROSChannels {
             Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
         };
     }
+
+    namespace ResetTestObjects {
+        const std::string topicName = "reset_test_objects";
+        using message_type = std_msgs::msg::Empty;
+        const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
+
+        class Pub : public BasePub<message_type> {
+        public:
+            Pub(rclcpp::Node& node, const rclcpp::QoS& qos = defaultQoS) : BasePub<message_type>(node, topicName, qos) {}
+        };
+
+        class Sub : public BaseSub<message_type> {
+        public:
+            Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback, const rclcpp::QoS& qos = defaultQoS) : BaseSub<message_type>(node, topicName, callback, qos) {}
+        };
+    }
+
+    namespace ReloadObjectSettings {
+        const std::string topicName = "reload_object_settings";
+        using message_type = std_msgs::msg::Empty;
+        const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
+
+        class Pub : public BasePub<message_type> {
+        public:
+            Pub(rclcpp::Node& node, const rclcpp::QoS& qos = defaultQoS) : BasePub<message_type>(node, topicName, qos) {}
+        };
+
+        class Sub : public BaseSub<message_type> {
+        public:
+            Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback, const rclcpp::QoS& qos = defaultQoS) : BaseSub<message_type>(node, topicName, callback, qos) {}
+        };
+    }
+
 }

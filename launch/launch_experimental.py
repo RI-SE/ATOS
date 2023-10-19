@@ -34,6 +34,12 @@ def get_experimental_nodes():
             executable='osi_adapter',
             name='osi_adapter',
             parameters=[files["params"]]
+        ),
+        Node(
+            package='atos',
+            namespace='atos',
+            executable='back_to_start',
+            name='back_to_start',
         )
     ]
 

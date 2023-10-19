@@ -688,8 +688,8 @@ void EsminiAdapter::InitializeEsmini()
 	RCLCPP_INFO(me->get_logger(), "Done extracting trajs");
 
 
-	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", me->idToTraj.size());
-	RCLCPP_INFO(me->get_logger(), "Number of objects with triggered start: %d", me->delayedStartIds.size());
+	RCLCPP_INFO(me->get_logger(), "Extracted %ld trajectories", me->idToTraj.size());
+	RCLCPP_INFO(me->get_logger(), "Number of objects with triggered start: %ld", me->delayedStartIds.size());
 
 	// Find object IPs as defined in VehicleCatalog file
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
@@ -713,7 +713,7 @@ void EsminiAdapter::InitializeEsmini()
 		auto id = it.first;
 		auto traj = it.second;
 
-		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
+		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %ld points", id, traj.points.size());
 
 		// Publish the trajectory as a path
 		me->pathPublishers.emplace(id, ROSChannels::Path::Pub(*me, id));
