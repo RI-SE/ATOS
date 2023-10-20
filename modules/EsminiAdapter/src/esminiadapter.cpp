@@ -367,7 +367,10 @@ void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr 
 	double roll, pitch, yaw;
 	m.getRPY(roll, pitch, yaw);
 
-	auto pos = monr->pose.pose.position;
+	geometry_msgs::msg::Point pos = monr->pose.pose.position;
+	if (me->applyTrajTransform) {
+		me->crsTransformation->apply(pos, PJ_INV);
+	}
 	auto speed = monr->velocity.twist.linear;
 
 	// Reporting to Esmini
