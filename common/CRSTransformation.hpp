@@ -8,6 +8,7 @@
 #include "proj.h"
 #include "trajectory.hpp"
 #include "rclcpp/logger.hpp"
+#include "geometry_msgs/msg/point.hpp"
 
 class CRSTransformation {
 
@@ -15,6 +16,7 @@ class CRSTransformation {
 
     CRSTransformation(const std::string &fromCRS, const std::string &toCRS);
     void apply(std::vector<ATOS::Trajectory::TrajectoryPoint> &traj);
+    void apply(geometry_msgs::msg::Point &point, PJ_DIRECTION direction);
     static std::vector<double> projToLLH(const std::string &projString, const std::string &datum);
     static void llhOffsetMeters(double *llh, const double *xyzOffset);
 
