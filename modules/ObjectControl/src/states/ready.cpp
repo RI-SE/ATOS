@@ -52,6 +52,17 @@ void AbstractKinematics::Ready::enableRemoteControlRequest(
 	ObjectControl& handler){
 }
 
+void AbstractKinematics::Ready::resetTestObjectsRequest(
+		ObjectControl& handler) {
+	handler.resetTestObjects();
+}
+
+void AbstractKinematics::Ready::reloadObjectSettingsRequest(
+		ObjectControl& handler) {
+	handler.reloadScenarioTrajectories();
+	handler.uploadAllConfigurations();
+}
+
 /*! ******************************************************
  * \section RelativeKinematics
  *  ******************************************************
@@ -108,6 +119,16 @@ void RelativeKinematics::Ready::enableRemoteControlRequest(
 	//setState(handler, new RelativeKinematics::RemoteControlled);
 }
 
+void RelativeKinematics::Ready::resetTestObjectsRequest(
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::resetTestObjectsRequest(handler);
+}
+
+void RelativeKinematics::Ready::reloadObjectSettingsRequest(
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::reloadObjectSettingsRequest(handler);
+}
+
 
 /*! ******************************************************
  * \section AbsoluteKinematics
@@ -160,4 +181,14 @@ void AbsoluteKinematics::Ready::settingModificationRequested(
 void AbsoluteKinematics::Ready::enableRemoteControlRequest(
 	ObjectControl& handler){
 	setState(handler, new AbsoluteKinematics::RemoteControlled);
+}
+
+void AbsoluteKinematics::Ready::resetTestObjectsRequest(
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::resetTestObjectsRequest(handler);
+}
+
+void AbsoluteKinematics::Ready::reloadObjectSettingsRequest(
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::reloadObjectSettingsRequest(handler);
 }

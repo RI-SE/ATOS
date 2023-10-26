@@ -367,7 +367,10 @@ void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr 
 	double roll, pitch, yaw;
 	m.getRPY(roll, pitch, yaw);
 
-	auto pos = monr->pose.pose.position;
+	geometry_msgs::msg::Point pos = monr->pose.pose.position;
+	if (me->applyTrajTransform) {
+		me->crsTransformation->apply(pos, PJ_INV);
+	}
 	auto speed = monr->velocity.twist.linear;
 
 	// Reporting to Esmini
@@ -564,6 +567,10 @@ void EsminiAdapter::getObjectStates(
 	constexpr double MAX_SCENARIO_TIME = 3600.0;
 	bool stopSimulation = false;
 	while (!stopSimulation) {
+		if (SE_GetQuitFlag() != 0) {
+			break;
+		}
+		
 		SE_StepDT(timeStep);
 		accumTime += timeStep;
 		for (int j = 0; j < SE_GetNumberOfObjects(); j++){
@@ -684,8 +691,8 @@ void EsminiAdapter::InitializeEsmini()
 	RCLCPP_INFO(me->get_logger(), "Done extracting trajs");
 
 
-	RCLCPP_INFO(me->get_logger(), "Extracted %d trajectories", me->idToTraj.size());
-	RCLCPP_INFO(me->get_logger(), "Number of objects with triggered start: %d", me->delayedStartIds.size());
+	RCLCPP_INFO(me->get_logger(), "Extracted %ld trajectories", me->idToTraj.size());
+	RCLCPP_INFO(me->get_logger(), "Number of objects with triggered start: %ld", me->delayedStartIds.size());
 
 	// Find object IPs as defined in VehicleCatalog file
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
@@ -709,7 +716,7 @@ void EsminiAdapter::InitializeEsmini()
 		auto id = it.first;
 		auto traj = it.second;
 
-		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %d points", id, traj.points.size());
+		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %ld points", id, traj.points.size());
 
 		// Publish the trajectory as a path
 		me->pathPublishers.emplace(id, ROSChannels::Path::Pub(*me, id));

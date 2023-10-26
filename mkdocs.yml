@@ -12,6 +12,7 @@ nav:
       - "index.md"
   - Installation:
       - "Installation/installation.md"
+      - "Installation/quickstart.md"
   - Configuration:
       - "Usage/How-to/configuration.md"
   - GUI: 

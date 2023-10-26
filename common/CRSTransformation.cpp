@@ -30,7 +30,6 @@ CRSTransformation::CRSTransformation(const std::string &fromCRS, const std::stri
  * @brief Apply transformation from fromCRS to toCRS
  * 
  * @param traj reference to trajectory to transform
- * @return Eigen::Vector3d Transformed point
  */
 void CRSTransformation::apply(std::vector<ATOS::Trajectory::TrajectoryPoint> &trajPoints) {
 	// Put TrajPoints into array of PJ_POINTS
@@ -53,6 +52,20 @@ void CRSTransformation::apply(std::vector<ATOS::Trajectory::TrajectoryPoint> &tr
 		trajPoints[i].setYCoord(in[i].xyz.y);
 		trajPoints[i].setZCoord(in[i].xyz.z);
 	}
+}
+
+/**
+ * @brief Apply a transform on a point
+ * 
+ * @param point The point to transform
+ * @param direction Which direction to transform, e.g. PJ_FWD or PJ_INV
+ */
+void CRSTransformation::apply(geometry_msgs::msg::Point &point, PJ_DIRECTION direction) {
+	PJ_COORD in = proj_coord(point.x, point.y, point.z, 0);
+	PJ_COORD out = proj_trans(projection.get(), direction, in);
+	point.x = out.xyz.x;
+	point.y = out.xyz.y;
+	point.z = out.xyz.z;
 }
 
 /**

@@ -10,6 +10,9 @@
 #include <chrono>
 #include <mutex>
 #include <memory>
+#include <unordered_map>
+
+#include "geographic_msgs/msg/geo_point.hpp"
 
 #include "module.hpp"
 #include "atosTime.h"
@@ -19,6 +22,7 @@
 #include "roschannels/monitorchannel.hpp"
 #include "roschannels/remotecontrolchannels.hpp"
 #include "roschannels/pathchannel.hpp"
+#include "roschannels/gnsspathchannel.hpp"
 #include "roschannels/controlsignalchannel.hpp"
 #include "roschannels/objstatechangechannel.hpp"
 #include "roschannels/statechange.hpp"
@@ -28,6 +32,7 @@
 #include "atos_interfaces/srv/get_object_trigger_start.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
 #include "atos_interfaces/srv/get_object_control_state.hpp"
+#include "atos_interfaces/srv/get_object_return_trajectory.hpp"
 
 // Forward declarations
 class ObjectControlState;
@@ -208,6 +213,8 @@ public:
 	void stopControlSignalSubscriber();
 
 private:
+	bool isResetting;
+	geographic_msgs::msg::GeoPoint origin_pos; //!< Test origin
 	std::mutex stateMutex;
 	std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> exec;
 	static inline std::string const moduleName = "object_control";
@@ -219,6 +226,8 @@ private:
 	void onStartObjectMessage(const ROSChannels::StartObject::message_type::SharedPtr) override;
 	void onDisconnectMessage(const ROSChannels::Disconnect::message_type::SharedPtr) override;
 	void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) override;
+	void onResetTestObjectsMessage(const ROSChannels::ResetTestObjects::message_type::SharedPtr) override;
+	void onReloadObjectSettingsMessage(const ROSChannels::ReloadObjectSettings::message_type::SharedPtr) override;
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onAllClearMessage(const ROSChannels::AllClear::message_type::SharedPtr) override;
 	void onRemoteControlEnableMessage(const ROSChannels::RemoteControlEnable::message_type::SharedPtr);
@@ -243,6 +252,8 @@ private:
 
 	std::shared_future<void> connStopReqFuture;	//!< Request to stop a connection attempt
 	std::promise<void> connStopReqPromise;		//!< Promise that the above value will be emitted
+	atos_interfaces::srv::GetObjectTrajectory::Response::SharedPtr trajResponse;
+	atos_interfaces::srv::GetObjectReturnTrajectory::Response::SharedPtr returnTrajResponse;
 
 	ROSChannels::Init::Sub scnInitSub;			//!< Subscriber to scenario initialization requests
 	ROSChannels::Start::Sub scnStartSub;		//!< Subscriber to scenario start requests
@@ -259,6 +270,8 @@ private:
 	ROSChannels::GetStatus::Sub getStatusSub;				//!< Subscriber to scenario get status requests
 	ROSChannels::ObjectStateChange::Sub objectStateChangeSub;	//!< Subscriber to object state changes
 	std::shared_ptr<ROSChannels::ControlSignal::Sub> controlSignalSub;	//!< Pointer to subscriber to receive control signal messages with percentage
+	ROSChannels::ResetTestObjects::Sub scnResetTestObjectsSub;	//!< Subscriber to scenario reset test requests
+	ROSChannels::ReloadObjectSettings::Sub scnReloadObjectSettingsSub;	//!< Subscriber to scenario reset test requests
 
 	rclcpp::TimerBase::SharedPtr objectsConnectedTimer;	//!< Timer to periodically publish connected objects
 
@@ -266,12 +279,15 @@ private:
 	ROSChannels::Abort::Pub scnAbortPub;					//!< Publisher to scenario abort reports
 	ROSChannels::ObjectsConnected::Pub objectsConnectedPub;	//!< Publisher to report that objects have been connected
 	ROSChannels::ConnectedObjectIds::Pub connectedObjectIdsPub;	//!< Publisher to periodically report connected object ids
-	ROSChannels::StateChange::Pub stateChangePub;	//!< Publisher to report state changes
+	ROSChannels::StateChange::Pub stateChangePub;			//!< Publisher to report state changes
+	std::unordered_map<uint32_t,ROSChannels::Path::Pub> pathPublishers;
+	std::unordered_map<uint32_t,ROSChannels::GNSSPath::Pub> gnssPathPublishers;
 	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr idClient;	//!< Client to request object ids
 	rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedPtr originClient;	//!< Client to request object status
 	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr trajectoryClient;	//!< Client to request object trajectories
 	rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedPtr ipClient;	//!< Client to request object IPs
 	rclcpp::Client<atos_interfaces::srv::GetObjectTriggerStart>::SharedPtr triggerClient;	//!< Client to request object trigger start
+	rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedPtr returnTrajectoryClient;	//!< Client to request object return trajectory
 	rclcpp::Service<atos_interfaces::srv::GetObjectControlState>::SharedPtr stateService;	//!< Service to request object control state
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
@@ -305,6 +321,8 @@ private:
 	//! \brief Transform the scenario trajectories relative to the trajectory of the
 	//!			specified object.
 	void transformScenarioRelativeTo(const uint32_t objectID);
+	//! \brief Upload the configuration in the ScenarioHandler to all connected objects.
+	void uploadAllConfigurations();
 	//! \brief Upload the configuration in the ScenarioHandler to the connected obj	std::unique_ptr<ScenarioHandler> scenarioHandler;
 	void uploadObjectConfiguration(const uint32_t id);
 	//! \brief Clear loaded data and object list.
@@ -316,6 +334,18 @@ private:
 	void disarmObjects();
 	//! \brief
 	void startScenario();
+	//! \brief Resets the test by offering a back to start trajectory. Still needs arm and start commands to execute the reset.
+	void resetTestObjects();
+	//! \brief Reloads the scenario trajectories for each object.
+	void reloadScenarioTrajectories();
+	//! \brief Updates the paths in the GUI to reflect the new trajectories.
+	void republishTrajectoryPaths(uint32_t id);
+	//! \brief Callback for the trajectory request. Sends the new trajectory to the object.
+	void trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future);
+	//! \brief Callback for the return trajectory request. Sends the new trajectory to the object.
+	void returnTrajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future);
+	//! \brief Requests a new trajectory and sends it to the object.
+	void setObjectTrajectory(uint32_t id);
 	//! \brief
 	void startObject(uint32_t id, std::chrono::system_clock::time_point startTime = std::chrono::system_clock::now());
 	//! \brief
