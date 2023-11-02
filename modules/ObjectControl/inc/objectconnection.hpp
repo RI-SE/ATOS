@@ -22,9 +22,9 @@ public:
 	Channel cmd;
 	Channel mntr;
 
-	ObjectConnection(rclcpp::Logger log)
-		: cmd(SOCK_STREAM, log),
-		mntr(SOCK_DGRAM, log),
+	ObjectConnection(rclcpp::Logger log, int id)
+		: cmd(SOCK_STREAM, log, id),
+		mntr(SOCK_DGRAM, log, id),
 		Loggable(log) {
 			pipe(interruptionPipeFds);
 		}

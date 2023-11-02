@@ -29,6 +29,8 @@ public:
 	virtual void allClearRequest(ObjectControl&) = 0;
 	virtual void enableRemoteControlRequest(ObjectControl&) = 0;
 	virtual void disableRemoteControlRequest(ObjectControl&) = 0;
+	virtual void resetTestObjectsRequest(ObjectControl&) = 0;
+	virtual void reloadObjectSettingsRequest(ObjectControl&) = 0;
 
 	//! The below transitions represent spontaneous actions uninitiated by
 	//! the user - inheriting classes may throw exceptions if transitions
@@ -85,6 +87,8 @@ public:
 	void allClearRequest(ObjectControl&) override {}
 	void enableRemoteControlRequest(ObjectControl&) override {}
 	void disableRemoteControlRequest(ObjectControl&) override {}
+	void resetTestObjectsRequest(ObjectControl&) override {}
+	void reloadObjectSettingsRequest(ObjectControl&) override {}
 
 	//! Allow modifications of the settings to occur
 	void settingModificationRequested(ObjectControl&) override {}
@@ -112,6 +116,8 @@ public:
 	void allClearRequest(ObjectControl&) override {}
 	void enableRemoteControlRequest(ObjectControl&) override {}
 	void disableRemoteControlRequest(ObjectControl&) override {}
+	void resetTestObjectsRequest(ObjectControl&) override {}
+	void reloadObjectSettingsRequest(ObjectControl&) override {}
 
 	//! Allow modifications of the settings to occur
 	void settingModificationRequested(ObjectControl&) override {}
@@ -148,6 +154,8 @@ public:
 	void allClearRequest(ObjectControl&) override {}
 	void enableRemoteControlRequest(ObjectControl&) override {}
 	void disableRemoteControlRequest(ObjectControl&) override {}
+	void resetTestObjectsRequest(ObjectControl&) override {}
+	void reloadObjectSettingsRequest(ObjectControl&) override {}
 
 	//! Other spontaneous events unexpected
 	// TODO perhaps settings may be modified here?
@@ -166,6 +174,8 @@ public:
 	virtual void disconnectedFromObject(ObjectControl&, uint32_t) override;
 	virtual void objectAborting(ObjectControl&,uint32_t) override;
 	virtual void objectAbortDisarmed(ObjectControl&,uint32_t) override;
+	virtual void resetTestObjectsRequest(ObjectControl&) override;
+	virtual void reloadObjectSettingsRequest(ObjectControl&) override;
 	//! Handle entering the remote control state
 	virtual void enableRemoteControlRequest(ObjectControl&) override;
 	
@@ -216,6 +226,8 @@ public:
 	void abortRequest(ObjectControl&) override {}
 	void enableRemoteControlRequest(ObjectControl&) override {}
 	void disableRemoteControlRequest(ObjectControl&) override {}
+	void resetTestObjectsRequest(ObjectControl&) override {}
+	void reloadObjectSettingsRequest(ObjectControl&) override {}
 
 	//! Handle strange object transitions
 	void objectDisarmed(ObjectControl&, uint32_t) override;
@@ -257,6 +269,8 @@ public:
 	void abortRequest(ObjectControl&) override {}
 	void enableRemoteControlRequest(ObjectControl&) override {}
 	void disableRemoteControlRequest(ObjectControl&) override {}
+	void resetTestObjectsRequest(ObjectControl&) override {}
+	void reloadObjectSettingsRequest(ObjectControl&) override {}
 
 	OBCState_t asNumber() const override { return OBC_STATE_CLEARING; }
 	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_READY; }
@@ -287,6 +301,8 @@ public:
 	void actionExecutionRequested(ObjectControl&) override {}
 	void enableRemoteControlRequest(ObjectControl&) override {}
 	void disableRemoteControlRequest(ObjectControl&) override {}
+	void resetTestObjectsRequest(ObjectControl&) override {}
+	void reloadObjectSettingsRequest(ObjectControl&) override {}
 
 	//! Other spontaneous events unexpected
 	//
@@ -322,6 +338,8 @@ public:
 	void allClearRequest(ObjectControl&) override {}
 	void enableRemoteControlRequest(ObjectControl&) override {}
 	void disableRemoteControlRequest(ObjectControl&) override {}
+	void resetTestObjectsRequest(ObjectControl&) override {}
+	void reloadObjectSettingsRequest(ObjectControl&) override {}
 
 	//! Other spontaneous events unexpected
 	//
@@ -354,6 +372,8 @@ public:
 	void allClearRequest(ObjectControl&) override {}
 	void enableRemoteControlRequest(ObjectControl&) override {}
 	void disableRemoteControlRequest(ObjectControl&) override {}
+	void resetTestObjectsRequest(ObjectControl&) override {}
+	void reloadObjectSettingsRequest(ObjectControl&) override {}
 
 	//! Other spontaneous events unexpected
 	//
@@ -381,6 +401,8 @@ public:
 	void allClearRequest(ObjectControl&) override {}
 	void enableRemoteControlRequest(ObjectControl&) override {}
 	void disableRemoteControlRequest(ObjectControl&) override {}
+	void resetTestObjectsRequest(ObjectControl&) override {}
+	void reloadObjectSettingsRequest(ObjectControl&) override {}
 
 	//! Other spontaneous events unexpected
 	//
@@ -411,6 +433,8 @@ public:
 	void abortRequest(ObjectControl&) override {} // safe?
 	void allClearRequest(ObjectControl&) override {}
 	void enableRemoteControlRequest(ObjectControl&) override {}
+	void resetTestObjectsRequest(ObjectControl&) override {}
+	void reloadObjectSettingsRequest(ObjectControl&) override {}
 
 	OBCState_t asNumber() const override { return OBC_STATE_REMOTECTRL; }
 	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_READY; }
@@ -449,6 +473,8 @@ class Ready : public AbstractKinematics::Ready {
 	void objectAbortDisarmed(ObjectControl&, uint32_t) override;
 	void settingModificationRequested(ObjectControl&) override;
 	void enableRemoteControlRequest(ObjectControl&) override;
+	void resetTestObjectsRequest(ObjectControl&) override;
+	void reloadObjectSettingsRequest(ObjectControl&) override;
 };
 
 class Aborting : public AbstractKinematics::Aborting {
@@ -547,6 +573,8 @@ class Ready : public AbstractKinematics::Ready {
 	void objectAbortDisarmed(ObjectControl&, uint32_t) override;
 	void settingModificationRequested(ObjectControl&) override;
 	void enableRemoteControlRequest(ObjectControl&) override;
+	void resetTestObjectsRequest(ObjectControl&) override;
+	void reloadObjectSettingsRequest(ObjectControl&) override;
 };
 
 class Aborting : public AbstractKinematics::Aborting {
@@ -579,7 +607,6 @@ class TestLive : public AbstractKinematics::TestLive {
 	void objectAborting(ObjectControl&, uint32_t) override;
 };
 
-
 class Disarming : public AbstractKinematics::Disarming {
 	void disconnectRequest(ObjectControl&) override;
 	void connectedToObject(ObjectControl&, uint32_t) override;
@@ -591,7 +618,6 @@ class Disarming : public AbstractKinematics::Disarming {
 	void objectArmed(ObjectControl&,uint32_t) override;
 	void objectAborting(ObjectControl&,uint32_t) override;
 };
-
 
 class Armed : public AbstractKinematics::Armed {
 	void startRequest(ObjectControl&) override;
@@ -613,4 +639,5 @@ class RemoteControlled : public AbstractKinematics::RemoteControlled {
 class Done : public AbstractKinematics::Done {
 	void postProcessingCompleted(ObjectControl&) override;
 };
+
 }

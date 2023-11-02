@@ -82,6 +82,7 @@ public:
 	}
 
 	virtual void sendSettings();
+	virtual void sendTrajectory();
 	virtual void sendHeartbeat(const ControlCenterStatusType ccStatus);
 	virtual void sendArm();
 	virtual void sendDisarm();
@@ -118,6 +119,12 @@ public:
 		ObjectPropertiesType retval;
 		this->comms.cmd >> retval; // TODO make use of this
 		RCLCPP_DEBUG(get_logger(), "Ignoring object properties message");
+		return retval;
+	}
+	virtual GeneralResponseMessageType parseGremMessage() {
+		GeneralResponseMessageType retval;
+		this->comms.cmd >> retval;
+		RCLCPP_DEBUG(get_logger(), "Ignoring general response message");
 		return retval;
 	}
 	virtual void handleISOMessage(bool awaitNext = false);

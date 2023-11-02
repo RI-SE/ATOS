@@ -6,8 +6,6 @@ services:
       context: .
       dockerfile: ./Dockerfile
     ipc: host
-    stop_signal: SIGINT
-    stop_grace_period: 15s
     privileged: true
     stdin_open: true
     tty: true

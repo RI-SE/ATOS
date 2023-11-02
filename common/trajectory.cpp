@@ -11,7 +11,7 @@
 #include <iomanip>
 #include "regexpatterns.hpp"
 #include "trajectory.hpp"
-#include "util/coordinateutils.hpp" // xyz2llh
+#include "CRSTransformation.hpp" // xyz2llh
 
 #if ROS_FOXY
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
@@ -104,7 +104,7 @@ foxglove_msgs::msg::GeoJSON Trajectory::toGeoJSON(std::array<double,3> llh_0) co
 	for (const auto& point : this->points){
 		double llh[3] = {llh_0[0], llh_0[1], llh_0[2]};
 		double offset[3] = {point.getXCoord(), point.getYCoord(), point.getZCoord()};
-		llhOffsetMeters(llh, offset);
+		CRSTransformation::llhOffsetMeters(llh, offset);
 		ss << "[" << llh[1] << "," << llh[0] << "],"; // Flipped order
 	}
 	std::string positions = ss.str();
@@ -598,10 +598,10 @@ Trajectory Trajectory::createWilliamsonTurn(
 	auto v1 = -1/radius*Eigen::ArrayXd::Ones(n0);
 	auto v2 = -1/radius*Eigen::ArrayXd::Ones(n1);
 	auto v3 = -1/radius*Eigen::ArrayXd::Zero(n2);
-	std::cout << curvatureArray.rows() << ", "  << curvatureArray.cols() << std::endl;
-	std::cout << v1.rows() << ", "  << v1.cols() << std::endl;
-	std::cout << v2.rows() << ", "  << v2.cols() << std::endl;
-	std::cout << v3.rows() << ", "  << v3.cols() << std::endl;
+	RCLCPP_DEBUG(startPoint.get_logger(), "curvatureArray rows: %d, cols: %d", curvatureArray.rows(), curvatureArray.cols());
+	RCLCPP_DEBUG(startPoint.get_logger(), "v1 rows: %d, cols: %d", v1.rows(), v1.cols());
+	RCLCPP_DEBUG(startPoint.get_logger(), "v2 rows: %d, cols: %d", v2.rows(), v2.cols());
+	RCLCPP_DEBUG(startPoint.get_logger(), "v3 rows: %d, cols: %d", v3.rows(), v3.cols());
 	curvatureArray << -1/radius*Eigen::ArrayXd::Ones(n0), 1/radius*Eigen::ArrayXd::Ones(n1), Eigen::ArrayXd::Zero(n2);
 
 	//create trajectory points

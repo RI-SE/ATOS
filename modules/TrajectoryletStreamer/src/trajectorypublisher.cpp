@@ -18,6 +18,7 @@ TrajectoryPublisher::TrajectoryPublisher(
 	const std::chrono::milliseconds chunkLength)
 	: traj(std::make_unique<const Trajectory>(_traj)),
 	pub(node, objectId),
+	startObjectSub(node, std::bind(&TrajectoryPublisher::getStartObjectMsg, this, std::placeholders::_1)),
 	lastPublishedChunk(traj->points.end(), traj->points.end()),
 	chunkLength(chunkLength)
 {
@@ -47,10 +48,11 @@ void TrajectoryPublisher::publishChunk()
 	}
 }
 
-
-void TrajectoryPublisher::handleStart() {
+void TrajectoryPublisher::getStartObjectMsg(const atos_interfaces::msg::ObjectTriggerStart::SharedPtr msg) {
 	using std::chrono::steady_clock;
-	startTime.reset(new steady_clock::time_point(steady_clock::now()));
+	if (msg->id == pub.objectId) {
+		startTime.reset(new steady_clock::time_point(steady_clock::now()));
+	}
 }
 
 

@@ -42,10 +42,13 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	scnRemoteControlEnableSub(*this, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1)),
 	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
 	objectStateChangeSub(*this, std::bind(&ObjectControl::onObjectStateChangeMessage, this, _1)),
+	scnResetTestObjectsSub(*this, std::bind(&ObjectControl::onResetTestObjectsMessage, this, _1)),
+	scnReloadObjectSettingsSub(*this, std::bind(&ObjectControl::onReloadObjectSettingsMessage, this, _1)),
 	failurePub(*this),
 	scnAbortPub(*this),
 	objectsConnectedPub(*this),
 	connectedObjectIdsPub(*this),
+	stateChangePub(*this),
 	exec(exec)
 {
 	int queueSize=0;
@@ -55,6 +58,7 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory);
 	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp);
 	triggerClient = create_client<atos_interfaces::srv::GetObjectTriggerStart>(ServiceNames::getObjectTriggerStart);
+	returnTrajectoryClient = create_client<atos_interfaces::srv::GetObjectReturnTrajectory>(ServiceNames::getObjectReturnTrajectory);
 	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(ServiceNames::getObjectControlState,
 		std::bind(&ObjectControl::onRequestState, this, _1, _2));
 
@@ -99,7 +103,7 @@ void ObjectControl::handleExecuteActionCommand(
 	this->state->actionExecutionRequested(*this);
 	auto delayedExecutor = [&](){
 		using namespace std::chrono;
-		RCLCPP_DEBUG(get_logger(), "Executing action %u in %d ms", actionID,
+		RCLCPP_DEBUG(get_logger(), "Executing action %u in %ld ms", actionID,
 				   duration_cast<milliseconds>(when - system_clock::now()).count());
 		std::this_thread::sleep_until(when);
 		RCLCPP_INFO(get_logger(), "Executing action %u", actionID);
@@ -111,37 +115,59 @@ void ObjectControl::handleExecuteActionCommand(
 
 void ObjectControl::onInitMessage(const Init::message_type::SharedPtr){
 	COMMAND cmd = COMM_INIT;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->initializeRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Init::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	// Don't publish until we are actually initialized
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onConnectMessage(const Connect::message_type::SharedPtr){	
 	COMMAND cmd = COMM_CONNECT;
+	// TO DO: Fix publishing correct data to stateChangeMsg
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->connectRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Connect::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onArmMessage(const Arm::message_type::SharedPtr){	
 	COMMAND cmd = COMM_ARM;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->armRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Arm::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onDisarmMessage(const Disarm::message_type::SharedPtr){	
 	COMMAND cmd = COMM_DISARM;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->disarmRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Disarm::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onStartMessage(const Start::message_type::SharedPtr){	
 	COMMAND cmd = COMM_STRT;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->startRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Start::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onStartObjectMessage(const StartObject::message_type::SharedPtr strtObj){
@@ -154,32 +180,72 @@ void ObjectControl::onStartObjectMessage(const StartObject::message_type::Shared
 
 void ObjectControl::onDisconnectMessage(const Disconnect::message_type::SharedPtr){	
 	COMMAND cmd = COMM_DISCONNECT;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->disconnectRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, Disconnect::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onStopMessage(const Stop::message_type::SharedPtr){
 	COMMAND cmd = COMM_STOP;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->stopRequest(*this); };
 	auto f_catch = [&]() {
 			failurePub.publish(msgCtr1<Failure::message_type>(cmd));
 			scnAbortPub.publish(Abort::message_type());
 	};
 	this->tryHandleMessage(f_try,f_catch, Stop::topicName, get_logger());	
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
+}
+
+/**
+ * @brief Resets the test objects to the scenario starting positions
+ * 
+ * @param msg Trigger message for resetting test objects (std_msgs/msg/Empty)
+*/
+void ObjectControl::onResetTestObjectsMessage(const ResetTestObjects::message_type::SharedPtr) {
+	COMMAND cmd = COMM_BACKTOSTART_CALL;
+	auto f_try = [&]() { this->state->resetTestObjectsRequest(*this); };
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch, ResetTestObjects::topicName, get_logger());
+}
+
+/**
+ * @brief Reloads the object settings from the configuration file
+ * 
+ * @param msg Trigger message for reloading object settings (std_msgs/msg/Empty)
+*/
+void ObjectControl::onReloadObjectSettingsMessage(const ReloadObjectSettings::message_type::SharedPtr) {
+	COMMAND cmd = COMM_OSEM;
+	auto f_try = [&]() { this->state->reloadObjectSettingsRequest(*this); };
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch, ReloadObjectSettings::topicName, get_logger());
 }
 
 void ObjectControl::onAbortMessage(const Abort::message_type::SharedPtr){
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
   publishScenarioInfoToJournal(); // TODO: This should be moved to a state that occurs right after a test is finished
 	// Any exceptions here should crash the program
 	this->state->abortRequest(*this);
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onAllClearMessage(const AllClear::message_type::SharedPtr){
 	COMMAND cmd = COMM_ABORT_DONE;
+	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
+	stateChangeMsg.prev_state = this->state->asNumber();
 	auto f_try = [&]() { this->state->allClearRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch, AllClear::topicName, get_logger());
+	stateChangeMsg.current_state = this->state->asNumber();
+	stateChangePub.publish(stateChangeMsg);
 }
 
 void ObjectControl::onRemoteControlEnableMessage(const RemoteControlEnable::message_type::SharedPtr){
@@ -214,11 +280,12 @@ void ObjectControl::onPathMessage(const Path::message_type::SharedPtr trajlet,ui
 }
 
 void ObjectControl::loadScenario() {
+	this->isResetting = false;
 	this->clearScenario();
 	RCLCPP_INFO(get_logger(), "Loading scenario");
 	auto idsCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFuture future) {
 		auto idResponse = future.get();
-		RCLCPP_INFO(get_logger(), "Received %d configured object ids", idResponse->ids.size());
+		RCLCPP_INFO(get_logger(), "Received %lu configured object ids", idResponse->ids.size());
 
 		for (const auto id : idResponse->ids) {
 			auto object = std::make_shared<TestObject>(id);
@@ -235,7 +302,7 @@ void ObjectControl::loadScenario() {
 				ATOS::Trajectory traj(get_logger());
 				traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
 				objects.at(id)->setTrajectory(traj);
-				RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %d points", id, traj.size());
+				RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %lu points", id, traj.size());
 			};
 			auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
 			trajRequest->id = id;
@@ -461,6 +528,12 @@ void ObjectControl::disconnectObject(
 	objectListeners.erase(id);
 }
 
+void ObjectControl::uploadAllConfigurations() {
+	for (auto& id : getVehicleIDs()) {
+		this->uploadObjectConfiguration(id);
+	}
+}
+
 void ObjectControl::uploadObjectConfiguration(
 		const uint32_t id) {
 	objects.at(id)->sendSettings();
@@ -487,7 +560,7 @@ void ObjectControl::heartbeat() {
 			if (objects.at(id)->isConnected()) {
 				auto diff = objects.at(id)->getTimeSinceLastMonitor();
 				if (diff > objects.at(id)->getMaxAllowedMonitorPeriod()) {
-					RCLCPP_WARN(get_logger(), "MONR timeout for object %u: %d ms > %d ms", id,
+					RCLCPP_WARN(get_logger(), "MONR timeout for object %u: %ld ms > %ld ms", id,
 							   diff.count(), objects.at(id)->getMaxAllowedMonitorPeriod().count());
 					objects.at(id)->disconnect();
 					this->state->disconnectedFromObject(*this, id);
@@ -687,6 +760,137 @@ void ObjectControl::startScenario() {
 		if (!objects.at(id)->isStartingOnTrigger()) {
 			startObject(id);
 		}
+	}
+}
+
+/**
+ * @brief Resets the scenario by offering return trajectories for all objects
+ * 
+ * @param isResetting state-flag to indicate if the reset procedure is currently running
+*/
+void ObjectControl::resetTestObjects() {
+	// Check if we are already resetting
+	if (this->isResetting) {
+		RCLCPP_INFO(get_logger(), "Test already resetting");
+		return;
+	}
+	this->isResetting = true;
+	RCLCPP_INFO(get_logger(), "Resetting test by offering return trajectories for all objects");
+	// Request a new return trajectory for each object
+	for (auto& id : getVehicleIDs()) {
+		this->setObjectTrajectory(id);
+	}
+}
+
+/**
+ * @brief Reloads the scenario trajectories for all objects
+ * 
+ * @param isResetting state-flag to indicate if the reset procedure is currently running
+ */
+void ObjectControl::reloadScenarioTrajectories() {
+	// Check if we already have loaded the scenario trajectories
+	if (!this->isResetting) {
+		RCLCPP_INFO(get_logger(), "Scenario trajectories already loaded");
+		return;
+	}
+	this->isResetting = false;
+	RCLCPP_INFO(get_logger(), "Reloading scenario trajectories");
+	// Request the scenario trajectory for each object
+	for (auto& id : getVehicleIDs()) {
+		this->setObjectTrajectory(id);
+	}
+}
+
+/**
+ * @brief Republishes the trajectory paths for a given object
+ * 
+ * @param id the object id
+*/
+void ObjectControl::republishTrajectoryPaths(uint32_t id){
+	// Update the GUI with the new trajectory in local coordinates
+	ATOS::Trajectory traj = objects.at(id)->getTrajectory();
+	this->pathPublishers.emplace(id, ROSChannels::Path::Pub(*this, id));
+	this->pathPublishers.at(id).publish(traj.toPath());
+
+	// Update the GUI with the new trajectory in global coordinates
+	GeographicPositionType origin = objects.at(id)->getOrigin();
+	std::array<double,3> llh_0 = {origin.latitude_deg, origin.longitude_deg, origin.altitude_m};
+	this->gnssPathPublishers.emplace(id, ROSChannels::GNSSPath::Pub(*this, id));
+	this->gnssPathPublishers.at(id).publish(traj.toGeoJSON(llh_0));
+}
+
+/**
+ * @brief Callback function for the trajectory service call. Sets the new trajectory for the object in ATOS and sends it to the object
+ * 
+ * @param future the future object containing the response from the trajectory service call
+*/
+void ObjectControl::trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
+	this->trajResponse = future.get();
+	auto id = returnTrajResponse->id;
+	// Check if the return trajectory service call was successful
+	if (!trajResponse->success) {
+		RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
+		return;
+	}
+
+	// Fill the trajectory class with the received trajectory and send to the object
+	ATOS::Trajectory traj(get_logger());
+	traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
+	objects.at(id)->setTrajectory(traj);
+	objects.at(id)->sendTrajectory();
+	// Update the GUI with the new trajectory
+	this->republishTrajectoryPaths(id);
+	RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %lu points", id, traj.size());
+};
+
+/**
+ * @brief Callback function for the return trajectory service call. Sets the new trajectory for the object in ATOS and sends it to the object
+ * 
+ * @param future the future object containing the response from the return trajectory service call
+*/
+void ObjectControl::returnTrajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future) {
+	this->returnTrajResponse = future.get();
+	auto id = returnTrajResponse->id;
+	// Check if the return trajectory service call was successful
+	if (!returnTrajResponse->success) {
+		RCLCPP_ERROR(get_logger(), "Get return trajectory service call failed for object %u", id);
+		return;
+	}
+
+	// Fill the trajectory class with the received trajectory and send to the object
+	ATOS::Trajectory traj(get_logger());
+	traj.initializeFromCartesianTrajectory(returnTrajResponse->trajectory);
+	objects.at(id)->setTrajectory(traj);
+	objects.at(id)->sendTrajectory();
+	// Update the GUI with the new trajectory
+	this->republishTrajectoryPaths(id);
+	RCLCPP_INFO(get_logger(), "Loaded return trajectory for object %u with %lu points", id, traj.size());
+};
+
+/**
+ * @brief Sets the trajectory for a given object by requesting it from the esminiAdapter or BackToStart module depending on the current state (resetting)
+ * 
+ * @param id the object id
+*/
+void ObjectControl::setObjectTrajectory(uint32_t id){
+	// Check if object is in resetting "state". If so, offer return trajectory instead of normal trajectory
+	if (this->isResetting) {
+		// Get the current trajectory and create a request for the return trajectory service
+		auto returnTrajectoryRequest = std::make_shared<atos_interfaces::srv::GetObjectReturnTrajectory::Request>();
+		returnTrajectoryRequest->id = id;
+		returnTrajectoryRequest->trajectory = objects.at(id)->getTrajectory().toCartesianTrajectory();
+		auto pos = objects.at(id)->getLastMonitorData().position;
+		returnTrajectoryRequest->position.x = pos.xCoord_m;
+		returnTrajectoryRequest->position.y = pos.yCoord_m;
+		returnTrajectoryRequest->position.z = pos.zCoord_m;
+		// Send the request to the return trajectory service asynchronously and bind the callback function for when the response is received
+		returnTrajectoryClient->async_send_request(returnTrajectoryRequest, std::bind(&ObjectControl::returnTrajectoryCallback, this, _1));
+	}
+	else {
+		// Request the scenario trajectory from the esminiAdapter
+		auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
+		trajRequest->id = id;
+		trajectoryClient->async_send_request(trajRequest, std::bind(&ObjectControl::trajectoryCallback, this, _1));
 	}
 }
 
