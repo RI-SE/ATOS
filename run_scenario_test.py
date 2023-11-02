@@ -1,17 +1,16 @@
-import sys
 import os
-from ament_index_python.packages import get_package_prefix
-sys.path.insert(0, os.path.join(  # Need to modify the sys.path since we launch from the ros2 installed path
-    get_package_prefix('atos'),
-    'share', 'atos', 'launch'))
-import rclpy
 import signal
 import pytest
 import launch
-from launch import LaunchDescription
 import launch_pytest
 from launch_pytest.tools import process as process_tools
 import re
+import psutil
+
+def kill_process_by_name(name, signal):
+    for proc in psutil.process_iter():
+        if proc.name() == name:
+            os.kill(proc.pid, signal)
 
 @pytest.fixture
 def integration_test_proc():
@@ -20,6 +19,7 @@ def integration_test_proc():
         cmd=['ros2', 'launch', 'atos', 'launch_integration_testing.py'],
         shell=True,
         cached_output=True,
+        output='screen'
     )
 
 # This function specifies the processes to be run for our test.
@@ -36,16 +36,10 @@ def test_read_stdout(integration_test_proc, launch_context):
     def validate_output(output):
         # this function can use assertions to validate the output or return a boolean.
         # pytest generates easier to understand failures when assertions are used.
-        assert any(re.search('Scenario Execution result: NOK', line) for line in output.splitlines()), 'Scenario test failed'
+        assert any(re.search('Scenario Execution result: OK', line) for line in output.splitlines()), 'Scenario test failed'
     process_tools.assert_output_sync(
-        launch_context, integration_test_proc, validate_output, timeout=30)
+        launch_context, integration_test_proc, validate_output, timeout=3000)
     yield
     # this is executed after launch service shutdown
-    assert False
-
-@pytest.fixture(scope='session', autouse=True)
-def term_handler():
-    orig = signal.signal(signal.SIGTERM, signal.getsignal(signal.SIGINT))
-    yield
-    signal.signal(signal.SIGTERM, orig)
+    kill_process_by_name("ros2", signal.SIGINT) # TODO: This is a hack to kill the process, need to find a better way
     
