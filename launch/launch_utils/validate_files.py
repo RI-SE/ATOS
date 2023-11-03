@@ -62,7 +62,7 @@ def validate_files():
 
     # Params
     params = validate_file(atos_dir / Path("conf") / Path("params.yaml"), 
-                           get_package_prefix('atos') / Path("etc") / Path("params.yaml"))
+                           get_package_prefix('atos') / Path("etc") / Path("conf") / Path("params.yaml"))
 
     return {
         "params": params,
