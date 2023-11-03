@@ -87,12 +87,10 @@ case "$SHELL" in
     */bash)
         add_source_line_if_needed $HOME/.bashrc "bash" "${atos_setup_script}"
         add_source_line_if_needed $HOME/.bashrc "bash" "${ros2_setup_script}"
-        source $HOME/.bashrc 
     ;;
     */zsh)
         add_source_line_if_needed $HOME/.zshrc "zsh" "${atos_setup_script}"
         add_source_line_if_needed $HOME/.zshrc "zsh" "${ros2_setup_script}"
-        source $HOME/.zshrc
     ;;
     *)
         echo "Unsupported shell detected! Please use either bash or zsh shells to run ATOS"

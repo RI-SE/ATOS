@@ -69,6 +69,5 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "ATOS installation and setup is complete. You can now test run ATOS by running the following command:"
-echo "ros2 launch atos launch_basic.py"
+echo "ATOS build and setup is complete. Please restart your terminal to complete the installation."
 echo "Please see the documentation for further details: https://atos.readthedocs.io/en/latest/"

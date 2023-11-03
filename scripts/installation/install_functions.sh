@@ -42,9 +42,14 @@ add_source_line_if_needed() {
     local source_line="$3$shell_type"
 
     if ! grep -qF "$source_line" "$file"; then
-        echo "Adding the following line to your shells config file: $file"
+        # Ask the user if they want to add the source line
+        echo "Do you want to add the following line to your $shell_type config file: $file"
         echo "$source_line"
-        echo "# Line below added by ATOS setup script" >> "$file"
-        echo "$source_line" >> "$file"
+        echo "y/n"
+        read -r answer
+        if [ "$answer" != "${answer#[Yy]}" ]; then
+            echo "# Line below added by ATOS setup script" >> "$file"
+            echo "$source_line" >> "$file"
+        fi
     fi
 }
