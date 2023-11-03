@@ -32,7 +32,8 @@ If you wish to run these test manually you can find the entry point script at sc
 python3 -m pytest run_scenario_test.py
 ```
 !!! note
-Running the integration test manually requires you to set up any necessary test objects yourself! 
+
+    Running the integration test manually requires you to set up any necessary test objects yourself! 
 
 ## Sample code
 In the Sample Module you will find a sample node and a some tests that triggers message callbacks and service routines. Use this as inspiration when testing your modules. 

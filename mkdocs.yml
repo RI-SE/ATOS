@@ -23,6 +23,7 @@ nav:
       - "Usage/Modules/BackToStart.md"
       - "Usage/Modules/DirectControl.md"
       - "Usage/Modules/EsminiAdapter.md"
+      - "Usage/Modules/IntegrationTesting.md"
       - "Usage/Modules/JournalControl.md"
       - "Usage/Modules/MQTTBridge.md"
       - "Usage/Modules/OSIAdapter.md"
@@ -35,3 +36,4 @@ nav:
       - "Contributing/Feature Requests/Feature_requests.md"
       - "Contributing/Issues/issues.md"
       - "Contributing/Pull Requests/pull_requests.md"
+      - "Contributing/Testing/testing.md"
