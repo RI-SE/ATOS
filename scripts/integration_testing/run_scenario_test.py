@@ -42,4 +42,3 @@ def test_read_traj(integration_test_proc, launch_context):
         assert any(re.search('Trajectory following result: OK', line) for line in output.splitlines()), 'Trajectory check test failed'
     process_tools.assert_output_sync(
         launch_context, integration_test_proc, validate_scenario_execution, timeout=30)
-    yield
