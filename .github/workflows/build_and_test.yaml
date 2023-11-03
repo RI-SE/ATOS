@@ -14,7 +14,7 @@ env:
   TEST_TAG: astazero/atos_docker_env:test
 
 jobs:
-  build_dockerImage:
+  build_and_test_docker_image:
     runs-on: ubuntu-latest
     steps:
     - name: Set up Docker Buildx
