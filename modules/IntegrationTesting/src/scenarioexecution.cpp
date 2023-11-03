@@ -68,7 +68,7 @@ std::vector<std::pair<double, double>> ScenarioExecution::getTrajectoryPoints() 
 	auto request = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
 	request->id = 1;
 	std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Response> response;
-	this->callService(1000ms, getObjectTrajectoryClient, request, response);
+	this->callService(1000ms, getObjectTrajectoryClient, response, request);
 
 	std::vector<std::pair<double, double>> trajectory;
 	for (const auto& t : response->trajectory.points) {
