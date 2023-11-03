@@ -4,7 +4,7 @@
 ###### Pre-installation checks ######
 #####################################
 
-source "scripts/install_functions.sh"
+source "scripts/installation/install_functions.sh"
 
 # Get this file location
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
@@ -48,7 +48,7 @@ fi
 ###### Install ATOS dependencies ######
 #######################################
 echo "Installing ATOS dependencies..."
-${REPO_DIR}/scripts/install_deps.sh ${REPO_DIR}
+${REPO_DIR}/scripts/installation/install_deps.sh ${REPO_DIR}
 
 if [ $? -ne 0 ]; then
     echo "Failed to install dependencies."
@@ -62,7 +62,7 @@ if [ "$INSTALL_ATOS" = false ]; then
     exit 0
 fi
 echo "Installing ATOS..."
-${REPO_DIR}/scripts/install_atos.sh ${REPO_DIR}
+${REPO_DIR}/scripts/installation/install_atos.sh ${REPO_DIR}
 
 if [ $? -ne 0 ]; then
     echo "Failed to install ATOS."

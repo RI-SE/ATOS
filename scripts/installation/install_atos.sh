@@ -10,8 +10,8 @@ fi
 
 # Take the first argument as the PATH to the ATOS git repo
 ATOS_REPO_PATH="$1"
-source "${ATOS_REPO_PATH}/scripts/install_functions.sh"
-check_command_failed $? "Failed to source ${ATOS_REPO_PATH}/scripts/install_functions.sh"
+source "${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
+check_command_failed $? "Failed to source ${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 
 ################################################
 ###### Install Control Panel dependencies ######

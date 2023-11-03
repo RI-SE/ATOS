@@ -9,10 +9,10 @@ fi
 # Take the first argument as the PATH to the ATOS git repo
 ATOS_REPO_PATH="$1"
 #fail unless var is set
-source "${ATOS_REPO_PATH}/scripts/install_functions.sh"
+source "${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 
 # Update and install required dependencies specified in dependencies.txt file
-apt_deps=$(cat ${ATOS_REPO_PATH}/scripts/dependencies.txt | tr '\n' ' ')
+apt_deps=$(cat ${ATOS_REPO_PATH}/scripts/installation/dependencies.txt | tr '\n' ' ')
 echo "Installing dependencies... $apt_deps"
 sudo apt update && sudo apt install -y ${apt_deps}
 
