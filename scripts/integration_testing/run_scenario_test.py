@@ -25,7 +25,6 @@ def integration_test_proc():
 # This function specifies the processes to be run for our test.
 @launch_pytest.fixture
 def launch_description(integration_test_proc):
-    """Launch a simple process to print 'hello_world'."""
     return launch.LaunchDescription([
         integration_test_proc,
         launch_pytest.actions.ReadyToTest()
