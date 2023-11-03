@@ -43,7 +43,7 @@ add_source_line_if_needed() {
 
     if ! grep -qF "$source_line" "$file"; then
         # Ask the user if they want to add the source line
-        echo "Do you want to add the following line to your $shell_type config file: $file"
+        echo "Do you want to add the following line to your $shell_type config file $file:"
         echo "$source_line"
         echo "y/n"
         read -r answer
