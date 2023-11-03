@@ -16,7 +16,7 @@ ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
 SHELL ["/bin/bash", "-c"]
 
 WORKDIR /root/atos_git
-COPY ./scripts/installation/ ./scripts
+COPY ./scripts/installation/ ./scripts/installation/
 RUN --mount=type=cache,target=/var/cache/apt \ 
         ./scripts/installation/install_deps.sh ${REPO_DIR}
 COPY . .
