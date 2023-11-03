@@ -9,10 +9,10 @@ fi
 # Take the first argument as the PATH to the ATOS git repo
 ATOS_REPO_PATH="$1"
 #fail unless var is set
-source "${ATOS_REPO_PATH}/scripts/install_functions.sh"
+source "${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 
 # Update and install required dependencies specified in dependencies.txt file
-apt_deps=$(cat ${ATOS_REPO_PATH}/scripts/dependencies.txt | tr '\n' ' ')
+apt_deps=$(cat ${ATOS_REPO_PATH}/scripts/installation/dependencies.txt | tr '\n' ' ')
 echo "Installing dependencies... $apt_deps"
 sudo apt update && sudo apt install -y ${apt_deps}
 
@@ -53,7 +53,8 @@ sudo apt install -y \
     ros-${ROS_DISTRO}-geographic-msgs \
     ros-${ROS_DISTRO}-foxglove-msgs \
     ros-${ROS_DISTRO}-pcl-conversions \
-    ros-${ROS_DISTRO}-rosbridge-suite
+    ros-${ROS_DISTRO}-rosbridge-suite \
+    ros-${ROS_DISTRO}-launch-pytest
 check_command_failed $? "Failed to install ROS2 packages."
 
 ###########################################
