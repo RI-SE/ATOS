@@ -39,19 +39,19 @@ void ScenarioExecution::runIntegrationTest() {
 	auto msg = std_msgs::msg::Empty();
 
 	initPub->publish(msg);
-	std::this_thread::sleep_for(std::chrono::seconds(1)); // sleep to allow the object to initialize
+	std::this_thread::sleep_for(1s); // sleep to allow the object to initialize
 	checkState(initTopic);
 	
 	connectPub->publish(msg);
-	std::this_thread::sleep_for(std::chrono::seconds(1)); // sleep to allow the object to connect
+	std::this_thread::sleep_for(1s); // sleep to allow the object to connect
 	checkState(connectTopic);
 
 	armPub->publish(msg);
-	std::this_thread::sleep_for(std::chrono::seconds(1)); // sleep to allow the object to arm
+	std::this_thread::sleep_for(1s); // sleep to allow the object to arm
 	checkState(armTopic);
 
 	startPub->publish(msg);
-	std::this_thread::sleep_for(std::chrono::seconds(1)); // sleep to allow the object to start
+	std::this_thread::sleep_for(1s); // sleep to allow the object to start
 	checkState(startTopic);
 
 	checkTrajectory();
