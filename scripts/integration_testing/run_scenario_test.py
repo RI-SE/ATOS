@@ -30,7 +30,7 @@ def launch_description(integration_test_proc):
         integration_test_proc,
         launch_pytest.actions.ReadyToTest()
     ])
-    kill_process_by_name("ros2", signal.SIGINT) # TODO: This is a hack to kill the process, need to find a better way
+    kill_process_by_name("ros2", signal.SIGINT) # TODO: Is there a better way to do this?
 
 
 @pytest.mark.launch(fixture=launch_description)
