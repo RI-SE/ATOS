@@ -6,7 +6,7 @@ to JSON which is then published over MQTT to a specified topic.
 
 Note! The module will shut if no broker ip is specified in the params.yaml
 ## Integration with EsminiAdapter
-The module can be used togheter with the EsminiAdapter module to trigger V2X while running a OpenScenario file in ATOS. You can find more information how to set this up at [EsminiAdapter](./EsminiAdapter.md).
+The module can be used together with the EsminiAdapter module to trigger V2X while running a OpenScenario file in ATOS. You can find more information how to set this up at [EsminiAdapter](./EsminiAdapter.md).
 
 ## ROS parameters
 The following ROS parameters should be set in the params.yaml file:
