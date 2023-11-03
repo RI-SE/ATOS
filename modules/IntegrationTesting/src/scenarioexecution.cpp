@@ -118,15 +118,19 @@ void ScenarioExecution::printResult() {
 	std::stringstream ss;
 	auto width = 20;
 	ss << "\nIntegration test - Scenario Excecution results:\n";
-	ss << "State change results:\n";
+	ss << "State change results table:\n";
 	ss << std::setfill('-') << std::setw(width * 3) << "-" << std::endl;
 	ss << std::left << std::setfill(' ') << std::setw(width) << "State" 
 		 << std::setw(width) << "Expected state" 
 		 << std::setw(width) << "Pass" << std::endl;
 	ss << std::setfill('-') << std::setw(width * 3) << "-" << std::endl;
 
+	bool allStatesCorrect = true;
 	for (auto const& [state, expectedState] : stateResult) {
 		auto pass = (state == expectedState) ? "OK" : "NOT OK";
+		if (pass == "NOT OK") {
+			allStatesCorrect = false;
+		}
 		ss << std::left << std::setfill(' ') << std::setw(width) << state 
 			 << std::setw(width) << expectedState 
 			 << std::setw(width) << pass << std::endl;
@@ -134,10 +138,10 @@ void ScenarioExecution::printResult() {
 	ss << std::setfill('-') << std::setw(width * 3) << "-" << std::endl;
 	ss << std::setfill(' ');
 
-	ss << "\nScenario Execution result: ";
-	auto pass = (followedTrajectory) ? "OK" : "NOT OK";
-	ss << pass << "\n";
-
+	ss << "\nState change result: ";
+	ss << ((allStatesCorrect) ? "OK" : "NOT OK");
+	ss << "\nTrajectory following result: ";
+	ss << ((followedTrajectory) ? "OK" : "NOT OK");
 	RCLCPP_INFO(get_logger(), ss.str().c_str());
 }
 
