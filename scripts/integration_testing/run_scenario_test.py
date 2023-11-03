@@ -37,7 +37,7 @@ def test_read_stdout(integration_test_proc, launch_context):
         # pytest generates easier to understand failures when assertions are used.
         assert any(re.search('Scenario Execution result: OK', line) for line in output.splitlines()), 'Scenario test failed'
     process_tools.assert_output_sync(
-        launch_context, integration_test_proc, validate_output, timeout=3000)
+        launch_context, integration_test_proc, validate_output, timeout=30)
     yield
     # this is executed after launch service shutdown
     kill_process_by_name("ros2", signal.SIGINT) # TODO: This is a hack to kill the process, need to find a better way
