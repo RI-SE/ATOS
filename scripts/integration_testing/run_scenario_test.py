@@ -30,14 +30,27 @@ def launch_description(integration_test_proc):
         launch_pytest.actions.ReadyToTest()
     ])
 
+
+
 @pytest.mark.launch(fixture=launch_description)
-def test_read_stdout(integration_test_proc, launch_context):
-    def validate_output(output):
+def test_read_states(integration_test_proc, launch_context):
+    def validate_scenario_execution_states(output):
         # this function can use assertions to validate the output or return a boolean.
         # pytest generates easier to understand failures when assertions are used.
-        assert any(re.search('Scenario Execution result: OK', line) for line in output.splitlines()), 'Scenario test failed'
+        assert any(re.search('State change result: OK', line) for line in output.splitlines()), 'Scenario test failed'
     process_tools.assert_output_sync(
-        launch_context, integration_test_proc, validate_output, timeout=30)
+        launch_context, integration_test_proc, validate_scenario_execution_states, timeout=30)
+    yield
+
+
+@pytest.mark.launch(fixture=launch_description)
+def test_read_traj(integration_test_proc, launch_context):
+    def validate_scenario_execution_traj(output):
+        # this function can use assertions to validate the output or return a boolean.
+        # pytest generates easier to understand failures when assertions are used.
+        assert any(re.search('Trajectory following result: OK', line) for line in output.splitlines()), 'Scenario test failed'
+    process_tools.assert_output_sync(
+        launch_context, integration_test_proc, validate_scenario_execution_traj, timeout=30)
     yield
     # this is executed after launch service shutdown
     kill_process_by_name("ros2", signal.SIGINT) # TODO: This is a hack to kill the process, need to find a better way
