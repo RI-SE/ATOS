@@ -117,6 +117,7 @@ void ScenarioExecution::checkTrajectory() {
 void ScenarioExecution::printResult() {
 	std::stringstream ss;
 	auto width = 20;
+	ss << "\nIntegration test - Scenario Excecution results:\n";
 	ss << "State change results:\n";
 	ss << std::setfill('-') << std::setw(width * 3) << "-" << std::endl;
 	ss << std::left << std::setfill(' ') << std::setw(width) << "State" 
