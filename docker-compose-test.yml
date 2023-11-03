@@ -1,7 +1,7 @@
 version: "3.2"
 services:
   atos:
-    image: astazero/atos_docker_env:integrationtesting
+    image: astazero/atos_docker_env:test
     volumes: 
       - ./conf/Catalogs/:/root/.astazero/ATOS/Catalogs
       - ./conf/conf/:/root/.astazero/ATOS/conf

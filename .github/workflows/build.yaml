@@ -38,3 +38,7 @@ jobs:
     - name: Run colcon test on docker image
       run: |
         docker run --rm ${{ env.TEST_TAG }} bash -c "colcon test --return-code-on-test-failure --event-handlers console_cohesion+"
+
+    - name: Run scenario integration test
+      run: |
+        docker compose -f docker-compose-test.yml up --abort-on-container-exit
