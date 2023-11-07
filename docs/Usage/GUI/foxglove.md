@@ -2,10 +2,14 @@
 If you want to run ATOS with more visualisation you can use [Foxglove Studio](https://github.com/foxglove/studio). 
 Run the following docker command to start the GUI:
 `docker run --rm -p "8080:8080" ghcr.io/foxglove/studio:latest`
-Open a browser and navigate to `http://localhost:8080`
+Open a browser and navigate to `http://localhost:8080` to open Foxglove Studio.
 
 ## Connect to ATOS
+# Secure mode
+If you are running foxbridge in secure mode, i.e. `ros2 launch atos atos.launch.py insecure:=False``, you need to accept the websocket certificate. Do this by going to https://ATOS_host_address:8765 in your browser (chrome) and accepting the self-signed certificate, which is automatically generated on startup of ATOS.
 In order to connect to ATOS in Foxglove Studio, ATOS first needs to be running. Then, in Foxglove Studio, go to `Data source -> New connection -> Open connection -> FoxGlove Websocket` and enter `wss://ATOS_host_address:8765`.
+# Insecure mode
+If you are running foxbridge in insecure mode, i.e. `ros2 launch atos atos.launch.py insecure:=True``, you can connect to ATOS in Foxglove Studio by going to `Data source -> New connection -> Open connection -> FoxGlove Websocket` and enter `ws://ATOS_host_address:8765`.
 
 ## Extensions
 In order for everything to be displayed correctly, some extensions needs to be added. The extensions for ATOS are found [here](https://github.com/RI-SE/ATOS/tree/dev/plugins/foxglove) with the file type `.foxe`. In Foxglove Studio, go to `Extensions` and then drag and drop the extensions.
