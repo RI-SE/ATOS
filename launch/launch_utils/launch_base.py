@@ -54,7 +54,7 @@ def get_base_nodes():
         insecure_launch_arg,
         ExecuteProcess(
             name='control_gui',
-            #output={'both': 'log'}, #print to log to avoid cluttering the terminal
+            output={'both': 'log'}, #print to log to avoid cluttering the terminal
             cmd=[[
                 FindExecutable(name='npm'),
                 ' start --prefix ',
