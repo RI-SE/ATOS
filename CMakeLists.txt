@@ -9,6 +9,9 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "Enable verbose make")
 set(CMAKE_COLOR_MAKEFILE   ON)
+set(COMPILER_WARNINGS "-Wall -Wextra -Werror")
+add_definitions(${COMPILER_WARNINGS})
+
 
 #Set preprocessor macros depending on used ros version
 if ($ENV{ROS_DISTRO} STREQUAL "foxy")
@@ -78,12 +81,17 @@ endif()
 
 
 # Add corresponding subprojects
+# Subdirectories without compiler warnings
+remove_definitions(${COMPILER_WARNINGS})
 add_subdirectory(iso22133)
 add_subdirectory(common/time)
 add_subdirectory(common/shmem)
 add_subdirectory(common/osihandler)
 add_subdirectory(common/sockets)
 add_subdirectory(common)
+add_definitions(${COMPILER_WARNINGS})
+
+# Subdirectories with compiler warnings
 add_subdirectory(modules/ATOSBase)
 
 foreach(MODULE ${ENABLED_MODULES})
