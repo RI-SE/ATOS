@@ -34,7 +34,7 @@ set(TARGET_LIBRARIES
 target_link_libraries(${SAMPLE_MODULE_TARGET} ${TARGET_LIBRARIES})
 
 # Add include directories
-target_include_directories(${SAMPLE_MODULE_TARGET} PUBLIC
+target_include_directories(${SAMPLE_MODULE_TARGET} PUBLIC SYSTEM
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
 	${COREUTILS_HEADERS}

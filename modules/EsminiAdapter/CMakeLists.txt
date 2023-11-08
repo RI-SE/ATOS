@@ -37,7 +37,7 @@ target_link_libraries(${ESMINI_ADAPTER_TARGET}
 	${esminiRMLib_LIBRARIES}
 )
 
-target_include_directories(${ESMINI_ADAPTER_TARGET} PUBLIC
+target_include_directories(${ESMINI_ADAPTER_TARGET} PUBLIC SYSTEM
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
 	${esminiLib_INCLUDE_DIRS}
