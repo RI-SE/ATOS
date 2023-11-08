@@ -327,7 +327,7 @@ void EsminiAdapter::handleActionElementStateChange(
 			double llh[3] = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
 			double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
 			CRSTransformation::llhOffsetMeters(llh, offset);
-			me->v2xPub.publish(denmFromMonitor(monr, llh));
+			me->v2xPub.publish(denmFromTestOrigin(llh));
 		}
 		else {
 			RCLCPP_DEBUG(me->get_logger(), "Action %s is not supported", action.c_str());
@@ -339,7 +339,7 @@ void EsminiAdapter::handleActionElementStateChange(
 	}
 }
 
-ROSChannels::V2X::message_type EsminiAdapter::denmFromMonitor(const ROSChannels::Monitor::message_type monr, double *llh) {
+ROSChannels::V2X::message_type EsminiAdapter::denmFromTestOrigin(double *llh) {
 	ROSChannels::V2X::message_type denm;
 	denm.message_type = "DENM";
 	denm.event_id = "ATOSEvent1";
@@ -581,7 +581,7 @@ void EsminiAdapter::getObjectStates(
 		});
 		bool atLeastMinTimePassed = accumTime > MIN_SCENARIO_TIME;
 		bool moreThanMaxTimePassed = accumTime > MAX_SCENARIO_TIME;
-		stopSimulation = noMovement && atLeastMinTimePassed || moreThanMaxTimePassed;
+		stopSimulation = (noMovement && atLeastMinTimePassed) || moreThanMaxTimePassed;
 	}
 	if (accumTime > MAX_SCENARIO_TIME) {
 		RCLCPP_WARN(me->get_logger(), "Scenario time limit reached, stopping simulation");
@@ -746,7 +746,7 @@ void EsminiAdapter::onRequestObjectTrajectory(
 }
 
 void EsminiAdapter::onRequestTestOrigin(
-	const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request> req,
+	const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,
 	std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response> res)
 {
 	while (me->testOriginSet == false){
