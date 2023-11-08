@@ -50,7 +50,7 @@ namespace ROSChannels {
                 BaseSub<message_type>(node, "object_anchor/" + topicName, callback, qos) {}
         };
 
-        static message_type fromISOMonr(const uint32_t id, const ObjectMonitorType& indata) {
+        inline message_type fromISOMonr(const uint32_t id, const ObjectMonitorType& indata) {
             atos_interfaces::msg::Monitor outdata;
             auto txid = id;
             auto stamp = rclcpp::Time(indata.timestamp.tv_sec, indata.timestamp.tv_usec*1000);
@@ -94,7 +94,7 @@ namespace ROSChannels {
             return outdata;
         }
 
-        static ObjectMonitorType toISOMonr(message_type& indata){
+        inline ObjectMonitorType toISOMonr(message_type& indata) {
             ObjectMonitorType outdata;
             outdata.timestamp.tv_sec = indata.atos_header.header.stamp.sec;
             outdata.timestamp.tv_usec = indata.atos_header.header.stamp.nanosec / 1000;
