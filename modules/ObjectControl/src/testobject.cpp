@@ -23,7 +23,7 @@ TestObject::TestObject(uint32_t id) :
 		navSatFixPub = std::make_shared<ROSChannels::NavSatFix::Pub>(*this, id);
 		stateChangePub = std::make_shared<ROSChannels::ObjectStateChange::Pub>(*this);
 }
-void TestObject::onPathMessage(const ROSChannels::Path::message_type::SharedPtr msg, int id){
+void TestObject::onPathMessage(const ROSChannels::Path::message_type::SharedPtr, int){
 	;
 }
 
@@ -320,7 +320,6 @@ void TestObject::sendAllClear() {
 }
 
 void TestObject::sendRemoteControl(bool on) {
-	
 	this->comms.cmd << (on ? OBJECT_COMMAND_REMOTE_CONTROL : OBJECT_COMMAND_DISARM);
 }
 
