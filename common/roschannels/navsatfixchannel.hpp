@@ -32,7 +32,7 @@ namespace ROSChannels {
                 objectId(id) {}
         };
         // TODO: Remove below..
-        static message_type fromROSMonr(std::array<double,3> origin, const ROSChannels::Monitor::message_type &monr) {
+        inline message_type fromROSMonr(std::array<double,3> origin, const ROSChannels::Monitor::message_type &monr) {
             sensor_msgs::msg::NavSatFix msg;
             msg.header.stamp = monr.atos_header.header.stamp;
 
