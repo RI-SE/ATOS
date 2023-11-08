@@ -7,13 +7,11 @@
 #include "objectcontrol.hpp"
 #include "state.hpp"
 
-ObjectListener::ObjectListener(
-		ObjectControl* sh,
-		std::shared_ptr<TestObject> ob,
-		rclcpp::Logger log)
-	:  obj(ob), handler(sh),
-	 Loggable(log)
-{
+ObjectListener::ObjectListener(ObjectControl* sh,	std::shared_ptr<TestObject> ob,	rclcpp::Logger log) : 
+	Loggable(log),
+	obj(ob),
+	handler(sh) {
+
 	if (!obj->isConnected()) {
 		throw std::invalid_argument("Attempted to start listener for disconnected object");
 	}
