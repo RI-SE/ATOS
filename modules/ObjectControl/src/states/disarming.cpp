@@ -24,49 +24,49 @@ void AbstractKinematics::Disarming::disconnectRequest(
 }
 
 void AbstractKinematics::Disarming::connectedToObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Disarming::disconnectedFromObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Disarming::connectedToArmedObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Disarming::connectedToLiveObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Disarming::allObjectsDisarmed(
-		ObjectControl&) {
+		ObjectControl& /* handler */) {
 	// TODO
 }
 
 void AbstractKinematics::Disarming::objectArmed(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Disarming::objectDisarmed(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Disarming::objectAborting(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
@@ -82,8 +82,8 @@ void RelativeKinematics::Disarming::disconnectRequest(
 }
 
 void RelativeKinematics::Disarming::connectedToObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
@@ -98,8 +98,8 @@ void RelativeKinematics::Disarming::disconnectedFromObject(
 }
 
 void RelativeKinematics::Disarming::connectedToArmedObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
@@ -151,8 +151,8 @@ void AbsoluteKinematics::Disarming::disconnectRequest(
 }
 
 void AbsoluteKinematics::Disarming::connectedToObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
@@ -167,8 +167,8 @@ void AbsoluteKinematics::Disarming::disconnectedFromObject(
 }
 
 void AbsoluteKinematics::Disarming::connectedToArmedObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
