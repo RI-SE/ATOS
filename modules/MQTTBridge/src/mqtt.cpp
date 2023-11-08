@@ -148,9 +148,9 @@ void MQTT::clearSubscriptionMsg()
  * \param dt
  * \return void 
  */
-void MQTT::msgDelivered(void *context, MQTTClient_deliveryToken dt)
+void MQTT::msgDelivered(void*, MQTTClient_deliveryToken dt)
 {
-    deliveredtoken = dt;
+  deliveredtoken = dt;
 }
 
 /*!
@@ -161,7 +161,7 @@ void MQTT::msgDelivered(void *context, MQTTClient_deliveryToken dt)
  * \param message
  * \return 1
  */
-int MQTT::msgArrived(void *context, char *topicName, int topicLen, MQTTClient_message *message)
+int MQTT::msgArrived(void*, char *topicName, int, MQTTClient_message *message)
 {
 	if(strlen(topicName) > 0)
 	{
@@ -185,7 +185,7 @@ int MQTT::msgArrived(void *context, char *topicName, int topicLen, MQTTClient_me
  * \param cause
  * \return void
  */
-void MQTT::connLost(void *context, char *cause)
+void MQTT::connLost(void*, char *cause)
 {
 	RCLCPP_DEBUG(get_logger("MQTT"), "Connection lost, cause %s \n", cause);
 }
