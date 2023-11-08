@@ -26,8 +26,8 @@ namespace ROSChannels {
         public:
             const uint32_t objectId;
             Pub(rclcpp::Node& node, const uint32_t id, const rclcpp::QoS& qos = defaultQoS) : 
-                objectId(id),
-                BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, qos) {}
+                BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, qos),
+                objectId(id) {}
         };
 
         class AnchorPub : public BasePub<message_type> {
@@ -40,8 +40,8 @@ namespace ROSChannels {
         public:
             const uint32_t objectId;
             Sub(rclcpp::Node& node, const uint32_t id, std::function<void(const message_type::SharedPtr)> callback, const rclcpp::QoS& qos = defaultQoS) : 
-                objectId(id),
-                BaseSub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, callback, qos) {}
+                BaseSub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, callback, qos),
+                objectId(id) {}
         };
 
         class AnchorSub : public BaseSub<message_type> {
