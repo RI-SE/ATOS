@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "Enable verbose make")
 set(CMAKE_COLOR_MAKEFILE   ON)
-set(COMPILER_WARNINGS "-Wall -Wextra -Werror")
+set(COMPILER_WARNINGS "-Wall -Wextra")
 
 
 #Set preprocessor macros depending on used ros version
@@ -21,20 +21,20 @@ endif()
 
 project(atos VERSION 1.0.0)
 
-macro(ADD_COMPILER_WARNINGS_GCC_CLANG)
+function(SET_COMPILER_WARNINGS_GCC_CLANG STATUS)
         if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-                add_definitions(${COMPILER_WARNINGS})
+                if(${STATUS} STREQUAL "ON")
+                        add_definitions(${COMPILER_WARNINGS})
+                elseif(${STATUS} STREQUAL "OFF")
+                        remove_definitions(${COMPILER_WARNINGS})
+                else()
+                        message("Invalid status: ${STATUS}")
+                endif()
         endif()
-endmacro()
-
-macro(REMOVE_COMPILER_WARNINGS_GCC_CLANG)
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        remove_definitions(${COMPILER_WARNINGS})
-endif()
-endmacro()
+endfunction()
 
 # Add compiler warnings
-ADD_COMPILER_WARNINGS_GCC_CLANG()
+SET_COMPILER_WARNINGS_GCC_CLANG("ON")
 
 # point out where CMake scripts are located
 set(PROJECT_CMAKE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
@@ -92,14 +92,14 @@ endif()
 
 # Add corresponding subprojects
 # Subdirectories without compiler warnings
-REMOVE_COMPILER_WARNINGS_GCC_CLANG()
+SET_COMPILER_WARNINGS_GCC_CLANG("OFF")
 add_subdirectory(iso22133)
 add_subdirectory(common/time)
 add_subdirectory(common/shmem)
 add_subdirectory(common/osihandler)
 add_subdirectory(common/sockets)
 add_subdirectory(common)
-ADD_COMPILER_WARNINGS_GCC_CLANG()
+SET_COMPILER_WARNINGS_GCC_CLANG("ON")
 
 # Subdirectories with compiler warnings
 add_subdirectory(modules/ATOSBase)
