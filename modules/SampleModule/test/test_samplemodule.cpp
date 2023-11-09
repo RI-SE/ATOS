@@ -43,7 +43,7 @@ TEST_F(SampleModuleTest, testModuleDoesNotAbortOnStartup){
 
 TEST_F(SampleModuleTest, testObjectIdsEmptyOnStartup){
   std::vector<std::uint32_t> objectIds = sampleModule->getObjectIds();
-  ASSERT_EQ(objectIds.size(), 0);
+  ASSERT_EQ((int)objectIds.size(), 0);
 }
 
 TEST_F(SampleModuleTest, testSetsAbortingWhenAbortMessagePublished){
