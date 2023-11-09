@@ -315,8 +315,7 @@ void ObjectControl::loadScenario() {
 				}
 				// Resolve the hostname or numerical IP address to an in_addr_t value
 				addrinfo* result;
-				addrinfo hints;
-				hints.ai_flags = 0;
+				addrinfo hints = {};
 				hints.ai_family = AF_INET; // Use AF_INET6 for IPv6
 				hints.ai_socktype = SOCK_STREAM;
 
