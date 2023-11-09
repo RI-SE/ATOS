@@ -65,7 +65,7 @@ TEST_F(SampleModuleTest, testPublishesOnInitResponseWhenInitIsPublished){
   auto failAfterTimeout = std::chrono::milliseconds(5000);
 
   bool receivedMsg = false; 
-  auto smOnInitResponseCallback = [&receivedMsg, &subCalled](const ROSChannels::SampleModuleTestForInitResponse::message_type::SharedPtr msg) {
+  auto smOnInitResponseCallback = [&receivedMsg, &subCalled](const ROSChannels::SampleModuleTestForInitResponse::message_type::SharedPtr) {
     receivedMsg = true;
     subCalled.set_value();
   };
