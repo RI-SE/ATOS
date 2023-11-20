@@ -6,6 +6,7 @@
 #pragma once
 
 #include "module.hpp"
+#include "roschannels/commandchannels.hpp"
 #include "atos_interfaces/srv/get_object_control_state.hpp"
 
 
@@ -19,10 +20,11 @@ class IntegrationTesting : public Module {
 		virtual void runIntegrationTest() = 0;
 
 	protected:
-	  static inline std::string const initTopic = "/atos/init";
-	  static inline std::string const connectTopic = "/atos/connect";
-	  static inline std::string const armTopic = "/atos/arm";
-	  static inline std::string const startTopic = "/atos/start";
+		const std::string atosNamespace = "/atos/";
+	  const std::string initTopic = atosNamespace + ROSChannels::Init::topicName;
+	  const std::string connectTopic = atosNamespace + ROSChannels::Connect::topicName;
+	  const std::string armTopic = atosNamespace + ROSChannels::Arm::topicName;
+	  const std::string startTopic = atosNamespace + ROSChannels::Start::topicName;
 		std::shared_ptr<rclcpp::Publisher<std_msgs::msg::Empty>> initPub;
 		std::shared_ptr<rclcpp::Publisher<std_msgs::msg::Empty>> connectPub;
 		std::shared_ptr<rclcpp::Publisher<std_msgs::msg::Empty>> armPub;
