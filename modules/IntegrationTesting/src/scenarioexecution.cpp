@@ -90,7 +90,8 @@ void ScenarioExecution::checkTrajectory() {
 		atos_interfaces::msg::Monitor monr;
 		monitorSub = this->create_subscription<atos_interfaces::msg::Monitor>("/atos/object_1/object_monitor", 10, std::bind(&ScenarioExecution::placeholderCallback, this, std::placeholders::_1));
 		rclcpp::wait_for_message(monr, monitorSub, this->get_node_base_interface()->get_context(), 50ms);
-		if (monr.velocity.twist.linear.x == 0 && monr.velocity.twist.linear.y == 0) {
+                speedThreshold = 0.1
+		if (abs(monr.velocity.twist.linear.x) < speedThreshold && abs(monr.velocity.twist.linear.y) < speedThreshold) {
 			lastPoint = std::make_pair(monr.pose.pose.position.x, monr.pose.pose.position.y);
 			isObjectMoving = false;
 		}
