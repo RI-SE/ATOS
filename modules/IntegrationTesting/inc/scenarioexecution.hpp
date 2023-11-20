@@ -24,6 +24,6 @@ class ScenarioExecution : public IntegrationTesting {
 		void runIntegrationTest() override;
 		void printResult() override;
 		std::vector<std::pair<double, double>> getTrajectoryPoints();
-		void checkTrajectory();
+		void checkObjectStoppedAtLastPoint();
 		void placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr msg);
 };
