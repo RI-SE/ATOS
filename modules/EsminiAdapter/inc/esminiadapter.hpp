@@ -80,7 +80,7 @@ private:
 	static bool isStartAction(const std::string& action);
 	static bool isSendDenmAction(const std::string& action);
 	static void collectStartAction(const char* name, int type, int state);
-	static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor::message_type monr, double *llh);
+	static ROSChannels::V2X::message_type denmFromTestOrigin(double *llh);
 
 	static void onRequestObjectTrajectory(
 		const std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Request> req,

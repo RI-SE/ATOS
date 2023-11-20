@@ -135,7 +135,7 @@ void ObjectConfig::parseConfigurationFile(
 		}
 		this->trajectoryFile = trajFile;
 		this->trajectory.initializeFromFile(setting);
-		RCLCPP_DEBUG(get_logger(), "Loaded trajectory with %u points", trajectory.points.size());
+		RCLCPP_DEBUG(get_logger(), "Loaded trajectory with %lu points", trajectory.points.size());
 	}
 	
 	// Get opendrive file setting

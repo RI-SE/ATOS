@@ -14,8 +14,8 @@ using std::placeholders::_1;
 
 TestObject::TestObject(uint32_t id) :
 	Node("object_" + std::to_string(id)),
-	osiChannel(SOCK_STREAM, get_logger()),
 	comms(get_logger(), id),
+	osiChannel(SOCK_STREAM, get_logger()),
 	conf(get_logger())
 	 {
 		pathSub = std::make_shared<ROSChannels::Path::Sub>(*this, id, std::bind(&TestObject::onPathMessage, this, _1, id));
@@ -23,18 +23,18 @@ TestObject::TestObject(uint32_t id) :
 		navSatFixPub = std::make_shared<ROSChannels::NavSatFix::Pub>(*this, id);
 		stateChangePub = std::make_shared<ROSChannels::ObjectStateChange::Pub>(*this);
 }
-void TestObject::onPathMessage(const ROSChannels::Path::message_type::SharedPtr msg, int id){
+void TestObject::onPathMessage(const ROSChannels::Path::message_type::SharedPtr, int){
 	;
 }
 
 TestObject::TestObject(TestObject&& other) :
-	osiChannel(SOCK_STREAM, other.get_logger()),
+	rclcpp::Node(other.get_name()),
 	comms(other.get_logger(), other.getTransmitterID()),
+	osiChannel(SOCK_STREAM, other.get_logger()),
 	state(other.state),
 	conf(other.conf),
 	lastMonitor(other.lastMonitor),
-	maxAllowedMonitorPeriod(other.maxAllowedMonitorPeriod),
-	rclcpp::Node(other.get_name())
+	maxAllowedMonitorPeriod(other.maxAllowedMonitorPeriod)
 {
 	this->comms = other.comms;
 	this->osiChannel = other.osiChannel;
@@ -320,7 +320,6 @@ void TestObject::sendAllClear() {
 }
 
 void TestObject::sendRemoteControl(bool on) {
-	
 	this->comms.cmd << (on ? OBJECT_COMMAND_REMOTE_CONTROL : OBJECT_COMMAND_DISARM);
 }
 

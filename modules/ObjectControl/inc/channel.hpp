@@ -20,12 +20,12 @@ class Channel : public Loggable
 {
 public:
 	Channel(const size_t bufferLength, const int type, rclcpp::Logger log, int id = 0, int transmitter = 0)
-		: channelType(type),
-		  transmitBuffer(bufferLength, 0),
-		  receiveBuffer(bufferLength, 0),
-		  Loggable(log),
+		: Loggable(log),
+			channelType(type),
 		  objectId(id),
-		  transmitterId(transmitter)
+		  transmitterId(transmitter),
+		  transmitBuffer(bufferLength, 0),
+		  receiveBuffer(bufferLength, 0)
 	{}
 	Channel(int type, rclcpp::Logger log, int id = 0) : Channel(1024, type, log, id) {}
 	struct sockaddr_in addr = {};

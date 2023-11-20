@@ -27,29 +27,29 @@ void AbstractKinematics::Ready::disconnectRequest(
 }
 
 void AbstractKinematics::Ready::disconnectedFromObject(
-		ObjectControl& handler,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Ready::objectAborting(
-		ObjectControl& handler,
-		uint32_t id) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Ready::objectAbortDisarmed(
-	ObjectControl& handler,
-	uint32_t id) {
+	ObjectControl& /* handler */,
+	uint32_t /* id */) {
 		// TODO
 }
 
 void AbstractKinematics::Ready::settingModificationRequested(
-		ObjectControl& handler) {
+		ObjectControl& /* handler */) {
 	// TODO
 }
 void AbstractKinematics::Ready::enableRemoteControlRequest(
-	ObjectControl& handler){
+	ObjectControl& /* handler */){
 }
 
 void AbstractKinematics::Ready::resetTestObjectsRequest(

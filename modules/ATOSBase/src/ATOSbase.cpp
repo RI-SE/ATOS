@@ -34,7 +34,7 @@ void ATOSBase::onExitMessage(const Exit::message_type::SharedPtr)
 }
 
 void ATOSBase::onRequestObjectIDs(
-	const std::shared_ptr<atos_interfaces::srv::GetObjectIds::Request> req,
+	const std::shared_ptr<atos_interfaces::srv::GetObjectIds::Request>,
 	std::shared_ptr<atos_interfaces::srv::GetObjectIds::Response> res)
 {
 	char path[PATH_MAX];

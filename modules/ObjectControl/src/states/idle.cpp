@@ -26,7 +26,7 @@ void AbstractKinematics::Idle::initializeRequest(
 		handler.controlMode = ObjectControl::RELATIVE_KINEMATICS;
 		setState(handler, new RelativeKinematics::Initialized);
 		RCLCPP_INFO(handler.get_logger(), "Relative control mode enabled");
-	} catch (std::invalid_argument) {
+	} catch (std::invalid_argument&) {
 		handler.controlMode = ObjectControl::ABSOLUTE_KINEMATICS;
 		setState(handler, new AbsoluteKinematics::Initialized);
 		RCLCPP_INFO(handler.get_logger(), "Absolute control mode enabled");

@@ -5,7 +5,7 @@
  */
 #include "trajectorypublisher.hpp"
 #include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <nav_msgs/msg/path.hpp>
 
 using namespace ATOS;
@@ -16,11 +16,11 @@ TrajectoryPublisher::TrajectoryPublisher(
 	const Trajectory& _traj,
 	const uint32_t objectId,
 	const std::chrono::milliseconds chunkLength)
-	: traj(std::make_unique<const Trajectory>(_traj)),
-	pub(node, objectId),
-	startObjectSub(node, std::bind(&TrajectoryPublisher::getStartObjectMsg, this, std::placeholders::_1)),
-	lastPublishedChunk(traj->points.end(), traj->points.end()),
-	chunkLength(chunkLength)
+	: pub(node, objectId),
+		startObjectSub(node, std::bind(&TrajectoryPublisher::getStartObjectMsg, this, std::placeholders::_1)),
+		chunkLength(chunkLength),
+		traj(std::make_unique<const Trajectory>(_traj)),
+		lastPublishedChunk(traj->points.end(), traj->points.end())
 {
 	timer = node.create_wall_timer(publishPeriod, std::bind(&TrajectoryPublisher::publishChunk, this));
 }

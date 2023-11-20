@@ -39,7 +39,7 @@ set(TARGET_LIBRARIES
 target_link_libraries(${BACK_TO_START}
     ${TARGET_LIBRARIES}
 )
-target_include_directories(${BACK_TO_START} PUBLIC
+target_include_directories(${BACK_TO_START} PUBLIC SYSTEM
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
 	${COREUTILS_HEADERS}

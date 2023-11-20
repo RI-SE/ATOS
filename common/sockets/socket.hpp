@@ -112,7 +112,7 @@ class Socket : public BasicSocket
 public:
 
 	using BasicSocket::BasicSocket;
-	Socket(const Socket& other){}
+	Socket(const Socket&) : BasicSocket() {}
 	Socket(Socket&& other);
 	Socket& operator=(const Socket& other);
 	Socket& operator=(Socket&& other);

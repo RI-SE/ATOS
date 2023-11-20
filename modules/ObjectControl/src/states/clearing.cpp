@@ -15,38 +15,38 @@ void AbstractKinematics::Clearing::onEnter(
 }
 
 void AbstractKinematics::Clearing::objectArmed(
-        ObjectControl&,
-        uint32_t) {
+        ObjectControl& /* handler */,
+        uint32_t /* id */) {
     // TODO
 }
 
 void AbstractKinematics::Clearing::objectDisarmed(
-        ObjectControl&,
-        uint32_t) {
+        ObjectControl& /* handler */,
+        uint32_t /* id */) {
     // TODO
 }
 
 void AbstractKinematics::Clearing::objectAbortDisarmed(
-        ObjectControl&,
-        uint32_t) {
+        ObjectControl& /* handler */,
+        uint32_t /* id */) {
     // TODO
 }
 
 void AbstractKinematics::Clearing::disconnectedFromObject(
-        ObjectControl& handler, 
-        uint32_t) {
+        ObjectControl&  /* handler */, 
+        uint32_t /* id */) {
     // TODO
 }
 
 void AbstractKinematics::Clearing::connectedToArmedObject(
-        ObjectControl& handler,
-        uint32_t) {
+        ObjectControl&  /* handler */,
+        uint32_t /* id */) {
     // TODO
 }
 
 void AbstractKinematics::Clearing::connectedToLiveObject(
-        ObjectControl& handler,
-        uint32_t) {
+        ObjectControl&  /* handler */,
+        uint32_t /* id */) {
     // TODO
 }
 
@@ -79,13 +79,13 @@ void RelativeKinematics::Clearing::objectArmed(
 
 void RelativeKinematics::Clearing::objectDisarmed(
         ObjectControl& handler,
-        uint32_t id) {
+        uint32_t /* id */) {
     changeStateIfAllOK(handler);
 }
 
 void RelativeKinematics::Clearing::objectAbortDisarmed(
         ObjectControl& handler,
-        uint32_t id) {
+        uint32_t /* id */) {
     changeStateIfAllOK(handler);
 }
 
@@ -147,13 +147,13 @@ void AbsoluteKinematics::Clearing::objectArmed(
 
 void AbsoluteKinematics::Clearing::objectDisarmed(
         ObjectControl& handler,
-        uint32_t id) {
+        uint32_t /* id */) {
 	changeStateIfAllOK(handler);
 }
 
 void AbsoluteKinematics::Clearing::objectAbortDisarmed(
     ObjectControl& handler,
-    uint32_t id) {
+    uint32_t /* id */) {
         changeStateIfAllOK(handler);
 }
 

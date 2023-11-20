@@ -56,19 +56,17 @@ JournalControl::JournalControl()
 
 void JournalControl::initialize()
 {
-	int retval = 0;
-
 	if (std::signal(SIGINT, signalHandler) == SIG_ERR) {
 		throw std::runtime_error("Failed to register signal handler");
 	}
 }
 
-void JournalControl::onArmMessage(const Arm::message_type::SharedPtr msg)
+void JournalControl::onArmMessage(const Arm::message_type::SharedPtr)
 {
 	journals.placeStartBookmarks();
 }
 
-void JournalControl::onStopMessage(const Stop::message_type::SharedPtr msg)
+void JournalControl::onStopMessage(const Stop::message_type::SharedPtr)
 {
 	try {
 		// Save stop references
@@ -89,7 +87,7 @@ void JournalControl::onAbortMessage(const Abort::message_type::SharedPtr msg)
 	onStopMessage(msg);
 }
 
-void JournalControl::onReplayMessage(const Replay::message_type::SharedPtr msg)
+void JournalControl::onReplayMessage(const Replay::message_type::SharedPtr)
 {
 	RCLCPP_WARN(get_logger(), "Replay function out of date");
 }
@@ -98,6 +96,6 @@ void Module::onExitMessage(const Exit::message_type::SharedPtr){
     this->quit=true;
 }
 
-void signalHandler(int signo) {
+void signalHandler(int) {
 	rclcpp::shutdown();
 }

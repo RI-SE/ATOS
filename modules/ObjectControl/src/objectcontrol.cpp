@@ -28,6 +28,7 @@ using namespace ATOS;
 
 ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> exec)
 	: Module(ObjectControl::moduleName),
+	exec(exec),
 	scnInitSub(*this, std::bind(&ObjectControl::onInitMessage, this, _1)),
 	scnStartSub(*this, std::bind(&ObjectControl::onStartMessage, this, _1)),
 	objectStartSub(*this, std::bind(&ObjectControl::onStartObjectMessage, this, _1)),
@@ -38,9 +39,9 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	scnAllClearSub(*this, std::bind(&ObjectControl::onAllClearMessage, this, _1)),
 	scnConnectSub(*this, std::bind(&ObjectControl::onConnectMessage, this, _1)),
 	scnDisconnectSub(*this, std::bind(&ObjectControl::onDisconnectMessage, this, _1)),
-	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, _1)),
 	scnRemoteControlEnableSub(*this, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1)),
 	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
+	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, _1)),	
 	objectStateChangeSub(*this, std::bind(&ObjectControl::onObjectStateChangeMessage, this, _1)),
 	scnResetTestObjectsSub(*this, std::bind(&ObjectControl::onResetTestObjectsMessage, this, _1)),
 	scnReloadObjectSettingsSub(*this, std::bind(&ObjectControl::onReloadObjectSettingsMessage, this, _1)),
@@ -48,10 +49,8 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	scnAbortPub(*this),
 	objectsConnectedPub(*this),
 	connectedObjectIdsPub(*this),
-	stateChangePub(*this),
-	exec(exec)
+	stateChangePub(*this)
 {
-	int queueSize=0;
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
     idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
 	originClient = create_client<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin);
@@ -75,7 +74,7 @@ ObjectControl::~ObjectControl() {
 }
 
 void ObjectControl::onRequestState(
-		const std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Request> req,
+		const std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Request>,
 		std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Response> res) {
 	try {
 		if (!this->state) {
@@ -92,7 +91,7 @@ void ObjectControl::onRequestState(
 }
 
 void ObjectControl::handleActionConfigurationCommand(
-		const TestScenarioCommandAction& action) {
+		const TestScenarioCommandAction& /* action */) {
 	this->state->settingModificationRequested(*this);
 	// TODO: Implement
 }
@@ -315,8 +314,8 @@ void ObjectControl::loadScenario() {
 					return;
 				}
 				// Resolve the hostname or numerical IP address to an in_addr_t value
-				addrinfo hints = {0};
 				addrinfo* result;
+				addrinfo hints = {};
 				hints.ai_family = AF_INET; // Use AF_INET6 for IPv6
 				hints.ai_socktype = SOCK_STREAM;
 
@@ -503,7 +502,7 @@ void ObjectControl::abortConnectionAttempt() {
 	try {
 		connStopReqPromise.set_value();
 	}
-	catch (std::future_error) {
+	catch (std::future_error&) {
 		// Attempted to stop when none in progress
 	}
 }
@@ -513,7 +512,7 @@ void ObjectControl::disconnectObjects() {
 	try {
 		stopHeartbeatSignal.set_value();
 	}
-	catch (std::future_error) {
+	catch (std::future_error&) {
 		// Attempted to stop when none in progress
 	}
 	objectListeners.clear();

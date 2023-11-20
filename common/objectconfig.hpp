@@ -41,7 +41,7 @@ public:
 	GeographicPositionType getOrigin() const { return origin; }
 	std::string getProjString() const;
 	ATOS::Trajectory getTrajectory() const { return trajectory; }
-	void setTrajectory(const ATOS::Trajectory& newTraj) { trajectory = newTraj; } // TODO danger danger - don't do this
+	void setTrajectory(const ATOS::Trajectory& newTraj) { trajectory = newTraj; }
 	uint32_t getTransmitterID() const { return transmitterID; }
 	void setTransmitterID(const uint32_t id) { transmitterID = id; }
 	double getTurningDiameter() const { return turningDiameter; }

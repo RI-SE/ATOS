@@ -20,19 +20,19 @@ namespace ROSChannels {
         public:
             const uint32_t objectId;
             Pub(rclcpp::Node& node, const uint32_t id, const rclcpp::QoS& qos = defaultQoS) : 
-                objectId(id),
-                BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, qos) {}
+                BasePub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, qos),
+                objectId(id) {}
         };
 
         class Sub : public BaseSub<message_type> {
         public:
             const uint32_t objectId;
             Sub(rclcpp::Node& node, const uint32_t id, std::function<void(const message_type::SharedPtr)> callback, const rclcpp::QoS& qos = defaultQoS) : 
-                objectId(id),
-                BaseSub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, callback, qos) {}
+                BaseSub<message_type>(node, "object_" + std::to_string(id) + "/" + topicName, callback, qos),
+                objectId(id) {}
         };
         // TODO: Remove below..
-        static message_type fromROSMonr(std::array<double,3> origin, const ROSChannels::Monitor::message_type &monr) {
+        inline message_type fromROSMonr(std::array<double,3> origin, const ROSChannels::Monitor::message_type &monr) {
             sensor_msgs::msg::NavSatFix msg;
             msg.header.stamp = monr.atos_header.header.stamp;
 

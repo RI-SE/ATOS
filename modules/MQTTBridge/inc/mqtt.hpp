@@ -30,7 +30,7 @@ public:
 
 	Message() {}
 	Message(const std::string& msg, const std::string& topic)
-		: payload(msg), topic(topic) {}
+		: topic(topic), payload(msg) {}
 };
 
 static std::string subMessageTopic;
