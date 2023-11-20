@@ -10,8 +10,8 @@ fi
 
 # Take the first argument as the PATH to the ATOS git repo
 ATOS_REPO_PATH="$1"
-source "${ATOS_REPO_PATH}/scripts/install_functions.sh"
-check_command_failed $? "Failed to source ${ATOS_REPO_PATH}/scripts/install_functions.sh"
+source "${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
+check_command_failed $? "Failed to source ${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 
 ################################################
 ###### Install Control Panel dependencies ######
@@ -85,14 +85,12 @@ ros2_setup_script="source /opt/ros/$ROS_DISTRO/setup."
 
 case "$SHELL" in
     */bash)
-        add_source_line_if_needed $HOME/.bashrc "bash" "${atos_setup_script}"
         add_source_line_if_needed $HOME/.bashrc "bash" "${ros2_setup_script}"
-        source $HOME/.bashrc 
+        add_source_line_if_needed $HOME/.bashrc "bash" "${atos_setup_script}"
     ;;
     */zsh)
-        add_source_line_if_needed $HOME/.zshrc "zsh" "${atos_setup_script}"
         add_source_line_if_needed $HOME/.zshrc "zsh" "${ros2_setup_script}"
-        source $HOME/.zshrc
+        add_source_line_if_needed $HOME/.zshrc "zsh" "${atos_setup_script}"
     ;;
     *)
         echo "Unsupported shell detected! Please use either bash or zsh shells to run ATOS"

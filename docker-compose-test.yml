@@ -6,13 +6,12 @@ services:
       context: .
       dockerfile: ./Dockerfile
     ipc: host
-    stop_signal: SIGINT
-    stop_grace_period: 15s
     privileged: true
     stdin_open: true
     tty: true
     volumes:
-      - ~/.astazero/ATOS/:/root/.astazero/ATOS/
+      - "./conf:/root/.astazero/ATOS"
+      - "./conf/param.yaml:/root/.astazero/conf/params.yaml"
     ports:
       - "80:80" 
       - "8080:8080" 
@@ -23,7 +22,7 @@ services:
       - "55555:55555"
       - "443:443"
       - "9090:9090" 
-    command: bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
+    command: bash -c "source /root/atos_ws/install/setup.sh ; python3 -m pytest /root/atos_ws/src/atos/scripts/integration_testing/run_scenario_test.py
   isoObject:
     image: astazero/iso_object_demo:latest
     privileged: true

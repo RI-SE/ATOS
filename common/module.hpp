@@ -82,19 +82,24 @@ class Module : public rclcpp::Node {
 								 const std::string& topic,
 								 const rclcpp::Logger& logger);
 	
-	/*! \brief This helper function is performs a service call given a client and yields a response.
-	*  \tparam Srv The name of the service to request.
-	*  \param timeout The timeout for the service call.
-	*  \param client The client to use to request the service.
-	*  \param response The response of the service.
-	* 	\return The response of the service.
-	*/
+
+	/**
+	 * @brief This helper function performs a service call given a client and yields a response. This
+	 * function is used when you want to specify the request instead of sending an empty request.
+	 * 
+	 * @tparam Srv Srv The name of the service to request.
+	 * @param timeout The timeout for the service call.
+	 * @param client The client to use to request the service.
+	 * @param response The response of the service.
+	 * @param request The request of the service, with the data to be sent. Defaults to an empty request.
+	 * @return The response of the service.
+	 */
 	template <typename Srv>
 	bool callService( const std::chrono::duration< double > &timeout,
 						std::shared_ptr<rclcpp::Client<Srv>> &client,
-						std::shared_ptr<typename Srv::Response> &response)
+						std::shared_ptr<typename Srv::Response> &response,
+						std::shared_ptr<typename Srv::Request> request = std::make_shared<typename Srv::Request>())
 {
-		auto request = std::make_shared<typename Srv::Request>();
 		auto promise = client->async_send_request(request);
 		if (rclcpp::spin_until_future_complete(get_node_base_interface(), promise, timeout) ==
 			rclcpp::FutureReturnCode::SUCCESS) {
