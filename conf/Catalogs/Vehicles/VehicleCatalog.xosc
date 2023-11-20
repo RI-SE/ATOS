@@ -18,7 +18,8 @@
             </BoundingBox>
             <Performance maxSpeed="${190/3.6}" maxDeceleration="10" maxAcceleration="5"/>
             <Properties>
-                <Property name="ip" value="127.0.0.1"/>
+                <Property name="ip" value="isoObject"/> <!-- used by integration test -->
+                <!-- <Property name="ip" value="127.0.0.1"/> -->
                 <Property name="model_id" value="$EgoModelId"/>
                 <!-- Scale modes: None, BBToModel, ModelToBB -->
                 <Property name="scaleMode" value="BBToModel"/>
