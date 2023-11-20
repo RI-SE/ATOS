@@ -34,7 +34,6 @@ add_executable(${INTEGRATION_TESTING_TARGET}
 # Link project executable to util libraries
 target_link_libraries(${INTEGRATION_TESTING_TARGET} 
 	${ATOS_COMMON_LIBRARY}
-	${ATOS_COMMON_LIBRARY}
 )
 
 # ROS specific settings
