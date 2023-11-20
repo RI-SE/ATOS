@@ -84,7 +84,7 @@ class Module : public rclcpp::Node {
 	
 
 	/**
-	 * @brief This helper function is performs a service call given a client and yields a response. This
+	 * @brief This helper function performs a service call given a client and yields a response. This
 	 * function is used when you want to specify the request instead of sending an empty request.
 	 * 
 	 * @tparam Srv Srv The name of the service to request.
