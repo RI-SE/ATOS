@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "integrationtesting.hpp"
+#include "module.hpp"
 #include "util.h"
 
 using namespace std::chrono_literals;
@@ -21,7 +22,7 @@ IntegrationTesting::IntegrationTesting(const std::string& moduleName) : Module(m
 	connectPub = this->create_publisher<std_msgs::msg::Empty>(connectTopic, 10);
 	armPub = this->create_publisher<std_msgs::msg::Empty>(armTopic, 10);
 	startPub = this->create_publisher<std_msgs::msg::Empty>(startTopic, 10);
-	getObjectControlStateClient = this->create_client<atos_interfaces::srv::GetObjectControlState>("/atos/get_object_control_state");
+	getObjectControlStateClient = this->create_client<atos_interfaces::srv::GetObjectControlState>(atosNamespace + ServiceNames::getObjectControlState);
 }
 
 
