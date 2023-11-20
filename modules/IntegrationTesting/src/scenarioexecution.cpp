@@ -16,7 +16,7 @@ using namespace std::chrono_literals;
  */
 ScenarioExecution::ScenarioExecution() : IntegrationTesting(testName) {
 	RCLCPP_INFO(get_logger(), "Started integration test: %s", testName.c_str());
-	getObjectTrajectoryClient = this->create_client<atos_interfaces::srv::GetObjectTrajectory>("/atos/get_object_trajectory");
+	getObjectTrajectoryClient = this->create_client<atos_interfaces::srv::GetObjectTrajectory>(atosNamespace + ServiceNames::getObjectTrajectory);
 	runIntegrationTest();
 }
 
