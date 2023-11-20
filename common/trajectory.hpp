@@ -142,14 +142,7 @@ public:
 	unsigned short version = 0;
 	unsigned short id = 0;
 
-	Trajectory& operator=(const Trajectory& other) {
-		id = other.id;
-		version = other.version;
-		name = other.name;
-		points = other.points;
-		return *this;
-	};
-
+	Trajectory& operator=(const Trajectory& other);
 
 	void initializeFromFile(const std::string& fileName);
 	void initializeFromCartesianTrajectory(const atos_interfaces::msg::CartesianTrajectory& cartesianTrajectory);

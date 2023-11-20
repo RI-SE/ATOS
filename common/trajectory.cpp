@@ -38,6 +38,14 @@ Trajectory::Trajectory(const Trajectory& other) : Loggable(other.get_logger()) {
 	this->points = std::vector<TrajectoryPoint>(other.points);
 }
 
+ Trajectory& Trajectory::operator=(const Trajectory& other) {
+	this->id = other.id;
+	this->name = other.name;
+	this->version = other.version;
+	this->points = std::vector<TrajectoryPoint>(other.points);
+	return *this;
+}
+
 atos_interfaces::msg::CartesianTrajectory Trajectory::toCartesianTrajectory(){
 	atos_interfaces::msg::CartesianTrajectory trajMsg;
 	for (const auto& point : this->points){
