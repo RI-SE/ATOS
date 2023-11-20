@@ -54,7 +54,7 @@ void ScenarioExecution::runIntegrationTest() {
 	std::this_thread::sleep_for(1s); // sleep to allow the object to start
 	checkState(startTopic);
 
-	checkTrajectory();
+	checkObjectStoppedAtLastPoint();
 	printResult();
 }	
 
@@ -82,7 +82,7 @@ std::vector<std::pair<double, double>> ScenarioExecution::getTrajectoryPoints() 
  * @brief Check that the object ends up near the end point of the trajectory.
  * 
  */
-void ScenarioExecution::checkTrajectory() {
+void ScenarioExecution::checkObjectStoppedAtLastPoint() {
 	auto trajectory = getTrajectoryPoints();
 	std::pair<double, double> lastPoint;
 	auto isObjectMoving = true;
@@ -90,7 +90,7 @@ void ScenarioExecution::checkTrajectory() {
 		atos_interfaces::msg::Monitor monr;
 		monitorSub = this->create_subscription<atos_interfaces::msg::Monitor>("/atos/object_1/object_monitor", 10, std::bind(&ScenarioExecution::placeholderCallback, this, std::placeholders::_1));
 		rclcpp::wait_for_message(monr, monitorSub, this->get_node_base_interface()->get_context(), 50ms);
-                speedThreshold = 0.1
+		double speedThreshold = 0.1;
 		if (abs(monr.velocity.twist.linear.x) < speedThreshold && abs(monr.velocity.twist.linear.y) < speedThreshold) {
 			lastPoint = std::make_pair(monr.pose.pose.position.x, monr.pose.pose.position.y);
 			isObjectMoving = false;
