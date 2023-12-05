@@ -43,7 +43,7 @@ TEST_F(SampleModuleTest, testModuleDoesNotAbortOnStartup){
 
 TEST_F(SampleModuleTest, testObjectIdsEmptyOnStartup){
   std::vector<std::uint32_t> objectIds = sampleModule->getObjectIds();
-  ASSERT_EQ(objectIds.size(), 0);
+  ASSERT_EQ((int)objectIds.size(), 0);
 }
 
 TEST_F(SampleModuleTest, testSetsAbortingWhenAbortMessagePublished){
@@ -65,7 +65,7 @@ TEST_F(SampleModuleTest, testPublishesOnInitResponseWhenInitIsPublished){
   auto failAfterTimeout = std::chrono::milliseconds(5000);
 
   bool receivedMsg = false; 
-  auto smOnInitResponseCallback = [&receivedMsg, &subCalled](const ROSChannels::SampleModuleTestForInitResponse::message_type::SharedPtr msg) {
+  auto smOnInitResponseCallback = [&receivedMsg, &subCalled](const ROSChannels::SampleModuleTestForInitResponse::message_type::SharedPtr) {
     receivedMsg = true;
     subCalled.set_value();
   };

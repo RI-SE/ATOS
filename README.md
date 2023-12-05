@@ -36,9 +36,9 @@ You might wish to mount the config directory at ~/.astazero/ATOS/ to a different
 
 
 ## <a name="Installation script"></a> Using the installation script
-ATOS comes with an installation script that automates the installation process. It is intended for use on Ubuntu 20.04 or 22.04, and has been tested on a fresh install of Ubuntu 20.04 and 22.04. The script will install ROS2, ATOS dependencies, and ATOS itself. It will also create a workspace and build ATOS. The script can be executed using the following command:
+ATOS comes with an installation script that automates the installation process. It is intended for use on Ubuntu 22.04. The script will install ROS2 Humble, ATOS dependencies, and ATOS itself. It will also create a workspace (~/atos_ws) and build ATOS. The script can be executed using the following command:
 ```bash
-./install_atos.sh
+./setup_atos.sh
 ```
 
 ## <a name="Native build"></a> Building from source manually

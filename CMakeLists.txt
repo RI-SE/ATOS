@@ -9,6 +9,8 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "Enable verbose make")
 set(CMAKE_COLOR_MAKEFILE   ON)
+set(COMPILER_WARNINGS "-Wall -Wextra")
+
 
 #Set preprocessor macros depending on used ros version
 if ($ENV{ROS_DISTRO} STREQUAL "foxy")
@@ -19,9 +21,20 @@ endif()
 
 project(atos VERSION 1.0.0)
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-	#add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
+function(SET_COMPILER_WARNINGS_GCC_CLANG STATUS)
+        if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+                if(${STATUS} STREQUAL "ON")
+                        add_definitions(${COMPILER_WARNINGS})
+                elseif(${STATUS} STREQUAL "OFF")
+                        remove_definitions(${COMPILER_WARNINGS})
+                else()
+                        message("Invalid status: ${STATUS}")
+                endif()
+        endif()
+endfunction()
+
+# Add compiler warnings
+SET_COMPILER_WARNINGS_GCC_CLANG("ON")
 
 # point out where CMake scripts are located
 set(PROJECT_CMAKE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
@@ -43,6 +56,7 @@ set(WITH_OSI_ADAPTER ON CACHE BOOL "Enable OSIAdapter module")
 set(WITH_ESMINI_ADAPTER ON CACHE BOOL "Enable EsminiAdapter module")
 set(WITH_MQTT_BRIDGE ON CACHE BOOL "Enable MQTTBridge module")
 set(WITH_POINTCLOUD_PUBLISHER ON CACHE BOOL "Enable PointcloudPublisher module")
+set(WITH_INTEGRATION_TESTING ON CACHE BOOL "Enable IntegrationTesting module")
 set(WITH_BACK_TO_START ON CACHE BOOL "Enable BackToStart module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
@@ -72,18 +86,26 @@ endif()
 if(WITH_POINTCLOUD_PUBLISHER)
         list(APPEND ENABLED_MODULES PointcloudPublisher)
 endif()
+if(WITH_INTEGRATION_TESTING)
+        list(APPEND ENABLED_MODULES IntegrationTesting)
+endif()
 if(WITH_BACK_TO_START)
         list(APPEND ENABLED_MODULES BackToStart)
 endif()
 
 
 # Add corresponding subprojects
+# Subdirectories without compiler warnings
+SET_COMPILER_WARNINGS_GCC_CLANG("OFF")
 add_subdirectory(iso22133)
 add_subdirectory(common/time)
 add_subdirectory(common/shmem)
 add_subdirectory(common/osihandler)
 add_subdirectory(common/sockets)
 add_subdirectory(common)
+SET_COMPILER_WARNINGS_GCC_CLANG("ON")
+
+# Subdirectories with compiler warnings
 add_subdirectory(modules/ATOSBase)
 
 foreach(MODULE ${ENABLED_MODULES})

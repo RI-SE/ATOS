@@ -9,21 +9,17 @@ services:
     privileged: true
     stdin_open: true
     tty: true
+    network_mode: host
     volumes:
       - ~/.astazero/ATOS/:/root/.astazero/ATOS/
-    ports:
-      - "80:80" 
-      - "8081:8081"
-      - "8082:8082"
-      - "3000:3000" 
-      - "3443:3443"
-      - "55555:55555"
-      - "443:443"
-      - "9090:9090" 
-    command: bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py insecure:=${INSECURE} foxbridge:=${USE_FOXBRIDGE}"
-  foxglove-studio:
-    image: ghcr.io/foxglove/studio:latest
-    ports:
-      - "8080:8080"
-    volumes:
-      - /plugins/foxglove/Map, 3D and control layout.json:/foxglove/default-layout.json
+    # ports: Switch to port mapping if you want to use the container with a remote machine
+    #   - "80:80" 
+    #   - "8080:8080" 
+    #   - "8081:8081"
+    #   - "8082:8082"
+    #   - "3000:3000" 
+    #   - "3443:3443"
+    #   - "55555:55555"
+    #   - "443:443"
+    #   - "9090:9090" 
+    command: bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"

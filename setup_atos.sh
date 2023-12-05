@@ -4,7 +4,7 @@
 ###### Pre-installation checks ######
 #####################################
 
-source "scripts/install_functions.sh"
+source "scripts/installation/install_functions.sh"
 
 # Get this file location
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
@@ -48,7 +48,7 @@ fi
 ###### Install ATOS dependencies ######
 #######################################
 echo "Installing ATOS dependencies..."
-${REPO_DIR}/scripts/install_deps.sh ${REPO_DIR}
+${REPO_DIR}/scripts/installation/install_deps.sh ${REPO_DIR}
 
 if [ $? -ne 0 ]; then
     echo "Failed to install dependencies."
@@ -62,13 +62,12 @@ if [ "$INSTALL_ATOS" = false ]; then
     exit 0
 fi
 echo "Installing ATOS..."
-${REPO_DIR}/scripts/install_atos.sh ${REPO_DIR}
+${REPO_DIR}/scripts/installation/install_atos.sh ${REPO_DIR}
 
 if [ $? -ne 0 ]; then
     echo "Failed to install ATOS."
     exit 1
 fi
 
-echo "ATOS installation and setup is complete. You can now test run ATOS by running the following command:"
-echo "ros2 launch atos launch_basic.py"
+echo "ATOS build and setup is complete. Please restart your terminal to complete the installation."
 echo "Please see the documentation for further details: https://atos.readthedocs.io/en/latest/"

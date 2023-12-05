@@ -41,7 +41,7 @@ target_link_libraries(${DIRECT_CONTROL_TARGET}
 	${COMMON_LIBRARY}
 )
 
-target_include_directories(${DIRECT_CONTROL_TARGET} PUBLIC
+target_include_directories(${DIRECT_CONTROL_TARGET} PUBLIC SYSTEM
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
 )

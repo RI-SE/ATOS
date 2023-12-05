@@ -11,7 +11,8 @@ AbstractKinematics::RemoteControlled::RemoteControlled() {
 
 
 void AbstractKinematics::RemoteControlled::disableRemoteControlRequest(
-		ObjectControl& handler) {
+		ObjectControl& /* handler */) {
+		// TODO
 }
 
 void AbstractKinematics::RemoteControlled::onEnter(ObjectControl& handler){

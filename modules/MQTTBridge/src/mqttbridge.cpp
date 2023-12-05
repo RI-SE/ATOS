@@ -101,7 +101,7 @@ void MqttBridge::onV2xMsg(const V2X::message_type::SharedPtr v2x_msg)
 			RCLCPP_DEBUG(this->get_logger(), "Publishing MQTT v2x msg to broker %s", payload.dump().c_str());
 			MQTT::publishMessage(mqttMsg, this->mqttClient, retained);
 		}
-		catch (std::runtime_error)
+		catch (std::runtime_error&)
 		{
 			RCLCPP_ERROR(this->get_logger(), "Failed to publish MQTT message");
 		}

@@ -39,7 +39,7 @@ void SampleModule::onAbortMessage(const Abort::message_type::SharedPtr) {
 void SampleModule::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 
 
-void SampleModule::OnCallbackSetBool(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+void SampleModule::OnCallbackSetBool(const std::shared_ptr<std_srvs::srv::SetBool::Request>,
 											std::shared_ptr<std_srvs::srv::SetBool::Response> response)
 {
 	response->message = "succeeded";

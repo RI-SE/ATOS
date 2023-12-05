@@ -21,48 +21,48 @@ void AbstractKinematics::Connecting::disconnectRequest(
 }
 
 void AbstractKinematics::Connecting::connectRequest(
-		ObjectControl& handler) {
+		ObjectControl& /* handler */) {
 	// TODO
 }
 
 void AbstractKinematics::Connecting::abortRequest(
-		ObjectControl& handler) {
+		ObjectControl& /* handler */) {
 	// TODO
 }
 
 void AbstractKinematics::Connecting::connectedToObject(
-		ObjectControl& handler,
-		uint32_t id) {
+		ObjectControl& /* handler */,
+		uint32_t /*id*/) {
 	// TODO
 }
 
 void AbstractKinematics::Connecting::disconnectedFromObject(
-		ObjectControl& handler,
-		uint32_t id) {
+		ObjectControl& /* handler */,
+		uint32_t /*id*/) {
 	// TODO
 }
 
 void AbstractKinematics::Connecting::connectedToLiveObject(
-		ObjectControl& handler,
-		uint32_t id) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Connecting::connectedToArmedObject(
-		ObjectControl& handler,
-		uint32_t id) {
+		ObjectControl& /* handler */,
+		uint32_t /*id*/) {
 	// TODO
 }
 
 void AbstractKinematics::Connecting::objectArmed(
-		ObjectControl& handler,
-		uint32_t id) {
+		ObjectControl& /* handler */,
+		uint32_t /*id*/) {
 	// TODO
 }
 
 void AbstractKinematics::Connecting::objectAborting(
-		ObjectControl& handler,
-		uint32_t id) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 

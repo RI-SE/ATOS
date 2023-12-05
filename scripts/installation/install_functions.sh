@@ -42,9 +42,20 @@ add_source_line_if_needed() {
     local source_line="$3$shell_type"
 
     if ! grep -qF "$source_line" "$file"; then
-        echo "Adding the following line to your shells config file: $file"
-        echo "$source_line"
-        echo "# Line below added by ATOS setup script" >> "$file"
-        echo "$source_line" >> "$file"
+        # Ask the user if they want to add the source line.
+        # First check for noninteractive shell with DEBAIN_FRONTEND=noninteractive
+        if [ -z "$DEBIAN_FRONTEND" ]; then
+            echo "Do you want to add the following line to your $shell_type config file $file:"
+            echo "$source_line"
+            echo "y/n"
+            read -r answer
+            if [ "$answer" != "${answer#[Yy]}" ]; then
+                echo "# Line below added by ATOS setup script" >> "$file"
+                echo "$source_line" >> "$file"
+            fi
+        else
+            echo "# Line below added by ATOS setup script" >> "$file"
+            echo "$source_line" >> "$file"
+        fi
     fi
 }

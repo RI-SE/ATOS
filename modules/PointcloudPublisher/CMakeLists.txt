@@ -50,7 +50,7 @@ ament_target_dependencies(${POINTCLOUD_PUBLISHER_TARGET}
   pcl_conversions
 )
 
-target_include_directories(${POINTCLOUD_PUBLISHER_TARGET} PUBLIC
+target_include_directories(${POINTCLOUD_PUBLISHER_TARGET} PUBLIC SYSTEM
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
 )

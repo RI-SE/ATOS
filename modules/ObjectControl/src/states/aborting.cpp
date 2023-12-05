@@ -10,17 +10,17 @@ AbstractKinematics::Aborting::Aborting() {
 }
 
 void AbstractKinematics::Aborting::onExit(
-		ObjectControl&) {
+		ObjectControl& /* handler */) {
 }
 
 void AbstractKinematics::Aborting::allClearRequest(
-		ObjectControl& handler) {
+		ObjectControl&  /* handler */) {
 	// TODO
 }
 
 void AbstractKinematics::Aborting::connectedToObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
@@ -31,26 +31,26 @@ void AbstractKinematics::Aborting::disconnectedFromObject(
 }
 
 void AbstractKinematics::Aborting::connectedToLiveObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Aborting::connectedToArmedObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Aborting::objectAborting(
-		ObjectControl& ,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Aborting::objectAbortDisarmed(
-	ObjectControl& ,
-	uint32_t) {
+	ObjectControl& /* handler */,
+	uint32_t /* id */) {
 	// TODO
 }
 
@@ -69,7 +69,7 @@ void AbstractKinematics::Aborting::objectArmed(
 
 
 void AbstractKinematics::Aborting::allObjectsAbortDisarmed(
-		ObjectControl& handler) {
+		ObjectControl&  /* handler */) {
 }
 
 
@@ -83,8 +83,8 @@ void RelativeKinematics::Aborting::allClearRequest(
 }
 
 void RelativeKinematics::Aborting::connectedToObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
@@ -95,14 +95,14 @@ void RelativeKinematics::Aborting::disconnectedFromObject(
 }
 
 void RelativeKinematics::Aborting::connectedToLiveObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void RelativeKinematics::Aborting::connectedToArmedObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
@@ -136,8 +136,8 @@ void AbsoluteKinematics::Aborting::allClearRequest(
 }
 
 void AbsoluteKinematics::Aborting::connectedToObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
@@ -148,14 +148,14 @@ void AbsoluteKinematics::Aborting::disconnectedFromObject(
 }
 
 void AbsoluteKinematics::Aborting::connectedToLiveObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbsoluteKinematics::Aborting::connectedToArmedObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 

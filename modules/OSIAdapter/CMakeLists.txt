@@ -46,7 +46,7 @@ ament_target_dependencies(${OSI_ADAPTER_TARGET}
   atos_interfaces
 )
 
-target_include_directories(${OSI_ADAPTER_TARGET} PUBLIC
+target_include_directories(${OSI_ADAPTER_TARGET} PUBLIC SYSTEM
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${OSI_HEADERS}
 	${SOCKET_HEADERS}

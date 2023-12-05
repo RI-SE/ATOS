@@ -142,6 +142,8 @@ public:
 	unsigned short version = 0;
 	unsigned short id = 0;
 
+	Trajectory& operator=(const Trajectory& other);
+
 	void initializeFromFile(const std::string& fileName);
 	void initializeFromCartesianTrajectory(const atos_interfaces::msg::CartesianTrajectory& cartesianTrajectory);
 	Trajectory relativeTo(const Trajectory& other) const;

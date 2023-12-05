@@ -226,7 +226,7 @@ int JournalModelCollection::dumpToFile(std::string fileName) {
 
 				if (section.end - section.beg < 0) {
 					RCLCPP_ERROR(get_logger(), "End precedes beginning in file %s: beg @%ld, end @%ld",
-							   file.c_str(), section.beg, section.end);
+							   file.c_str(), (long int)section.beg, (long int)section.end);
 					section.istrm.close();
 					inputFiles.pop_back();
 				}

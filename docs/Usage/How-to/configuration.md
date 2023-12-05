@@ -2,7 +2,7 @@
 
 ## The test directory
 After starting ATOS the first time, you will find the test directory `.astazero/ATOS` in your home folder on the host machine (or where you have specified it to be). 
-This directory contains all configuration settings and journals which are located in the the following directories:
+This directory contains all configuration settings and journals which are located in the following directories:
 
 - **Catalogs**
     - Explanation: Catalog directory containing various OpenSCENARIO-files with settings and parameters used by esmini. 
@@ -11,7 +11,7 @@ This directory contains all configuration settings and journals which are locate
 - **certs**
     - Explanation: Directory containing the certificates used by e.g. the web-gui.
 - **conf**
-    - Explanation:  Directory containing the configuration files used to configure ATOS, i.e. the ROS parameters located in the file params.yaml. Find more information below.
+    - Explanation: Directory containing the configuration files used to configure ATOS, i.e. the ROS parameters located in the file params.yaml. Find more information below.
 - **journal**
     - Explanation: Directory containing the journal files, i.e. recorded configuration/state/position of each object for the duration of a test.
 - **objects**

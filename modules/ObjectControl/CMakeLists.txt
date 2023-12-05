@@ -83,7 +83,7 @@ ament_target_dependencies(${OBJECT_CONTROL_TARGET}
   tf2
 )
 
-target_include_directories(${OBJECT_CONTROL_TARGET} PUBLIC
+target_include_directories(${OBJECT_CONTROL_TARGET} PUBLIC SYSTEM
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${OSI_HEADERS}
 	${TIME_HEADERS}

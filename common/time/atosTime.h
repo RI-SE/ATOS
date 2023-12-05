@@ -30,7 +30,7 @@ namespace std::chrono {
 	}
 
 	template<typename Duration>
-	void from_timeval(struct timeval & tv, Duration& d) {
+	void from_timeval(struct timeval & /* tv */, Duration& /* d */) {
 		// TODO
 		//const auto sec = std::chrono::seconds(tv.tv_sec);
 		//const auto usec = std::chrono::microseconds(tv.tv_usec);

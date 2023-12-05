@@ -15,8 +15,8 @@ TrajectoryletStreamer::TrajectoryletStreamer()
 	: Module(TrajectoryletStreamer::moduleName),
 	  initSub(*this, std::bind(&TrajectoryletStreamer::onInitMessage, this, _1)),
 	  connectedSub(*this, std::bind(&TrajectoryletStreamer::onObjectsConnectedMessage, this, _1)),
-	  stopSub(*this, std::bind(&TrajectoryletStreamer::onStopMessage, this, _1)),
-	  abortSub(*this, std::bind(&TrajectoryletStreamer::onAbortMessage, this, _1)) {
+		abortSub(*this, std::bind(&TrajectoryletStreamer::onAbortMessage, this, _1)),
+	  stopSub(*this, std::bind(&TrajectoryletStreamer::onStopMessage, this, _1)) {
 	declare_parameter("chunk_duration", 0.0);
 	idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
 	trajectoryClient
@@ -28,7 +28,7 @@ void TrajectoryletStreamer::onInitMessage(const std_msgs::msg::Empty::SharedPtr)
 	loadObjectFiles();
 }
 
-void TrajectoryletStreamer::onObjectsConnectedMessage(const ObjectsConnected::message_type::SharedPtr msg) {
+void TrajectoryletStreamer::onObjectsConnectedMessage(const ObjectsConnected::message_type::SharedPtr) {
 	// TODO setup and first chunk transmission
 	RCLCPP_INFO(get_logger(), "Starting trajectory publishers");
 	for (const auto& [id, traj] : trajectories) {
