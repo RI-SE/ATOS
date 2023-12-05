@@ -39,25 +39,3 @@ void Module::tryHandleMessage(
 		executeIfFail();
 	}
 }
-
-/*!
- * \brief requestDataDictInitialization Sends a request to initialize the data dictionary
- * \param maxRetries Maximum number of retries before returning failure
- * \return true if the initialization was successful, false otherwise
- */
-bool Module::requestDataDictInitialization(int maxRetries) {
-    SetBool::Response::SharedPtr response;
-    using namespace std::chrono_literals;
-    auto successful = nShotServiceRequest<SetBool>(maxRetries, 1s, ServiceNames::initDataDict, response);
-    if (successful) {
-        if (response->success){
-            RCLCPP_INFO(get_logger(), "Data dictionary successfully initialized");
-        } else {
-            RCLCPP_ERROR(get_logger(), "Failed to initialize data dictionary, with message: %s", response->message.c_str());
-        }
-    }
-    else{
-        RCLCPP_ERROR(get_logger(), "Failed to initialize data dictionary");
-    }
-    return response->success && successful;
-}

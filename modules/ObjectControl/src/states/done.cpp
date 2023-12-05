@@ -17,7 +17,7 @@ void AbstractKinematics::Done::onEnter(
 }
 
 void AbstractKinematics::Done::postProcessingCompleted(
-		ObjectControl& handler) {
+		ObjectControl& /* handler */) {
 	// TODO
 }
 

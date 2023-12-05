@@ -40,7 +40,7 @@ target_link_libraries(${ATOS_BASE_TARGET}
 	${COREUTILS_LIBRARY}
 	${COMMON_LIBRARY}
 )
-target_include_directories(${ATOS_BASE_TARGET} PUBLIC
+target_include_directories(${ATOS_BASE_TARGET} PUBLIC SYSTEM
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COREUTILS_HEADERS}
 	${COMMON_HEADERS}

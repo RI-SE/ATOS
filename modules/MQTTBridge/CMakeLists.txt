@@ -36,7 +36,7 @@ target_link_libraries(${MQTT_BRIDGE_TARGET}
 	eclipse-paho-mqtt-c::paho-mqtt3c
 )
 
-target_include_directories(${MQTT_BRIDGE_TARGET} PUBLIC
+target_include_directories(${MQTT_BRIDGE_TARGET} PUBLIC SYSTEM
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${CMAKE_INSTALL_INCLUDEDIR}
 	${COMMON_HEADERS}

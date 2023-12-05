@@ -19,6 +19,7 @@ const std::string getTestOrigin = "get_test_origin";
 const std::string getObjectTrajectory = "get_object_trajectory";
 const std::string getObjectTriggerStart = "get_object_trigger_start";
 const std::string getObjectControlState = "get_object_control_state";
+const std::string getObjectReturnTrajectory = "get_object_return_trajectory";
 }
 
 // TODO move somewhere else? also make generic to allow more args (variadic template)?
@@ -72,28 +73,33 @@ class Module : public rclcpp::Node {
 	virtual void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr){};
 	virtual void onReplayMessage(const ROSChannels::Replay::message_type::SharedPtr){};
 	virtual void onExitMessage(const ROSChannels::Exit::message_type::SharedPtr);
+	virtual void onResetTestObjectsMessage(const ROSChannels::ResetTestObjects::message_type::SharedPtr){};
+	virtual void onReloadObjectSettingsMessage(const ROSChannels::ReloadObjectSettings::message_type::SharedPtr){};
 
 
 	static void tryHandleMessage(std::function<void()> tryExecute,
 								 std::function<void()> executeIfFail,
 								 const std::string& topic,
 								 const rclcpp::Logger& logger);
-								 
-	bool requestDataDictInitialization(int maxRetries = 3);
 	
-	/*! \brief This helper function is performs a service call given a client and yields a response.
-	*  \tparam Srv The name of the service to request.
-	*  \param timeout The timeout for the service call.
-	*  \param client The client to use to request the service.
-	*  \param response The response of the service.
-	* 	\return The response of the service.
-	*/
+
+	/**
+	 * @brief This helper function performs a service call given a client and yields a response. This
+	 * function is used when you want to specify the request instead of sending an empty request.
+	 * 
+	 * @tparam Srv Srv The name of the service to request.
+	 * @param timeout The timeout for the service call.
+	 * @param client The client to use to request the service.
+	 * @param response The response of the service.
+	 * @param request The request of the service, with the data to be sent. Defaults to an empty request.
+	 * @return The response of the service.
+	 */
 	template <typename Srv>
 	bool callService( const std::chrono::duration< double > &timeout,
 						std::shared_ptr<rclcpp::Client<Srv>> &client,
-						std::shared_ptr<typename Srv::Response> &response)
+						std::shared_ptr<typename Srv::Response> &response,
+						std::shared_ptr<typename Srv::Request> request = std::make_shared<typename Srv::Request>())
 {
-		auto request = std::make_shared<typename Srv::Request>();
 		auto promise = client->async_send_request(request);
 		if (rclcpp::spin_until_future_complete(get_node_base_interface(), promise, timeout) ==
 			rclcpp::FutureReturnCode::SUCCESS) {

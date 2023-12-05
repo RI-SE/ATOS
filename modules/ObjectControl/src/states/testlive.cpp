@@ -21,34 +21,34 @@ void AbstractKinematics::TestLive::startObjectRequest(
 	handler.startObject(id, startTime);
 }
 
-void AbstractKinematics::TestLive::stopRequest(ObjectControl&) {
+void AbstractKinematics::TestLive::stopRequest(ObjectControl& /* handler */) {
 	// TODO
 }
 
-void AbstractKinematics::TestLive::abortRequest(ObjectControl&) {
+void AbstractKinematics::TestLive::abortRequest(ObjectControl& /* handler */) {
 	// TODO
 }
 
-void AbstractKinematics::TestLive::testCompleted(ObjectControl&) {
+void AbstractKinematics::TestLive::testCompleted(ObjectControl& /* handler */) {
 	// TODO
 }
 
 void AbstractKinematics::TestLive::disconnectedFromObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::TestLive::objectDisarmed(
-		ObjectControl&,
-		uint32_t) {
-
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
+	// TODO
 }
 
 void AbstractKinematics::TestLive::objectAborting(
-		ObjectControl&,
-		uint32_t) {
-
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
+	// TODO
 }
 
 

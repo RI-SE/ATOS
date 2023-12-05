@@ -29,7 +29,6 @@
 
 #include "journalcontrol.hpp"
 #include "journal.hpp"
-#include "datadictionary.h"
 
 #if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
 namespace fs = std::filesystem;
@@ -50,24 +49,24 @@ JournalControl::JournalControl()
 	replaySub(*this, std::bind(&JournalControl::onReplayMessage, this, _1)),
 	exitSub(*this, std::bind(&JournalControl::onExitMessage, this, _1))
 {
+	declare_parameter("scenario_name", "default_scenario_name");
+	get_parameter("scenario_name", scenarioName);
 	initialize();
 }
 
 void JournalControl::initialize()
 {
-	int retval = 0;
-
 	if (std::signal(SIGINT, signalHandler) == SIG_ERR) {
 		throw std::runtime_error("Failed to register signal handler");
 	}
 }
 
-void JournalControl::onArmMessage(const Arm::message_type::SharedPtr msg)
+void JournalControl::onArmMessage(const Arm::message_type::SharedPtr)
 {
 	journals.placeStartBookmarks();
 }
 
-void JournalControl::onStopMessage(const Stop::message_type::SharedPtr msg)
+void JournalControl::onStopMessage(const Stop::message_type::SharedPtr)
 {
 	try {
 		// Save stop references
@@ -76,7 +75,7 @@ void JournalControl::onStopMessage(const Stop::message_type::SharedPtr msg)
 		// insert them
 		journals.insertNonBookmarked();
 		// Merge journals into named output
-		journals.dumpToFile();
+		journals.dumpToFile(scenarioName);
 	} catch (std::exception &e) {
 		RCLCPP_ERROR(get_logger(), "Failed to save journal: %s", e.what());
 	}
@@ -88,7 +87,7 @@ void JournalControl::onAbortMessage(const Abort::message_type::SharedPtr msg)
 	onStopMessage(msg);
 }
 
-void JournalControl::onReplayMessage(const Replay::message_type::SharedPtr msg)
+void JournalControl::onReplayMessage(const Replay::message_type::SharedPtr)
 {
 	RCLCPP_WARN(get_logger(), "Replay function out of date");
 }
@@ -97,6 +96,6 @@ void Module::onExitMessage(const Exit::message_type::SharedPtr){
     this->quit=true;
 }
 
-void signalHandler(int signo) {
+void signalHandler(int) {
 	rclcpp::shutdown();
 }

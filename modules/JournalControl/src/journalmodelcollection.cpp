@@ -4,8 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "journalmodelcollection.hpp"
-#include "datadictionary.h"
 #include "journal.hpp"
+#include <regex>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <algorithm>
@@ -137,33 +138,38 @@ void JournalModelCollection::insertNonBookmarked() {
  *			interleaving relevant entries from all contained journals.
  * \return 0 on success, -1 otherwise
  */
-int JournalModelCollection::dumpToFile() {
+int JournalModelCollection::dumpToFile(std::string fileName) {
 
 	int retval = 0;
-	char scenarioName[PATH_MAX] = {'\0'};
 	char journalDir[PATH_MAX] = {'\0'};
 
-	// Construct output file name and path
-	if (DataDictionaryGetScenarioName(scenarioName, sizeof (scenarioName)) != READ_OK) {
-		RCLCPP_ERROR(get_logger(), "Unable to get scenario name parameter to generate output file");
-		return -1;
-	}
+	//TODO: Create a function for this. 
 	UtilGetJournalDirectoryPath(journalDir, sizeof (journalDir));
-	fs::path journalDirPath(std::string(journalDir) + std::string(scenarioName) + JOURNAL_FILE_ENDING);
+	// If a filename with the same name exists, add a number to the end of the filename
+	int maxnum = 0;
+  for (const auto & entry : fs::directory_iterator(std::string(journalDir))) {
+		auto entryFileName = entry.path().filename().string();
+		// Find the file with maximum number
+		if (entryFileName.find(fileName) != std::string::npos) {
+			std::regex re(fileName + R"(_(\d+))");
+			std::smatch match;
+			if (std::regex_search(entryFileName, match, re)) {
+				auto number = std::stoi(match[1].str());
+				if (number >= maxnum) {
+					maxnum = number + 1;
+				}
+			}
+		}
+	}
+	if (maxnum >= 0) {
+		fileName += "_" + std::to_string(maxnum);
+	}
+
+	fs::path journalDirPath(std::string(journalDir) + fileName + JOURNAL_FILE_ENDING);
 
 	std::ofstream ostrm(journalDirPath);
 	if (!ostrm.is_open()) {
 		RCLCPP_ERROR(get_logger(), "Unable to open %s for writing", journalDirPath.c_str());
-		return -1;
-	}
-
-	try {
-		printJournalHeaderTo(ostrm);
-	}
-	catch (const std::runtime_error& e) {
-		RCLCPP_ERROR(get_logger(), "Unable to write journal header to %s: %s",
-				   journalDirPath.c_str(), e.what());
-		ostrm.close();
 		return -1;
 	}
 
@@ -220,7 +226,7 @@ int JournalModelCollection::dumpToFile() {
 
 				if (section.end - section.beg < 0) {
 					RCLCPP_ERROR(get_logger(), "End precedes beginning in file %s: beg @%ld, end @%ld",
-							   file.c_str(), section.beg, section.end);
+							   file.c_str(), (long int)section.beg, (long int)section.end);
 					section.istrm.close();
 					inputFiles.pop_back();
 				}
@@ -271,59 +277,6 @@ int JournalModelCollection::dumpToFile() {
 	RCLCPP_INFO(get_logger(), "Generated output journal %s", journalDirPath.stem().c_str());
 	return retval;
 }
-
-
-
-int JournalModelCollection::printJournalHeaderTo(std::ofstream &ostrm) {
-	std::vector<char> trajectoryDirectory(PATH_MAX, '\0');
-	std::vector<char> configurationDirectory(PATH_MAX, '\0');
-	std::vector<char> objectDirectory(PATH_MAX, '\0');
-	std::ifstream istrm;
-	fs::path fileDirectory;
-
-	ostrm << "------------------------------------------" << std::endl;
-	ostrm << "Whole object files" << std::endl;
-	ostrm << "------------------------------------------" << std::endl;
-
-	UtilGetObjectDirectoryPath(objectDirectory.data(), objectDirectory.size());
-	objectDirectory.erase(std::find(objectDirectory.begin(), objectDirectory.end(), '\0'),
-							  objectDirectory.end());
-	std::remove(std::find(objectDirectory.begin(), objectDirectory.end(), '\0'),
-				objectDirectory.end(), '\0');
-	fileDirectory.assign(objectDirectory.begin(), objectDirectory.end());
-
-	printFilesTo(fileDirectory, ostrm);
-
-	ostrm << "------------------------------------------" << std::endl;
-	ostrm << "Whole trajectory files" << std::endl;
-	ostrm << "------------------------------------------" << std::endl;
-
-	UtilGetTrajDirectoryPath(trajectoryDirectory.data(), trajectoryDirectory.size());
-	trajectoryDirectory.erase(std::find(trajectoryDirectory.begin(), trajectoryDirectory.end(), '\0'),
-							  trajectoryDirectory.end());
-	std::remove(std::find(trajectoryDirectory.begin(), trajectoryDirectory.end(), '\0'),
-				trajectoryDirectory.end(), '\0');
-	fileDirectory.assign(trajectoryDirectory.begin(), trajectoryDirectory.end());
-
-	printFilesTo(fileDirectory, ostrm);
-
-	ostrm << "------------------------------------------" << std::endl;
-	ostrm << "Whole configuration files" << std::endl;
-	ostrm << "------------------------------------------" << std::endl;
-
-	UtilGetConfDirectoryPath(configurationDirectory.data(), configurationDirectory.size());
-	configurationDirectory.erase(std::find(configurationDirectory.begin(), configurationDirectory.end(), '\0'),
-								 configurationDirectory.end());
-	std::remove(std::find(configurationDirectory.begin(), configurationDirectory.end(), '\0'),
-				configurationDirectory.end(), '\0');
-	fileDirectory.assign(configurationDirectory.begin(), configurationDirectory.end());
-
-	printFilesTo(fileDirectory, ostrm);
-
-	// TODO: information about file structure
-	return 0;
-}
-
 
 /*!
  * \brief getCurrentDateAsString Creates a string on the format YYYY-MM-DD of the current date.

@@ -1,4 +1,4 @@
-# Install dependencies
+# Install OSI dependencies
 
 Build OSI and dependencies from source according to [documentation](https://opensimulationinterface.github.io/osi-documentation/index.html#_installing_osi_for_c_on_linux) for Cpp usage.
 

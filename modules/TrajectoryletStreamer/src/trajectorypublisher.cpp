@@ -5,7 +5,7 @@
  */
 #include "trajectorypublisher.hpp"
 #include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <nav_msgs/msg/path.hpp>
 
 using namespace ATOS;
@@ -16,10 +16,11 @@ TrajectoryPublisher::TrajectoryPublisher(
 	const Trajectory& _traj,
 	const uint32_t objectId,
 	const std::chrono::milliseconds chunkLength)
-	: traj(std::make_unique<const Trajectory>(_traj)),
-	pub(node, objectId),
-	lastPublishedChunk(traj->points.end(), traj->points.end()),
-	chunkLength(chunkLength)
+	: pub(node, objectId),
+		startObjectSub(node, std::bind(&TrajectoryPublisher::getStartObjectMsg, this, std::placeholders::_1)),
+		chunkLength(chunkLength),
+		traj(std::make_unique<const Trajectory>(_traj)),
+		lastPublishedChunk(traj->points.end(), traj->points.end())
 {
 	timer = node.create_wall_timer(publishPeriod, std::bind(&TrajectoryPublisher::publishChunk, this));
 }
@@ -47,10 +48,11 @@ void TrajectoryPublisher::publishChunk()
 	}
 }
 
-
-void TrajectoryPublisher::handleStart() {
+void TrajectoryPublisher::getStartObjectMsg(const atos_interfaces::msg::ObjectTriggerStart::SharedPtr msg) {
 	using std::chrono::steady_clock;
-	startTime.reset(new steady_clock::time_point(steady_clock::now()));
+	if (msg->id == pub.objectId) {
+		startTime.reset(new steady_clock::time_point(steady_clock::now()));
+	}
 }
 
 

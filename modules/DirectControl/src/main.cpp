@@ -8,7 +8,6 @@
 #include <signal.h>
 
 #include "util.h"
-#include "datadictionary.h"
 #include "directcontrol.hpp"
 
 using namespace std::chrono;

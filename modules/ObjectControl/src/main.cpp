@@ -4,11 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "objectcontrol.hpp"
+#include <rclcpp/executor.hpp>
 
 int main(int argc, char **argv) {
 	rclcpp::init(argc,argv);
-	auto obc = std::make_shared<ObjectControl>();
-	rclcpp::spin(obc);
+	auto exec = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
+	auto obc = std::make_shared<ObjectControl>(exec);
+	exec->add_node(obc);
+	exec->spin();
 	rclcpp::shutdown();
 
 	return 0;

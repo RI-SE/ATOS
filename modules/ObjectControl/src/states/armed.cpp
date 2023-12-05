@@ -22,27 +22,27 @@ void AbstractKinematics::Armed::startRequest(
 }
 
 void AbstractKinematics::Armed::disarmRequest(
-		ObjectControl&) {
+		ObjectControl& /* handler */) {
 }
 
 void AbstractKinematics::Armed::disconnectedFromObject(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 }
 
 void AbstractKinematics::Armed::objectArmed(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 }
 
 void AbstractKinematics::Armed::objectDisarmed(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 }
 
 void AbstractKinematics::Armed::objectAborting(
-		ObjectControl&,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 }
 
 

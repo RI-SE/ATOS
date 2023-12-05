@@ -11,9 +11,13 @@
 #include "roschannels/pathchannel.hpp"
 #include "roschannels/monitorchannel.hpp"
 #include "roschannels/gnsspathchannel.hpp"
+#include "roschannels/statechange.hpp"
 #include <unordered_map>
 #include <filesystem>
 #include "esmini/esminiLib.hpp"
+#include "esmini/esminiRMLib.hpp"
+#include "CRSTransformation.hpp"
+
 #include "trajectory.hpp"
 #include "atos_interfaces/srv/get_test_origin.hpp"
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
@@ -39,10 +43,8 @@ private:
 	ROSChannels::StartObject::Pub startObjectPub;
 	ROSChannels::V2X::Pub v2xPub;
 	ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;
-	ROSChannels::Init::Sub initSub;
-	ROSChannels::Start::Sub startSub;
-	ROSChannels::Abort::Sub abortSub;
 	ROSChannels::Exit::Sub exitSub;
+	ROSChannels::StateChange::Sub stateChangeSub;
 	std::unordered_map<uint32_t,ROSChannels::Path::Pub> pathPublishers;
 	std::unordered_map<uint32_t,ROSChannels::GNSSPath::Pub> gnssPathPublishers;
 
@@ -50,31 +52,35 @@ private:
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> objectTrajectoryService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTriggerStart>> startOnTriggerService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectIp>> objectIpService;
+	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetTestOrigin>> testOriginService;
 
 
 	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
 	// Below is a quickfix, fix properly later
-	static void onStaticInitMessage(const ROSChannels::Init::message_type::SharedPtr);
-	static void onStaticStartMessage(const ROSChannels::Start::message_type::SharedPtr);
-	static void onStaticAbortMessage(const ROSChannels::Abort::message_type::SharedPtr);
+	static void handleInitCommand();
+	static void handleStartCommand();
+	static void handleAbortCommand();
 	static void onStaticExitMessage(const ROSChannels::Exit::message_type::SharedPtr);
+	static void onStaticStateChangeMessage(const ROSChannels::StateChange::message_type::SharedPtr);
 
 	static void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
 	static void reportObjectPosition(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
 	static void executeActionIfStarted(const char* name, int type, int state);
 	static std::filesystem::path getOpenScenarioFileParameter();
+	static std::filesystem::path getOpenDriveFile();
 	static void setOpenScenarioFile(const std::filesystem::path&);
 	static void handleStoryBoardElementChange(const char* name, int type, int state);
 	static void handleActionElementStateChange(const char* name, int state);
 	static void InitializeEsmini();
 	static void getObjectStates(double timeStep, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
-	static ATOS::Trajectory getTrajectory(uint32_t,std::vector<SE_ScenarioObjectState>& states);
+	static ATOS::Trajectory getTrajectoryFromObjectState(uint32_t,std::vector<SE_ScenarioObjectState>& states);
+	static std::string projStrFromGeoReference(RM_GeoReference& geoRef);
 	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(double timeStep, std::map<uint32_t,ATOS::Trajectory>& idToTraj);
 	static std::pair<uint32_t, std::string> parseAction(const std::string& action);
 	static bool isStartAction(const std::string& action);
 	static bool isSendDenmAction(const std::string& action);
 	static void collectStartAction(const char* name, int type, int state);
-	static ROSChannels::V2X::message_type denmFromMonitor(const ROSChannels::Monitor::message_type monr, double *llh);
+	static ROSChannels::V2X::message_type denmFromTestOrigin(double *llh);
 
 	static void onRequestObjectTrajectory(
 		const std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Request> req,
@@ -88,12 +94,20 @@ private:
 		const std::shared_ptr<atos_interfaces::srv::GetObjectIp::Request> req,
 		std::shared_ptr<atos_interfaces::srv::GetObjectIp::Response> res);
 
+	static void onRequestTestOrigin(const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,
+							std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response>);
+	
+
 	static std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> testOriginClient;
 	static std::shared_ptr<EsminiAdapter> me;
 	static std::unordered_map<int, int> ATOStoEsminiObjectId;
 	static std::map<uint32_t,ATOS::Trajectory> idToTraj;
 	static std::map<uint32_t,std::string> idToIp;
 	static std::vector<uint32_t> delayedStartIds;
+
+	std::shared_ptr<CRSTransformation> crsTransformation;
+	bool applyTrajTransform;
+	bool testOriginSet;
 
 	static geographic_msgs::msg::GeoPose testOrigin;
 

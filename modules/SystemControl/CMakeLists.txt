@@ -41,7 +41,7 @@ target_link_libraries(${SYSTEM_CONTROL_TARGET}
 	${ATOS_COMMON_LIBRARY}
 )
 
-target_include_directories(${SYSTEM_CONTROL_TARGET} PUBLIC
+target_include_directories(${SYSTEM_CONTROL_TARGET} PUBLIC SYSTEM
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${TIME_HEADERS}
 )

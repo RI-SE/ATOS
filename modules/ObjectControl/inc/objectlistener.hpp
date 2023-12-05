@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #pragma once
-#include "positioning.h"
+
 #include "objectcontrol.hpp"
 #include "testobject.hpp"
 #include "loggable.hpp"

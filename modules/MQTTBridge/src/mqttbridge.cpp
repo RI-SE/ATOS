@@ -7,6 +7,7 @@
 #include "mqtt.hpp"
 #include <random>
 
+
 using namespace ROSChannels;
 
 using std::placeholders::_1;
@@ -14,12 +15,12 @@ using std::placeholders::_1;
 MqttBridge::MqttBridge() : Module(MqttBridge::moduleName),
 						   v2xMsgSub(*this, std::bind(&MqttBridge::onV2xMsg, this, _1))
 {
-	declare_parameter("broker_ip");
-	declare_parameter("pub_client_id");
-	declare_parameter("username");
-	declare_parameter("password");
-	declare_parameter("topic");
-	declare_parameter("quality_of_service");
+	declare_parameter("broker_ip","");
+	declare_parameter("pub_client_id","");
+	declare_parameter("username","");
+	declare_parameter("password","");
+	declare_parameter("topic","");
+	declare_parameter("quality_of_service","1");
 
 	get_parameter("broker_ip", brokerIP);
 	get_parameter("pub_client_id", pubClientId);
@@ -100,7 +101,7 @@ void MqttBridge::onV2xMsg(const V2X::message_type::SharedPtr v2x_msg)
 			RCLCPP_DEBUG(this->get_logger(), "Publishing MQTT v2x msg to broker %s", payload.dump().c_str());
 			MQTT::publishMessage(mqttMsg, this->mqttClient, retained);
 		}
-		catch (std::runtime_error)
+		catch (std::runtime_error&)
 		{
 			RCLCPP_ERROR(this->get_logger(), "Failed to publish MQTT message");
 		}

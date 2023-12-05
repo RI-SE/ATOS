@@ -22,6 +22,7 @@
 #include "atos_interfaces/msg/cartesian_trajectory.hpp"
 
 #include "util.h"
+//! ATOS Namespace
 namespace ATOS {
 class Trajectory : public Loggable {
 public:
@@ -140,6 +141,8 @@ public:
 	std::string name = "";
 	unsigned short version = 0;
 	unsigned short id = 0;
+
+	Trajectory& operator=(const Trajectory& other);
 
 	void initializeFromFile(const std::string& fileName);
 	void initializeFromCartesianTrajectory(const atos_interfaces::msg::CartesianTrajectory& cartesianTrajectory);

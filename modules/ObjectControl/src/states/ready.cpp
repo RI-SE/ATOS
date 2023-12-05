@@ -11,7 +11,7 @@ AbstractKinematics::Ready::Ready() {
 
 void AbstractKinematics::Ready::onEnter(
 		ObjectControl& handler) {
-	// TODO
+	handler.startSafetyThread();
 }
 
 void AbstractKinematics::Ready::armRequest(
@@ -27,29 +27,40 @@ void AbstractKinematics::Ready::disconnectRequest(
 }
 
 void AbstractKinematics::Ready::disconnectedFromObject(
-		ObjectControl& handler,
-		uint32_t) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Ready::objectAborting(
-		ObjectControl& handler,
-		uint32_t id) {
+		ObjectControl& /* handler */,
+		uint32_t /* id */) {
 	// TODO
 }
 
 void AbstractKinematics::Ready::objectAbortDisarmed(
-	ObjectControl& handler,
-	uint32_t id) {
+	ObjectControl& /* handler */,
+	uint32_t /* id */) {
 		// TODO
 }
 
 void AbstractKinematics::Ready::settingModificationRequested(
-		ObjectControl& handler) {
+		ObjectControl& /* handler */) {
 	// TODO
 }
 void AbstractKinematics::Ready::enableRemoteControlRequest(
-	ObjectControl& handler){
+	ObjectControl& /* handler */){
+}
+
+void AbstractKinematics::Ready::resetTestObjectsRequest(
+		ObjectControl& handler) {
+	handler.resetTestObjects();
+}
+
+void AbstractKinematics::Ready::reloadObjectSettingsRequest(
+		ObjectControl& handler) {
+	handler.reloadScenarioTrajectories();
+	handler.uploadAllConfigurations();
 }
 
 /*! ******************************************************
@@ -59,17 +70,7 @@ void AbstractKinematics::Ready::enableRemoteControlRequest(
 
 void RelativeKinematics::Ready::onEnter(
 		ObjectControl& handler) {
-	handler.startSafetyThread();
-	auto disconnected = []( std::shared_ptr<TestObject> obj ){ return obj->isConnected(); };
-	if (handler.isAnyObjectIn(std::set({OBJECT_STATE_ABORTING,OBJECT_STATE_RUNNING}))) {
-		setState(handler, new RelativeKinematics::Aborting); // Any Object in aborting -> abort test
-	}
-	else if (handler.isAnyObject(disconnected)) {
-		setState(handler, new RelativeKinematics::Connecting); // Not all objects were connected and disarmed
-	}
-	else if (handler.isAnyObjectIn(OBJECT_STATE_ARMED)){
-		setState(handler, new RelativeKinematics::Disarming); // Not all objects were connected and disarmed
-	}
+	AbstractKinematics::Ready::onEnter(handler);
 }
 
 void RelativeKinematics::Ready::armRequest(
@@ -118,6 +119,16 @@ void RelativeKinematics::Ready::enableRemoteControlRequest(
 	//setState(handler, new RelativeKinematics::RemoteControlled);
 }
 
+void RelativeKinematics::Ready::resetTestObjectsRequest(
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::resetTestObjectsRequest(handler);
+}
+
+void RelativeKinematics::Ready::reloadObjectSettingsRequest(
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::reloadObjectSettingsRequest(handler);
+}
+
 
 /*! ******************************************************
  * \section AbsoluteKinematics
@@ -126,17 +137,7 @@ void RelativeKinematics::Ready::enableRemoteControlRequest(
 
 void AbsoluteKinematics::Ready::onEnter(
 		ObjectControl& handler) {
-	handler.startSafetyThread();
-	auto disconnected = []( std::shared_ptr<TestObject> obj ){ return obj->isConnected(); };
-	if (handler.isAnyObjectIn(std::set({OBJECT_STATE_ABORTING,OBJECT_STATE_RUNNING}))) {
-		setState(handler, new AbsoluteKinematics::Aborting); // Any Object in aborting -> abort test
-	}
-	else if (handler.isAnyObject(disconnected)) {
-		setState(handler, new AbsoluteKinematics::Connecting); // Not all objects were connected and disarmed
-	}
-	else if (handler.isAnyObjectIn(OBJECT_STATE_ARMED)){
-		setState(handler, new AbsoluteKinematics::Disarming); // Not all objects were connected and disarmed
-	}
+	AbstractKinematics::Ready::onEnter(handler);
 }
 
 void AbsoluteKinematics::Ready::armRequest(
@@ -180,4 +181,14 @@ void AbsoluteKinematics::Ready::settingModificationRequested(
 void AbsoluteKinematics::Ready::enableRemoteControlRequest(
 	ObjectControl& handler){
 	setState(handler, new AbsoluteKinematics::RemoteControlled);
+}
+
+void AbsoluteKinematics::Ready::resetTestObjectsRequest(
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::resetTestObjectsRequest(handler);
+}
+
+void AbsoluteKinematics::Ready::reloadObjectSettingsRequest(
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::reloadObjectSettingsRequest(handler);
 }

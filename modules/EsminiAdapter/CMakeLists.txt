@@ -3,6 +3,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 cmake_minimum_required(VERSION 3.8)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
@@ -12,6 +13,7 @@ project(esmini_adapter)
 find_package(atos_interfaces REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(esminiLib REQUIRED)
+find_package(esminiRMLib REQUIRED)
 find_package(foxglove_msgs REQUIRED)
 
 # Define target names
@@ -20,7 +22,6 @@ set(ESMINI_ADAPTER_TARGET ${PROJECT_NAME})
 set(ATOS_COMMON_LIBRARY ATOSCommon)
 set(COREUTILS_LIBRARY ATOSCoreUtil)
 get_target_property(COMMON_HEADERS ${ATOS_COMMON_LIBRARY} INCLUDE_DIRECTORIES)
-
 include(GNUInstallDirs)
 
 # Create project main executable target
@@ -33,12 +34,14 @@ target_link_libraries(${ESMINI_ADAPTER_TARGET}
 	${COREUTILS_LIBRARY}
 	${ATOS_COMMON_LIBRARY}
 	${esminiLib_LIBRARIES}
+	${esminiRMLib_LIBRARIES}
 )
 
-target_include_directories(${ESMINI_ADAPTER_TARGET} PUBLIC
+target_include_directories(${ESMINI_ADAPTER_TARGET} PUBLIC SYSTEM
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
 	${esminiLib_INCLUDE_DIRS}
+	${esminiRMLib_INCLUDE_DIRS}
 )
 
 # ROS specific rules

@@ -15,9 +15,8 @@ TrajectoryletStreamer::TrajectoryletStreamer()
 	: Module(TrajectoryletStreamer::moduleName),
 	  initSub(*this, std::bind(&TrajectoryletStreamer::onInitMessage, this, _1)),
 	  connectedSub(*this, std::bind(&TrajectoryletStreamer::onObjectsConnectedMessage, this, _1)),
-	  startSub(*this, std::bind(&TrajectoryletStreamer::onStartMessage, this, _1)),
-	  stopSub(*this, std::bind(&TrajectoryletStreamer::onStopMessage, this, _1)),
-	  abortSub(*this, std::bind(&TrajectoryletStreamer::onAbortMessage, this, _1)) {
+		abortSub(*this, std::bind(&TrajectoryletStreamer::onAbortMessage, this, _1)),
+	  stopSub(*this, std::bind(&TrajectoryletStreamer::onStopMessage, this, _1)) {
 	declare_parameter("chunk_duration", 0.0);
 	idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
 	trajectoryClient
@@ -29,19 +28,14 @@ void TrajectoryletStreamer::onInitMessage(const std_msgs::msg::Empty::SharedPtr)
 	loadObjectFiles();
 }
 
-void TrajectoryletStreamer::onObjectsConnectedMessage(const ObjectsConnected::message_type::SharedPtr msg) {
+void TrajectoryletStreamer::onObjectsConnectedMessage(const ObjectsConnected::message_type::SharedPtr) {
 	// TODO setup and first chunk transmission
 	RCLCPP_INFO(get_logger(), "Starting trajectory publishers");
 	for (const auto& [id, traj] : trajectories) {
-		publishers.emplace_back(*this, *traj, id, chunkLength);
+		publishers.emplace_back(std::make_shared<TrajectoryPublisher>(*this, *traj, id, chunkLength));
 	}
 }
 
-void TrajectoryletStreamer::onStartMessage(const std_msgs::msg::Empty::SharedPtr) {
-	for (auto& pub : publishers) {
-		pub.handleStart();
-	}
-}
 
 void TrajectoryletStreamer::loadObjectFiles() {
 	clearScenario();
@@ -52,7 +46,7 @@ void TrajectoryletStreamer::loadObjectFiles() {
 		return;
 	} else {
 		chunkLength = std::chrono::milliseconds(static_cast<int>(res * 1000.0));
-		RCLCPP_INFO(get_logger(), "Chunk duration: %d ms", chunkLength.count());
+		RCLCPP_INFO(get_logger(), "Chunk duration: %ld ms", chunkLength.count());
 	}
 	RCLCPP_INFO(get_logger(), "Loading trajectories");
 	auto idsCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFuture future) {
@@ -70,7 +64,7 @@ void TrajectoryletStreamer::loadObjectFiles() {
 					ATOS::Trajectory traj(get_logger());
 					traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
 					trajectories[trajResponse->id] = std::make_unique<ATOS::Trajectory>(traj);
-					RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %d points",
+					RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %ld points",
 								trajResponse->id, trajectories[trajResponse->id]->size());
 				};
 			auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();

@@ -11,17 +11,10 @@ SampleModule::SampleModule() :
 	initSub(*this, std::bind(&SampleModule::onInitMessage, this, _1)),
 	abortSub(*this, std::bind(&SampleModule::onAbortMessage, this, _1)),
 	allClearSub(*this, std::bind(&SampleModule::onAllClearMessage, this, _1)),
-	tcpServer("0.0.0.0",TCPPort)
+	smOnInitResponsePub(*this)
 {
-	tcpThread = std::make_unique<std::thread>(&SampleModule::tcpSocketProcedure, this);
-}
-
-SampleModule::~SampleModule() {
-	// When the SampleModule object is destroyed, make sure that socket thread is joined
-	quit = true;
-	if (tcpThread != nullptr) {
-		tcpThread->join();
-	}
+    service_server = create_service<std_srvs::srv::SetBool>(
+        "/sample_module_test_service", std::bind(&SampleModule::OnCallbackSetBool, this, _1, _2));
 }
 
 //! Message queue callbacks
@@ -31,24 +24,31 @@ void SampleModule::onInitMessage(const Init::message_type::SharedPtr) {
 	// Get the object id of the objects in the scenario
 	ConnectedObjectIds::message_type connectedObjectIds;
 	// Wait for a single message containing a vector of ids, at most 1000ms
-	rclcpp::wait_for_message(connectedObjectIds, shared_from_this(), std::string(get_namespace()) + "/connected_object_ids", 1000ms);
-	// Do something with IDs
+	rclcpp::wait_for_message(connectedObjectIds, shared_from_this(), std::string(get_namespace()) + "connected_object_ids", 1000ms);
+	// Populate a list of object IDs
+	for (auto id : connectedObjectIds.ids) {
+		objectIds.push_back(id);
+	}
+	smOnInitResponsePub.publish(std_msgs::msg::Empty());
 }
 
-void SampleModule::onAbortMessage(const Abort::message_type::SharedPtr) {}
+void SampleModule::onAbortMessage(const Abort::message_type::SharedPtr) {
+	aborting_ = true;
+}
 
 void SampleModule::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 
-/*! \brief This function is executed in a separate thread
- * It is used to handle incoming TCP connections
- * and receive data from them
+
+void SampleModule::OnCallbackSetBool(const std::shared_ptr<std_srvs::srv::SetBool::Request>,
+											std::shared_ptr<std_srvs::srv::SetBool::Response> response)
+{
+	response->message = "succeeded";
+	response->success = true;
+}
+
+/*! \brief  returns the object ids of the objects in the scenario
+ * \return a vector of object ids
 */
-void SampleModule::tcpSocketProcedure() {
-	while (!quit) {
-		auto socket = tcpServer.await();
-		auto bytes = socket.recv();
-		for (auto b : bytes) {
-			RCLCPP_INFO(get_logger(), "Received byte: %d", b);
-		}
-	}
+std::vector<std::uint32_t> SampleModule::getObjectIds() {
+	return objectIds;
 }
