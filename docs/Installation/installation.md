@@ -80,8 +80,7 @@ If you instead want to install ROS 2 Humble, do:
 sudo apt update
 sudo apt install ros-humble-desktop python3-colcon-common-extensions ros-humble-nav-msgs \
 ros-humble-geographic-msgs ros-humble-foxglove-msgs ros-humble-sensor-msgs \
-ros-humble-rosbridge-suite ros-humble-pcl-conversions \
-ros-humble-foxglove-bridge
+ros-humble-rosbridge-suite ros-humble-pcl-conversions
 ```
 
 and source the setup script:

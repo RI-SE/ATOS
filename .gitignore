@@ -62,4 +62,3 @@ docs/html/*
 
 #
 gui/controlpanel/package-lock.json
-*.env
