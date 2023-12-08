@@ -499,8 +499,12 @@ Trajectory Trajectory::createWilliamsonTurn(
 	using namespace std::chrono;
 	using Eigen::MatrixXd;
 
-	constexpr double topSpeed = 10 / 3.6;
-	const int calculatedNoOfPoints = 500;
+	double topSpeed = turnRadius*2 / 3.6; // Set top speed depending on radius.
+	// Limit top speed.
+	double minSpeed = 4.0;
+	double maxSpeed = 12.0;
+	std::clamp(topSpeed, minSpeed, maxSpeed);
+	const int calculatedNoOfPoints = 50;
 	double radius = turnRadius;
 	double headingRad = startPoint.getHeading();
 
