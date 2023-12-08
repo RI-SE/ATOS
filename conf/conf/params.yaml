@@ -35,3 +35,6 @@ atos:
   integration_testing_handler:
     ros__parameters:
       scenario_execution: true
+  back_to_start:
+    ros__parameters:
+      turnRadius: 5.0
