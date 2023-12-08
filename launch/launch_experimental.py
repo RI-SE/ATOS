@@ -40,6 +40,7 @@ def get_experimental_nodes():
             namespace='atos',
             executable='back_to_start',
             name='back_to_start',
+            parameters=[files["params"]]
         )
     ]
 

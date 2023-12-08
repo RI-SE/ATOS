@@ -10,6 +10,7 @@ BackToStart::BackToStart() : Module(BackToStart::moduleName)
 {
 	getObjectReturnTrajectoryService = create_service<atos_interfaces::srv::GetObjectReturnTrajectory>(ServiceNames::getObjectReturnTrajectory,
 		std::bind(&BackToStart::onReturnTrajectoryRequest, this, _1, _2));
+	this->declare_parameter("turnRadius", 5.0);
 }
 
 /**
@@ -26,6 +27,17 @@ void BackToStart::onReturnTrajectoryRequest(const std::shared_ptr<atos_interface
         response->success = false;
         return;
     }
+
+	// Get the turn radius of the williamson turn.
+	double turnRadius;
+	auto success = this->get_parameter("turnRadius", turnRadius);
+	if (!success) {
+		throw std::runtime_error("Could not read parameter turnRadius. Using 5m as default.");
+	}
+	else {
+        turnRadius = 5.0;
+	}
+
     // Load the trajectory in a Trajectory object
     ATOS::Trajectory currentTraj(get_logger());
     currentTraj.initializeFromCartesianTrajectory(request->trajectory);
@@ -35,7 +47,7 @@ void BackToStart::onReturnTrajectoryRequest(const std::shared_ptr<atos_interface
     ATOS::Trajectory b2sTraj(get_logger());
 
     //Add first turn
-    ATOS::Trajectory turn1 = ATOS::Trajectory::createWilliamsonTurn(5, 1, currentTraj.points.back());
+    ATOS::Trajectory turn1 = ATOS::Trajectory::createWilliamsonTurn(turnRadius, 1, currentTraj.points.back());
     b2sTraj.points.insert(b2sTraj.points.end(), std::begin(turn1.points), turn1.points.end());
 
     //Add reversed original traj
@@ -43,7 +55,7 @@ void BackToStart::onReturnTrajectoryRequest(const std::shared_ptr<atos_interface
     b2sTraj.points.insert(b2sTraj.points.end(), std::begin(rev.points), rev.points.end());
 
     //Add last turn
-    ATOS::Trajectory turn2 = ATOS::Trajectory::createWilliamsonTurn(5, 1, b2sTraj.points.back());
+    ATOS::Trajectory turn2 = ATOS::Trajectory::createWilliamsonTurn(turnRadius, 1, b2sTraj.points.back());
     turn2 = turn2.delayed(b2sTraj.points.back().getTime());
     b2sTraj.points.insert(b2sTraj.points.end(), std::begin(turn2.points), turn2.points.end());
 
