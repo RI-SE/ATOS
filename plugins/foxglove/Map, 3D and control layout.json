@@ -2,8 +2,8 @@
   "configById": {
     "atos_simple_control.Simple Control!494eifz": {
       "atosHostname": "localhost",
-      "atosPort": "3443",
-      "atosProtocol": "https"
+      "atosPort": "3000",
+      "atosProtocol": "http"
     },
     "map!2s6yzns": {
       "center": {
