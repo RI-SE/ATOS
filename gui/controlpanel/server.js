@@ -64,20 +64,24 @@ module.exports = app;
 
 // Initialize ros2
 rclnodejs.init().then(() => {
-  // Create a node
-  const node = new rclnodejs.Node('simple_control','atos');
+  const ParameterType = rclnodejs.ParameterType;
+  const Parameter = rclnodejs.Parameter;
+
+  // Create nodes
+  const control_node = new rclnodejs.Node('simple_control','atos');
+  const config_node = new rclnodejs.Node('config_panel','atos');
 
   // Publishers
-  const initPub = node.createPublisher('std_msgs/msg/Empty', '/atos/init');
-  const connectPub = node.createPublisher('std_msgs/msg/Empty', '/atos/connect');
-  const disconnectPub = node.createPublisher('std_msgs/msg/Empty', '/atos/disconnect');
-  const armPub = node.createPublisher('std_msgs/msg/Empty', '/atos/arm');
-  const disarmPub = node.createPublisher('std_msgs/msg/Empty', '/atos/disarm');
-  const startPub = node.createPublisher('std_msgs/msg/Empty', '/atos/start');
-  const abortPub = node.createPublisher('std_msgs/msg/Empty', '/atos/abort');
-  const allClearPub = node.createPublisher('std_msgs/msg/Empty', '/atos/all_clear');
-  const resetTestObjectsPub = node.createPublisher('std_msgs/msg/Empty', '/atos/reset_test_objects');
-  const reloadObjectSettingsPub = node.createPublisher('std_msgs/msg/Empty', '/atos/reload_object_settings');
+  const initPub = control_node.createPublisher('std_msgs/msg/Empty', '/atos/init');
+  const connectPub = control_node.createPublisher('std_msgs/msg/Empty', '/atos/connect');
+  const disconnectPub = control_node.createPublisher('std_msgs/msg/Empty', '/atos/disconnect');
+  const armPub = control_node.createPublisher('std_msgs/msg/Empty', '/atos/arm');
+  const disarmPub = control_node.createPublisher('std_msgs/msg/Empty', '/atos/disarm');
+  const startPub = control_node.createPublisher('std_msgs/msg/Empty', '/atos/start');
+  const abortPub = control_node.createPublisher('std_msgs/msg/Empty', '/atos/abort');
+  const allClearPub = control_node.createPublisher('std_msgs/msg/Empty', '/atos/all_clear');
+  const resetTestObjectsPub = control_node.createPublisher('std_msgs/msg/Empty', '/atos/reset_test_objects');
+  const reloadObjectSettingsPub = control_node.createPublisher('std_msgs/msg/Empty', '/atos/reload_object_settings');
   var commandToPublisher = {
     "send_init": initPub,
     "send_connect": connectPub,
@@ -91,14 +95,21 @@ rclnodejs.init().then(() => {
     "send_reload_object_settings": reloadObjectSettingsPub
   };
 
-  // Service Clients
-  const obcStateClient = node.createClient('atos_interfaces/srv/GetObjectControlState', '/atos/get_object_control_state');
+  // Control Service Clients
+  const obcStateClient = control_node.createClient('atos_interfaces/srv/GetObjectControlState', '/atos/get_object_control_state');
   var commandToSrvClient = {
     "get_obc_state": obcStateClient
   };
 
+  // Config Service Clients
+  const scenarioClient = config_node.createClient('rcl_interfaces/srv/SetParametersAtomically', '/atos/esmini_adapter/set_parameters_atomically');
+  var commandToConfigClient = {
+    "set_scenario_param": scenarioClient
+  };
+
   // Start the ros2 event loop
-  node.spin();
+  control_node.spin();
+  config_node.spin();
 
   // Helper functions
   function requestService(serviceClient, command, ws){
@@ -122,6 +133,20 @@ rclnodejs.init().then(() => {
     }
     else if (command in commandToSrvClient){ // if the command should be called as a service
       requestService(commandToSrvClient[command], command, ws);
+    }
+    else if (command in commandToConfigClient){ // if the command should be called as a service
+      var scenarioParam = new Parameter(
+        'open_scenario_file',
+        ParameterType.PARAMETER_STRING,
+        'GaragePlanScenario.xosc'
+      );
+      const request = {
+        parameters: scenarioParam,
+      };
+      scenarioClient.sendRequest(request, (response) => {
+        // Let websocket client know that the service call is done
+        common.wsSend(command, ws, response)
+      };
     }
     else { // Undefined
       console.log("Undefined command: " + command);
@@ -151,7 +176,7 @@ rclnodejs.init().then(() => {
   const httpsServer = https.createServer({
     cert: fs.readFileSync(homeDir + '/.astazero/ATOS/certs/selfsigned.crt', 'utf8'),
     key: fs.readFileSync(homeDir + '/.astazero/ATOS/certs/selfsigned.key', 'utf8'),
-})
+  })
 
   httpsServer.listen(8082);
 
