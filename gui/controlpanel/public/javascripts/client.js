@@ -112,7 +112,7 @@ var wsConnect = function(){
     }
     ws.addEventListener('open', function (event) {
         console.log("Connection opened");
-        updateATOSStatusIcon("active", "Connected to ATOS");
+        updateATOSStatusIcon("active", "Websocket connection to ATOS established");
         sendCommand("get_obc_state", ws); // Get state of OBC on connection immediately
         intervalGetOBCState = setInterval(function() { // also start a timer to get the state periodically
             sendCommand("get_obc_state", ws);
