@@ -6,7 +6,7 @@ router.get('/controlpanel', function(req, res, next) {
   res.render('controlpanel', { title: 'Simple Control GUI for ATOS' });
 });
 router.get('/configpanel', function(req, res, next) {
-  res.render('configpanel', { title: 'Simple Control GUI for ATOS' });
+  res.render('configpanel', { title: 'Simple Config GUI for ATOS' });
 });
 
 
