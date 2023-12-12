@@ -64,8 +64,6 @@ rclnodejs.init().then(() => {
   control_node = new ControlNode();
   const ConfigNode = require('./ros_nodes/config_node');
   config_node = new ConfigNode();
-  control_node.init();
-  config_node.init();
 
   function wsInit(wss){
     // Wire up some logic for the connection event (when a client connects) 

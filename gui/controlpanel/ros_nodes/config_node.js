@@ -11,12 +11,9 @@ class ConfigNode {
     this.commandToParamClient = {
       "set_scenario_param": this.scenarioClient
     };
-  };
-
-  init(){
     // Start the ros2 event loop
     this.config_node.spin();
-    };
+  };
 
   // Helper functions
   requestParamService(serviceClient, param_name, param_value, command, ws){

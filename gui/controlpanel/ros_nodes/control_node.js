@@ -34,12 +34,10 @@ class ControlNode {
     this.commandToSrvClient = {
         "get_obc_state": this.obcStateClient
       };
-  };
-
-  init(){
+    
     // Start the ros2 event loop
     this.control_node.spin();
-    };
+  };
 
   // Helper functions
   requestService(serviceClient, command, ws){
