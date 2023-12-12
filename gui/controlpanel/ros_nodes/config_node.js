@@ -45,6 +45,4 @@ class ConfigNode {
   };
 };
 
-module.exports = {
-    ConfigNode: ConfigNode
-}
+module.exports = ConfigNode

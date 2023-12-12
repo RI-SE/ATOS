@@ -62,10 +62,10 @@ module.exports = app;
 rclnodejs.init().then(() => {
   const ControlNode = require('./ros_nodes/control_node');
   control_node = new ControlNode();
-  // const ConfigNode = require('./ros_nodes/config_node');
-  // config_node_object = new ConfigNode();
+  const ConfigNode = require('./ros_nodes/config_node');
+  config_node = new ConfigNode();
   control_node.init();
-  // config_node.init();
+  config_node.init();
 
   function wsInit(wss){
     // Wire up some logic for the connection event (when a client connects) 
@@ -76,7 +76,7 @@ rclnodejs.init().then(() => {
         var clientMessage = JSON.parse(message).msg_type;
         if (clientMessage.includes("param")) {
           var param_value = JSON.parse(message).value;
-          // config_node.handleMessage(clientMessage, param_value, ws);
+          config_node.handleMessage(clientMessage, param_value, ws);
         }
         else {
           control_node.handleMessage(clientMessage,ws);
