@@ -49,14 +49,14 @@ class ControlNode {
     }
     else{
       // Following is async
-      obcStateClient.sendRequest({}, (response) => {
+      this.obcStateClient.sendRequest({}, (response) => {
       // Let websocket client know that the service call is done
       common.wsSend(command, ws, response);
       });
     };
   };
   
-  executeCommand(command, ws){
+  handleMessage(command, ws){
     if (command in this.commandToPublisher){ // If the command should be published
       this.commandToPublisher[command].publish({}); // Publish an empty message
       common.wsSend(command, ws, {"success" : "true"});
@@ -70,6 +70,4 @@ class ControlNode {
   };
 };
 
-module.exports = {
-    ControlNode: ControlNode
-}
+module.exports = ControlNode
