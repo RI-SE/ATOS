@@ -2,8 +2,11 @@ var express = require('express');
 var router = express.Router();
 
 /* GET home page. */
-router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Simple Control GUI for ATOS' });
+router.get('/controlpanel', function(req, res, next) {
+  res.render('controlpanel', { title: 'Simple Control GUI for ATOS' });
+});
+router.get('/configpanel', function(req, res, next) {
+  res.render('configpanel', { title: 'Simple Control GUI for ATOS' });
 });
 
 
