@@ -12,8 +12,18 @@ function sendParam(param, value, ws){
 }
 
 // HTML-Button callbacks
-function sendScenarioParam(value){
-    sendParam("send_scenario_param", value, ws);
+function requestParameters(request){
+    scenarioPath = request.getElementById('scenario_file_path').value;
+}
+
+function sendScenarioParam(scenarioPath){
+    const elem = document.getElementById('scenario_file_path');
+    if (not (scenarioPath.includes(".xosc"))){
+        console.log("Scenario file does not end with .xosc!");
+        return;
+    }
+    console.log("Sending scenario file: " + filePath);
+    sendParam("send_scenario_param", filePath, ws);
 }
 
 // Websocket callbacks and reconnect functionality
