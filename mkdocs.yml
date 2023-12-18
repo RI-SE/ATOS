@@ -15,6 +15,7 @@ nav:
   - Using ATOS:
       - "Installation/quickstart.md"
       - "Usage/How-to/configuration.md"
+      - "Usage/Summary/summary_of_states.md"
       - "Usage/GUI/foxglove.md"
       - "Usage/GUI/controlpanel.md"
   - Modules:
