@@ -10,13 +10,13 @@ nav:
   - ATOS Doxygen: html/index.html
   - About:
       - "About/index.md"
-      - "About/visionAndPurpose.md"
+      - "About/aboutATOS.md"
+      - "Usage/Summary/summary_of_states.md"
   - Installation:
       - "Installation/installation.md"
+  - Using ATOS:
       - "Installation/quickstart.md"
-  - Configuration:
       - "Usage/How-to/configuration.md"
-  - GUI:
       - "Usage/GUI/foxglove.md"
       - "Usage/GUI/controlpanel.md"
   - Modules:
