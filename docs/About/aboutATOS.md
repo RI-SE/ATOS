@@ -2,7 +2,7 @@
 
 Originally, ATOS was developed as part of several research projects funded by the Swedish Agency for Innovation, Vinnova. The main objective of these projects was to establish a unique platform for testing and research on automated vehicles and associated communication.  
 
-As of April 2023, ATOS has been released as Open Source. ATOS is based on ROS2 and is implemented mostly in C++. ATOS Features a module structure to seamlessly enable the addition of new features as modules, with respect to the unknown prerequisites for future testing needs. 
+As of April 2023, ATOS has been released as Open Source. ATOS is based on ROS 2 and is implemented mostly in C++. ATOS Features a module structure to seamlessly enable the addition of new features as modules, with respect to the unknown prerequisites for future testing needs. 
 
 The core functionality of ATOS implements the standard ISO 22133, and its main task involves test object monitoring and control for active safety and automated vehicle testing in complex and realistic scenarios. 
 
