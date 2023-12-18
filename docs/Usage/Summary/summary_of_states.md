@@ -1,6 +1,6 @@
 # Summary of ATOS test-states
 
-Once ATOS is running, the control-panel GUI can be used to issue commands to ATOS. Certain commands are legal only in specific states. States and the legal transitions between states are described in the standard [ISO22133](https://www.iso.org/standard/78970.html).
+Once ATOS is running, the control-panel GUI can be used to issue commands to ATOS. Certain commands are legal only in specific states. States and the legal transitions between states are described in the standard [ISO 22133](https://www.iso.org/standard/78970.html).
 
 A normal sequence of events is described in the following table:    
 
