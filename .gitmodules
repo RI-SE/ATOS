@@ -4,3 +4,6 @@
 [submodule "atos_interfaces"]
 	path = atos_interfaces
 	url = https://github.com/RI-SE/atos_interfaces.git
+[submodule "gui/controlpanel/public/lib/jsonform"]
+	path = gui/controlpanel/public/lib/jsonform
+	url = git@github.com:jsonform/jsonform.git
