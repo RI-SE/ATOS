@@ -1,0 +1,345 @@
+{
+    "schema": {
+        "type": "object",
+        "title": "ATOS",
+        "description": "ATOS",
+        "properties": {
+        "journal_control": {
+            "properties": {
+            "ros__parameters":
+            {
+                "properties": {
+                "scenario_name": {
+                    "type": "string",
+                    "default": ""
+                }
+                }
+            }
+            }
+        },
+        "esmini_adapter":{
+            "properties": {
+            "ros__parameters":
+            {
+                "properties": {
+                "open_scenario_file": {
+                    "type": "string",
+                    "default": "GaragePlanScenario.xosc"
+                }
+                }
+            }
+            }
+        },
+        "object_control": {
+            "properties": {
+            "ros__parameters":
+            {
+                "properties": {
+                "max_missing_heartbeats": {
+                    "type": "integer",
+                    "default": 100
+                },
+                "transmitter_id": {
+                    "type": "integer",
+                    "default": 15
+                }
+                }
+            }
+            }
+        },
+        "system_control": {
+            "properties": {
+            "ros__parameters":
+            {
+                "properties": {
+                "gui_update_rate": {
+                    "type": "number",
+                    "default": 20
+                }
+                }
+            }
+            }
+        },
+        "osi_adapter": {
+            "properties": {
+            "ros__parameters":
+            {
+                "properties": {
+                "address": {
+                    "type": "string",
+                    "default": "0.0.0.0",
+                    "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}$"
+                },
+                "port": {
+                    "type": "number",
+                    "default": 55555
+                },
+                "protocol": {
+                    "type": "string",
+                    "enum": [
+                        "tcp",
+                        "udp"
+                    ],
+                    "default": "tcp"
+                },
+                "frequency": {
+                    "type": "number",
+                    "default": 100
+                }
+                }
+            }
+            }
+        },
+        "mqtt_bridge": {
+            "properties": {
+            "ros__parameters":
+            {
+                "properties": {
+                "broker_ip": {
+                    "type": "string",
+                    "default": ""
+                },
+                "pub_client_id": {
+                    "type": "string",
+                    "default": ""
+                },
+                "username": {
+                    "type": "string",
+                    "default": ""
+                },
+                "password": {
+                    "type": "string",
+                    "default": ""
+                },
+                "topic": {
+                    "type": "string",
+                    "default": ""
+                },
+                "quality_of_service": {
+                    "type": "string",
+                    "default": ""
+                }
+                }
+            }
+            }
+        },
+        "trajectorylet_streamer": {
+            "properties": {
+            "ros__parameters":
+            {
+                "properties": {
+                "chunk_duration": {
+                    "type": "number",
+                    "default": 2
+                }
+                }
+            }
+            }
+        },
+        "pointcloud_publisher": {
+            "properties": {
+            "ros__parameters":
+            {
+                "properties": {
+                "pointcloud_files": {
+                    "type": "array",
+                    "description": "Pointclouds to visualize",
+                    "items": {
+                        "type": "object",
+                        "title": "Pointcloud file",
+                        "properties": {
+                            "file": {
+                                "type": "string",
+                                "default": ""
+                            }
+                        }
+                    }
+                }
+                }
+            }
+            }
+        },
+        "back_to_start": {
+            "properties": {
+            "ros__parameters":
+            {
+                "properties": {
+                "turn_radius": {
+                    "type": "number",
+                    "default": 2.5
+                }
+                }
+            }
+            }
+        },
+        "integration_testing_handler": {
+            "properties": {
+            "ros__parameters":
+            {
+                "properties": {
+                "scenario_execution": {
+                    "type": "boolean",
+                    "default": true
+                }
+                }
+            }
+            }
+        }
+        }
+    },
+    "form": [
+      {
+        "type": "fieldset",
+        "title": "ATOS Nodes Configuration",
+        "items": [
+            {
+                "type": "tabs",
+                "id": "ros_nodes",
+                "items": [
+                    {   "title": "journal_control",
+                        "type": "tab",
+                        "items": [
+                            {
+                                "key": "journal_control.ros__parameters.scenario_name",
+                                "title": "Alternative name of the scenario when logging"
+                            }
+                        ]
+                    },
+                    {   "title": "esmini_adapter",
+                        "type": "tab",
+                        "items": [
+                            {
+                                "key": "esmini_adapter.ros__parameters.open_scenario_file",
+                                "title": "Search path to the OpenSCENARIO file",
+                                "type": "file",
+                                "accept": ".xosc"
+                            }
+                        ]
+                    },
+                    {   "title": "object_control",
+                        "type": "tab",
+                        "items": [
+                            {
+                                "key": "object_control.ros__parameters.max_missing_heartbeats",
+                                "title": "Number of missing heartbeats before losing connection to object"
+                            },
+                            {
+                                "key": "object_control.ros__parameters.transmitter_id",
+                                "title": "ATOS transmitter ID"
+                            }
+                        ]
+                    },
+                    {   "title": "system_control",
+                        "type": "tab",
+                        "items": [
+                            {
+                                "key": "system_control.ros__parameters.gui_update_rate",
+                                "title": "Refresh rate of the GUI in Hz"
+                            }
+                        ]
+                    },
+                    {   "title": "osi_adapter",
+                        "type": "tab",
+                        "items": [
+                            {
+                                "key": "osi_adapter.ros__parameters.address",
+                                "title": "IP address that the OSI adapter connects to"
+                            },
+                            {
+                                "key": "osi_adapter.ros__parameters.port",
+                                "title": "Port that the OSI adapter connects to"
+                            },
+                            {
+                                "key": "osi_adapter.ros__parameters.protocol",
+                                "title": "Protocol of the connection"
+                            },
+                            {
+                                "key": "osi_adapter.ros__parameters.frequency",
+                                "title": "How often the OSI adapter publishes data in Hz"
+                            }
+                        ]
+                    },
+                    {   "title": "mqtt_bridge",
+                        "type": "tab",
+                        "items": [
+                            {
+                                "key": "mqtt_bridge.ros__parameters.broker_ip",
+                                "title": "MQTT broker IP address"
+                            },
+                            {
+                                "key": "mqtt_bridge.ros__parameters.pub_client_id",
+                                "title": "Client ID of the publisher"
+                            },
+                            {
+                                "key": "mqtt_bridge.ros__parameters.username",
+                                "title": "Username for the MQTT broker"
+                            },
+                            {
+                                "key": "mqtt_bridge.ros__parameters.password",
+                                "title": "Password for the MQTT broker"
+                            },
+                            {
+                                "key": "mqtt_bridge.ros__parameters.topic",
+                                "title": "Topic to publish to"
+                            },
+                            {
+                                "key": "mqtt_bridge.ros__parameters.quality_of_service",
+                                "title": "Quality of service for the MQTT broker"
+                            }
+                        ]
+                    },
+                    {   "title": "trajectorylet_streamer",
+                        "type": "tab",
+                        "items": [
+                            {
+                                "key": "trajectorylet_streamer.ros__parameters.chunk_duration",
+                                "title": "Lookahead time in seconds"
+                            }
+                        ]
+                    },
+                    {   "title": "pointcloud_publisher",
+                        "type": "tab",
+                        "items": [
+                            {
+                                "key": "pointcloud_publisher.ros__parameters.pointcloud_files",
+                                "title": "Pointclouds to visualize",
+                                "items": [
+                                    {
+                                        "key": "pointcloud_publisher.ros__parameters.pointcloud_files[].file",
+                                        "title": "Select a pointcloud",
+                                        "type": "file",
+                                        "accept": ".pcd"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {   "title": "back_to_start",
+                        "type": "tab",
+                        "items": [
+                            {
+                                "key": "back_to_start.ros__parameters.turn_radius",
+                                "title": "Turn radius of the object when returning to start position"
+                            }
+                        ]
+                    },
+                    {   "title": "integration_testing_handler",
+                        "type": "tab",
+                        "items": [
+                            {
+                                "key": "integration_testing_handler.ros__parameters.scenario_execution",
+                                "title": "Whether to test a scenario execution or not"
+                            }
+                        ]
+                    }
+                ]
+            }
+            
+        ]
+      },
+      {
+        "type": "submit",
+        "title": "Submit"
+      }    
+    ]
+}
