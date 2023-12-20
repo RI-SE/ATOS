@@ -9,7 +9,7 @@ markdown_extensions:
 nav:
   - ATOS Doxygen: html/index.html
   - About:
-      - "About/index.md"
+      - "index.md"
       - "About/aboutATOS.md"
       - "Usage/Summary/summary_of_states.md"
   - Installation:
