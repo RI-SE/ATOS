@@ -57,9 +57,8 @@ CMakeCache.txt
 # Generated files
 scripts/*.xosc
 scripts/openscenario/*.xosc
-gui/controlpanel/package-lock.json
+gui/src/package-lock.json
 docs/html/*
 
 #
-gui/controlpanel/package-lock.json
 *.env
