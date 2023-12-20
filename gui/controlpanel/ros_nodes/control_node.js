@@ -3,7 +3,7 @@ const common = require('../public/javascripts/common'); // Server/client common 
 
 class ControlNode {
   constructor(){
-    this.control_node = new rclnodejs.Node('simple_control','atos');
+    this.control_node = new rclnodejs.Node('control_panel','atos');
 
     // Publishers
     this.initPub = this.control_node.createPublisher('std_msgs/msg/Empty', '/atos/init');
