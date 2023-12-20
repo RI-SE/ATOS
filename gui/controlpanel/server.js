@@ -68,13 +68,17 @@ rclnodejs.init().then(() => {
 
       // Wire up logic for the message event (when a client sends something)
       ws.on('message', function incoming(message) {
-        var clientMessage = JSON.parse(message).msg_type;
-        if (clientMessage.includes("param")) {
-          var param_value = JSON.parse(message).value;
-          config_node.handleMessage(clientMessage, param_value, ws);
+        var clientMessageType = JSON.parse(message).msg_type;
+        if (clientMessageType.includes("config")) {
+          var param_values = JSON.parse(message).value;
+          config_node.handleMessage(param_values, ws);
+        }
+        else if (clientMessageType.includes("command")) {
+          var command = JSON.parse(message).command;
+          control_node.handleMessage(command, ws);
         }
         else {
-          control_node.handleMessage(clientMessage,ws);
+          console.log("Invalid message type.")
         }
       });
     });

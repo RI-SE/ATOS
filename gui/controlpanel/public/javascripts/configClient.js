@@ -17,8 +17,6 @@ function loadJsonFile(example) {
   return jsonPlaceholder
 };
 
-
-
 /**
  * Displays the form entered by the user
  * (this function runs whenever once per second whenever the user
@@ -36,14 +34,15 @@ function generateForm(jsonString) {
       if (console && console.log) {
         console.log('Values extracted from submitted form', values);
       }
-      window.alert('Form submitted. Values object:\n' +
-        JSON.stringify(values, null, 2));
+      // window.alert('Form submitted. Values object:\n' +
+      //   JSON.stringify(values, null, 2));
     };
     createdForm.onSubmit = function (errors, values) {
       if (errors) {
         console.log('Validation errors', errors);
         return false;
       }
+      sendConfig(values, ws)
       return true;
     };
     $('#form').jsonForm(createdForm);
@@ -69,30 +68,12 @@ var itv = window.setInterval(function() {
 // Websocket connection
 var ws;
 
-// function sendParam(param, value, ws){
-//     var clientParam = new Object();
-//     clientParam.msg_type = param;
-//     clientParam.value = value;
+function sendConfig(value, ws){
+    var clientParam = new Object();
+    clientParam.msg_type = 'config';
+    clientParam.value = value;
 
-//     ws.send(JSON.stringify(clientParam));
-// }
-
-// HTML-Button callbacks
-function requestParameters(parameters){
-    tmpName = parameters.Name;
-    console.log("tmpName: " + tmpName);
-    scenarioPath = parameters.ScenarioPath;
-    console.log("Sending scenario file: " + scenarioPath);
-}
-
-function sendScenarioParam(scenarioPath){
-    const elem = document.getElementById('scenario_file_path');
-    if (not (scenarioPath.includes(".xosc"))){
-        console.log("Scenario file does not end with .xosc!");
-        return;
-    }
-    console.log("Sending scenario file: " + filePath);
-    sendParam("send_scenario_param", filePath, ws);
+    ws.send(JSON.stringify(clientParam));
 }
 
 // Websocket callbacks and reconnect functionality
@@ -117,9 +98,15 @@ var wsConnect = function(){
     ws.addEventListener('message', function (event) {
         var serverResponse = JSON.parse(event.data);
         switch (serverResponse.msg_type) {
-            case "send_scenario_param_response":
-                setScenarioParamStatusText(serverResponse.success);
-                break;
+            case "config_response":
+              console.log("server response: ", serverResponse)
+              if (serverResponse.success){
+                window.alert('All parameters were successfully set');
+              }
+              else{
+                window.alert('Not all parameters were successfully set');
+                // break;
+              }
             // Add more callbacks here, e.g. feedback of successfully executed ros2 commands
             default:
                 break;

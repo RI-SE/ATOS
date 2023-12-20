@@ -34,7 +34,8 @@ function getOBCState(intState){
 
 function sendCommand(command, ws){
     var clientCommand = new Object();
-    clientCommand.msg_type = command;
+    clientCommand.msg_type = 'command';
+    clientCommand.command = command;
     ws.send(JSON.stringify(clientCommand));
 }
 
