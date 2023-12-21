@@ -1,3 +1,45 @@
+// Websocket connection
+var ws;
+
+// Websocket callbacks and reconnect functionality
+var wsConnect = function(){
+
+  // Depending on the connection type, open different websockets.
+  const currentUrl = new URL(window.location.href);
+  if (currentUrl.protocol == "https:"){
+      ws = new WebSocket('wss://' + currentUrl.hostname + ':8082');
+  }
+  else{
+      ws = new WebSocket('ws://' + currentUrl.hostname + ':8081');
+  }
+  ws.addEventListener('open', function (event) {
+      console.log("Connection opened");
+  });
+
+  ws.addEventListener('close', function (event) {
+      console.log("Connection lost!");
+  });
+
+  ws.addEventListener('message', function (event) {
+      var serverResponse = JSON.parse(event.data);
+      switch (serverResponse.msg_type) {
+          case "config_response":
+            console.log("server response: ", serverResponse)
+            if (serverResponse.success){
+              window.alert('All parameters were successfully set');
+            }
+            else{
+              window.alert('Not all parameters were successfully set');
+              // break;
+            }
+          // Add more callbacks here, e.g. feedback of successfully executed ros2 commands
+          default:
+              break;
+      }
+  });
+};
+wsConnect();
+
 
 /**
  * Loads the example identified by the given name
@@ -61,57 +103,26 @@ var itv = window.setInterval(function() {
     var example = 'atos-param-schema';
     window.clearInterval(itv);
     const jsonPlaceholder = loadJsonFile(example);
-    generateForm(jsonPlaceholder);
+    generateForm(jsonPlaceholder, ws);
+    getCurrentConfig(jsonPlaceholder);
   }
 }, 1000);
 
-// Websocket connection
-var ws;
+function getCurrentConfig(jsonString, ws){
+  var jsonObject = JSON.parse(jsonString);
+  var nodes = jsonObject.schema.properties;
+  console.log("nodes in param-schema: ", nodes)
+  var clientParam = new Object();
+  clientParam.msg_type = 'get_config';
+  clientParam.value = nodes;
+
+  // ws.send(JSON.stringify(clientParam));
+}
 
 function sendConfig(value, ws){
     var clientParam = new Object();
-    clientParam.msg_type = 'config';
+    clientParam.msg_type = 'set_config';
     clientParam.value = value;
 
     ws.send(JSON.stringify(clientParam));
 }
-
-// Websocket callbacks and reconnect functionality
-var wsConnect = function(){
-
-    // Depending on the connection type, open different websockets.
-    const currentUrl = new URL(window.location.href);
-    if (currentUrl.protocol == "https:"){
-        ws = new WebSocket('wss://' + currentUrl.hostname + ':8082');
-    }
-    else{
-        ws = new WebSocket('ws://' + currentUrl.hostname + ':8081');
-    }
-    ws.addEventListener('open', function (event) {
-        console.log("Connection opened");
-    });
-
-    ws.addEventListener('close', function (event) {
-        console.log("Connection lost!");
-    });
-
-    ws.addEventListener('message', function (event) {
-        var serverResponse = JSON.parse(event.data);
-        switch (serverResponse.msg_type) {
-            case "config_response":
-              console.log("server response: ", serverResponse)
-              if (serverResponse.success){
-                window.alert('All parameters were successfully set');
-              }
-              else{
-                window.alert('Not all parameters were successfully set');
-                // break;
-              }
-            // Add more callbacks here, e.g. feedback of successfully executed ros2 commands
-            default:
-                break;
-        }
-    });
-};
-wsConnect();
-
