@@ -110,7 +110,10 @@ var itv = window.setInterval(function() {
 
 function getCurrentConfig(jsonString, ws){
   var jsonObject = JSON.parse(jsonString);
-  var nodes = jsonObject.schema.properties;
+  var nodes = [];
+  for (var node in jsonObject.schema.properties){
+    nodes.push(node);
+  }
   console.log("nodes in param-schema: ", nodes)
   var clientParam = new Object();
   clientParam.msg_type = 'get_config';
