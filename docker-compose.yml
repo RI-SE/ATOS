@@ -23,3 +23,8 @@ services:
     #   - "443:443"
     #   - "9090:9090" 
     command: bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
+  foxglove-studio:
+    image: ghcr.io/foxglove/studio:1.76
+    network_mode: host
+    volumes:
+      - ./plugins/foxglove/Map, 3D and control layout.json:/foxglove/default-layout.json

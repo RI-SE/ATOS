@@ -52,16 +52,16 @@ def get_base_nodes():
     return [
         foxbridge_launch_arg,
         insecure_launch_arg,
-        ExecuteProcess(
-            name='control_gui',
-            output={'both': 'log'}, #print to log to avoid cluttering the terminal
-            cmd=[[
-                FindExecutable(name='npm'),
-                ' start --prefix ',
-                str(control_gui_dir)
-            ]],
-            shell=True
-        ),
+        # ExecuteProcess(
+        #     name='control_gui',
+        #     output={'both': 'log'}, #print to log to avoid cluttering the terminal
+        #     cmd=[[
+        #         FindExecutable(name='npm'),
+        #         ' start --prefix ',
+        #         str(control_gui_dir)
+        #     ]],
+        #     shell=True
+        # ),
         Node(
             package='atos',
             namespace='atos',
