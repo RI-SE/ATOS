@@ -53,7 +53,7 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 {
 	this->declare_parameter("max_missing_heartbeats", 100);
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
-  idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
+	idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
 	originClient = create_client<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin);
 	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory);
 	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp);
