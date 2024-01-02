@@ -25,7 +25,7 @@ check_command_failed $? "Failed to install dependencies."
 ROS_DISTRO=humble
 
 # Check if the ROS2 repository is already added
-if ! (dpkg -l | grep -q "ros-$ROS_DISTRO-desktop"); then
+if ! (apt list | grep -q "ros-$ROS_DISTRO-desktop"); then
     echo "Adding the ROS2 $ROS_DISTRO apt repository..."
 
     # Install ROS2 prerequisites
