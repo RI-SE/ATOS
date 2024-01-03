@@ -70,8 +70,7 @@ rclnodejs.init().then(() => {
       ws.on('message', function incoming(message) {
         var clientMessageType = JSON.parse(message).msg_type;
         if (clientMessageType.includes("config")) {
-          var param_values = JSON.parse(message).value;
-          config_node.handleMessage(param_values, ws);
+          config_node.handleMessage(JSON.parse(message), ws);
         }
         else if (clientMessageType.includes("command")) {
           var command = JSON.parse(message).command;

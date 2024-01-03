@@ -23,8 +23,8 @@ var wsConnect = function(){
   ws.addEventListener('message', function (event) {
       var serverResponse = JSON.parse(event.data);
       switch (serverResponse.msg_type) {
-          case "config_response":
-            console.log("server response: ", serverResponse)
+          case "set_config_response":
+            console.log("set config response: ", serverResponse)
             if (serverResponse.success){
               window.alert('All parameters were successfully set');
             }
@@ -32,6 +32,9 @@ var wsConnect = function(){
               window.alert('Not all parameters were successfully set');
               // break;
             }
+          case "get_config_response":
+            console.log("get config response: ", serverResponse)
+            // generateForm(serverResponse.value);
           // Add more callbacks here, e.g. feedback of successfully executed ros2 commands
           default:
               break;
@@ -97,14 +100,20 @@ function generateForm(jsonString) {
   }
 };
 
+function updateForm(jsonString){
+  var createdForm = JSON.parse(jsonString);
+  console.log("update form: ", createdForm);
+  // $('#form').jsonForm(createdForm);
+}
+
 // Wait until ACE is loaded
 var itv = window.setInterval(function() {
   if (window.ace) {
     var example = 'atos-param-schema';
     window.clearInterval(itv);
     const jsonPlaceholder = loadJsonFile(example);
-    generateForm(jsonPlaceholder, ws);
-    getCurrentConfig(jsonPlaceholder);
+    generateForm(jsonPlaceholder);
+    getCurrentConfig(jsonPlaceholder, ws); // Get initial config from server to init the form
   }
 }, 1000);
 
@@ -114,12 +123,11 @@ function getCurrentConfig(jsonString, ws){
   for (var node in jsonObject.schema.properties){
     nodes.push(node);
   }
-  console.log("nodes in param-schema: ", nodes)
   var clientParam = new Object();
   clientParam.msg_type = 'get_config';
   clientParam.value = nodes;
 
-  // ws.send(JSON.stringify(clientParam));
+  ws.send(JSON.stringify(clientParam));
 }
 
 function sendConfig(value, ws){
