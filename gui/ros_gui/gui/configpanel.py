@@ -6,6 +6,7 @@ from rcl_interfaces.msg import ParameterType, Parameter
 from rcl_interfaces.srv import SetParametersAtomically, GetParameters, ListParameters
 from rclpy.node import Node
 from rclpy.executors import ExternalShutdownException
+from ros2node.api import get_node_names
 
 from nicegui import Client, ui, app, ui_run
 from .local_file_picker import local_file_picker
@@ -18,10 +19,11 @@ class ConfigPanelNode(Node):
 
     def __init__(self) -> None:
         super().__init__('config_panel')
-        self.module_list = ["journal_control", "esmini_adapter", "object_control", "osi_adapter", "mqtt_bridge",
-                            "trajectorylet_streamer", "pointcloud_publisher", "back_to_start", "integration_testing_handler"]
-        
-        self
+        banned_nodes = ["config_panel", "control_panel", "foxglove_bridge"]
+        self.nodes_and_namespaces = self.get_node_names_and_namespaces()
+        self.node_list = [node for node, namespace in self.nodes_and_namespaces if node not in banned_nodes and "ros2cli" not in node]
+        self.get_logger().info(f'Discovered nodes: {self.node_list}')
+
         self.client_list = self.init_clients()
         self.parameters = {}
         threading.Thread(target=self.get_parameters_list, args=(self.client_list,)).start()
@@ -33,12 +35,16 @@ class ConfigPanelNode(Node):
                 with splitter.before:
                     with ui.tabs().props('vertical').classes('w-fit') as tabs:
                         ui.tab('Home', icon='🏠')
-                        for module in self.module_list:
+                        for module in self.node_list:
                             ui.tab(module.replace("_", " "))
                 with splitter.after:
                     with ui.tab_panels(tabs, value='Home'):
                         with ui.tab_panel('Home'):
-                            ui.label('Welcome to the ATOS Configuration Panel!')
+                            ui.label('Welcome to the ATOS Configuration Panel!').classes('h4')
+                            if self.node_list:
+                                ui.label('Select a node to configure')
+                            else:
+                                ui.label('No nodes were discovered')
                         with ui.tab_panel('journal control'):
                             ui.input(label="Scenario name", 
                                     on_change=lambda result: self.set_parameter("journal_control", "scenario_name", result.value)).bind_value(self.parameters, "scenario_name")
@@ -88,7 +94,7 @@ class ConfigPanelNode(Node):
 
     def init_clients(self) -> dict:
         client_list = {}
-        for module in self.module_list:
+        for module in self.node_list:
             get_params_client = self.create_client(ListParameters, f'/atos/{module}/list_parameters')
             get_param_value_client = self.create_client(GetParameters, f'/atos/{module}/get_parameters')
             set_params_client = self.create_client(SetParametersAtomically, f'/atos/{module}/set_parameters_atomically')
