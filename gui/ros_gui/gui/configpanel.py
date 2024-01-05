@@ -20,6 +20,8 @@ class ConfigPanelNode(Node):
         super().__init__('config_panel')
         self.module_list = ["journal_control", "esmini_adapter", "object_control", "osi_adapter", "mqtt_bridge",
                             "trajectorylet_streamer", "pointcloud_publisher", "back_to_start", "integration_testing_handler"]
+        
+        self
         self.client_list = self.init_clients()
         self.parameters = {}
         threading.Thread(target=self.get_parameters_list, args=(self.client_list,)).start()
@@ -27,41 +29,62 @@ class ConfigPanelNode(Node):
 
     def render_configpanel(self) -> None:
         with Client.auto_index_client:
-            with ui.tabs() as tabs:
-                ui.tab('Home', icon='🏠')
-                for module in self.module_list:
-                    ui.tab(module)
-            with ui.tab_panels(tabs, value='Home'):
-                with ui.tab_panel('Home'):
-                    ui.label('Welcome to the ATOS Configuration Panel!')
-                with ui.tab_panel('journal_control'):
-                    ui.input(label="Scenario name").bind_value(self.parameters, "open_scenario_file")
-                with ui.tab_panel('esmini_adapter'):
-                    ui.label('Openscenario file:')
-                    ui.button('Choose new file', on_click=self.pick_scenario_file, icon='📂')
-                with ui.tab_panel('object_control'):
-                    ui.input(label="Max missing heartbeats").bind_value_from(self.parameters, "max_missing_heartbeats")
-                    ui.input(label="Transmitter ID").bind_value_from(self.parameters, "transmitter_id")
-                with ui.tab_panel('osi_adapter'):
-                    ui.input(label="Address").bind_value_from(self.parameters, "address")
-                    ui.input(label="Port").bind_value_from(self.parameters, "port")
-                    ui.input(label="Protocol").bind_value_from(self.parameters, "protocol")
-                    ui.input(label="Frequency").bind_value_from(self.parameters, "frequency")
-                with ui.tab_panel('mqtt_bridge'):
-                    ui.input(label="Broker IP").bind_value_from(self.parameters, "broker_ip")
-                    ui.input(label="Pub client ID").bind_value_from(self.parameters, "pub_client_id")
-                    ui.input(label="Username").bind_value_from(self.parameters, "username")
-                    ui.input(label="Password").bind_value_from(self.parameters, "password")
-                    ui.input(label="Topic").bind_value_from(self.parameters, "topic")
-                    ui.input(label="Quality of Service").bind_value_from(self.parameters, "quality_of_service")
-                with ui.tab_panel("trajectorylet_streamer"):
-                    ui.input(label="Chunk duration").bind_value(self.parameters, "chunk_duration")
-                with ui.tab_panel("pointcloud_publisher"):
-                    ui.button('Choose new file', on_click=self.pick_pointcloud_file, icon='📂')
-                with ui.tab_panel("back_to_start"):
-                    ui.input(label="Turn radius").bind_value_from(self.parameters, "turn_radius")
-                # with ui.tab_panel("integration_testing_handler"):
-                #     ui.switch(label="Scenario execution", on_change=self.get_logger().info(self.parameters["scenario_execution"])).bind_value_from(self.parameters, "scenario_execution")
+            with ui.splitter(value=30).classes('w-1/2') as splitter:
+                with splitter.before:
+                    with ui.tabs().props('vertical').classes('w-fit') as tabs:
+                        ui.tab('Home', icon='🏠')
+                        for module in self.module_list:
+                            ui.tab(module.replace("_", " "))
+                with splitter.after:
+                    with ui.tab_panels(tabs, value='Home'):
+                        with ui.tab_panel('Home'):
+                            ui.label('Welcome to the ATOS Configuration Panel!')
+                        with ui.tab_panel('journal control'):
+                            ui.input(label="Scenario name", 
+                                    on_change=lambda result: self.set_parameter("journal_control", "scenario_name", result.value)).bind_value(self.parameters, "scenario_name")
+                        with ui.tab_panel('esmini adapter'):
+                            ui.label('Openscenario file:')
+                            ui.button('Choose new file', on_click=self.pick_scenario_file, icon='📂')
+                        with ui.tab_panel('object control'):
+                            ui.number(label="Max missing heartbeats", 
+                                    on_change=lambda result: self.set_parameter("object_control", "max_missing_heartbeats", result.value)).bind_value(self.parameters, "max_missing_heartbeats")
+                            ui.number(label="Transmitter ID", 
+                                    on_change=lambda result: self.set_parameter("object_control", "transmitter_id", result.value)).bind_value(self.parameters, "transmitter_id")
+                        with ui.tab_panel('osi adapter'):
+                            ui.input(label="Address", 
+                                    on_change=lambda result: self.set_parameter("osi_adapter", "address", result.value)).bind_value(self.parameters, "address").classes('w-40')
+                            ui.number(label="Port", 
+                                    on_change=lambda result: self.set_parameter("osi_adapter", "port", result.value)).bind_value(self.parameters, "port").classes('w-40')
+                            ui.select(options=["tcp", "udp"], 
+                                    label="Protocol", 
+                                    on_change=lambda result: self.set_parameter("osi_adapter", "protocol", result.value)).bind_value(self.parameters, "protocol").classes('w-40')
+                            ui.number(label="Frequency", 
+                                    on_change=lambda result: self.set_parameter("osi_adapter", "frequency", result.value)).bind_value(self.parameters, "frequency").classes('w-40')
+                        with ui.tab_panel('mqtt bridge'):
+                            ui.input(label="Broker IP", 
+                                    on_change=lambda result: self.set_parameter("mqtt_bridge", "broker_ip", result.value)).bind_value(self.parameters, "broker_ip")
+                            ui.number(label="Pub client ID", 
+                                    on_change=lambda result: self.set_parameter("mqtt_bridge", "pub_client_id", result.value)).bind_value(self.parameters, "pub_client_id")
+                            ui.input(label="Username", 
+                                    on_change=lambda result: self.set_parameter("mqtt_bridge", "username", result.value)).bind_value(self.parameters, "username")
+                            ui.input(label="Password", 
+                                    on_change=lambda result: self.set_parameter("mqtt_bridge", "password", result.value)).bind_value(self.parameters, "password")
+                            ui.input(label="Topic", 
+                                    on_change=lambda result: self.set_parameter("mqtt_bridge", "topic", result.value)).bind_value(self.parameters, "topic")
+                            ui.input(label="Quality of Service", 
+                                    on_change=lambda result: self.set_parameter("mqtt_bridge", "quality_of_service", result.value)).bind_value(self.parameters, "quality_of_service")
+                        with ui.tab_panel("trajectorylet streamer"):
+                            ui.number(label="Chunk duration", 
+                                    on_change=lambda result: self.set_parameter("trajectorylet_streamer", "chunk_duration", result.value)).bind_value(self.parameters, "chunk_duration")
+                        with ui.tab_panel("pointcloud publisher"):
+                            ui.label('Pointcloud files:')
+                            ui.button('Choose new file', on_click=self.pick_pointcloud_file, icon='📂')
+                        with ui.tab_panel("back to start"):
+                            ui.number(label="Turn radius", 
+                                    on_change=lambda result: self.set_parameter("back_to_start", "turn_radius", result.value)).bind_value(self.parameters, "turn_radius")
+                        with ui.tab_panel("integration testing handler"):
+                            ui.switch(text="Scenario execution", 
+                                    on_change=lambda result: self.set_parameter("integration_testing_handler", "scenario_execution", result.value)).bind_value(self.parameters, "scenario_execution")
 
     def init_clients(self) -> dict:
         client_list = {}
@@ -78,7 +101,7 @@ class ConfigPanelNode(Node):
             get_params_client = client_list[module]["get_params_client"]
             get_param_value_client = client_list[module]["get_param_value_client"]
             service_timeout_counter = 0
-            while not get_params_client.wait_for_service(timeout_sec=1.0) and service_timeout_counter < MAX_TIMEOUT:
+            while not get_params_client.wait_for_service(timeout_sec=0.1) and service_timeout_counter < MAX_TIMEOUT:
                 service_timeout_counter += 1
                 self.get_logger().info(f'{module} not available, waiting again...')
             if service_timeout_counter >= MAX_TIMEOUT:
@@ -113,8 +136,6 @@ class ConfigPanelNode(Node):
                     self.parameters[param_name] = future.result().values[idx].string_value
                 case _:
                     self.get_logger().info(f'Parameter {param_name} has an unsupported type {param_type}')
-            # self.get_logger().info(f'Parameter {param_name} has value {self.parameters[param_name]}')
-        # self.get_logger().info(f'Parameters saved: {self.parameters}')
 
     async def pick_scenario_file(self) -> None:
         result = await local_file_picker('~/.astazero/ATOS', multiple=False, show_hidden_files=True)
@@ -174,7 +195,31 @@ class ConfigPanelNode(Node):
             self.get_logger().info(f'Result of set_parameters was {"successful" if response.result.successful else "unsuccesful"}')
         except Exception as e:
             self.get_logger().info('Service call failed %r' % (e,))
-            
+
+    def set_parameter(self, node_name, param_name, param_value) -> None:
+        self.get_logger().info(f'Setting parameter {param_name} in {node_name} to {param_value}')
+        ui.notify(f'Setting parameter {param_name} in {node_name} to {param_value}')
+
+        service_timeout_counter = 0
+        client = self.client_list[node_name]["set_params_client"]
+        while not client.wait_for_service(timeout_sec=1.0):
+            service_timeout_counter += 1
+            self.get_logger().info('service not available, waiting again...')
+            if service_timeout_counter >= MAX_TIMEOUT:
+                ui.notify(f'Service not available after {MAX_TIMEOUT} seconds, please try again later')
+                self.get_logger().info(f'Service not available after {MAX_TIMEOUT} seconds, please try again later')
+                return
+
+        scenario_param = Parameter()
+        scenario_param.name = param_name
+        scenario_param.value.type = ParameterType.PARAMETER_STRING
+        scenario_param.value.string_value = str(param_value)
+
+        esmini_param_req = SetParametersAtomically.Request()
+        esmini_param_req.parameters.append(scenario_param)
+
+        future = client.call_async(esmini_param_req)
+        future.add_done_callback(lambda future: self.set_param_callback(future))
 
 def ros_main() -> None:
     rclpy.init()
