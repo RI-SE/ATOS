@@ -8,6 +8,7 @@
   <license>MPL 2.0</license>
   
   <depend>rclpy</depend>
+  <depend>rcl_interfaces</depend>
 
   <export>
     <build_type>ament_python</build_type>
