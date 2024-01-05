@@ -25,9 +25,9 @@ class ConfigPanelNode(Node):
         self.client_list = self.init_clients()
         self.parameters = {}
         self.get_parameters_list(self.client_list)
-        self.render_ui()
+        self.render_configpanel()
 
-    def render_ui(self) -> None:
+    def render_configpanel(self) -> None:
         with Client.auto_index_client:
             with ui.tabs() as tabs:
                 ui.tab('Home', icon='🏠')
