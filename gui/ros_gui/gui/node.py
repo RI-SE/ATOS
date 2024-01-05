@@ -7,11 +7,21 @@ from std_msgs.msg import Empty
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 
-from nicegui import Client, app, ui, ui_run
+from nicegui import Client, app, ui, ui_run, run
 
 QOS = rclpy.qos.QoSProfile(depth=10)
 
-
+OBC_STATES = {
+        0: 'UNDEFINED',
+        1: 'IDLE',
+        2: 'INITIALIZED',
+        3: 'CONNECTED',
+        4: 'ARMED',
+        5: 'RUNNING',
+        6: 'REMOTE_CTRL',
+        7: 'ERROR',
+        8: 'ABORTING'
+    }
 class NiceGuiNode(Node):
 
     def __init__(self) -> None:
@@ -26,16 +36,17 @@ class NiceGuiNode(Node):
         self.allClearPub = self.create_publisher(Empty, '/atos/all_clear', QOS)
         self.resetTestObjectsPub = self.create_publisher(Empty, '/atos/reset_test_objects', QOS)
         self.reloadObjectSettingsPub = self.create_publisher(Empty, '/atos/reload_object_settings', QOS)
-        # # Create a timer service call and put in variable
-        # self.timer = self.create_timer(1, self.get_object_control_state_callback)
-        # # Create a service client for each service
-        # self.get_object_control_state_client = self.create_client(GetObjectControlState, '/atos/get_object_control_state')
-        # while not self.get_object_control_state_client.wait_for_service(timeout_sec=1.0):
-        #     self.get_logger().info('service not available, waiting again...')
-        # self.OBC_state_req = GetObjectControlState.Request()
-        # self.OBC_state = None
+        
+        self.get_object_control_state_client = self.create_client(GetObjectControlState, '/atos/get_object_control_state')
+        self.OBC_state_req = GetObjectControlState.Request()
+        self.get_object_control_state_timer = self.create_timer(0.5, self.get_object_control_state_callback)
+
+        self.OBC_state = {'state': "UNDEFINED"}
+        self.lost_connection = True
 
         with Client.auto_index_client:
+            with ui.row().bind_visibility_from(self, 'lost_connection'):
+                ui.label('Lost connection to ATOS...')
             with ui.row():
                 ui.button('Abort', on_click=lambda: self.abortPub.publish(Empty()), color='red')
             with ui.row():
@@ -47,31 +58,30 @@ class NiceGuiNode(Node):
                 ui.button('Start', on_click=lambda: self.startPub.publish(Empty()), color='green')
                 ui.button('All Clear', on_click=lambda: self.allClearPub.publish(Empty()), color='blue')
             with ui.row():
-                ui.label('Object Control State: Placeholder')
+                ui.label().bind_text_from(self.OBC_state, 'state', backward=lambda n: f'Object Control State: {n}')
             with ui.row():
                 ui.button('Reset Test Objects', on_click=lambda: self.resetTestObjectsPub.publish(Empty()), color='grey')
                 ui.button('Reload Object Settings', on_click=lambda: self.reloadObjectSettingsPub.publish(Empty()), color='grey')
 
 
-    # def get_object_control_state_callback(self):
-    #     # Call the service
-    #     self.new_OBC_state = self.get_object_control_state_client.call_async(self.OBC_state_req)
-    #     # If the service is available
-    #     if self.new_OBC_state.done():
-    #         # Get the response
-    #         self.OBC_state = self.new_OBC_state.result()
-    #         # Update the label
-    #         self.OBC_status_label().bind_text_from(self.OBC_state, 'state')
-    #     else:
-    #         self.get_logger().info('service not available, waiting again...')
+
+    def get_object_control_state_callback(self):
+        # Call the service
+        while not self.get_object_control_state_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+            self.lost_connection = True
+        self.lost_connection = False
+        future = self.get_object_control_state_client.call_async(self.OBC_state_req)
+        future.add_done_callback(lambda future: self.get_object_control_state_callback_done(future))
+
+    def get_object_control_state_callback_done(self, future):
+        try:
+            response = future.result()
+        except Exception as e:
+            self.get_logger().info('Service call failed %r' % (e,))
+        else:
+            self.OBC_state["state"] = OBC_STATES[response.state]
     
-    # class OBC_status_label(ui.label):
-    #     def _handle_text_change(self, text: str) -> None:
-    #         super()._handle_text_change(text)
-    #         if text == 'ok':
-    #             self.classes(replace='text-positive')
-    #         else:
-    #             self.classes(replace='text-negative')
 
 
 def main() -> None:
@@ -87,7 +97,9 @@ def ros_main() -> None:
     except ExternalShutdownException:
         pass
 
-
+#Starting the ros node in a thread managed by nicegui. It will restarted with "on_startup" after a reload.
+#It has to be in a thread, since NiceGUI wants the main thread for itself.
 app.on_startup(lambda: threading.Thread(target=ros_main).start())
+
 ui_run.APP_IMPORT_STRING = f'{__name__}:app'  # ROS2 uses a non-standard module name, so we need to specify it here
 ui.run(uvicorn_reload_dirs=str(Path(__file__).parent.resolve()), favicon='🤖', port=3000)
