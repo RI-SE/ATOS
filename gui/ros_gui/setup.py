@@ -22,7 +22,7 @@ setup(
     entry_points={
         'console_scripts': [
             'config_panel = gui.configpanel:main',
-            'control_panel = gui.node:main',
+            'control_panel = gui.controlpanel:main',
         ],
     },
 )
