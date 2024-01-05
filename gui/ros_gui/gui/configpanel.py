@@ -1,27 +1,27 @@
 import threading
-from pathlib import Path
-from atos_interfaces.srv import *
 
 import rclpy
-from std_msgs.msg import Empty
 from rcl_interfaces.msg import ParameterType, Parameter, ParameterValue
 from rcl_interfaces.srv import SetParametersAtomically, GetParameters, ListParameters
-from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 
-from nicegui import Client, app, ui, ui_run
+from nicegui import Client, app, ui, ui_run, APIRouter
 from .local_file_picker import local_file_picker
+
+# router = APIRouter(prefix='/configpanel')
 
 QOS = rclpy.qos.QoSProfile(depth=10)
 
 MAX_TIMEOUT = 1
 
+# @router.page('/')
 class ConfigPanelNode(Node):
 
     def __init__(self) -> None:
         super().__init__('config_panel')
-        self.module_list = ["journal_control", "esmini_adapter", "object_control", "osi_adapter", "mqtt_bridge",
-                            "trajectorylet_streamer", "pointcloud_publisher", "back_to_start", "integration_testing_handler"]
+        # self.module_list = ["journal_control", "esmini_adapter", "object_control", "osi_adapter", "mqtt_bridge",
+        #                     "trajectorylet_streamer", "pointcloud_publisher", "back_to_start", "integration_testing_handler"]
+        self.module_list = ["esmini_adapter"]
         self.client_list = self.init_clients()
         self.parameters = {}
         self.get_parameters_list(self.client_list)
@@ -184,21 +184,3 @@ class ConfigPanelNode(Node):
         except Exception as e:
             self.get_logger().info('Service call failed %r' % (e,))
             
-
-def main() -> None:
-    # NOTE: This function is defined as the ROS entry point in setup.py, but it's empty to enable NiceGUI auto-reloading
-    pass
-
-
-def ros_main() -> None:
-    rclpy.init()
-    node = ConfigPanelNode()
-    try:
-        rclpy.spin(node)
-    except ExternalShutdownException:
-        pass
-
-
-app.on_startup(lambda: threading.Thread(target=ros_main).start())
-ui_run.APP_IMPORT_STRING = f'{__name__}:app'  # ROS2 uses a non-standard module name, so we need to specify it here
-ui.run(uvicorn_reload_dirs=str(Path(__file__).parent.resolve()), favicon='🤖', port=3000, title='Config Panel')
