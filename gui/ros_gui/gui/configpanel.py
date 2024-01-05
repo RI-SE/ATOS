@@ -1,14 +1,14 @@
 import threading
+from pathlib import Path
 
 import rclpy
-from rcl_interfaces.msg import ParameterType, Parameter, ParameterValue
+from rcl_interfaces.msg import ParameterType, Parameter
 from rcl_interfaces.srv import SetParametersAtomically, GetParameters, ListParameters
 from rclpy.node import Node
+from rclpy.executors import ExternalShutdownException
 
-from nicegui import Client, app, ui, ui_run, APIRouter
+from nicegui import Client, ui, app, ui_run
 from .local_file_picker import local_file_picker
-
-# router = APIRouter(prefix='/configpanel')
 
 QOS = rclpy.qos.QoSProfile(depth=10)
 
@@ -19,56 +19,49 @@ class ConfigPanelNode(Node):
 
     def __init__(self) -> None:
         super().__init__('config_panel')
-        # self.module_list = ["journal_control", "esmini_adapter", "object_control", "osi_adapter", "mqtt_bridge",
-        #                     "trajectorylet_streamer", "pointcloud_publisher", "back_to_start", "integration_testing_handler"]
-        self.module_list = ["esmini_adapter"]
+        self.module_list = ["journal_control", "esmini_adapter", "object_control", "osi_adapter", "mqtt_bridge",
+                            "trajectorylet_streamer", "pointcloud_publisher", "back_to_start", "integration_testing_handler"]
         self.client_list = self.init_clients()
         self.parameters = {}
-        self.get_parameters_list(self.client_list)
+        threading.Thread(target=self.get_parameters_list, args=(self.client_list,)).start()
         self.render_configpanel()
 
     def render_configpanel(self) -> None:
         with Client.auto_index_client:
             with ui.tabs() as tabs:
                 ui.tab('Home', icon='🏠')
-                ui.tab('Esmini_adapter')
-                ui.tab('Object_control')
-                ui.tab('Osi_adapter')
-                ui.tab('Mqtt_bridge')
-                ui.tab('Trajectorylet Streamer')
-                ui.tab('Pointcloud Publisher')
-                ui.tab('Back to Start')
-                ui.tab('Integration Testing Handler')
+                for module in self.module_list:
+                    ui.tab(module)
             with ui.tab_panels(tabs, value='Home'):
                 with ui.tab_panel('Home'):
                     ui.label('Welcome to the ATOS Configuration Panel!')
-                with ui.tab_panel('Journal_control'):
-                    ui.input(label="Scenario name").bind_value_from(self.parameters, "open_scenario_file")
-                with ui.tab_panel('Esmini_adapter'):
+                with ui.tab_panel('journal_control'):
+                    ui.input(label="Scenario name").bind_value(self.parameters, "open_scenario_file")
+                with ui.tab_panel('esmini_adapter'):
                     ui.label('Openscenario file:')
                     ui.button('Choose new file', on_click=self.pick_scenario_file, icon='📂')
-                with ui.tab_panel('Object_control'):
+                with ui.tab_panel('object_control'):
                     ui.input(label="Max missing heartbeats").bind_value_from(self.parameters, "max_missing_heartbeats")
                     ui.input(label="Transmitter ID").bind_value_from(self.parameters, "transmitter_id")
-                with ui.tab_panel('Osi_adapter'):
+                with ui.tab_panel('osi_adapter'):
                     ui.input(label="Address").bind_value_from(self.parameters, "address")
                     ui.input(label="Port").bind_value_from(self.parameters, "port")
                     ui.input(label="Protocol").bind_value_from(self.parameters, "protocol")
                     ui.input(label="Frequency").bind_value_from(self.parameters, "frequency")
-                with ui.tab_panel('Mqtt_bridge'):
+                with ui.tab_panel('mqtt_bridge'):
                     ui.input(label="Broker IP").bind_value_from(self.parameters, "broker_ip")
                     ui.input(label="Pub client ID").bind_value_from(self.parameters, "pub_client_id")
                     ui.input(label="Username").bind_value_from(self.parameters, "username")
                     ui.input(label="Password").bind_value_from(self.parameters, "password")
                     ui.input(label="Topic").bind_value_from(self.parameters, "topic")
                     ui.input(label="Quality of Service").bind_value_from(self.parameters, "quality_of_service")
-                with ui.tab_panel("Trajectorylet Streamer"):
-                    ui.input(label="Chunk duration").bind_value_from(self.parameters, "chunk_duration")
-                with ui.tab_panel("Pointcloud Publisher"):
+                with ui.tab_panel("trajectorylet_streamer"):
+                    ui.input(label="Chunk duration").bind_value(self.parameters, "chunk_duration")
+                with ui.tab_panel("pointcloud_publisher"):
                     ui.button('Choose new file', on_click=self.pick_pointcloud_file, icon='📂')
-                with ui.tab_panel("Back to Start"):
+                with ui.tab_panel("back_to_start"):
                     ui.input(label="Turn radius").bind_value_from(self.parameters, "turn_radius")
-                # with ui.tab_panel("Integration Testing Handler"):
+                # with ui.tab_panel("integration_testing_handler"):
                 #     ui.switch(label="Scenario execution", on_change=self.get_logger().info(self.parameters["scenario_execution"])).bind_value_from(self.parameters, "scenario_execution")
 
     def init_clients(self) -> dict:
@@ -94,7 +87,6 @@ class ConfigPanelNode(Node):
                 continue
             self.get_logger().info(f'Retrieving parameter values from {module}...')
             threading.Thread(target=self.call_service, args=(get_params_client, get_param_value_client)).start()
-            # get_params_client.call_async(ListParameters.Request()).add_done_callback(lambda future: self.get_parameter_values(future, get_param_value_client))
 
     def call_service(self, get_params_client, get_param_value_client) -> None:
         get_params_client.call_async(ListParameters.Request()).add_done_callback(lambda future: self.get_parameter_values(future, get_param_value_client))
@@ -184,3 +176,21 @@ class ConfigPanelNode(Node):
         except Exception as e:
             self.get_logger().info('Service call failed %r' % (e,))
             
+
+def ros_main() -> None:
+    rclpy.init()
+    node = ConfigPanelNode()
+    try:
+        rclpy.spin(node)
+    except ExternalShutdownException:
+        pass
+
+def main() -> None:
+    # NOTE: This function is defined as the ROS entry point in setup.py, but it's empty to enable NiceGUI auto-reloading
+    pass
+
+
+
+app.on_startup(lambda: threading.Thread(target=ros_main).start())
+ui_run.APP_IMPORT_STRING = f'{__name__}:app'  # ROS2 uses a non-standard module name, so we need to specify it here
+ui.run(uvicorn_reload_dirs=str(Path(__file__).parent.resolve()), favicon='🤖', port=3001, title='Config Panel')
