@@ -6,7 +6,6 @@ from rcl_interfaces.msg import ParameterType, Parameter
 from rcl_interfaces.srv import SetParametersAtomically, GetParameters, ListParameters
 from rclpy.node import Node
 from rclpy.executors import ExternalShutdownException
-from ros2node.api import get_node_names
 
 from nicegui import Client, ui, app, ui_run
 from .local_file_picker import local_file_picker
@@ -40,7 +39,7 @@ class ConfigPanelNode(Node):
                 with splitter.after:
                     with ui.tab_panels(tabs, value='Home'):
                         with ui.tab_panel('Home'):
-                            ui.label('Welcome to the ATOS Configuration Panel!').classes('h4')
+                            ui.label('Welcome to ATOS config panel!').classes('text-h4')
                             if self.node_list:
                                 ui.label('Select a node to configure')
                             else:
@@ -145,10 +144,10 @@ class ConfigPanelNode(Node):
 
     async def pick_scenario_file(self) -> None:
         result = await local_file_picker('~/.astazero/ATOS', multiple=False, show_hidden_files=True)
-        ui.notify(f'You selected {result}')
+        ui.notify(f'You selected {result[0]}')
         if not result:
             return
-        self.set_parameter("esmini_adapter", "open_scenario_file", str(result))
+        self.set_parameter("esmini_adapter", "open_scenario_file", result[0])
 
     async def pick_pointcloud_file(self) -> None:
         result = await local_file_picker('~/.astazero/ATOS/pointclouds', multiple=True, show_hidden_files=True)

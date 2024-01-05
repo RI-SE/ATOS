@@ -65,8 +65,13 @@ class ControlPanelNode(Node):
 
     def get_object_control_state_callback(self):
         # Call the service
+        service_timeout_counter = 0
         while not self.get_object_control_state_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('service not available, waiting again...')
+            if service_timeout_counter > 5:
+                self.get_logger().info('object control state service not available, giving up')
+                return
+            service_timeout_counter += 1
+            self.get_logger().info('object control state service not available, waiting again...')
             self.lost_connection = True
         self.lost_connection = False
         future = self.get_object_control_state_client.call_async(self.OBC_state_req)
