@@ -15,12 +15,14 @@ setup(
     license=package_xml.find('license').text,
     data_files=[
         (str(data), ['package.xml']),
+        (str(data / 'launch'), ['launch/ros_gui.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
     entry_points={
         'console_scripts': [
-            'gui_node = gui.main:main',
+            'config_panel = gui.configpanel:main',
+            'control_panel = gui.node:main',
         ],
     },
 )
