@@ -40,13 +40,13 @@ def get_experimental_nodes():
             namespace='atos',
             executable='back_to_start',
             name='back_to_start',
-        ),
-        Node(
-            package='gui',
-            namespace='atos',
-            executable='gui_node',
-            name='ros_gui',
-            output='screen',
+        # ),
+        # Node(
+        #     package='gui',
+        #     namespace='atos',
+        #     executable='gui_node',
+        #     name='ros_gui',
+        #     output='screen',
         )
     ]
 
