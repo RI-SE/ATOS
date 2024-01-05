@@ -142,52 +142,14 @@ class ConfigPanelNode(Node):
         ui.notify(f'You selected {result}')
         if not result:
             return
-        service_timeout_counter = 0
-        client = self.client_list["esmini_adapter"]["set_params_client"]
-        while not client.wait_for_service(timeout_sec=1.0):
-            service_timeout_counter += 1
-            self.get_logger().info('service not available, waiting again...')
-            if service_timeout_counter >= MAX_TIMEOUT:
-                ui.notify(f'Service not available after {MAX_TIMEOUT} seconds, please try again later')
-                self.get_logger().info(f'Service not available after {MAX_TIMEOUT} seconds, please try again later')
-                return
-
-        scenario_param = Parameter()
-        scenario_param.name = 'open_scenario_file'
-        scenario_param.value.type = ParameterType.PARAMETER_STRING
-        scenario_param.value.string_value = str(result)
-
-        esmini_param_req = SetParametersAtomically.Request()
-        esmini_param_req.parameters.append(scenario_param)
-
-        future = client.call_async(esmini_param_req)
-        future.add_done_callback(lambda future: self.set_param_callback(future))
+        self.set_parameter("esmini_adapter", "open_scenario_file", str(result))
 
     async def pick_pointcloud_file(self) -> None:
         result = await local_file_picker('~/.astazero/ATOS/pointclouds', multiple=True, show_hidden_files=True)
         ui.notify(f'You selected {result}')
         if not result:
             return
-        service_timeout_counter = 0
-        client = self.client_list["pointcloud_publisher"]["set_params_client"]
-        while not client.wait_for_service(timeout_sec=1.0):
-            service_timeout_counter += 1
-            self.get_logger().info('service not available, waiting again...')
-            if service_timeout_counter >= MAX_TIMEOUT:
-                ui.notify(f'Service not available after {MAX_TIMEOUT} seconds, please try again later')
-                self.get_logger().info(f'Service not available after {MAX_TIMEOUT} seconds, please try again later')
-                return
-
-        scenario_param = Parameter()
-        scenario_param.name = 'pointcloud_files'
-        scenario_param.value.type = ParameterType.PARAMETER_STRING_ARRAY
-        scenario_param.value.string_value = str(result)
-
-        esmini_param_req = SetParametersAtomically.Request()
-        esmini_param_req.parameters.append(scenario_param)
-
-        future = client.call_async(esmini_param_req)
-        future.add_done_callback(lambda future: self.set_param_callback(future))
+        self.set_parameter("pointcloud_publisher", "pointcloud_files", str(result))
 
     def set_param_callback(self, future):
         try:
