@@ -22,7 +22,7 @@ OBC_STATES = {
         7: 'ERROR',
         8: 'ABORTING'
     }
-class NiceGuiNode(Node):
+class ControlPanelNode(Node):
 
     def __init__(self) -> None:
         super().__init__('nicegui')
@@ -63,8 +63,6 @@ class NiceGuiNode(Node):
                 ui.button('Reset Test Objects', on_click=lambda: self.resetTestObjectsPub.publish(Empty()), color='grey')
                 ui.button('Reload Object Settings', on_click=lambda: self.reloadObjectSettingsPub.publish(Empty()), color='grey')
 
-
-
     def get_object_control_state_callback(self):
         # Call the service
         while not self.get_object_control_state_client.wait_for_service(timeout_sec=1.0):
@@ -91,7 +89,7 @@ def main() -> None:
 
 def ros_main() -> None:
     rclpy.init()
-    node = NiceGuiNode()
+    node = ControlPanelNode()
     try:
         rclpy.spin(node)
     except ExternalShutdownException:
