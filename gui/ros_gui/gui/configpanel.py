@@ -1,5 +1,6 @@
 import threading
 from pathlib import Path
+import time
 
 import rclpy
 from rcl_interfaces.msg import ParameterType, Parameter
@@ -18,10 +19,10 @@ class ConfigPanelNode(Node):
 
     def __init__(self) -> None:
         super().__init__('config_panel')
-        banned_nodes = ["config_panel", "control_panel", "foxglove_bridge"]
+        banned_nodes = ["config_panel", "control_panel", "foxglove_bridge", "atos_base"]
+        time.sleep(0.2) # Allow time for this node to initialize before discovering other nodes, otherwise it will fail to find the others.
         self.nodes_and_namespaces = self.get_node_names_and_namespaces()
         self.node_list = [node for node, namespace in self.nodes_and_namespaces if node not in banned_nodes and "ros2cli" not in node]
-        self.get_logger().info(f'Discovered nodes: {self.node_list}')
 
         self.client_list = self.init_clients()
         self.parameters = {}
@@ -101,18 +102,17 @@ class ConfigPanelNode(Node):
         return client_list
 
     def get_parameters_list(self, client_list) -> None:
-        self.get_logger().info('Retrieving all parameters...')
-        for module in client_list.keys():
-            get_params_client = client_list[module]["get_params_client"]
-            get_param_value_client = client_list[module]["get_param_value_client"]
+        self.get_logger().info(f'Retrieving all parameters in {[node for node in client_list.keys()]}')
+        for node in client_list.keys():
+            get_params_client = client_list[node]["get_params_client"]
+            get_param_value_client = client_list[node]["get_param_value_client"]
             service_timeout_counter = 0
             while not get_params_client.wait_for_service(timeout_sec=0.1) and service_timeout_counter < MAX_TIMEOUT:
                 service_timeout_counter += 1
-                self.get_logger().info(f'{module} not available, waiting again...')
+                self.get_logger().info(f'{node} not available, waiting again...')
             if service_timeout_counter >= MAX_TIMEOUT:
-                self.get_logger().info(f'{module} not available after {MAX_TIMEOUT} seconds, please try again later')
+                self.get_logger().info(f'{node} not available after {MAX_TIMEOUT} seconds, please try again later')
                 continue
-            self.get_logger().info(f'Retrieving parameter values from {module}...')
             threading.Thread(target=self.call_service, args=(get_params_client, get_param_value_client)).start()
 
     def call_service(self, get_params_client, get_param_value_client) -> None:
@@ -123,11 +123,9 @@ class ConfigPanelNode(Node):
         get_param_req = GetParameters.Request()
         param_names = response.result.names
         get_param_req.names = param_names
-        self.get_logger().debug(f'Retrieving following parameters: {param_names}')
         client.call_async(get_param_req).add_done_callback(lambda future: self.save_params_locally(future, param_names))
 
     def save_params_locally(self, future, param_names) -> None:
-        self.get_logger().info(f'Saving parameters locally...')
         for idx, param_name in enumerate(param_names):
             param_type = future.result().values[idx].type
             match param_type:
@@ -139,6 +137,16 @@ class ConfigPanelNode(Node):
                     self.parameters[param_name] = future.result().values[idx].double_value
                 case ParameterType.PARAMETER_STRING:
                     self.parameters[param_name] = future.result().values[idx].string_value
+                case ParameterType.PARAMETER_BYTE_ARRAY:
+                    self.parameters[param_name] = future.result().values[idx].byte_array_value
+                case ParameterType.PARAMETER_BOOL_ARRAY:
+                    self.parameters[param_name] = future.result().values[idx].bool_array_value
+                case ParameterType.PARAMETER_INTEGER_ARRAY:
+                    self.parameters[param_name] = future.result().values[idx].integer_array_value
+                case ParameterType.PARAMETER_DOUBLE_ARRAY:
+                    self.parameters[param_name] = future.result().values[idx].double_array_value
+                case ParameterType.PARAMETER_STRING_ARRAY:
+                    self.parameters[param_name] = future.result().values[idx].string_array_value
                 case _:
                     self.get_logger().info(f'Parameter {param_name} has an unsupported type {param_type}')
 
@@ -156,10 +164,10 @@ class ConfigPanelNode(Node):
             return
         self.set_parameter("pointcloud_publisher", "pointcloud_files", str(result))
 
-    def set_param_callback(self, future):
+    def set_param_callback(self, future, param_name):
         try:
             response = future.result()
-            self.get_logger().info(f'Result of set_parameters was {"successful" if response.result.successful else "unsuccesful"}')
+            self.get_logger().info(f'Setting parameter {param_name} was {"successful" if response.result.successful else "unsuccesful"}')
         except Exception as e:
             self.get_logger().info('Service call failed %r' % (e,))
 
@@ -186,7 +194,7 @@ class ConfigPanelNode(Node):
         esmini_param_req.parameters.append(scenario_param)
 
         future = client.call_async(esmini_param_req)
-        future.add_done_callback(lambda future: self.set_param_callback(future))
+        future.add_done_callback(lambda future: self.set_param_callback(future, param_name))
 
 def ros_main() -> None:
     rclpy.init()
