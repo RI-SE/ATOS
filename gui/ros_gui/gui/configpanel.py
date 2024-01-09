@@ -1,6 +1,8 @@
 import threading
 from pathlib import Path
+import os
 import time
+import json
 
 import rclpy
 from rcl_interfaces.msg import ParameterType, Parameter
@@ -11,18 +13,21 @@ from rclpy.executors import ExternalShutdownException
 from nicegui import Client, ui, app, ui_run
 from .local_file_picker import local_file_picker
 
-QOS = rclpy.qos.QoSProfile(depth=10)
-
+CONF_PATH = os.path.join(os.path.expanduser('~'), ".astazero/ATOS/conf")
 MAX_TIMEOUT = 1
 
 class ConfigPanelNode(Node):
 
     def __init__(self) -> None:
         super().__init__('config_panel')
-        self.banned_nodes = ["config_panel", "control_panel", "foxglove_bridge", "atos_base"]
+        schema_path = os.path.join(CONF_PATH, "atos-param-schema.json")
+        self.get_logger().info(f"search path for json schema {schema_path}")
+        self.json_schema = json.load(open(schema_path, "r"))
+        modules = self.json_schema["modules"].keys()
         time.sleep(0.5) # Allow time for this node to initialize before discovering other nodes, otherwise it will fail to find the others.
-        self.nodes_and_namespaces = self.get_node_names_and_namespaces()
-        self.node_list = [node for node, namespace in self.nodes_and_namespaces if node not in self.banned_nodes and "ros2cli" not in node]
+        self.active_nodes_and_namespaces = self.get_node_names_and_namespaces()
+        # self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node not in self.banned_nodes and "ros2cli" not in node]
+        self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node in modules and "atos" in namespace]
 
         self.client_list = self.init_clients()
         self.parameters = {}
@@ -31,7 +36,7 @@ class ConfigPanelNode(Node):
 
     def init_clients(self) -> dict:
         client_list = {}
-        for module in self.node_list:
+        for module in self.active_node_list:
             get_params_client = self.create_client(ListParameters, f'/atos/{module}/list_parameters')
             get_param_value_client = self.create_client(GetParameters, f'/atos/{module}/get_parameters')
             set_params_client = self.create_client(SetParametersAtomically, f'/atos/{module}/set_parameters_atomically')
@@ -105,6 +110,7 @@ class ConfigPanelNode(Node):
         try:
             response = future.result()
             self.get_logger().info(f'Setting parameter {param_name} was {"successful" if response.result.successful else "unsuccesful"}')
+            ui.notify(f'Setting parameter {param_name} was {"successful" if response.result.successful else "unsuccesful"}')
         except Exception as e:
             self.get_logger().info('Service call failed %r' % (e,))
 
@@ -139,28 +145,41 @@ class ConfigPanelNode(Node):
                 with splitter.before:
                     with ui.tabs().props('vertical').classes('w-fit') as tabs:
                         ui.tab('Home', icon='🏠')
-                        for module in self.node_list:
+                        for module in self.active_node_list:
                             ui.tab(module.replace("_", " "))
                 with splitter.after:
                     with ui.tab_panels(tabs, value='Home'):
                         with ui.tab_panel('Home'):
                             ui.label('Welcome to ATOS config panel!').classes('text-h4')
-                            if self.node_list:
-                                ui.label('Select a node to configure')
+                            if self.active_node_list:
+                                ui.label("Select a node to configure. Press the refresh button if you can't find the node you're looking for.")
                             else:
-                                ui.label('No nodes were discovered')
+                                ui.label("No nodes were discovered. Press the refresh button to try again.")
                             ui.button('Refresh', on_click=lambda: self.refresh(splitter), icon='🔄')
                         with ui.tab_panel('journal control'):
-                            ui.input(label="Scenario name").on('keydown.enter', lambda result: self.set_parameter("journal_control", "scenario_name", result.sender.value)) \
-                                    .bind_value(self.parameters, "scenario_name")
+                            with ui.row():
+                                ui.input(label="Scenario name").on('keydown.enter', lambda result: self.set_parameter("journal_control", "scenario_name", result.sender.value)) \
+                                        .bind_value(self.parameters, "scenario_name")
+                                help_switch = ui.switch('Help')
+                            ui.label("The scenario name is the name of the scenario file without the .xosc extension").bind_visibility_from(help_switch, 'value')
                         with ui.tab_panel('esmini adapter'):
-                            ui.label('Openscenario file:')
-                            ui.button('Choose new file', on_click=self.pick_scenario_file, icon='📂')
+                            with ui.row():
+                                with ui.column():
+                                    ui.label('Openscenario file:')
+                                    ui.button('Choose new file', on_click=self.pick_scenario_file, icon='📂')
+                                help_switch = ui.switch('Help')
+                            ui.label("The scenario name is the name of the scenario file with the .xosc extension").bind_visibility_from(help_switch, 'value')
                         with ui.tab_panel('object control'):
-                            ui.number(label="Max missing heartbeats").on('keydown.enter', lambda result: self.set_parameter("object_control", "max_missing_heartbeats", result.sender.value)) \
-                                    .bind_value(self.parameters, "max_missing_heartbeats")
-                            ui.number(label="Transmitter ID").on('keydown.enter', lambda result: self.set_parameter("object_control", "transmitter_id", result.sender.value)) \
-                                    .bind_value(self.parameters, "transmitter_id")
+                            with ui.row():
+                                ui.number(label="Max missing heartbeats").on('keydown.enter', lambda result: self.set_parameter("object_control", "max_missing_heartbeats", result.sender.value)) \
+                                        .bind_value(self.parameters, "max_missing_heartbeats")
+                                help_switch = ui.switch('Help')
+                            ui.label("Max missing heartbeats").bind_visibility_from(help_switch, 'value')
+                            with ui.row():
+                                ui.number(label="Transmitter ID").on('keydown.enter', lambda result: self.set_parameter("object_control", "transmitter_id", result.sender.value)) \
+                                        .bind_value(self.parameters, "transmitter_id")
+                                help_switch = ui.switch('Help')
+                            ui.label("Transmitter ID").bind_visibility_from(help_switch, 'value')
                         with ui.tab_panel('osi adapter'):
                             ui.input(label="Address").on('keydown.enter', lambda result: self.set_parameter("osi_adapter", "address", result.sender.value)) \
                                     .bind_value(self.parameters, "address").classes('w-40')
@@ -199,8 +218,8 @@ class ConfigPanelNode(Node):
 
     def refresh(self, splitter) -> None:
         splitter.delete()
-        self.nodes_and_namespaces = self.get_node_names_and_namespaces()
-        self.node_list = [node for node, namespace in self.nodes_and_namespaces if node not in self.banned_nodes and "ros2cli" not in node]
+        self.active_nodes_and_namespaces = self.get_node_names_and_namespaces()
+        self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node not in self.banned_nodes and "ros2cli" not in node]
 
         self.client_list = self.init_clients()
         self.parameters = {}
