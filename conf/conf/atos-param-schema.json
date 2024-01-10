@@ -15,7 +15,7 @@
         "esmini_adapter":{
             "ros__parameters": {
                 "open_scenario_file": {
-                    "type": "filepath",
+                    "type": "file",
                     "default": "GaragePlanScenario.xosc",
                     "description": "Name of the OpenSCENARIO-file. The file must end in .xosc and be located in the osc-directory."
                 }
@@ -24,12 +24,12 @@
         "object_control": {
             "ros__parameters": {
                 "max_missing_heartbeats": {
-                    "type": "integer",
+                    "type": "int",
                     "default": 100,
                     "description": "The number of position update (MONR) message periods that are allowed to pass since the last received message before an abort signal is sent to all objects."
                 },
                 "transmitter_id": {
-                    "type": "integer",
+                    "type": "int",
                     "default": 15,
                     "description": "The ISO 22133 transmitted id to be used for ATOS."
                 }
@@ -44,7 +44,7 @@
                     "description": "IP address for client to connect to."
                 },
                 "port": {
-                    "type": "number",
+                    "type": "int",
                     "default": 55555,
                     "description": "Port for client to connect to."
                 },
@@ -58,7 +58,7 @@
                     "description": "Which protocol to use, use 'tcp' or 'udp'."
                 },
                 "frequency": {
-                    "type": "number",
+                    "type": "int",
                     "default": 100,
                     "description": "Frequency for sending data, measured in Hz."
                 }
@@ -101,7 +101,7 @@
         "trajectorylet_streamer": {
             "ros__parameters": {
                 "chunk_duration": {
-                    "type": "integer",
+                    "type": "int",
                     "default": 2,
                     "description": "Length of the chunks to be transmitted, in seconds. The current time is used to find a chunk start point in the trajectory and the chunk length marks the end of that chunk."
                 }
@@ -110,12 +110,12 @@
         "pointcloud_publisher": {
             "ros__parameters": {
                 "pointcloud_files": {
-                    "type": "array",
+                    "type": "file_array",
                     "description": "List of one or more pointcloud files to publish.",
                     "items": {
                         "type": "object",
                         "title": "Pointcloud file",
-                        "file": {
+                        "file_array": {
                             "type": "string",
                             "default": ""
                         }
@@ -126,7 +126,7 @@
         "back_to_start": {
             "ros__parameters": {
                 "turn_radius": {
-                    "type": "number",
+                    "type": "double",
                     "default": 2.5,
                     "description": "Radius of the turn to be performed, in meters."
                 }
