@@ -42,16 +42,17 @@ class ConfigPanelNode(Node):
         return client_list
 
     def get_parameters_list(self, client_list) -> None:
-        self.get_logger().info(f'Retrieving all parameters in {[node for node in client_list.keys()]}')
+        self.get_logger().debug(f'Retrieving all parameters in {[node for node in client_list.keys()]}')
         for node in client_list.keys():
             get_params_client = client_list[node]["get_params_client"]
             get_param_value_client = client_list[node]["get_param_value_client"]
             service_timeout_counter = 0
             while not get_params_client.wait_for_service(timeout_sec=0.1) and service_timeout_counter < MAX_TIMEOUT:
                 service_timeout_counter += 1
-                self.get_logger().info(f'{node} not available, waiting again...')
+                self.get_logger().debug(f'{node} not available, waiting again...')
             if service_timeout_counter >= MAX_TIMEOUT:
                 self.get_logger().info(f'{node} not available after {MAX_TIMEOUT} seconds, please try again later')
+                ui.notify(f'{node} not available after {MAX_TIMEOUT} seconds, please try again later')
                 continue
             threading.Thread(target=self.call_service, args=(get_params_client, get_param_value_client)).start()
 
@@ -109,20 +110,22 @@ class ConfigPanelNode(Node):
     def set_param_callback(self, future, param_name):
         try:
             response = future.result()
-            self.get_logger().info(f'Setting parameter {param_name} was {"successful" if response.result.successful else "unsuccesful"}')
-            # ui.notify(f'Setting parameter {param_name} was {"successful" if response.result.successful else "unsuccesful"}')
         except Exception as e:
             self.get_logger().info('Service call failed %r' % (e,))
+            return
+        self.get_logger().debug(f'Setting parameter {param_name} was {"successful" if response.result.successful else "unsuccesful"}')
+        with self.splitter:
+            ui.notify(f'Setting parameter {param_name} was {"successful" if response.result.successful else "unsuccesful"}')
 
     def set_parameter(self, node_name, param_name, param_value) -> None:
-        self.get_logger().info(f'Setting parameter {param_name} in {node_name} to {param_value}')
+        self.get_logger().debug(f'Setting parameter {param_name} in {node_name} to {param_value}')
         ui.notify(f'Setting parameter {param_name} in {node_name} to {param_value}')
 
         service_timeout_counter = 0
         client = self.client_list[node_name]["set_params_client"]
         while not client.wait_for_service(timeout_sec=1.0):
             service_timeout_counter += 1
-            self.get_logger().info('service not available, waiting again...')
+            self.get_logger().debug('service not available, waiting again...')
             if service_timeout_counter >= MAX_TIMEOUT:
                 ui.notify(f'Service not available after {MAX_TIMEOUT} seconds, please try again later')
                 self.get_logger().info(f'Service not available after {MAX_TIMEOUT} seconds, please try again later')
@@ -134,7 +137,6 @@ class ConfigPanelNode(Node):
         self.assign_value_and_type_to_parameter(parameter, param_type, param_value) # Checks param_value type and assigns it to the parameter
         param_req = SetParametersAtomically.Request()
         param_req.parameters.append(parameter)
-        self.get_logger().info(f'Sending request to set parameter name {param_req.parameters[0].name} to value {param_req.parameters[0].value}')
 
         future = client.call_async(param_req)
         future.add_done_callback(lambda future: self.set_param_callback(future, param_name))
@@ -214,13 +216,13 @@ class ConfigPanelNode(Node):
 
     def render_configpanel(self) -> None:
         with Client.auto_index_client:
-            with ui.splitter(value=30).classes('w-1/2') as splitter:
-                with splitter.before:
+            with ui.splitter(value=30).classes('w-1/2') as self.splitter:
+                with self.splitter.before:
                     with ui.tabs().props('vertical').classes('w-fit') as tabs:
                         ui.tab('Home', icon='🏠')
                         for node in self.active_node_list:
                             ui.tab(node.replace("_", " "))
-                with splitter.after:
+                with self.splitter.after:
                     with ui.tab_panels(tabs, value='Home'):
                         with ui.tab_panel('Home'):
                             ui.label('Welcome to ATOS config panel!').classes('text-h4')
@@ -228,7 +230,7 @@ class ConfigPanelNode(Node):
                                 ui.label("Select a node to configure. Press the refresh button if you can't find the node you're looking for.")
                             else:
                                 ui.label("No nodes were discovered. Press the refresh button to try again.")
-                            ui.button('Refresh', on_click=lambda: self.refresh(splitter), icon='🔄')
+                            ui.button('Refresh', on_click=lambda: self.refresh(self.splitter), icon='🔄')
                         for node in self.active_node_list:
                             with ui.tab_panel(node.replace("_", " ")):
                                 for param_name in self.json_schema["modules"][node]["ros__parameters"]: # Should this loop through the active parameters instead?
@@ -277,6 +279,8 @@ class ConfigPanelNode(Node):
 
         self.client_list = self.init_clients()
         self.parameters = {}
+        with self.splitter:
+            ui.notify('Retrieving parameters again...')
         threading.Thread(target=self.get_parameters_list, args=(self.client_list,)).start()
         self.render_configpanel()
 
