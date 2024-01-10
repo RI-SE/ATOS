@@ -21,12 +21,10 @@ class ConfigPanelNode(Node):
     def __init__(self) -> None:
         super().__init__('config_panel')
         schema_path = os.path.join(CONF_PATH, "atos-param-schema.json")
-        self.get_logger().info(f"search path for json schema {schema_path}")
         self.json_schema = json.load(open(schema_path, "r"))
         modules = self.json_schema["modules"].keys()
         time.sleep(0.5) # Allow time for this node to initialize before discovering other nodes, otherwise it will fail to find the others.
         self.active_nodes_and_namespaces = self.get_node_names_and_namespaces()
-        # self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node not in self.banned_nodes and "ros2cli" not in node]
         self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node in modules and "atos" in namespace]
 
         self.client_list = self.init_clients()
@@ -92,19 +90,21 @@ class ConfigPanelNode(Node):
                 case _:
                     self.get_logger().info(f'Parameter {param_name} has an unsupported type {param_type}')
 
-    async def pick_scenario_file(self) -> None:
+    async def pick_file(self, node_name, param_name) -> None:
         result = await local_file_picker('~/.astazero/ATOS', multiple=False, show_hidden_files=True)
-        ui.notify(f'You selected {result[0]}')
-        if not result:
-            return
-        self.set_parameter("esmini_adapter", "open_scenario_file", result[0])
-
-    async def pick_pointcloud_file(self) -> None:
-        result = await local_file_picker('~/.astazero/ATOS/pointclouds', multiple=True, show_hidden_files=True)
         ui.notify(f'You selected {result}')
         if not result:
             return
-        self.set_parameter("pointcloud_publisher", "pointcloud_files", str(result))
+        self.parameters[param_name] = str(result)
+        self.set_parameter(node_name, param_name, str(result))
+
+    async def pick_files(self, node_name, param_name) -> None:
+        result = await local_file_picker('~/.astazero/ATOS', multiple=True, show_hidden_files=True)
+        ui.notify(f'You selected {result}')
+        if not result:
+            return
+        self.parameters[param_name] = str(result)
+        self.set_parameter(node_name, param_name, str(result))
 
     def set_param_callback(self, future, param_name):
         try:
@@ -145,8 +145,8 @@ class ConfigPanelNode(Node):
                 with splitter.before:
                     with ui.tabs().props('vertical').classes('w-fit') as tabs:
                         ui.tab('Home', icon='🏠')
-                        for module in self.active_node_list:
-                            ui.tab(module.replace("_", " "))
+                        for node in self.active_node_list:
+                            ui.tab(node.replace("_", " "))
                 with splitter.after:
                     with ui.tab_panels(tabs, value='Home'):
                         with ui.tab_panel('Home'):
@@ -156,70 +156,52 @@ class ConfigPanelNode(Node):
                             else:
                                 ui.label("No nodes were discovered. Press the refresh button to try again.")
                             ui.button('Refresh', on_click=lambda: self.refresh(splitter), icon='🔄')
-                        with ui.tab_panel('journal control'):
-                            with ui.row():
-                                ui.input(label="Scenario name").on('keydown.enter', lambda result: self.set_parameter("journal_control", "scenario_name", result.sender.value)) \
-                                        .bind_value(self.parameters, "scenario_name")
-                                help_switch = ui.switch('Help')
-                            ui.label("The scenario name is the name of the scenario file without the .xosc extension").bind_visibility_from(help_switch, 'value')
-                        with ui.tab_panel('esmini adapter'):
-                            with ui.row():
-                                with ui.column():
-                                    ui.label('Openscenario file:')
-                                    ui.button('Choose new file', on_click=self.pick_scenario_file, icon='📂')
-                                help_switch = ui.switch('Help')
-                            ui.label("The scenario name is the name of the scenario file with the .xosc extension").bind_visibility_from(help_switch, 'value')
-                        with ui.tab_panel('object control'):
-                            with ui.row():
-                                ui.number(label="Max missing heartbeats").on('keydown.enter', lambda result: self.set_parameter("object_control", "max_missing_heartbeats", result.sender.value)) \
-                                        .bind_value(self.parameters, "max_missing_heartbeats")
-                                help_switch = ui.switch('Help')
-                            ui.label("Max missing heartbeats").bind_visibility_from(help_switch, 'value')
-                            with ui.row():
-                                ui.number(label="Transmitter ID").on('keydown.enter', lambda result: self.set_parameter("object_control", "transmitter_id", result.sender.value)) \
-                                        .bind_value(self.parameters, "transmitter_id")
-                                help_switch = ui.switch('Help')
-                            ui.label("Transmitter ID").bind_visibility_from(help_switch, 'value')
-                        with ui.tab_panel('osi adapter'):
-                            ui.input(label="Address").on('keydown.enter', lambda result: self.set_parameter("osi_adapter", "address", result.sender.value)) \
-                                    .bind_value(self.parameters, "address").classes('w-40')
-                            ui.number(label="Port").on('keydown.enter', lambda result: self.set_parameter("osi_adapter", "port", result.sender.value)) \
-                                    .bind_value(self.parameters, "port").classes('w-40')
-                            ui.select(options=["tcp", "udp"], 
-                                    label="Protocol", 
-                                    on_change=lambda result: self.set_parameter("osi_adapter", "protocol", result.value)).bind_value(self.parameters, "protocol").classes('w-40')
-                            ui.number(label="Frequency").on('keydown.enter', lambda result: self.set_parameter("osi_adapter", "frequency", result.sender.value)) \
-                                    .bind_value(self.parameters, "frequency").classes('w-40')
-                        with ui.tab_panel('mqtt bridge'):
-                            ui.input(label="Broker IP").on('keydown.enter', lambda result: self.set_parameter("mqtt_bridge", "broker_ip", result.sender.value)) \
-                                    .bind_value(self.parameters, "broker_ip")
-                            ui.number(label="Pub client ID").on('keydown.enter', lambda result: self.set_parameter("mqtt_bridge", "pub_client_id", result.sender.value)) \
-                                    .bind_value(self.parameters, "pub_client_id")
-                            ui.input(label="Username").on('keydown.enter', lambda result: self.set_parameter("mqtt_bridge", "username", result.sender.value)) \
-                                    .bind_value(self.parameters, "username")
-                            ui.input(label="Password").on('keydown.enter', lambda result: self.set_parameter("mqtt_bridge", "password", result.sender.value)) \
-                                    .bind_value(self.parameters, "password")
-                            ui.input(label="Topic").on('keydown.enter', lambda result: self.set_parameter("mqtt_bridge", "topic", result.sender.value)) \
-                                    .bind_value(self.parameters, "topic")
-                            ui.input(label="Quality of Service").on('keydown.enter', lambda result: self.set_parameter("mqtt_bridge", "quality_of_service", result.sender.value)) \
-                                    .bind_value(self.parameters, "quality_of_service")
-                        with ui.tab_panel("trajectorylet streamer"):
-                            ui.number(label="Chunk duration").on('keydown.enter', lambda result: self.set_parameter("trajectorylet_streamer", "chunk_duration", result.sender.value)) \
-                                    .bind_value(self.parameters, "chunk_duration")
-                        with ui.tab_panel("pointcloud publisher"):
-                            ui.label('Pointcloud files:')
-                            ui.button('Choose new file', on_click=self.pick_pointcloud_file, icon='📂')
-                        with ui.tab_panel("back to start"):
-                            ui.number(label="Turn radius").on('keydown.enter', lambda result: self.set_parameter("back_to_start", "turn_radius", result.sender.value)) \
-                                    .bind_value(self.parameters, "turn_radius")
-                        with ui.tab_panel("integration testing handler"):
-                            ui.switch(text="Scenario execution").on('keydown.enter', lambda result: self.set_parameter("integration_testing_handler", "scenario_execution", result.sender.value)) \
-                                    .bind_value(self.parameters, "scenario_execution")
+                        for node in self.active_node_list:
+                            with ui.tab_panel(node.replace("_", " ")):
+                                for param_name in self.json_schema["modules"][node]["ros__parameters"]: # Should this loop through the active parameters instead?
+                                    param_text = param_name.replace("_", " ")
+                                    param_type = self.json_schema["modules"][node]["ros__parameters"][param_name]["type"]
+                                    param_description = self.json_schema["modules"][node]["ros__parameters"][param_name]["description"]
+                                    with ui.row():
+                                        match param_type:
+                                            case "file":
+                                                with ui.column():
+                                                    ui.label(param_name.replace("_", " ") + ":")
+                                                    ui.button('Choose new file:', 
+                                                             on_click=lambda node=node, param_name=param_name: self.pick_file(node, param_name), 
+                                                             icon='📂')
+                                            case "bool":
+                                                ui.checkbox(param_text).bind_value(self.parameters, param_name).on('change', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.value))
+                                            case "int":
+                                                ui.number(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case "double":
+                                                ui.number(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case "string":
+                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case "file_array":
+                                                with ui.column():
+                                                    ui.label(param_name.replace("_", " ") + ":")
+                                                    ui.button('Choose new file:', on_click=lambda node=node, param_name=param_name: self.pick_files(node, param_name), icon='📂')
+                                            case "byte_array":
+                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case "bool_array":
+                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case "int_array":
+                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case "double_array":
+                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case "string_array":
+                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case _:
+                                                ui.label(f"Unsupported type {param_type}").classes('text-red-500')
+                                        help_switch = ui.switch('Help')
+                                    ui.label(param_description).bind_visibility_from(help_switch, 'value')
 
     def refresh(self, splitter) -> None:
         splitter.delete()
+        modules = self.json_schema["modules"].keys()
         self.active_nodes_and_namespaces = self.get_node_names_and_namespaces()
-        self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node not in self.banned_nodes and "ros2cli" not in node]
+        self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node in modules and "atos" in namespace]
 
         self.client_list = self.init_clients()
         self.parameters = {}
