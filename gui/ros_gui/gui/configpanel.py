@@ -110,7 +110,7 @@ class ConfigPanelNode(Node):
         try:
             response = future.result()
             self.get_logger().info(f'Setting parameter {param_name} was {"successful" if response.result.successful else "unsuccesful"}')
-            ui.notify(f'Setting parameter {param_name} was {"successful" if response.result.successful else "unsuccesful"}')
+            # ui.notify(f'Setting parameter {param_name} was {"successful" if response.result.successful else "unsuccesful"}')
         except Exception as e:
             self.get_logger().info('Service call failed %r' % (e,))
 
@@ -128,16 +128,89 @@ class ConfigPanelNode(Node):
                 self.get_logger().info(f'Service not available after {MAX_TIMEOUT} seconds, please try again later')
                 return
 
-        scenario_param = Parameter()
-        scenario_param.name = param_name
-        scenario_param.value.type = ParameterType.PARAMETER_STRING
-        scenario_param.value.string_value = str(param_value)
+        parameter = Parameter()
+        parameter.name = param_name
+        param_type = self.json_schema["modules"][node_name]["ros__parameters"][param_name]["type"]
+        self.assign_value_and_type_to_parameter(parameter, param_type, param_value) # Checks param_value type and assigns it to the parameter
+        param_req = SetParametersAtomically.Request()
+        param_req.parameters.append(parameter)
+        self.get_logger().info(f'Sending request to set parameter name {param_req.parameters[0].name} to value {param_req.parameters[0].value}')
 
-        esmini_param_req = SetParametersAtomically.Request()
-        esmini_param_req.parameters.append(scenario_param)
-
-        future = client.call_async(esmini_param_req)
+        future = client.call_async(param_req)
         future.add_done_callback(lambda future: self.set_param_callback(future, param_name))
+
+    def assign_value_and_type_to_parameter(self, parameter, param_type, param_value) -> None:
+        match param_type:
+            case "file":
+                if type(param_value) != str:
+                    ui.notify(f'Please select a file')
+                    return
+                parameter.value.type = ParameterType.PARAMETER_STRING
+                parameter.value.string_value = param_value
+            case "bool":
+                if type(param_value) != bool:
+                    ui.notify(f'Please select a boolean')
+                    return
+                parameter.value.type = ParameterType.PARAMETER_BOOL
+                parameter.value.bool_value = param_value
+            case "int":
+                if type(param_value) != int:
+                    ui.notify(f'Please select an integer')
+                    return
+                parameter.value.type = ParameterType.PARAMETER_INTEGER
+                parameter.value.integer_value = param_value
+            case "double":
+                if type(param_value) != float:
+                    ui.notify(f'Please select a double')
+                    return
+                parameter.value.type = ParameterType.PARAMETER_DOUBLE
+                parameter.value.double_value = param_value
+            case "string":
+                if type(param_value) != str:
+                    ui.notify(f'Please select a string')
+                    return
+                parameter.value.type = ParameterType.PARAMETER_STRING
+                parameter.value.string_value = param_value
+            case "file_array":
+                if type(param_value) != list or type(param_value[0]) != str:
+                    ui.notify(f'Please select one or more files')
+                    return
+                parameter.value.type = ParameterType.PARAMETER_STRING_ARRAY
+                parameter.value.string_array_value = param_value
+            case "byte_array":
+                if type(param_value) != list or type(param_value[0]) != int:
+                    ui.notify(f'Please select one or more bytes')
+                    return
+                parameter.value.type = ParameterType.PARAMETER_BYTE_ARRAY
+                parameter.value.byte_array_value = param_value
+            case "bool_array":
+                if type(param_value) != list or type(param_value[0]) != bool:
+                    ui.notify(f'Please select one or more booleans')
+                    return
+                parameter.value.type = ParameterType.PARAMETER_BOOL_ARRAY
+                parameter.value.bool_array_value = param_value
+            case "int_array":
+                if type(param_value) != list or type(param_value[0]) != int:
+                    ui.notify(f'Please select one or more integers')
+                    return
+                parameter.value.type = ParameterType.PARAMETER_INTEGER_ARRAY
+                parameter.value.integer_array_value = param_value
+            case "double_array":
+                if type(param_value) != list or type(param_value[0]) != float:
+                    ui.notify(f'Please select one or more doubles')
+                    return
+                parameter.value.type = ParameterType.PARAMETER_DOUBLE_ARRAY
+                parameter.value.double_array_value = param_value
+            case "string_array":
+                if type(param_value) != list or type(param_value[0]) != str:
+                    ui.notify(f'Please select one or more strings')
+                    return
+                parameter.value.type = ParameterType.PARAMETER_STRING_ARRAY
+                parameter.value.string_array_value = param_value
+            case _:
+                self.get_logger().info(f'Unsupported type {param_type}')
+                ui.notify(f'Unsupported type {param_type}')
+                return
 
     def render_configpanel(self) -> None:
         with Client.auto_index_client:
@@ -166,14 +239,13 @@ class ConfigPanelNode(Node):
                                         match param_type:
                                             case "file":
                                                 with ui.column():
-                                                    ui.label(param_name.replace("_", " ") + ":")
-                                                    ui.button('Choose new file:', 
+                                                    ui.button(f'Select {param_name.replace("_", " ")}:', 
                                                              on_click=lambda node=node, param_name=param_name: self.pick_file(node, param_name), 
                                                              icon='📂')
                                             case "bool":
                                                 ui.checkbox(param_text).bind_value(self.parameters, param_name).on('change', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.value))
                                             case "int":
-                                                ui.number(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                                ui.number(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, int(result.sender.value)))
                                             case "double":
                                                 ui.number(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
                                             case "string":
