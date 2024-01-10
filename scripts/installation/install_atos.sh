@@ -53,11 +53,12 @@ cd $HOME/atos_ws
 
 # Set ATOS_INTERFACES_PATH using ATOS_PATH
 ATOS_INTERFACES_PATH="$ATOS_REPO_PATH/atos_interfaces"
+ATOS_GUI_PATH="$ATOS_REPO_PATH/gui/ros_gui"
 
 # Update symlinks to atos and atos_interfaces
 update_symlink "$ATOS_REPO_PATH" $HOME/atos_ws/src/atos
 update_symlink "$ATOS_INTERFACES_PATH" $HOME/atos_ws/src/atos_interfaces
-
+update_symlink "$ATOS_GUI_PATH" $HOME/atos_ws/src/atos_gui
 
 # Change directory into the workspace and build, check with the user before continuing
 echo "Dependecy installation done and ATOS workspace created."
