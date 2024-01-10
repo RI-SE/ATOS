@@ -17,8 +17,12 @@ CONF_PATH = os.path.join(os.path.expanduser('~'), ".astazero/ATOS/conf")
 MAX_TIMEOUT = 1
 
 class ConfigPanelNode(Node):
+    """ This node is responsible for rendering the config panel and setting parameters in ATOS nodes.
+    """
 
     def __init__(self) -> None:
+        """ Initializes the node, fetches all ros parameters and renders the config panel with these values.
+        """
         super().__init__('config_panel')
         schema_path = os.path.join(CONF_PATH, "atos-param-schema.json")
         self.json_schema = json.load(open(schema_path, "r"))
@@ -27,14 +31,22 @@ class ConfigPanelNode(Node):
         self.active_nodes_and_namespaces = self.get_node_names_and_namespaces()
         self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node in modules and "atos" in namespace]
 
-        self.client_list = self.init_clients()
+        self.client_list = self.init_clients(self.active_node_list)
         self.parameters = {}
         threading.Thread(target=self.get_parameters_list, args=(self.client_list,)).start()
         self.render_configpanel()
 
-    def init_clients(self) -> dict:
+    def init_clients(self, active_node_list) -> dict:
+        """ Initializes the get and set parameter clients for all active nodes.
+
+        Args:
+            active_node_list (list): List of active nodes.
+
+        Returns:
+            client_list (dict): Dictionary of clients for all active nodes.
+        """
         client_list = {}
-        for module in self.active_node_list:
+        for module in active_node_list:
             get_params_client = self.create_client(ListParameters, f'/atos/{module}/list_parameters')
             get_param_value_client = self.create_client(GetParameters, f'/atos/{module}/get_parameters')
             set_params_client = self.create_client(SetParametersAtomically, f'/atos/{module}/set_parameters_atomically')
@@ -42,6 +54,13 @@ class ConfigPanelNode(Node):
         return client_list
 
     def get_parameters_list(self, client_list) -> None:
+        """ Retrieves all parameters from all active nodes and saves them in a dictionary. 
+            First calls the list parameters service for each node to get all parameter names, then calls the get parameters service to get all parameter values.
+
+        Args:
+            client_list (dict): Dictionary of clients for all active nodes.
+            
+        """
         self.get_logger().debug(f'Retrieving all parameters in {[node for node in client_list.keys()]}')
         for node in client_list.keys():
             get_params_client = client_list[node]["get_params_client"]
@@ -57,9 +76,21 @@ class ConfigPanelNode(Node):
             threading.Thread(target=self.call_service, args=(get_params_client, get_param_value_client)).start()
 
     def call_service(self, get_params_client, get_param_value_client) -> None:
+        """Helper function for get_parameters_list to make the actual service call. TODO: Retire this function
+
+        Args:
+            get_params_client (Client): Client for the list parameters service.
+            get_param_value_client (Client): Client for the get parameters service.
+        """
         get_params_client.call_async(ListParameters.Request()).add_done_callback(lambda future: self.get_parameter_values(future, get_param_value_client))
 
     def get_parameter_values(self, future, client) -> None:
+        """ Retrieves all parameter values from a node (specified by the client) and saves them in a dictionary.
+        
+        Args:
+            future (Future): Future object returned by the list parameters service call.
+            client (Client): Client for the get parameters service (related to a specific node).
+        """
         response = future.result()
         get_param_req = GetParameters.Request()
         param_names = response.result.names
@@ -67,6 +98,12 @@ class ConfigPanelNode(Node):
         client.call_async(get_param_req).add_done_callback(lambda future: self.save_params_locally(future, param_names))
 
     def save_params_locally(self, future, param_names) -> None:
+        """ Saves all parameter values in a dictionary.
+
+        Args:
+            future (Future): Future object returned by the get parameters service call.
+            param_names (list): List of parameter names.
+        """
         for idx, param_name in enumerate(param_names):
             param_type = future.result().values[idx].type
             match param_type:
@@ -92,6 +129,12 @@ class ConfigPanelNode(Node):
                     self.get_logger().info(f'Parameter {param_name} has an unsupported type {param_type}')
 
     async def pick_file(self, node_name, param_name) -> None:
+        """ Opens a file picker and sets the selected file as the parameter value.
+        
+        Args:
+            node_name (str): Name of the node that the parameter belongs to.
+            param_name (str): Name of the parameter.
+        """
         result = await local_file_picker('~/.astazero/ATOS', multiple=False, show_hidden_files=True)
         ui.notify(f'You selected {result}')
         if not result:
@@ -100,6 +143,12 @@ class ConfigPanelNode(Node):
         self.set_parameter(node_name, param_name, str(result))
 
     async def pick_files(self, node_name, param_name) -> None:
+        """ Opens a file picker and sets the selected files as the parameter value.
+
+        Args:
+            node_name (str): Name of the node that the parameter belongs to.
+            param_name (str): Name of the parameter.
+        """
         result = await local_file_picker('~/.astazero/ATOS', multiple=True, show_hidden_files=True)
         ui.notify(f'You selected {result}')
         if not result:
@@ -107,7 +156,13 @@ class ConfigPanelNode(Node):
         self.parameters[param_name] = str(result)
         self.set_parameter(node_name, param_name, str(result))
 
-    def set_param_callback(self, future, param_name):
+    def set_param_callback(self, future, param_name) -> None:
+        """ Callback function for the set parameters service call. Notifies the user if the call was successful or not.
+        
+        Args:
+            future (Future): Future object returned by the set parameters service call (Bool).
+            param_name (str): Name of the parameter.
+        """
         try:
             response = future.result()
         except Exception as e:
@@ -118,6 +173,13 @@ class ConfigPanelNode(Node):
             ui.notify(f'Setting parameter {param_name} was {"successful" if response.result.successful else "unsuccesful"}')
 
     def set_parameter(self, node_name, param_name, param_value) -> None:
+        """ Sets the value for a specific parameter.
+
+        Args:
+            node_name (str): Name of the node that the parameter belongs to.
+            param_name (str): Name of the parameter.
+            param_value (any): Value of the parameter.
+        """
         self.get_logger().debug(f'Setting parameter {param_name} in {node_name} to {param_value}')
         ui.notify(f'Setting parameter {param_name} in {node_name} to {param_value}')
 
@@ -142,6 +204,13 @@ class ConfigPanelNode(Node):
         future.add_done_callback(lambda future: self.set_param_callback(future, param_name))
 
     def assign_value_and_type_to_parameter(self, parameter, param_type, param_value) -> None:
+        """ Assigns a value and type to a parameter. Translates the parameter type from the json schema to the ROS2 parameter type.
+
+        Args:
+            parameter (Parameter): Parameter object.
+            param_type (str): Type of the parameter.
+            param_value (any): Value of the parameter.
+        """
         match param_type:
             case "file":
                 if type(param_value) != str:
@@ -215,6 +284,8 @@ class ConfigPanelNode(Node):
                 return
 
     def render_configpanel(self) -> None:
+        """ Renders the config panel with all active nodes and their parameters.
+        """
         with Client.auto_index_client:
             with ui.splitter(value=30).classes('w-1/2') as self.splitter:
                 with self.splitter.before:
@@ -272,19 +343,23 @@ class ConfigPanelNode(Node):
                                     ui.label(param_description).bind_visibility_from(help_switch, 'value')
 
     def refresh(self, splitter) -> None:
+        """ Refreshes the config panel by fetching all active nodes and their parameters again.
+        """
         splitter.delete()
         modules = self.json_schema["modules"].keys()
         self.active_nodes_and_namespaces = self.get_node_names_and_namespaces()
         self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node in modules and "atos" in namespace]
 
-        self.client_list = self.init_clients()
+        self.client_list = self.init_clients(self.active_node_list)
         self.parameters = {}
         with self.splitter:
-            ui.notify('Retrieving parameters again...')
+            ui.notify('Refreshing by fetching all active nodes and their parameters again')
         threading.Thread(target=self.get_parameters_list, args=(self.client_list,)).start()
         self.render_configpanel()
 
 def ros_main() -> None:
+    """ Initializes the ROS node and spins it.
+    """
     rclpy.init()
     node = ConfigPanelNode()
     try:
@@ -293,7 +368,9 @@ def ros_main() -> None:
         pass
 
 def main() -> None:
-    # NOTE: This function is defined as the ROS entry point in setup.py, but it's empty to enable NiceGUI auto-reloading
+    """ Main function for ROS.
+        NOTE: This function is defined as the ROS entry point in setup.py, but it's empty to enable NiceGUI auto-reloading
+    """
     pass
 
 #Starting the ros node in a thread managed by nicegui. It will restarted with "on_startup" after a reload.
