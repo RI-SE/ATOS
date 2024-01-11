@@ -8,7 +8,7 @@
 Docs generated with mkdocs/doxygen and hosted on Read The Docs
 
 When editing locally, install deps with 
-"sudo apt install doxygen && pip install -r requirements.txt"
+"sudo apt install doxygen && pip install -r docs/requirements.txt"
 
 Then build the doxygen html pages with "doxygen Doxyfile" from the ATOS root folder.
 
