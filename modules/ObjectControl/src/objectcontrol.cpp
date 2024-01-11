@@ -876,7 +876,7 @@ void ObjectControl::setObjectTrajectory(uint32_t id){
 	// Check if object is in resetting "state". If so, offer return trajectory instead of normal trajectory
 	if (this->isResetting) {
 		using namespace std::chrono_literals;
-		if (!this->returnTrajectoryClient->wait_for_service(1s))
+		if (!this->returnTrajectoryClient->wait_for_service(1s)) // TODO: This is blocking any other callbacks for 1s if the service is not available. Consider new thread.
 		{
 			RCLCPP_ERROR(get_logger(), "The return trajectory service is not available. Try again later.");
 			return;
