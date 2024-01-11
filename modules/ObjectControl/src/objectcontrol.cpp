@@ -875,6 +875,12 @@ void ObjectControl::returnTrajectoryCallback(const rclcpp::Client<atos_interface
 void ObjectControl::setObjectTrajectory(uint32_t id){
 	// Check if object is in resetting "state". If so, offer return trajectory instead of normal trajectory
 	if (this->isResetting) {
+		using namespace std::chrono_literals;
+		if (!this->returnTrajectoryClient->wait_for_service(1s))
+		{
+			RCLCPP_ERROR(get_logger(), "The return trajectory service is not available. Try again later.");
+			return;
+		}
 		// Get the current trajectory and create a request for the return trajectory service
 		auto returnTrajectoryRequest = std::make_shared<atos_interfaces::srv::GetObjectReturnTrajectory::Request>();
 		returnTrajectoryRequest->id = id;
