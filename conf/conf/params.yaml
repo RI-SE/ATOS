@@ -37,4 +37,6 @@ atos:
       scenario_execution: true
   back_to_start:
     ros__parameters:
-      turnRadius: 5.0
+      turn_radius: 5.0
+      min_speed: 4.0
+      max_speed: 12.0
