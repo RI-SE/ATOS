@@ -20,7 +20,7 @@ setup(
     zip_safe=True,
     entry_points={
         'console_scripts': [
-            'gui_node = gui.node:main',
+            'gui_node = gui.object_panel:main',
         ],
     },
 )
