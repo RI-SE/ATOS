@@ -34,7 +34,65 @@ class ConfigPanelNode(Node):
         self.client_list = self.init_clients(self.active_node_list)
         self.parameters = {}
         threading.Thread(target=self.get_parameters_list, args=(self.client_list,)).start()
-        self.render_configpanel()
+        with Client.auto_index_client:
+            pass
+
+        @ui.page(path='/config')
+        def render_configpanel() -> None:
+            with ui.splitter(value=30).classes('w-1/2') as self.splitter:
+                with self.splitter.before:
+                    with ui.tabs().props('vertical').classes('w-fit') as tabs:
+                        ui.tab('Home', icon='🏠')
+                        for node in self.active_node_list:
+                            ui.tab(node.replace("_", " "))
+                with self.splitter.after:
+                    with ui.tab_panels(tabs, value='Home'):
+                        with ui.tab_panel('Home'):
+                            ui.label('Welcome to ATOS config panel!').classes('text-h4')
+                            if self.active_node_list:
+                                ui.label("Select a node to configure. Press the refresh button if you can't find the node you're looking for.")
+                            else:
+                                ui.label("No nodes were discovered. Press the refresh button to try again.")
+                            ui.button('Refresh', on_click=lambda: self.refresh(self.splitter), icon='🔄')
+                        for node in self.active_node_list:
+                            with ui.tab_panel(node.replace("_", " ")):
+                                for param_name in self.json_schema["modules"][node]["ros__parameters"]: # Should this loop through the active parameters instead?
+                                    param_text = param_name.replace("_", " ")
+                                    param_type = self.json_schema["modules"][node]["ros__parameters"][param_name]["type"]
+                                    param_description = self.json_schema["modules"][node]["ros__parameters"][param_name]["description"]
+                                    with ui.row():
+                                        match param_type:
+                                            case "file":
+                                                with ui.column():
+                                                    ui.button(f'Select {param_name.replace("_", " ")}:', 
+                                                             on_click=lambda node=node, param_name=param_name: self.pick_file(node, param_name), 
+                                                             icon='📂')
+                                            case "bool":
+                                                ui.checkbox(param_text).bind_value(self.parameters, param_name).on('change', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.value))
+                                            case "int":
+                                                ui.number(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, int(result.sender.value)))
+                                            case "double":
+                                                ui.number(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case "string":
+                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case "file_array":
+                                                with ui.column():
+                                                    ui.label(param_name.replace("_", " ") + ":")
+                                                    ui.button('Choose new file:', on_click=lambda node=node, param_name=param_name: self.pick_files(node, param_name), icon='📂')
+                                            case "byte_array":
+                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case "bool_array":
+                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case "int_array":
+                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case "double_array":
+                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case "string_array":
+                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
+                                            case _:
+                                                ui.label(f"Unsupported type {param_type}").classes('text-red-500')
+                                        help_switch = ui.switch('Help')
+                                    ui.label(param_description).bind_visibility_from(help_switch, 'value')
 
     def init_clients(self, active_node_list) -> dict:
         """ Initializes the get and set parameter clients for all active nodes.
@@ -283,65 +341,6 @@ class ConfigPanelNode(Node):
                 ui.notify(f'Unsupported type {param_type}')
                 return
 
-    def render_configpanel(self) -> None:
-        """ Renders the config panel with all active nodes and their parameters.
-        """
-        with Client.auto_index_client:
-            with ui.splitter(value=30).classes('w-1/2') as self.splitter:
-                with self.splitter.before:
-                    with ui.tabs().props('vertical').classes('w-fit') as tabs:
-                        ui.tab('Home', icon='🏠')
-                        for node in self.active_node_list:
-                            ui.tab(node.replace("_", " "))
-                with self.splitter.after:
-                    with ui.tab_panels(tabs, value='Home'):
-                        with ui.tab_panel('Home'):
-                            ui.label('Welcome to ATOS config panel!').classes('text-h4')
-                            if self.active_node_list:
-                                ui.label("Select a node to configure. Press the refresh button if you can't find the node you're looking for.")
-                            else:
-                                ui.label("No nodes were discovered. Press the refresh button to try again.")
-                            ui.button('Refresh', on_click=lambda: self.refresh(self.splitter), icon='🔄')
-                        for node in self.active_node_list:
-                            with ui.tab_panel(node.replace("_", " ")):
-                                for param_name in self.json_schema["modules"][node]["ros__parameters"]: # Should this loop through the active parameters instead?
-                                    param_text = param_name.replace("_", " ")
-                                    param_type = self.json_schema["modules"][node]["ros__parameters"][param_name]["type"]
-                                    param_description = self.json_schema["modules"][node]["ros__parameters"][param_name]["description"]
-                                    with ui.row():
-                                        match param_type:
-                                            case "file":
-                                                with ui.column():
-                                                    ui.button(f'Select {param_name.replace("_", " ")}:', 
-                                                             on_click=lambda node=node, param_name=param_name: self.pick_file(node, param_name), 
-                                                             icon='📂')
-                                            case "bool":
-                                                ui.checkbox(param_text).bind_value(self.parameters, param_name).on('change', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.value))
-                                            case "int":
-                                                ui.number(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, int(result.sender.value)))
-                                            case "double":
-                                                ui.number(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
-                                            case "string":
-                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
-                                            case "file_array":
-                                                with ui.column():
-                                                    ui.label(param_name.replace("_", " ") + ":")
-                                                    ui.button('Choose new file:', on_click=lambda node=node, param_name=param_name: self.pick_files(node, param_name), icon='📂')
-                                            case "byte_array":
-                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
-                                            case "bool_array":
-                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
-                                            case "int_array":
-                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
-                                            case "double_array":
-                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
-                                            case "string_array":
-                                                ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
-                                            case _:
-                                                ui.label(f"Unsupported type {param_type}").classes('text-red-500')
-                                        help_switch = ui.switch('Help')
-                                    ui.label(param_description).bind_visibility_from(help_switch, 'value')
-
     def refresh(self, splitter) -> None:
         """ Refreshes the config panel by fetching all active nodes and their parameters again.
         """
@@ -352,10 +351,8 @@ class ConfigPanelNode(Node):
 
         self.client_list = self.init_clients(self.active_node_list)
         self.parameters = {}
-        with self.splitter:
-            ui.notify('Refreshing by fetching all active nodes and their parameters again')
         threading.Thread(target=self.get_parameters_list, args=(self.client_list,)).start()
-        self.render_configpanel()
+        ui.open('/config')
 
 def ros_main() -> None:
     """ Initializes the ROS node and spins it.
