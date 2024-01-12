@@ -1,13 +1,10 @@
-import threading
-from pathlib import Path
 from atos_interfaces.srv import *
 
 import rclpy
 from std_msgs.msg import Empty
-from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 
-from nicegui import Client, app, ui, ui_run, run
+from nicegui import Client, ui
 
 QOS = rclpy.qos.QoSProfile(depth=10)
 
@@ -22,8 +19,7 @@ OBC_STATES = {
         7: 'ERROR',
         8: 'ABORTING'
     }
-class NiceGuiNode(Node):
-
+class ControlPanelNode(Node):
     def __init__(self) -> None:
         super().__init__('nicegui')
         self.initPub = self.create_publisher(Empty, '/atos/init', QOS)
@@ -45,6 +41,10 @@ class NiceGuiNode(Node):
         self.lost_connection = True
 
         with Client.auto_index_client:
+            pass
+
+        @ui.page(path='/control')
+        def render_page():
             with ui.row().bind_visibility_from(self, 'lost_connection'):
                 ui.label('Lost connection to ATOS...')
             with ui.row():
@@ -81,25 +81,3 @@ class NiceGuiNode(Node):
             self.get_logger().info('Service call failed %r' % (e,))
         else:
             self.OBC_state["state"] = OBC_STATES[response.state]
-    
-
-
-def main() -> None:
-    # NOTE: This function is defined as the ROS entry point in setup.py, but it's empty to enable NiceGUI auto-reloading
-    pass
-
-
-def ros_main() -> None:
-    rclpy.init()
-    node = NiceGuiNode()
-    try:
-        rclpy.spin(node)
-    except ExternalShutdownException:
-        pass
-
-#Starting the ros node in a thread managed by nicegui. It will restarted with "on_startup" after a reload.
-#It has to be in a thread, since NiceGUI wants the main thread for itself.
-app.on_startup(lambda: threading.Thread(target=ros_main).start())
-
-ui_run.APP_IMPORT_STRING = f'{__name__}:app'  # ROS2 uses a non-standard module name, so we need to specify it here
-ui.run(uvicorn_reload_dirs=str(Path(__file__).parent.resolve()), favicon='🤖', port=3000)
