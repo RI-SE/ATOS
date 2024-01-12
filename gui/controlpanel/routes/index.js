@@ -3,7 +3,7 @@ var router = express.Router();
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Simple Control GUI for ATOS' });
+  res.render('index', { title: 'Control Panel GUI for ATOS' });
 });
 
 

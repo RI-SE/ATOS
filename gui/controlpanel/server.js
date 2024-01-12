@@ -60,12 +60,12 @@ module.exports = app;
 /* End of boilerplate */
 
 
-// simple_control logic:
+// control_panel logic:
 
 // Initialize ros2
 rclnodejs.init().then(() => {
   // Create a node
-  const node = new rclnodejs.Node('simple_control','atos');
+  const node = new rclnodejs.Node('control_panel','atos');
 
   // Publishers
   const initPub = node.createPublisher('std_msgs/msg/Empty', '/atos/init');

@@ -6,7 +6,7 @@
 
 var app = require('../server');
 var fs = require('fs');
-var debug = require('debug')('simplecontrol:server');
+var debug = require('debug')('controlpanel:server');
 var http = require('http');
 var https = require('https');
 const homeDir = require('os').homedir();

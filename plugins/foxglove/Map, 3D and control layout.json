@@ -1,6 +1,6 @@
 {
   "configById": {
-    "atos_simple_control.Simple Control!494eifz": {
+    "atos_control_panel.Control Panel!494eifz": {
       "atosHostname": "localhost",
       "atosPort": "3000",
       "atosProtocol": "http"
@@ -171,7 +171,7 @@
   },
   "layout": {
     "first": {
-      "first": "atos_simple_control.Simple Control!494eifz",
+      "first": "atos_control_panel.Control Panel!494eifz",
       "second": "map!2s6yzns",
       "direction": "column",
       "splitPercentage": 22.626441881100266
