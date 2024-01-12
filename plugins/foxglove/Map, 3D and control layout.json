@@ -3,7 +3,8 @@
     "atos_control_panel.Control Panel!494eifz": {
       "atosHostname": "localhost",
       "atosPort": "3000",
-      "atosProtocol": "http"
+      "atosProtocol": "http",
+      "atosRoute": "control"
     },
     "map!2s6yzns": {
       "center": {
