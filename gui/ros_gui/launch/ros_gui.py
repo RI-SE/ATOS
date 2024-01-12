@@ -7,15 +7,8 @@ def generate_launch_description():
         Node(
             package='gui',
             namespace='atos',
-            executable='config_panel',
-            name='config_panel',
-            output='screen',
-        ),
-        Node(
-            package='gui',
-            namespace='atos',
-            executable='control_panel',
-            name='control_panel',
+            executable='gui',
+            name='gui',
             output='screen',
         )
     ])

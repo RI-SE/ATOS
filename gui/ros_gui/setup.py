@@ -21,8 +21,7 @@ setup(
     zip_safe=True,
     entry_points={
         'console_scripts': [
-            'config_panel = gui.configpanel:main',
-            'control_panel = gui.controlpanel:main',
+            'gui = gui.main:main'
         ],
     },
 )
