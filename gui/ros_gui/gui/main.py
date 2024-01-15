@@ -1,6 +1,7 @@
 import threading
 from pathlib import Path
 from atos_interfaces.srv import *
+import sys
 
 import rclpy
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
@@ -8,6 +9,9 @@ from .controlpanel.controlpanel import ControlPanelNode
 from .configpanel.configpanel import ConfigPanelNode
 
 from nicegui import app, ui, ui_run
+
+print(str(sys.argv[1]))
+USE_SSL = sys.argv[1] == "True"
 
 def main() -> None:
     # NOTE: This function is defined as the ROS entry point in setup.py, but it's empty to enable NiceGUI auto-reloading
@@ -37,4 +41,18 @@ def ros_main() -> None:
 app.on_startup(lambda: threading.Thread(target=ros_main).start())
 
 ui_run.APP_IMPORT_STRING = f'{__name__}:app'  # ROS2 uses a non-standard module name, so we need to specify it here
-ui.run(uvicorn_reload_dirs=str(Path(__file__).parent.resolve()), favicon='🤖', port=3000, title="ATOS GUI")
+
+# Prepare the arguments for ui.run()
+uvicorn_args = {
+    'uvicorn_reload_dirs': str(Path(__file__).parent.resolve()),
+    'favicon': '🤖',
+    'port': 3000,
+}
+
+# If use_ssl is True, add the SSL arguments
+if USE_SSL:
+    uvicorn_args['ssl_keyfile'] = "/home/robertbre/.astazero/ATOS/certs/selfsigned.key"
+    uvicorn_args['ssl_certfile'] = "/home/robertbre/.astazero/ATOS/certs/selfsigned.crt"
+
+# Call ui.run() with the prepared arguments
+ui.run(**uvicorn_args)

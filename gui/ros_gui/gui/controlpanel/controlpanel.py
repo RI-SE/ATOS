@@ -44,7 +44,7 @@ class ControlPanelNode(Node):
             pass
 
 
-        @ui.page(path='/control', title="ATOS Control Panel")
+        @ui.page("/")
         def render_page():
             with ui.row().bind_visibility_from(self, 'lost_connection'):
                 ui.label('Lost connection to ATOS...')
