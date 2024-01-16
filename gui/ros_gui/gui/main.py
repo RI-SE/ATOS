@@ -15,6 +15,8 @@ def main() -> None:
 
 
 def ros_main() -> None:
+    ui.link('Control Panel', '/control')
+    ui.link('Config Panel', '/config')
     rclpy.init()
     control_panel = ControlPanelNode()
     config_panel = ConfigPanelNode()
