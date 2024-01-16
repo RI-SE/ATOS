@@ -35,7 +35,7 @@ class ConfigPanelNode(Node):
         with Client.auto_index_client:
             pass
 
-        @ui.page(path='/config')
+        @ui.page(path='/config', title="ATOS Config Panel")
         def render_configpanel() -> None:
             with ui.splitter(value=30).classes('w-1/2') as self.splitter:
                 with self.splitter.before:
