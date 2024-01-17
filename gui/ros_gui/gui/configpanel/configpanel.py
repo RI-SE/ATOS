@@ -52,9 +52,9 @@ class ConfigPanelNode(Node):
                                 ui.label("Select a node to configure. Press the refresh button if you can't find the node you're looking for.")
                             else:
                                 ui.label("No nodes were discovered. Refreshing again.")
-                                self.refresh(self.splitter)
+                                self.refresh()
 
-                            ui.button('Refresh', on_click=lambda: self.refresh(self.splitter), icon='🔄')
+                            ui.button('Refresh', on_click=lambda: self.refresh(), icon='🔄')
                         for node in self.active_node_list:
                             with ui.tab_panel(node.replace("_", " ")):
                                 for param_name in self.json_schema["modules"][node]["ros__parameters"]: # Should this loop through the active parameters instead?
@@ -343,10 +343,9 @@ class ConfigPanelNode(Node):
                 ui.notify(f'Unsupported type {param_type}')
                 return
 
-    def refresh(self, splitter) -> None:
+    def refresh(self) -> None:
         """ Refreshes the config panel by fetching all active nodes and their parameters again.
         """
-        splitter.delete()
         modules = self.json_schema["modules"].keys()
         self.active_nodes_and_namespaces = self.get_node_names_and_namespaces()
         self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node in modules and "atos" in namespace]
