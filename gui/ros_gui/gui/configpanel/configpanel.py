@@ -41,7 +41,7 @@ class ConfigPanelNode(Node):
                 with self.splitter.before:
                     with ui.tabs().props('vertical').classes('w-fit') as tabs:
                         ui.tab('Home', icon='🏠')
-                        for node in self.active_node_list:
+                        for node in set(self.active_node_list): # Avoids duplicate tabs
                             ui.tab(node.replace("_", " "))
                 with self.splitter.after:
                     with ui.tab_panels(tabs, value='Home'):
