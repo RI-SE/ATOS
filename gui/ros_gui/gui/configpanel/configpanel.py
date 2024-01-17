@@ -241,7 +241,6 @@ class ConfigPanelNode(Node):
             param_value (any): Value of the parameter.
         """
         self.get_logger().debug(f'Setting parameter {param_name} in {node_name} to {param_value}')
-        ui.notify(f'Setting parameter {param_name} in {node_name} to {param_value}')
 
         service_timeout_counter = 0
         client = self.parameter_clients[node_name]["set_params_client"]
