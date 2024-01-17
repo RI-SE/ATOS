@@ -3,7 +3,7 @@ from pathlib import Path
 from atos_interfaces.srv import *
 
 import rclpy
-from rclpy.executors import ExternalShutdownException
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from .controlpanel.controlpanel import ControlPanelNode
 from .configpanel.configpanel import ConfigPanelNode
 
@@ -20,11 +20,18 @@ def ros_main() -> None:
     rclpy.init()
     control_panel = ControlPanelNode()
     config_panel = ConfigPanelNode()
+    executor = MultiThreadedExecutor()
+    executor.add_node(control_panel)
+    executor.add_node(config_panel)
     try:
-        rclpy.spin(control_panel)
-        rclpy.spin(config_panel)
+        executor.spin()
     except ExternalShutdownException:
         pass
+    finally:
+        executor.shutdown()
+        control_panel.destroy_node()
+        config_panel.destroy_node()
+        rclpy.shutdown()
 
 #Starting the ros node in a thread managed by nicegui. It will restarted with "on_startup" after a reload.
 #It has to be in a thread, since NiceGUI wants the main thread for itself.
