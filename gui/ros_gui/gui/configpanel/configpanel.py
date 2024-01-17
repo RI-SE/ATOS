@@ -30,7 +30,7 @@ class ConfigPanelNode(Node):
         self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node in modules and "atos" in namespace]
         self.active_node_list = list(set(self.active_node_list)) # Removes duplicates
 
-        self.client_list = self.init_clients(self.active_node_list)
+        self.client_list = self.init_parameter_clients(self.active_node_list)
         self.parameters = {}
         threading.Thread(target=self.get_parameters_list, args=(self.client_list,)).start()
         with Client.auto_index_client:
@@ -94,7 +94,7 @@ class ConfigPanelNode(Node):
                                                 ui.label(f"Unsupported type {param_type}").classes('text-red-500')
                                         ui.tooltip(param_description)
 
-    def init_clients(self, active_node_list) -> dict:
+    def init_parameter_clients(self, active_node_list) -> dict:
         """ Initializes the get and set parameter clients for all active nodes.
 
         Args:
@@ -351,7 +351,7 @@ class ConfigPanelNode(Node):
         self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node in modules and "atos" in namespace]
         self.active_node_list = list(set(self.active_node_list)) # Removes duplicates
 
-        self.client_list = self.init_clients(self.active_node_list)
+        self.client_list = self.init_parameter_clients(self.active_node_list)
         self.parameters = {}
         threading.Thread(target=self.get_parameters_list, args=(self.client_list,)).start()
         ui.open('/config')
