@@ -6,26 +6,31 @@ import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 
-from nicegui import Client, app, ui, ui_run
+from nicegui import Client, ui
 
 MAX_TIMEOUT = 3
 
-class NiceGuiNode(Node):
-
+class ObjectPanelNode(Node):
     def __init__(self) -> None:
-        super().__init__('nicegui')
+        super().__init__('object_panel')
         self.id_client = self.create_client(GetObjectIds, '/atos/get_object_ids')
         self.ip_client = self.create_client(GetObjectIp, '/atos/get_object_ip')
         self.object_ids_req = GetObjectIds.Request()
-        self.object_id_ip_map = {}
-
-        with Client.auto_index_client as self.ui_client:
+        self.object_id_ip_map = {}                
+        self.get_object_ids()
+        
+        with Client.auto_index_client:
+            pass
+    
+        @ui.page(path='/object', title="ATOS Object Panel")
+        def render_objectpanel() -> None:
             with ui.row() as self.first_row:
                 with ui.button(text='Refresh', on_click=self.refresh):
                     ui.icon('refresh')
-                
-        self.get_object_ids()
-        self.render_ui()
+            with ui.row() as self.second_row:
+                for object_id in self.object_id_ip_map.keys():
+                    ui.input(label=f'Object {object_id}').bind_value_from(self.object_id_ip_map[object_id]
+                            ).on('keydown.enter', lambda result, object_id=object_id: self.update_object_ip(object_id, result.sender.value))
 
     def get_object_ids(self):
         # Call the service
@@ -74,34 +79,6 @@ class NiceGuiNode(Node):
         with self.ui_client:
             ui.notify(f'Setting object {object_id} IP: {object_ip}')
 
-    def render_ui(self):
-        with self.ui_client:
-            with ui.row() as self.second_row:
-                for object_id in self.object_id_ip_map.keys():
-                    ui.input(label=f'Object {object_id}').bind_value_from(self.object_id_ip_map[object_id]
-                            ).on('keydown.enter', lambda result, object_id=object_id: self.update_object_ip(object_id, result.sender.value))
-
     def refresh(self):
         self.get_object_ids()
-        self.second_row.delete()
-        self.render_ui()
-
-def main() -> None:
-    # NOTE: This function is defined as the ROS entry point in setup.py, but it's empty to enable NiceGUI auto-reloading
-    pass
-
-
-def ros_main() -> None:
-    rclpy.init()
-    node = NiceGuiNode()
-    try:
-        rclpy.spin(node)
-    except ExternalShutdownException:
-        pass
-
-#Starting the ros node in a thread managed by nicegui. It will restarted with "on_startup" after a reload.
-#It has to be in a thread, since NiceGUI wants the main thread for itself.
-app.on_startup(lambda: threading.Thread(target=ros_main).start())
-
-ui_run.APP_IMPORT_STRING = f'{__name__}:app'  # ROS2 uses a non-standard module name, so we need to specify it here
-ui.run(uvicorn_reload_dirs=str(Path(__file__).parent.resolve()), favicon='🤖', port=3000, title='Object Panel')
+        ui.open('/object')
