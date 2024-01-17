@@ -22,8 +22,7 @@ class ConfigPanelNode(Node):
         """ Initializes the node, fetches all ros parameters and renders the config panel with these values.
         """
         super().__init__('config_panel')
-        schema_path = os.path.join(CONF_PATH, "atos-param-schema.json")
-        self.json_schema = json.load(open(schema_path, "r"))
+        self.json_schema = self.load_json_schema("atos-param-schema.json")
         modules = self.json_schema["modules"].keys()
         time.sleep(0.5) # Allow time for this node to initialize before discovering other nodes, otherwise it will fail to find the others.
         self.active_nodes_and_namespaces = self.get_node_names_and_namespaces()
@@ -93,6 +92,24 @@ class ConfigPanelNode(Node):
                                             case _:
                                                 ui.label(f"Unsupported type {param_type}").classes('text-red-500')
                                         ui.tooltip(param_description)
+
+    def load_json_schema(self, file_name) -> None:
+        """ Loads the parameter schema from the config folder.
+
+        Args:
+            file_name (str): Name of the parameter schema file.
+
+        Returns:
+            json_schema (dict): Dictionary of the parameter schema.
+        """
+        schema_path = os.path.join(CONF_PATH, file_name)
+        if not os.path.exists(schema_path):
+            ui.notify(f'Could not find parameter schema at {schema_path}')
+            self.get_logger().info(f'Could not find parameter schema at {schema_path}')
+            return
+        with open(schema_path, "r") as f:
+            json_schema = json.load(f)
+        return json_schema
 
     def init_parameter_clients(self, active_node_list) -> dict:
         """ Initializes the get and set parameter clients for all active nodes.
