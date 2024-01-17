@@ -89,8 +89,7 @@ class ConfigPanelNode(Node):
                                                 ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
                                             case _:
                                                 ui.label(f"Unsupported type {param_type}").classes('text-red-500')
-                                        help_switch = ui.switch('Help')
-                                    ui.label(param_description).bind_visibility_from(help_switch, 'value')
+                                        ui.tooltip(param_description)
 
     def init_clients(self, active_node_list) -> dict:
         """ Initializes the get and set parameter clients for all active nodes.
