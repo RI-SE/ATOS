@@ -51,7 +51,9 @@ class ConfigPanelNode(Node):
                             if self.active_node_list:
                                 ui.label("Select a node to configure. Press the refresh button if you can't find the node you're looking for.")
                             else:
-                                ui.label("No nodes were discovered. Press the refresh button to try again.")
+                                ui.label("No nodes were discovered. Refreshing again.")
+                                self.refresh(self.splitter)
+
                             ui.button('Refresh', on_click=lambda: self.refresh(self.splitter), icon='🔄')
                         for node in self.active_node_list:
                             with ui.tab_panel(node.replace("_", " ")):
