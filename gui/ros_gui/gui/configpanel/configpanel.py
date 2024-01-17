@@ -30,9 +30,9 @@ class ConfigPanelNode(Node):
         self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node in modules and "atos" in namespace]
         self.active_node_list = list(set(self.active_node_list)) # Removes duplicates
 
-        self.client_list = self.init_parameter_clients(self.active_node_list)
+        self.parameter_clients = self.init_parameter_clients(self.active_node_list)
         self.parameters = {}
-        threading.Thread(target=self.get_parameters_list, args=(self.client_list,)).start()
+        threading.Thread(target=self.get_parameters_list, args=(self.parameter_clients,)).start()
         with Client.auto_index_client:
             pass
 
@@ -101,7 +101,7 @@ class ConfigPanelNode(Node):
             active_node_list (list): List of active nodes.
 
         Returns:
-            client_list (dict): Dictionary of clients for all active nodes.
+            parameter_clients (dict): Dictionary of clients for all active nodes.
         """
         client_list = {}
         for module in active_node_list:
@@ -244,7 +244,7 @@ class ConfigPanelNode(Node):
         ui.notify(f'Setting parameter {param_name} in {node_name} to {param_value}')
 
         service_timeout_counter = 0
-        client = self.client_list[node_name]["set_params_client"]
+        client = self.parameter_clients[node_name]["set_params_client"]
         while not client.wait_for_service(timeout_sec=1.0):
             service_timeout_counter += 1
             self.get_logger().debug('service not available, waiting again...')
@@ -351,8 +351,8 @@ class ConfigPanelNode(Node):
         self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node in modules and "atos" in namespace]
         self.active_node_list = list(set(self.active_node_list)) # Removes duplicates
 
-        self.client_list = self.init_parameter_clients(self.active_node_list)
+        self.parameter_clients = self.init_parameter_clients(self.active_node_list)
         self.parameters = {}
-        threading.Thread(target=self.get_parameters_list, args=(self.client_list,)).start()
+        threading.Thread(target=self.get_parameters_list, args=(self.parameter_clients,)).start()
         ui.open('/config')
         
