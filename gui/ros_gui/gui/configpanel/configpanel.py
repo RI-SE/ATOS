@@ -138,6 +138,7 @@ class ConfigPanelNode(Node):
             get_params_client (Client): Client for the list parameters service.
             get_param_value_client (Client): Client for the get parameters service.
         """
+        self.get_logger().debug(f'Calling service {get_params_client.srv_name}, setting callback service: {get_param_value_client.srv_name}')
         get_params_client.call_async(ListParameters.Request()).add_done_callback(lambda future: self.get_parameter_values(future, get_param_value_client))
 
     def get_parameter_values(self, future, client) -> None:
@@ -160,6 +161,7 @@ class ConfigPanelNode(Node):
             future (Future): Future object returned by the get parameters service call.
             param_names (list): List of parameter names.
         """
+        self.get_logger().debug(f'Got value(s) {future.result().values} for parameter(s) {param_names}')
         for idx, param_name in enumerate(param_names):
             param_type = future.result().values[idx].type
             match param_type:
