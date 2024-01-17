@@ -7,7 +7,7 @@ from launch.actions import DeclareLaunchArgument, ExecuteProcess
 from launch.conditions import IfCondition
 import subprocess
 from pathlib import Path
-from .validate_files import validate_files
+from .validate_files import validate_atos_dir
 import rclpy.logging as logging
 import copy
 
@@ -17,7 +17,7 @@ def print_version():
     logging.get_logger('launch').info("ATOS version: " + version_file.read())
 
 def get_files():
-    return validate_files()
+    return validate_atos_dir()
 
 def get_base_nodes():
     files = get_files()
