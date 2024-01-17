@@ -28,6 +28,7 @@ class ConfigPanelNode(Node):
         time.sleep(0.5) # Allow time for this node to initialize before discovering other nodes, otherwise it will fail to find the others.
         self.active_nodes_and_namespaces = self.get_node_names_and_namespaces()
         self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node in modules and "atos" in namespace]
+        self.active_node_list = list(set(self.active_node_list)) # Removes duplicates
 
         self.client_list = self.init_clients(self.active_node_list)
         self.parameters = {}
@@ -41,7 +42,7 @@ class ConfigPanelNode(Node):
                 with self.splitter.before:
                     with ui.tabs().props('vertical').classes('w-fit') as tabs:
                         ui.tab('Home', icon='🏠')
-                        for node in set(self.active_node_list): # Avoids duplicate tabs
+                        for node in self.active_node_list:
                             ui.tab(node.replace("_", " "))
                 with self.splitter.after:
                     with ui.tab_panels(tabs, value='Home'):
@@ -347,6 +348,7 @@ class ConfigPanelNode(Node):
         modules = self.json_schema["modules"].keys()
         self.active_nodes_and_namespaces = self.get_node_names_and_namespaces()
         self.active_node_list = [node for node, namespace in self.active_nodes_and_namespaces if node in modules and "atos" in namespace]
+        self.active_node_list = list(set(self.active_node_list)) # Removes duplicates
 
         self.client_list = self.init_clients(self.active_node_list)
         self.parameters = {}
