@@ -110,6 +110,23 @@ class ConfigPanelNode(Node):
             set_params_client = self.create_client(SetParametersAtomically, f'/atos/{module}/set_parameters_atomically')
             client_list[module] = {"get_params_client": get_params_client, "get_param_value_client": get_param_value_client, "set_params_client": set_params_client}
         return client_list
+        
+    def service_is_available(self, client: Client) -> bool:
+        """ Waits for a service to become available and notifies the user if it times out.
+
+        Args:
+            client (Client): Client for the service.
+        """
+        service_timeout_counter = 0
+        while not client.wait_for_service(timeout_sec=1.0):
+            service_timeout_counter += 1
+            self.get_logger().debug('Service not available, waiting again...')
+            if service_timeout_counter >= MAX_TIMEOUT:
+                timeout_message = f'Service {client.srv_name} not available after {MAX_TIMEOUT} seconds, please try again later'
+                ui.notify(timeout_message)
+                self.get_logger().info(timeout_message)
+                return False
+        return True
 
     def get_parameters_list(self, client_list) -> None:
         """ Retrieves all parameters from all active nodes and saves them in a dictionary. 
@@ -123,13 +140,7 @@ class ConfigPanelNode(Node):
         for node in client_list.keys():
             get_params_client = client_list[node]["get_params_client"]
             get_param_value_client = client_list[node]["get_param_value_client"]
-            service_timeout_counter = 0
-            while not get_params_client.wait_for_service(timeout_sec=0.1) and service_timeout_counter < MAX_TIMEOUT:
-                service_timeout_counter += 1
-                self.get_logger().debug(f'{node} not available, waiting again...')
-            if service_timeout_counter >= MAX_TIMEOUT:
-                self.get_logger().info(f'{node} not available after {MAX_TIMEOUT} seconds, please try again later')
-                ui.notify(f'{node} not available after {MAX_TIMEOUT} seconds, please try again later')
+            if not self.service_is_available(get_params_client):
                 continue
             threading.Thread(target=self.call_service, args=(get_params_client, get_param_value_client)).start()
 
@@ -151,6 +162,8 @@ class ConfigPanelNode(Node):
             client (Client): Client for the get parameters service (related to a specific node).
         """
         response = future.result()
+        if not self.service_is_available(client):
+            return
         get_param_req = GetParameters.Request()
         param_names = response.result.names
         get_param_req.names = param_names
@@ -242,15 +255,9 @@ class ConfigPanelNode(Node):
         """
         self.get_logger().debug(f'Setting parameter {param_name} in {node_name} to {param_value}')
 
-        service_timeout_counter = 0
         client = self.parameter_clients[node_name]["set_params_client"]
-        while not client.wait_for_service(timeout_sec=1.0):
-            service_timeout_counter += 1
-            self.get_logger().debug('service not available, waiting again...')
-            if service_timeout_counter >= MAX_TIMEOUT:
-                ui.notify(f'Service not available after {MAX_TIMEOUT} seconds, please try again later')
-                self.get_logger().info(f'Service not available after {MAX_TIMEOUT} seconds, please try again later')
-                return
+        if not self.service_is_available(client):
+            return
 
         parameter = Parameter()
         parameter.name = param_name
@@ -354,4 +361,3 @@ class ConfigPanelNode(Node):
         self.parameters = {}
         threading.Thread(target=self.get_parameters_list, args=(self.parameter_clients,)).start()
         ui.open('/config')
-        
