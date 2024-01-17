@@ -8,7 +8,6 @@ def generate_launch_description():
             package='gui',
             namespace='atos',
             executable='gui',
-            name='gui',
             output='screen',
         )
     ])

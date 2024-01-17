@@ -51,15 +51,6 @@ def get_experimental_nodes():
         )
     ]
 
-def get_launch_includes():
-    gui_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(
-                get_package_share_directory('gui'),
-                'launch/ros_gui.py'))
-    )
-    return [gui_launch]
-
 def generate_launch_description():
     base_nodes = launch_base.get_base_nodes()
     
