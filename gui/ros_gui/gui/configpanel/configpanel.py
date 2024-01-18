@@ -78,7 +78,7 @@ class ConfigPanelNode(Node):
                                             case "file_array":
                                                 with ui.column():
                                                     ui.label(param_name.replace("_", " ") + ":")
-                                                    ui.button('Choose new file:', on_click=lambda node=node, param_name=param_name: self.pick_files(node, param_name), icon='📂')
+                                                    ui.button('Choose new file:', on_click=lambda node=node, param_name=param_name: self.pick_file(node, param_name, multiple=True), icon='📂')
                                             case "byte_array":
                                                 ui.input(param_text).bind_value(self.parameters, param_name).on('keydown.enter', lambda result, node=node, param_name=param_name: self.set_parameter(node, param_name, result.sender.value))
                                             case "bool_array":
@@ -218,33 +218,24 @@ class ConfigPanelNode(Node):
                 case _:
                     self.get_logger().info(f'Parameter {param_name} has an unsupported type {param_type}')
 
-    async def pick_file(self, node_name, param_name) -> None:
-        """ Opens a file picker and sets the selected file as the parameter value.
-        
-        Args:
-            node_name (str): Name of the node that the parameter belongs to.
-            param_name (str): Name of the parameter.
-        """
-        result = await local_file_picker('~/.astazero/ATOS', multiple=False, show_hidden_files=True)
-        ui.notify(f'You selected {result}')
-        if not result:
-            return
-        self.parameters[param_name] = str(result)
-        self.set_parameter(node_name, param_name, str(result))
-
-    async def pick_files(self, node_name, param_name) -> None:
+    async def pick_file(self, node_name, param_name, multiple=False) -> None:
         """ Opens a file picker and sets the selected files as the parameter value.
 
         Args:
             node_name (str): Name of the node that the parameter belongs to.
             param_name (str): Name of the parameter.
+            multiple (bool, optional): Whether to allow multiple files to be selected. Defaults to False.
         """
-        result = await local_file_picker('~/.astazero/ATOS', multiple=True, show_hidden_files=True)
+        result = await local_file_picker('~/.astazero/ATOS', multiple=multiple, show_hidden_files=True)
         ui.notify(f'You selected {result}')
         if not result:
             return
-        self.parameters[param_name] = str(result)
-        self.set_parameter(node_name, param_name, str(result))
+        if multiple: 
+            param_value = result
+        else:
+            param_value = result[0]
+        self.parameters[param_name] = param_value
+        self.set_parameter(node_name, param_name, param_value)
 
     def set_param_callback(self, future, param_name) -> None:
         """ Callback function for the set parameters service call. Notifies the user if the call was successful or not.
