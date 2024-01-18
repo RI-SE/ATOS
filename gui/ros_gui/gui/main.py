@@ -10,7 +10,6 @@ from .configpanel.configpanel import ConfigPanelNode
 
 from nicegui import app, ui, ui_run
 
-print(str(sys.argv[1]))
 USE_SSL = sys.argv[1] == "True"
 
 def main() -> None:
