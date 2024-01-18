@@ -3,13 +3,10 @@ name: clang-tidy-review
 # You can be more specific, but it currently only works on pull requests
 on: [pull_request]
 
-env:
-  ROS_DISTRO: humble
-
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: ros:${{ env.ROS_DISTRO }}
+    container: ros:humble
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -24,13 +21,13 @@ jobs:
         if: ${{ steps.get-modified-packages.outputs.modified-packages != '' }}
         uses: autowarefoundation/autoware-github-actions/colcon-build@v1
         with:
-          rosdistro: ${{ env.ROS_DISTRO }}
+          rosdistro: humble
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
           build-depends-repos: build_depends.repos
 
   clang-tidy:
     runs-on: ubuntu-latest
-    container: ros:${{ env.ROS_DISTRO }}
+    container: ros:humble
     needs: build
     steps:
       - name: Check out repository
@@ -46,7 +43,7 @@ jobs:
         if: ${{ steps.get-modified-packages.outputs.modified-packages != '' }}
         uses: autowarefoundation/autoware-github-actions/clang-tidy@v1
         with:
-          rosdistro: ${{ env.ROS_DISTRO }}
+          rosdistro: humble
           clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware/main/.clang-tidy
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
           build-depends-repos: build_depends.repos
