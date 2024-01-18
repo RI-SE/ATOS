@@ -46,6 +46,7 @@ uvicorn_args = {
     'uvicorn_reload_dirs': str(Path(__file__).parent.resolve()),
     'favicon': '🤖',
     'port': 3000,
+    'show': False # Disable auto-opening the browser
 }
 
 # If use_ssl is True, add the SSL arguments
