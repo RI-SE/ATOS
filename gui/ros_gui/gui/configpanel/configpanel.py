@@ -237,7 +237,7 @@ class ConfigPanelNode(Node):
         self.parameters[param_name] = param_value
         self.set_parameter(node_name, param_name, param_value)
 
-    def set_param_callback(self, future, param_name) -> None:
+    def set_param_callback(self, future, param_name, param_value) -> None:
         """ Callback function for the set parameters service call. Notifies the user if the call was successful or not.
         
         Args:
@@ -249,9 +249,10 @@ class ConfigPanelNode(Node):
         except Exception as e:
             self.get_logger().info('Service call failed %r' % (e,))
             return
-        self.get_logger().debug(f'Setting parameter {param_name} was {"successful" if response.result.successful else "unsuccesful"}')
+        response_text = f'Setting parameter \'{param_name}\' to \'{param_value}\' was {"successful" if response.result.successful else "unsuccesful"}'
+        self.get_logger().debug(response_text)
         with self.splitter:
-            ui.notify(f'Setting parameter {param_name} was {"successful" if response.result.successful else "unsuccesful"}')
+            ui.notify(response_text)
 
     def set_parameter(self, node_name, param_name, param_value) -> None:
         """ Sets the value for a specific parameter.
@@ -275,7 +276,7 @@ class ConfigPanelNode(Node):
         param_req.parameters.append(parameter)
 
         future = client.call_async(param_req)
-        future.add_done_callback(lambda future: self.set_param_callback(future, param_name))
+        future.add_done_callback(lambda future: self.set_param_callback(future, param_name, param_value))
 
     def assign_value_and_type_to_parameter(self, parameter, param_type, param_value) -> None:
         """ Assigns a value and type to a parameter. Translates the parameter type from the json schema to the ROS2 parameter type.
