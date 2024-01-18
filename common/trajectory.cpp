@@ -505,7 +505,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	// Limit top speed.
 	std::clamp(topSpeed, minSpeed, maxSpeed);
 
-	const int calculatedNoOfPoints = 200;
+	const int calculatedNoOfPoints = 200; // TODO: Make this variable dynamic depending on turnRadius
 	double radius = turnRadius;
 	double headingRad = startPoint.getHeading();
 
