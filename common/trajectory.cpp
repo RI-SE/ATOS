@@ -492,6 +492,8 @@ Trajectory Trajectory::rescaledToVelocity(
 Trajectory Trajectory::createWilliamsonTurn(
 		double turnRadius,
 		double acceleration,
+		double minSpeed,
+		double maxSpeed,
 		TrajectoryPoint startPoint,
 		std::chrono::milliseconds startTime)
 {
@@ -499,8 +501,11 @@ Trajectory Trajectory::createWilliamsonTurn(
 	using namespace std::chrono;
 	using Eigen::MatrixXd;
 
-	constexpr double topSpeed = 10 / 3.6;
-	const int calculatedNoOfPoints = 500;
+	double topSpeed = turnRadius*2 / 3.6; // Set top speed depending on radius.
+	// Limit top speed.
+	std::clamp(topSpeed, minSpeed, maxSpeed);
+
+	const int calculatedNoOfPoints = 200; // TODO: Make this variable dynamic depending on turnRadius
 	double radius = turnRadius;
 	double headingRad = startPoint.getHeading();
 
@@ -606,10 +611,10 @@ Trajectory Trajectory::createWilliamsonTurn(
 	auto v1 = -1/radius*Eigen::ArrayXd::Ones(n0);
 	auto v2 = -1/radius*Eigen::ArrayXd::Ones(n1);
 	auto v3 = -1/radius*Eigen::ArrayXd::Zero(n2);
-	RCLCPP_DEBUG(startPoint.get_logger(), "curvatureArray rows: %d, cols: %d", curvatureArray.rows(), curvatureArray.cols());
-	RCLCPP_DEBUG(startPoint.get_logger(), "v1 rows: %d, cols: %d", v1.rows(), v1.cols());
-	RCLCPP_DEBUG(startPoint.get_logger(), "v2 rows: %d, cols: %d", v2.rows(), v2.cols());
-	RCLCPP_DEBUG(startPoint.get_logger(), "v3 rows: %d, cols: %d", v3.rows(), v3.cols());
+	RCLCPP_DEBUG(startPoint.get_logger(), "curvatureArray rows: %ld, cols: %ld", curvatureArray.rows(), curvatureArray.cols());
+	RCLCPP_DEBUG(startPoint.get_logger(), "v1 rows: %ld, cols: %ld", v1.rows(), v1.cols());
+	RCLCPP_DEBUG(startPoint.get_logger(), "v2 rows: %ld, cols: %ld", v2.rows(), v2.cols());
+	RCLCPP_DEBUG(startPoint.get_logger(), "v3 rows: %ld, cols: %ld", v3.rows(), v3.cols());
 	curvatureArray << -1/radius*Eigen::ArrayXd::Ones(n0), 1/radius*Eigen::ArrayXd::Ones(n1), Eigen::ArrayXd::Zero(n2);
 
 	//create trajectory points
