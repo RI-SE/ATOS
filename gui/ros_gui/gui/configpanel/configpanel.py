@@ -31,7 +31,7 @@ class ConfigPanelNode(Node):
 
         self.parameter_clients = self.init_parameter_clients(self.active_node_list)
         self.parameters = {}
-        threading.Thread(target=self.get_parameters_list, args=(self.parameter_clients,)).start()
+        threading.Thread(target=self.fetch_parameters_list, args=(self.parameter_clients,)).start()
         with Client.auto_index_client:
             pass
 
@@ -145,7 +145,7 @@ class ConfigPanelNode(Node):
                 return False
         return True
 
-    def get_parameters_list(self, client_list) -> None:
+    def fetch_parameters_list(self, client_list) -> None:
         """ Retrieves all parameters from all active nodes and saves them in a dictionary. 
             First calls the list parameters service for each node to get all parameter names, then calls the get parameters service to get all parameter values.
 
@@ -169,9 +169,9 @@ class ConfigPanelNode(Node):
             get_param_value_client (Client): Client for the get parameters service.
         """
         self.get_logger().debug(f'Calling service {get_params_client.srv_name}, setting callback service: {get_param_value_client.srv_name}')
-        get_params_client.call_async(ListParameters.Request()).add_done_callback(lambda future: self.get_parameter_values(future, get_param_value_client))
+        get_params_client.call_async(ListParameters.Request()).add_done_callback(lambda future: self.fetch_parameter_values(future, get_param_value_client))
 
-    def get_parameter_values(self, future, client) -> None:
+    def fetch_parameter_values(self, future, client) -> None:
         """ Retrieves all parameter values from a node (specified by the client) and saves them in a dictionary.
         
         Args:
@@ -376,5 +376,5 @@ class ConfigPanelNode(Node):
 
         self.parameter_clients = self.init_parameter_clients(self.active_node_list)
         self.parameters = {}
-        threading.Thread(target=self.get_parameters_list, args=(self.parameter_clients,)).start()
+        threading.Thread(target=self.fetch_parameters_list, args=(self.parameter_clients,)).start()
         ui.open('/config')
