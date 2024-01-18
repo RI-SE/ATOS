@@ -23,7 +23,6 @@ jobs:
         with:
           rosdistro: humble
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
-          build-depends-repos: build_depends.repos
 
   clang-tidy:
     runs-on: ubuntu-latest
@@ -46,4 +45,3 @@ jobs:
           rosdistro: humble
           clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware/main/.clang-tidy
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
-          build-depends-repos: build_depends.repos
