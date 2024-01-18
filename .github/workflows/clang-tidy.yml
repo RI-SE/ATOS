@@ -4,17 +4,7 @@ env:
   ROS_DISTRO: humble
 
 # You can be more specific, but it currently only works on pull requests
-on: 
-  pull_request:
-    paths:
-      - '**.c'
-      - '**.cpp'
-      - '**.h'
-      - '**.hpp'
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+on: [pull_request]
 
 jobs:
   build:
