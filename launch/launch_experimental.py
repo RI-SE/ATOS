@@ -1,13 +1,11 @@
 import sys
 import os
-from ament_index_python.packages import get_package_prefix, get_package_share_directory
+from ament_index_python.packages import get_package_prefix
 sys.path.insert(0, os.path.join( # Need to modify the sys.path since we launch from the ros2 installed path
     get_package_prefix('atos'),
     'share', 'atos', 'launch'))
 from launch_ros.actions import Node
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
-from launch.launch_description_sources import PythonLaunchDescriptionSource
 import launch_utils.launch_base as launch_base
 
 
@@ -42,12 +40,6 @@ def get_experimental_nodes():
             namespace='atos',
             executable='back_to_start',
             name='back_to_start',
-        ),
-        IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(
-                get_package_share_directory('gui'),
-                'launch/ros_gui.py'))
         )
     ]
 
