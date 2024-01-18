@@ -122,10 +122,10 @@ class ConfigPanelNode(Node):
         """
         client_list = {}
         for module in active_node_list:
-            get_params_client = self.create_client(ListParameters, f'/atos/{module}/list_parameters')
+            list_params_client = self.create_client(ListParameters, f'/atos/{module}/list_parameters')
             get_param_value_client = self.create_client(GetParameters, f'/atos/{module}/get_parameters')
             set_params_client = self.create_client(SetParametersAtomically, f'/atos/{module}/set_parameters_atomically')
-            client_list[module] = {"get_params_client": get_params_client, "get_param_value_client": get_param_value_client, "set_params_client": set_params_client}
+            client_list[module] = {"list_params_client": list_params_client, "get_param_value_client": get_param_value_client, "set_params_client": set_params_client}
         return client_list
         
     def service_is_available(self, client: Client) -> bool:
@@ -155,21 +155,21 @@ class ConfigPanelNode(Node):
         """
         self.get_logger().debug(f'Retrieving all parameters in {[node for node in client_list.keys()]}')
         for node in client_list.keys():
-            get_params_client = client_list[node]["get_params_client"]
+            list_params_client = client_list[node]["list_params_client"]
             get_param_value_client = client_list[node]["get_param_value_client"]
-            if not self.service_is_available(get_params_client):
+            if not self.service_is_available(list_params_client):
                 continue
-            threading.Thread(target=self.call_service, args=(get_params_client, get_param_value_client)).start()
+            threading.Thread(target=self.call_service, args=(list_params_client, get_param_value_client)).start()
 
-    def call_service(self, get_params_client, get_param_value_client) -> None:
+    def call_service(self, list_params_client, get_param_value_client) -> None:
         """Helper function for get_parameters_list to make the actual service call. TODO: Retire this function
 
         Args:
-            get_params_client (Client): Client for the list parameters service.
+            list_params_client (Client): Client for the list parameters service.
             get_param_value_client (Client): Client for the get parameters service.
         """
-        self.get_logger().debug(f'Calling service {get_params_client.srv_name}, setting callback service: {get_param_value_client.srv_name}')
-        get_params_client.call_async(ListParameters.Request()).add_done_callback(lambda future: self.fetch_parameter_values(future, get_param_value_client))
+        self.get_logger().debug(f'Calling service {list_params_client.srv_name}, setting callback service: {get_param_value_client.srv_name}')
+        list_params_client.call_async(ListParameters.Request()).add_done_callback(lambda future: self.fetch_parameter_values(future, get_param_value_client))
 
     def fetch_parameter_values(self, future, client) -> None:
         """ Retrieves all parameter values from a node (specified by the client) and saves them in a dictionary.
