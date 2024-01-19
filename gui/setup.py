@@ -15,7 +15,7 @@ setup(
     license=package_xml.find('license').text,
     data_files=[
         (str(data), ['package.xml']),
-        (str(data / 'launch'), ['launch/ros_gui.py']),
+        (str(data / 'launch'), ['launch/gui.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

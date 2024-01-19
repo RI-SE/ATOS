@@ -52,7 +52,7 @@ def get_base_nodes():
         PythonLaunchDescriptionSource(
             os.path.join(
                 get_package_share_directory('gui'),
-                'launch/ros_gui.py'))
+                'launch/gui.py'))
         ),
         Node(
             package='atos',

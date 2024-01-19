@@ -51,8 +51,8 @@ uvicorn_args = {
 
 # If use_ssl is True, add the SSL arguments
 if USE_SSL:
-    uvicorn_args['ssl_keyfile'] = Path.home() + "/.astazero/ATOS/certs/selfsigned.key"
-    uvicorn_args['ssl_certfile'] = Path.home() + "/.astazero/ATOS/certs/selfsigned.crt"
+    uvicorn_args['ssl_keyfile'] = Path.home() / ".astazero/ATOS/certs/selfsigned.key"
+    uvicorn_args['ssl_certfile'] = Path.home() / ".astazero/ATOS/certs/selfsigned.crt"
 
 # Call ui.run() with the prepared arguments
 ui.run(**uvicorn_args)

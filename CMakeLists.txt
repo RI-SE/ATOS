@@ -112,8 +112,6 @@ foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})
 endforeach()
 
-add_subdirectory(gui)
-
 if(BUILD_TESTING)
   add_subdirectory(modules/SampleModule)
   find_package(ament_lint_auto REQUIRED)
