@@ -1,1 +1,1 @@
-add_subdirectory(controlpanel)
+# Install Python dependencies

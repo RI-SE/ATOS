@@ -9,9 +9,6 @@ atos:
     ros__parameters:
       max_missing_heartbeats: 100
       transmitter_id: 15
-  system_control:
-    ros__parameters:
-      gui_update_rate: 20
   osi_adapter:
     ros__parameters:
       address: "0.0.0.0"
