@@ -13,9 +13,9 @@ ATOS_REPO_PATH="$1"
 source "${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 check_command_failed $? "Failed to source ${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 
-#############################################################
-###### Install Python based Control Panel dependencies ######
-#############################################################
+###############################################
+######## Install ATOS GUI dependencies ########
+###############################################
 
 pip install -r ${ATOS_REPO_PATH}/gui/requirements.txt 
 
