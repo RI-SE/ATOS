@@ -43,6 +43,7 @@ class ConfigNode {
   };
 
   getParamService(serviceClient, ros_parameters, node, ws){
+  //TODO: This is not yet tested. Getting parameter values for nodes from ROS2 does not currently work.
     const wait_duration_s = 1 // Wait duration for service to appear in seconds.
     if ( !serviceClient.isServiceServerAvailable() || !serviceClient.waitForService(wait_duration_s*1000)) {
       console.log(`${node} get parameters service not available after waiting ${wait_duration_s} second(s)`);
