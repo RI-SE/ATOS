@@ -10,7 +10,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "Enable verbose make")
 set(CMAKE_COLOR_MAKEFILE   ON)
 set(COMPILER_WARNINGS "-Wall -Wextra")
-
+set(CMAKE_CXX_COMPILER "clang++")
+set(CMAKE_C_COMPILER "clang")
 
 #Set preprocessor macros depending on used ros version
 if ($ENV{ROS_DISTRO} STREQUAL "foxy")
