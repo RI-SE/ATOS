@@ -8,6 +8,7 @@ from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from .controlpanel.controlpanel import ControlPanelNode
 from .configpanel.configpanel import ConfigPanelNode
 
+import nicegui
 from nicegui import app, ui, ui_run
 
 USE_SSL = sys.argv[1] == "True"
@@ -18,8 +19,8 @@ def main() -> None:
 
 
 def ros_main() -> None:
-    ui.link('Control Panel', '/control')
-    ui.link('Config Panel', '/config')
+    nicegui.ui.link('Control Panel', '/control')
+    nicegui.ui.link('Config Panel', '/config')
     rclpy.init()
     control_panel = ControlPanelNode()
     config_panel = ConfigPanelNode()
