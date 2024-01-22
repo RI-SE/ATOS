@@ -30,11 +30,10 @@ var wsConnect = function(){
             }
             else{
               window.alert('Not all parameters were successfully set');
-              // break;
             }
           case "get_config_response":
             console.log("get config response: ", serverResponse)
-            // generateForm(serverResponse.value);
+            // generateForm(serverResponse.value); // TODO: This is not working yet. Update the form with the current values when all have been fetched.
           // Add more callbacks here, e.g. feedback of successfully executed ros2 commands
           default:
               break;
@@ -79,8 +78,6 @@ function generateForm(jsonString) {
       if (console && console.log) {
         console.log('Values extracted from submitted form', values);
       }
-      // window.alert('Form submitted. Values object:\n' +
-      //   JSON.stringify(values, null, 2));
     };
     createdForm.onSubmit = function (errors, values) {
       if (errors) {
@@ -103,7 +100,7 @@ function generateForm(jsonString) {
 function updateForm(jsonString){
   var createdForm = JSON.parse(jsonString);
   console.log("update form: ", createdForm);
-  // $('#form').jsonForm(createdForm);
+  // $('#form').jsonForm(createdForm); // TODO: This is not working yet. Update the form with the current values when all have been fetched.
 }
 
 // Wait until ACE is loaded
