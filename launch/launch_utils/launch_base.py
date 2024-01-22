@@ -24,7 +24,7 @@ def get_base_nodes():
     atos_install_dir = get_package_prefix('atos')
 
     # start control-gui server
-    control_gui_dir = Path(atos_install_dir) / Path("controlpanel/")
+    control_gui_dir = Path(atos_install_dir) / Path("src/")
 
     insecure_websockets = LaunchConfiguration('insecure')
     foxbridge = LaunchConfiguration('foxbridge')

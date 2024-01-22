@@ -112,7 +112,7 @@ foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})
 endforeach()
 
-add_subdirectory(gui)
+add_subdirectory(gui/src)
 
 if(BUILD_TESTING)
   add_subdirectory(modules/SampleModule)
