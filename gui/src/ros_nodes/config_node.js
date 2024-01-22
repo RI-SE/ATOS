@@ -35,6 +35,7 @@ class ConfigNode {
       "number": ParameterType.PARAMETER_DOUBLE,
       "string": ParameterType.PARAMETER_STRING,
     }
+//TODO: Currently only journal parameter client implemented..
     this._getParametersSrvMsg = 'rcl_interfaces/srv/GetParameters';
     this._journalGetParametersClient = this._config_node.createClient(this._getParametersSrvMsg, '/atos/journal_control/get_parameters');
     // Start the ros2 event loop
