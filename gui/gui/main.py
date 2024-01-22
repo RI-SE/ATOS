@@ -35,7 +35,7 @@ def ros_main() -> None:
         control_panel.destroy_node()
         config_panel.destroy_node()
 
-#Starting the ros node in a thread managed by nicegui. It will restarted with "on_startup" after a reload.
+#Starting the ros node in a thread managed by nicegui. It will be restarted with "on_startup" after a reload.
 #It has to be in a thread, since NiceGUI wants the main thread for itself.
 app.on_startup(lambda: threading.Thread(target=ros_main).start())
 
