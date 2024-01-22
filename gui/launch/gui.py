@@ -12,7 +12,7 @@ def generate_launch_description():
         insecure_launch_arg,
         Node(
             condition=IfCondition(PythonExpression(['not ', LaunchConfiguration('insecure')])),
-            package='gui',
+            package='atos_gui',
             namespace='atos',
             executable='gui',
             output='screen',
@@ -20,7 +20,7 @@ def generate_launch_description():
         ),
         Node(
             condition=IfCondition(LaunchConfiguration('insecure')),
-            package='gui',
+            package='atos_gui',
             namespace='atos',
             executable='gui',
             output='screen',
