@@ -48,18 +48,18 @@ wsConnect();
  * Loads the example identified by the given name
  */
 function loadJsonFile(example) {
-  var jsonPlaceholder;
+  var jsonSchema;
   $.ajax({
     url: 'json/' + example + '.json',
     dataType: 'text',
     async: false
   }).done(function (code) {
     console.log("Loading example: " + example);
-    jsonPlaceholder = code;
+    jsonSchema = code;
   }).fail(function () {
     $('#form').html('Sorry, I could not retrieve the example!');
   });
-  return jsonPlaceholder
+  return jsonSchema
 };
 
 /**
@@ -111,9 +111,9 @@ var itv = window.setInterval(function() {
   if (window.ace) {
     var example = 'atos-param-schema';
     window.clearInterval(itv);
-    const jsonPlaceholder = loadJsonFile(example);
-    generateForm(jsonPlaceholder);
-    getCurrentConfig(jsonPlaceholder, ws); // Get initial config from server to init the form
+    const jsonSchema = loadJsonFile(example);
+    generateForm(jsonSchema);
+    getCurrentConfig(jsonSchema, ws); // Get initial config from server to init the form
   }
 }, 1000);
 
