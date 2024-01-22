@@ -56,3 +56,7 @@ if USE_SSL:
 
 # Call ui.run() with the prepared arguments
 ui.run(**uvicorn_args)
+
+# If print is above ui.run(), it will be printed twice for some reason
+if USE_SSL:
+    print("ATTENTION: Using SSL, use https://localhost:3000 to access the GUI instead", flush=True)
