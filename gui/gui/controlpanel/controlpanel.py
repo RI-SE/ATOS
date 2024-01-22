@@ -40,10 +40,6 @@ class ControlPanelNode(Node):
         self.OBC_state = {'state': "UNDEFINED"}
         self.lost_connection = True
 
-        with Client.auto_index_client:
-            pass
-
-
         @ui.page(path='/control', title="ATOS Control Panel")
         def render_page():
             with ui.row().bind_visibility_from(self, 'lost_connection'):

@@ -32,8 +32,6 @@ class ConfigPanelNode(Node):
         self.parameter_clients = self.init_parameter_clients(self.active_node_list)
         self.parameters = {}
         threading.Thread(target=self.fetch_parameters_list, args=(self.parameter_clients,)).start()
-        with Client.auto_index_client:
-            pass
 
         @ui.page(path='/config', title="ATOS Config Panel")
         def render_configpanel() -> None:
