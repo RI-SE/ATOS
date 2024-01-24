@@ -224,7 +224,7 @@ class ConfigPanelNode(Node):
             param_name (str): Name of the parameter.
             multiple (bool, optional): Whether to allow multiple files to be selected. Defaults to False.
         """
-        result = await local_file_picker('~/.astazero/ATOS', multiple=multiple, show_hidden_files=True)
+        result = await local_file_picker('~/.astazero/ATOS', upper_limit='~', multiple=multiple, show_hidden_files=True)
         ui.notify(f'You selected {result}')
         if not result:
             return
