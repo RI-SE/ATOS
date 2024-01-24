@@ -1,5 +1,4 @@
 import threading
-from pathlib import Path
 import os
 import time
 import json
@@ -7,8 +6,9 @@ import json
 from rcl_interfaces.msg import ParameterType, Parameter
 from rcl_interfaces.srv import SetParametersAtomically, GetParameters, ListParameters
 from rclpy.node import Node
+from rclpy.client import Client
 
-from nicegui import Client, ui, app
+from nicegui import ui
 from .local_file_picker import local_file_picker
 
 CONF_PATH = os.path.join(os.path.expanduser('~'), ".astazero/ATOS/conf")

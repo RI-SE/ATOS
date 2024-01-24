@@ -4,7 +4,7 @@ import rclpy
 from std_msgs.msg import Empty
 from rclpy.node import Node
 
-from nicegui import Client, ui
+from nicegui import ui
 
 QOS = rclpy.qos.QoSProfile(depth=10)
 
