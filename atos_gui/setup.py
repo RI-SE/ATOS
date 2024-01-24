@@ -21,7 +21,7 @@ setup(
     zip_safe=True,
     entry_points={
         'console_scripts': [
-            'gui = gui.main:main'
+            'gui = atos_gui.main:main'
         ],
     },
 )
