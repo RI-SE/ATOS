@@ -1,3 +1,8 @@
+"""This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+"""
+
 """This file is taken from the NiceGUI repository and added some dosctrings for clarifications. 
 Original file: https://github.com/zauberzeug/nicegui/blob/main/examples/local_file_picker/local_file_picker.py """
 
