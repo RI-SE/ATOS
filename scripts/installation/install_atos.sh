@@ -34,7 +34,7 @@ cd $HOME/atos_ws
 
 # Set ATOS_INTERFACES_PATH using ATOS_PATH
 ATOS_INTERFACES_PATH="$ATOS_REPO_PATH/atos_interfaces"
-ATOS_GUI_PATH="$ATOS_REPO_PATH/gui"
+ATOS_GUI_PATH="$ATOS_REPO_PATH/atos_gui"
 
 # Update symlinks to atos and atos_interfaces
 update_symlink "$ATOS_REPO_PATH" $HOME/atos_ws/src/atos
