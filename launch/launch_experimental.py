@@ -28,13 +28,13 @@ def get_experimental_nodes():
             parameters=[files["params"]],
             # arguments=['--ros-args', '--log-level', "debug"] # To get RCL_DEBUG prints
         ),
-        # Node(
-        #     package='atos',
-        #     namespace='atos',
-        #     executable='osi_adapter',
-        #     name='osi_adapter',
-        #     parameters=[files["params"]]
-        # ),
+        Node(
+            package='atos',
+            namespace='atos',
+            executable='osi_adapter',
+            name='osi_adapter',
+            parameters=[files["params"]]
+        ),
         Node(
             package='atos',
             namespace='atos',
