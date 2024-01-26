@@ -10,8 +10,8 @@ import sys
 
 import rclpy
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
-from .controlpanel.controlpanel import ControlPanelNode
-from .configpanel.configpanel import ConfigPanelNode
+from atos_gui.controlpanel.controlpanel import ControlPanelNode
+from atos_gui.configpanel.configpanel import ConfigPanelNode
 
 import nicegui
 from nicegui import app, ui, ui_run
