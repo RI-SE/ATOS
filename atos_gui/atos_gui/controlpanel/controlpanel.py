@@ -60,7 +60,7 @@ class ControlPanelNode(Node):
                 ui.button('Start', on_click=lambda: self.startPub.publish(Empty()), color='green')
                 ui.button('All Clear', on_click=lambda: self.allClearPub.publish(Empty()), color='grey')
             with ui.row():
-                ui.label().bind_text_from(self.OBC_state, 'state', backward=lambda n: f'State: {n}')
+                ui.label().bind_text_from(self.OBC_state, 'state', backward=lambda n: f'State: {n}').classes('text-lg')
             with ui.row():
                 ui.button('Reset Test Objects', on_click=lambda: self.resetTestObjectsPub.publish(Empty()), color='grey')
                 ui.button('Reload Object Settings', on_click=lambda: self.reloadObjectSettingsPub.publish(Empty()), color='grey')
