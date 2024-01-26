@@ -24,4 +24,4 @@ jobs:
           rosdistro: humble
           clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware/main/.clang-tidy
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
-          build-depends-repos: https://github.com/RI-SE/atos_interfaces.git
+          build-depends-repos: build_depends.repos
