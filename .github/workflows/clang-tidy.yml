@@ -7,21 +7,67 @@ jobs:
   clang-tidy:
     runs-on: ubuntu-latest
     container: ros:humble
+    needs: [build_and_test_docker_image]
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          submodules: recursive
 
-      - name: Get modified packages
-        id: get-modified-packages
-        uses: autowarefoundation/autoware-github-actions/get-modified-packages@v1
+    - name: Install ATOS
+      run: |
+        ./setup_atos.sh
+      shell: bash
 
-      - name: Run clang-tidy
-        if: ${{ steps.get-modified-packages.outputs.modified-packages != '' }}
-        uses: autowarefoundation/autoware-github-actions/clang-tidy@v1
-        with:
-          rosdistro: humble
-          clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware/main/.clang-tidy
-          target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
-          build-depends-repos: build_depends.repos
+    - name: Install Clang-Tidy
+      run: |
+        sudo apt-get -yqq update
+        sudo apt-get -yqq install clang-tidy libomp-dev
+      shell: bash
+
+    - name: Get target files
+      id: get-target-files
+      run: |
+        package_path=$(colcon list --paths-only --packages-select atos)
+        target_files=$(find $package_path -name "*.cpp" -or -name "*.hpp")
+
+        echo "target-files=$target_files" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Analyze
+      if: ${{ steps.get-target-files.outputs.target-files != '' }}
+      run: |
+        cd $HOME/atos_ws
+        mkdir /tmp/clang-tidy-result
+        clang-tidy -p build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml ${{ steps.get-target-files.outputs.target-files }} || true
+        echo "${{ github.event.number }}" > /tmp/clang-tidy-result/pr-id.txt
+        echo "${{ github.event.pull_request.head.repo.full_name }}" > /tmp/clang-tidy-result/pr-head-repo.txt
+        echo "${{ github.event.pull_request.head.ref }}" > /tmp/clang-tidy-result/pr-head-ref.txt
+      shell: bash
+
+
+    - name: Check if the fixes.yaml file exists
+      id: check-fixes-yaml-existence
+      uses: autowarefoundation/autoware-github-actions/check-file-existence@v1
+      with:
+        files: /tmp/clang-tidy-result/fixes.yaml
+
+    - name: Upload artifacts
+      if: ${{ steps.check-fixes-yaml-existence.outputs.exists == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: clang-tidy-result
+        path: /tmp/clang-tidy-result/
+
+      # - name: Get modified packages
+      #   id: get-modified-packages
+      #   uses: autowarefoundation/autoware-github-actions/get-modified-packages@v1
+
+      # - name: Run clang-tidy
+      #   if: ${{ steps.get-modified-packages.outputs.modified-packages != '' }}
+      #   uses: autowarefoundation/autoware-github-actions/clang-tidy@v1
+      #   with:
+      #     rosdistro: humble
+      #     clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware/main/.clang-tidy
+      #     target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
+      #     build-depends-repos: build_depends.repos
