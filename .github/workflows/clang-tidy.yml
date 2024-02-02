@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     container: ros:humble
     outputs: 
-      output1: ${{ steps.get-target-files.outputs.target-files }}
+      output1: ${{ steps.target-files.outputs.all }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -28,7 +28,7 @@ jobs:
         run: |
           ./setup_atos.sh
         shell: bash
-            
+            E
       - name: Save build cache
         id: cache-build-save
         uses: actions/cache/save@v4
