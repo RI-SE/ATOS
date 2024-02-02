@@ -29,6 +29,8 @@ jobs:
         run: |
           package_path=$(colcon list --paths-only --packages-select atos)
           target_files=$(find $package_path -name "*.cpp" -or -name "*.hpp")
+          
+          echo $target_files
 
           echo "target-files=$target_files" >> $GITHUB_OUTPUT
         shell: bash
