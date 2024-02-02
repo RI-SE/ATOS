@@ -72,7 +72,7 @@ cd -
 echo "Building ATOS..."
 cd $HOME/atos_ws
 source /opt/ros/$ROS_DISTRO/setup.bash
-MAKEFLAGS=-j4 colcon build --symlink-install
+MAKEFLAGS=-j4 colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 check_command_failed $? "Failed to build ATOS."
 cd -
 
