@@ -44,26 +44,19 @@ jobs:
           sudo apt-get -yqq install clang-tidy libomp-dev
         shell: bash
 
-      - name: Get target files
-        id: get-target-files
-        run: |
-          cd $HOME/atos_ws
-          package_path=$(colcon list --paths-only --packages-select atos)
-          target_files=$(find $package_path -name "*.cpp" -or -name "*.hpp")
-          
-          {
-            echo "target-files<<EOF"
-            echo $target_files
-            echo EOF
-          } >> "$GITHUB_OUTPUT"
+      - name: Get changed files
+        id: target-files
+        uses: jitterbit/get-changed-files@v1
+      - run: |
+          echo ${{ steps.target-files.outputs.all }}
         shell: bash
 
       - name: Analyze
-        if: ${{ steps.get-target-files.outputs.target-files != '' }}
+        if: ${{ steps.target-files.outputs.all != '' }}
         run: |
           cd $HOME/atos_ws
           mkdir /tmp/clang-tidy-result
-          clang-tidy -p build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml ${{ steps.get-target-files.outputs.target-files }} || true
+          clang-tidy -p build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml ${{ steps.target-files.outputs.all }} || true
           echo "${{ github.event.number }}" > /tmp/clang-tidy-result/pr-id.txt
           echo "${{ github.event.pull_request.head.repo.full_name }}" > /tmp/clang-tidy-result/pr-head-repo.txt
           echo "${{ github.event.pull_request.head.ref }}" > /tmp/clang-tidy-result/pr-head-ref.txt
