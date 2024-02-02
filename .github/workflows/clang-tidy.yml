@@ -38,12 +38,10 @@ jobs:
       - name: Get target files
         id: get-target-files
         run: |
-          echo $PWD
           cd $HOME/atos_ws
           package_path=$(colcon list --paths-only --packages-select atos)
           target_files=$(find $package_path -name "*.cpp" -or -name "*.hpp")
           
-          echo $target_files
           {
             echo "target-files<<EOF"
             echo $target_files
@@ -75,16 +73,3 @@ jobs:
         with:
           name: clang-tidy-result
           path: /tmp/clang-tidy-result/
-
-      # - name: Get modified packages
-      #   id: get-modified-packages
-      #   uses: autowarefoundation/autoware-github-actions/get-modified-packages@v1
-
-      # - name: Run clang-tidy
-      #   if: ${{ steps.get-modified-packages.outputs.modified-packages != '' }}
-      #   uses: autowarefoundation/autoware-github-actions/clang-tidy@v1
-      #   with:
-      #     rosdistro: humble
-      #     clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware/main/.clang-tidy
-      #     target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
-      #     build-depends-repos: build_depends.repos
