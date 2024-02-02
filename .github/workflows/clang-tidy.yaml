@@ -54,7 +54,6 @@ jobs:
       - name: Analyze
         if: ${{ steps.target-files.outputs.all != '' }}
         run: |
-          cd $HOME/atos_ws
           mkdir /tmp/clang-tidy-result
           clang-tidy -p build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml ${{ steps.target-files.outputs.all }} || true
           echo "${{ github.event.number }}" > /tmp/clang-tidy-result/pr-id.txt
