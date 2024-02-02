@@ -75,3 +75,9 @@ jobs:
         with:
           name: clang-tidy-result
           path: /tmp/clang-tidy-result/
+
+      - name: Run clang-format style check for C/C++/Protobuf programs.
+        uses: jidicula/clang-format-action@v4.11.0
+        with:
+          clang-format-version: '13'
+          check-path: ${{ steps.target-files.outputs.all }}
