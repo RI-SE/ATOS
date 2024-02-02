@@ -51,12 +51,8 @@ if [ ! -d "$HOME/atos_ws/src" ]; then
 fi
 cd $HOME/atos_ws
 
-# Set ATOS_INTERFACES_PATH using ATOS_PATH
-ATOS_INTERFACES_PATH="$ATOS_REPO_PATH/atos_interfaces"
-
 # Update symlinks to atos and atos_interfaces
 update_symlink "$ATOS_REPO_PATH" $HOME/atos_ws/src/atos
-update_symlink "$ATOS_INTERFACES_PATH" $HOME/atos_ws/src/atos_interfaces
 
 
 # Change directory into the workspace and build, check with the user before continuing
