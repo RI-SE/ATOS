@@ -75,8 +75,26 @@ jobs:
           name: clang-tidy-result
           path: /tmp/clang-tidy-result/
 
-      - name: Run clang-format style check for C/C++/Protobuf programs.
-        uses: jidicula/clang-format-action@v4.11.0
+      - name: Install clang-format
+        run: |
+          sudo apt-get -yqq update
+          sudo apt-get -yqq install clang-format
+        shell: bash
+
+      - name: Run clang-format style check.
+        id: clang-format
+        run: |
+          clang-format ${{ steps.target-files.outputs.all }} > /tmp/clang-format-result.txt || true
+
+      - name: Check if the clang-format-result.txt file exists
+        id: check-clang-format-result-existence
+        uses: autowarefoundation/autoware-github-actions/check-file-existence@v1
         with:
-          clang-format-version: '13'
-          check-path: ${{ steps.target-files.outputs.all }}
+          files: /tmp/clang-format-result.txt
+
+      - name: Upload artifacts
+        if: ${{ steps.check-clang-format-result-existence.outputs.exists == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-format-result
+          path: /tmp/clang-format-result.txt
