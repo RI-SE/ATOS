@@ -46,7 +46,7 @@ jobs:
           echo $target_files
           {
             echo "target-files<<EOF"
-            $target_files
+            echo $target_files
             echo EOF
           } >> "$GITHUB_OUTPUT"
         shell: bash
