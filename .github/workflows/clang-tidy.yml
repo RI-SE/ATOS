@@ -7,6 +7,8 @@ jobs:
   clang-tidy:
     runs-on: ubuntu-latest
     container: ros:humble
+    outputs: 
+      output1: ${{ steps.get-target-files.outputs.target-files }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -27,12 +29,14 @@ jobs:
       - name: Get target files
         id: get-target-files
         run: |
+          echo $PWD
+          cd $HOME/atos_ws
           package_path=$(colcon list --paths-only --packages-select atos)
           target_files=$(find $package_path -name "*.cpp" -or -name "*.hpp")
           
           echo $target_files
 
-          echo "target-files=$target_files" >> $GITHUB_OUTPUT
+          echo "target-files=$target_files" >> "$GITHUB_OUTPUT"
         shell: bash
 
       - name: Analyze
