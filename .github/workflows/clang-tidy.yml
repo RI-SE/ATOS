@@ -28,7 +28,7 @@ jobs:
         run: |
           ./setup_atos.sh
         shell: bash
-            E
+
       - name: Save build cache
         id: cache-build-save
         uses: actions/cache/save@v4
