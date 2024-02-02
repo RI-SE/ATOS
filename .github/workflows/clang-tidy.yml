@@ -15,6 +15,15 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Restore build files from cache
+        id: restore-build-files
+        uses: actions/cache@v3
+        with:
+          path: |
+            ./build
+            ./install
+          key: build-humble-${{ runner.os }}-${{ runner.arch }}-clang-${{ github.sha }}
+
       - name: Install ATOS
         run: |
           ./setup_atos.sh
@@ -35,8 +44,11 @@ jobs:
           target_files=$(find $package_path -name "*.cpp" -or -name "*.hpp")
           
           echo $target_files
-
-          echo "target-files=$target_files" >> "$GITHUB_OUTPUT"
+          {
+            echo "target-files<<EOF"
+            $target_files
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
         shell: bash
 
       - name: Analyze
