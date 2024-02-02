@@ -15,19 +15,28 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Restore build files from cache
-        id: restore-build-files
-        uses: actions/cache@v3
+      - name: Restore build cache
+        id: cache-build-restore
+        uses: actions/cache/restore@v4
         with:
           path: |
-            ./build
-            ./install
-          key: build-humble-${{ runner.os }}-${{ runner.arch }}-clang-${{ github.sha }}
+            $HOME/atos_ws/build
+            $HOME/atos_ws/install
+          key: ${{ runner.os }}-build
 
       - name: Install ATOS
         run: |
           ./setup_atos.sh
         shell: bash
+            
+      - name: Save build cache
+        id: cache-build-save
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            $HOME/atos_ws/build
+            $HOME/atos_ws/install
+          key: ${{ steps.cache-build-restore.outputs.cache-primary-key }}
 
       - name: Install Clang-Tidy
         run: |
