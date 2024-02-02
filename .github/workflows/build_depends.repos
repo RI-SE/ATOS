@@ -1,5 +1,0 @@
-repositories:
-    tmp/atos_interfaces:
-        type: git
-        url: https://github.com/RI-SE/atos_interfaces.git
-        version: master
