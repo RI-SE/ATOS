@@ -13,30 +13,11 @@ ATOS_REPO_PATH="$1"
 source "${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 check_command_failed $? "Failed to source ${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 
-################################################
-###### Install Control Panel dependencies ######
-################################################
+###############################################
+######## Install ATOS GUI dependencies ########
+###############################################
 
-echo "Installing nvm and Node.js..."
-NODE_VERSION=16.20.0    # Also specified in the Dockerfile
-NVM_DIR="$HOME/.nvm"
-
-if ! command -v nvm &> /dev/null; then
-    echo "nvm not found, installing..."
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-    . "$NVM_DIR/nvm.sh"
-    check_command_failed $? "Failed to install nvm."
-else 
-    echo "nvm already installed, skipping installation..."
-fi
-
-echo "Installing Node.js v${NODE_VERSION}..."
-nvm install ${NODE_VERSION}
-nvm use v${NODE_VERSION}
-nvm alias default v${NODE_VERSION}
-echo 'export PATH="$HOME/.nvm/versions/node/v${NODE_VERSION}/bin/:$PATH"' >> $HOME/.bashrc
-source $HOME/.bashrc
-npm --version
+pip install -r ${ATOS_REPO_PATH}/gui/requirements.txt 
 
 # Install pyOpenSSL
 pip install pyOpenSSL
@@ -53,11 +34,12 @@ cd $HOME/atos_ws
 
 # Set ATOS_INTERFACES_PATH using ATOS_PATH
 ATOS_INTERFACES_PATH="$ATOS_REPO_PATH/atos_interfaces"
+ATOS_GUI_PATH="$ATOS_REPO_PATH/atos_gui"
 
 # Update symlinks to atos and atos_interfaces
 update_symlink "$ATOS_REPO_PATH" $HOME/atos_ws/src/atos
 update_symlink "$ATOS_INTERFACES_PATH" $HOME/atos_ws/src/atos_interfaces
-
+update_symlink "$ATOS_GUI_PATH" $HOME/atos_ws/src/atos_gui
 
 # Change directory into the workspace and build, check with the user before continuing
 echo "Dependecy installation done and ATOS workspace created."
