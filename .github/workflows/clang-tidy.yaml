@@ -22,8 +22,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: |
-            ${{ github.workspace }}/atos_ws/build
-            ${{ github.workspace }}/atos_ws/install
+            /github/home/atos_ws/build
+            /github/home/atos_ws/install
           key: ${{ runner.os }}-build
 
       - name: Install ATOS
@@ -36,8 +36,8 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: |
-            ${{ github.workspace }}/atos_ws/build
-            ${{ github.workspace }}/atos_ws/install
+            /github/home/atos_ws/build
+            /github/home/atos_ws/install
           key: ${{ runner.os }}-build
 
       - name: Install Clang-Tidy
