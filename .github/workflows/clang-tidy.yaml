@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     container: ros:humble
     outputs: 
-      output1: ${{ steps.target-files.outputs.all }}
+      output1: ${{ steps.target-files.outputs.all_changed_files }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
