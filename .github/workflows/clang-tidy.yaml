@@ -56,6 +56,15 @@ jobs:
             *.c
             *.h
 
+      - name: List all changed files
+        env:
+          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all_changed_files }}
+        run: |
+          for file in ${ALL_CHANGED_FILES}; do
+            echo "$file was changed"
+          done
+          echo "All changed files as one string: ${ALL_CHANGED_FILES}"
+
       - name: Analyze
         if: ${{ steps.target-files.outputs.all_changed_files != '' }}
         env: 
