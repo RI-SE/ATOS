@@ -1,42 +1,24 @@
 name: clang-tidy-review
 
 # You can be more specific, but it currently only works on pull requests
-on: [pull_request]
+on: 
+  workflow_call:
+    inputs:
+      target_files: 
+        description: 'The list of files to be checked by clang-tidy'
+        required: true
+        default: ''
+        type: string
 
 jobs:
   clang-tidy:
     runs-on: ubuntu-latest
     container: ros:humble
-    outputs: 
-      output1: ${{ steps.target-files.outputs.all }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Restore build cache
-        id: cache-build-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            /github/home/atos_ws/build
-            /github/home/atos_ws/install
-          key: ${{ runner.os }}-build
-
-      - name: Install ATOS
-        run: |
-          ./setup_atos.sh
-        shell: bash
-
-      - name: Save build cache
-        id: cache-build-save
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            /github/home/atos_ws/build
-            /github/home/atos_ws/install
-          key: ${{ runner.os }}-build
 
       - name: Install Clang-Tidy
         run: |
@@ -44,14 +26,10 @@ jobs:
           sudo apt-get -yqq install clang-tidy libomp-dev
         shell: bash
 
-      - name: Get changed files
-        id: target-files
-        uses: jitterbit/get-changed-files@v1
-    
       - name: Run clang-tidy linter
-        if: ${{ steps.target-files.outputs.all != '' }}
+        if: ${{ inputs.target_files != '' }}
         env: 
-          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all }}
+          ALL_CHANGED_FILES: ${{ inputs.target_files }}
         run: |
           mkdir /tmp/clang-tidy-result
           clang-tidy -p $HOME/atos_ws/build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml ${ALL_CHANGED_FILES} || true
@@ -72,27 +50,3 @@ jobs:
         with:
           name: clang-tidy-result
           path: /tmp/clang-tidy-result/
-
-      - name: Install clang-format
-        run: |
-          sudo apt-get -yqq update
-          sudo apt-get -yqq install clang-format
-        shell: bash
-
-      - name: Run clang-format style check.
-        id: clang-format
-        env: 
-          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all }}
-        run: |
-          mkdir /tmp/clang-format-result
-          for file_path in ${ALL_CHANGED_FILES}; do
-            folder_name="${file_path%/*}/"
-            mkdir -p /tmp/clang-format-result/$folder_name
-            clang-format ${file_path} > /tmp/clang-format-result/${file_path} || true
-          done
-
-      - name: Upload clang-format result
-        uses: actions/upload-artifact@v4
-        with:
-          name: clang-format-result
-          path: /tmp/clang-format-result/

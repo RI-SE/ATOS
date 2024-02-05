@@ -3,13 +3,24 @@ name: Clang
 on: [pull_request]
 
 jobs:
-    checkout:
-      runs-on: ubuntu-latest
-      steps:
-        - name: Check out repository
-          uses: actions/checkout@v3
-          with:
-            submodules: recursive
-    
     build:
         uses: ./.github/workflows/build.yaml
+
+    file-changes:
+      runs-on: ubuntu-latest
+      outputs: 
+        all: ${{ steps.target-files.outputs.all }}
+      steps:
+        - name: Get changed files
+          id: target-files
+          uses: jitterbit/get-changed-files@v1
+
+    clang-tidy:
+        uses: ./.github/workflows/clang-tidy.yaml
+        needs: [build, file-changes]
+        with:
+            target_files: ${{ needs.file-changes.outputs.all }}
+    
+    # clang-format:
+    #     uses: ./.github/workflows/clang-format.yaml
+    #     needs: [build, file-changes]
