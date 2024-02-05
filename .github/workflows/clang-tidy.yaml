@@ -15,8 +15,6 @@ jobs:
         with:
           submodules: recursive
 
-      - run: echo $HOME
-      - run: echo ${{ github.workspace }}
       - name: Restore build cache
         id: cache-build-restore
         uses: actions/cache/restore@v4
