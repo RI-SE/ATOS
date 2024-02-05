@@ -55,7 +55,7 @@ jobs:
         if: ${{ steps.target-files.outputs.all != '' }}
         run: |
           mkdir /tmp/clang-tidy-result
-          clang-tidy -p build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml ${{ steps.target-files.outputs.all }} || true
+          clang-tidy -p $HOME/atos_ws/build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml ${{ steps.target-files.outputs.all }} || true
           echo "${{ github.event.number }}" > /tmp/clang-tidy-result/pr-id.txt
           echo "${{ github.event.pull_request.head.repo.full_name }}" > /tmp/clang-tidy-result/pr-head-repo.txt
           echo "${{ github.event.pull_request.head.ref }}" > /tmp/clang-tidy-result/pr-head-ref.txt
@@ -85,8 +85,11 @@ jobs:
         id: clang-format
         run: |
           mkdir /tmp/clang-format-result
-          for changed_file in ${{ steps.target-files.outputs.all }}; do
-            clang-format ${changed_file} > /tmp/clang-format-result/${changed_file} || true
+          for file_path in ${{ steps.target-files.outputs.all }}; do
+            folder_name="${file_path%/*}/"
+            echo $folder_name
+            mkdir -p /tmp/clang-format-result/$folder_name
+            clang-format ${file_path} > /tmp/clang-format-result/file_path || true
           done
 
       - name: Upload artifacts
