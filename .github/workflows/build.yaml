@@ -1,0 +1,22 @@
+name: Docker Image CI
+
+on: workflow_call
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Restore build cache
+      id: cache-build
+      uses: actions/cache@v4
+      with:
+        path: |
+          /github/home/atos_ws/build
+          /github/home/atos_ws/install
+        key: ${{ runner.os }}-build
+
+    - name: Install ATOS
+      if: steps.cache-build.outputs.cache-hit != 'true'
+      run: |
+        ./setup_atos.sh
+      shell: bash
