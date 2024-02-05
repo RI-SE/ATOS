@@ -84,17 +84,25 @@ jobs:
       - name: Run clang-format style check.
         id: clang-format
         run: |
-          clang-format ${{ steps.target-files.outputs.all }} > /tmp/clang-format-result.txt || true
+          mkdir /tmp/clang-format-result
+          for changed_file in ${{ steps.target-files.outputs.all }}; do
+            clang-format ${changed_file} > /tmp/clang-format-result/${changed_file} || true
+          done
 
       - name: Check if the clang-format-result.txt file exists
         id: check-clang-format-result-existence
         uses: autowarefoundation/autoware-github-actions/check-file-existence@v1
         with:
-          files: /tmp/clang-format-result.txt
+          files: |
+            /tmp/clang-format-result/*.cpp
+            /tmp/clang-format-result/*.hpp
+            /tmp/clang-format-result/*.c
+            /tmp/clang-format-result/*.h
+          condition: or
 
       - name: Upload artifacts
         if: ${{ steps.check-clang-format-result-existence.outputs.exists == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: clang-format-result
-          path: /tmp/clang-format-result.txt
+          path: /tmp/clang-format-result/
