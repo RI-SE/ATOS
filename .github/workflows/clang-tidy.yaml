@@ -63,7 +63,7 @@ jobs:
             echo EOF
           } >> "$GITHUB_OUTPUT"
 
-      - name: Analyze
+      - name: Run clang-tidy linter
         if: ${{ steps.target-files.outputs.all != '' }}
         env: 
           ALL_CHANGED_FILES: ${{ steps.target-files.outputs.target_files }}
@@ -75,14 +75,13 @@ jobs:
           echo "${{ github.event.pull_request.head.ref }}" > /tmp/clang-tidy-result/pr-head-ref.txt
         shell: bash
 
-
       - name: Check if the fixes.yaml file exists
         id: check-fixes-yaml-existence
         uses: autowarefoundation/autoware-github-actions/check-file-existence@v1
         with:
           files: /tmp/clang-tidy-result/fixes.yaml
 
-      - name: Upload artifacts
+      - name: Upload clang-tidy result
         if: ${{ steps.check-fixes-yaml-existence.outputs.exists == 'true' }}
         uses: actions/upload-artifact@v4
         with:
@@ -107,7 +106,7 @@ jobs:
             clang-format ${file_path} > /tmp/clang-format-result/${file_path} || true
           done
 
-      - name: Upload artifacts
+      - name: Upload clang-format result
         uses: actions/upload-artifact@v4
         with:
           name: clang-format-result
