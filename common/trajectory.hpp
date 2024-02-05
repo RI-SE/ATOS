@@ -109,8 +109,15 @@ public:
 
 		std::string toString() const;
 		std::string getFormatString() const;
+<<<<<<< HEAD
+
+		bool operator==(const TrajectoryPoint& other) const;
+    private:
+        double time = 0;
+=======
 	private:
 		std::chrono::milliseconds time = std::chrono::milliseconds(0);
+>>>>>>> dev
 		Eigen::Vector3d position; //! x, y, z [m]
 		double heading = 0;		  //! Heading ccw from x axis [rad]
 		Eigen::Vector2d velocity; //! Vehicle frame, x forward [m/s]
@@ -171,6 +178,7 @@ public:
 		return newTrajectory;
 	}
 
+	bool operator==(const Trajectory& other) const;
 	bool isValid() const;
 private:
 	static const std::regex fileHeaderPattern;
