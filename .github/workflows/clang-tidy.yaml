@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     container: ros:humble
     outputs: 
-      output1: ${{ steps.target-files.outputs.all_changed_files }}
+      output1: ${{ steps.target-files.outputs.all }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -46,17 +46,11 @@ jobs:
 
       - name: Get changed files
         id: target-files
-        uses: tj-actions/changed-files@v42
-        with:
-          files: |
-            *.cpp
-            *.hpp
-            *.c
-            *.h
+        uses: jitterbit/get-changed-files@v1
 
       - name: List all changed files
         env:
-          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all_changed_files }}
+          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all }}
         run: |
           for file in ${ALL_CHANGED_FILES}; do
             echo "$file was changed"
@@ -64,9 +58,9 @@ jobs:
           echo "All changed files as one string: ${ALL_CHANGED_FILES}"
 
       - name: Analyze
-        if: ${{ steps.target-files.outputs.all_changed_files != '' }}
+        if: ${{ steps.target-files.outputs.all != '' }}
         env: 
-          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all_changed_files }}
+          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all }}
         run: |
           mkdir /tmp/clang-tidy-result
           clang-tidy -p $HOME/atos_ws/build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml ${ALL_CHANGED_FILES} || true
@@ -98,7 +92,7 @@ jobs:
       - name: Run clang-format style check.
         id: clang-format
         env: 
-          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all_changed_files }}
+          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all }}
         run: |
           mkdir /tmp/clang-format-result
           for file_path in ${ALL_CHANGED_FILES}; do
