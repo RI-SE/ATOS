@@ -89,19 +89,7 @@ jobs:
             clang-format ${changed_file} > /tmp/clang-format-result/${changed_file} || true
           done
 
-      - name: Check if the clang-format-result.txt file exists
-        id: check-clang-format-result-existence
-        uses: autowarefoundation/autoware-github-actions/check-file-existence@v1
-        with:
-          files: |
-            /tmp/clang-format-result/*.cpp
-            /tmp/clang-format-result/*.hpp
-            /tmp/clang-format-result/*.c
-            /tmp/clang-format-result/*.h
-          condition: or
-
       - name: Upload artifacts
-        if: ${{ steps.check-clang-format-result-existence.outputs.exists == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: clang-format-result
