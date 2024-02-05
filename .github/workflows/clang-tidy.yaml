@@ -48,13 +48,21 @@ jobs:
 
       - name: Get changed files
         id: target-files
-        uses: jitterbit/get-changed-files@v1
+        uses: tj-actions/changed-files@v42
+        with:
+          files: |
+            *.cpp
+            *.hpp
+            *.c
+            *.h
 
       - name: Analyze
-        if: ${{ steps.target-files.outputs.all != '' }}
+        if: ${{ steps.target-files.outputs.all_changed_files != '' }}
+        env: 
+          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all_changed_files }}
         run: |
           mkdir /tmp/clang-tidy-result
-          clang-tidy -p $HOME/atos_ws/build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml ${{ steps.target-files.outputs.all }} || true
+          clang-tidy -p $HOME/atos_ws/build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml ${ALL_CHANGED_FILES} || true
           echo "${{ github.event.number }}" > /tmp/clang-tidy-result/pr-id.txt
           echo "${{ github.event.pull_request.head.repo.full_name }}" > /tmp/clang-tidy-result/pr-head-repo.txt
           echo "${{ github.event.pull_request.head.ref }}" > /tmp/clang-tidy-result/pr-head-ref.txt
@@ -82,9 +90,11 @@ jobs:
 
       - name: Run clang-format style check.
         id: clang-format
+        env: 
+          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all_changed_files }}
         run: |
           mkdir /tmp/clang-format-result
-          for file_path in ${{ steps.target-files.outputs.all }}; do
+          for file_path in ${ALL_CHANGED_FILES}; do
             folder_name="${file_path%/*}/"
             mkdir -p /tmp/clang-format-result/$folder_name
             clang-format ${file_path} > /tmp/clang-format-result/${file_path} || true
