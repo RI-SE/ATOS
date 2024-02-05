@@ -21,6 +21,8 @@ jobs:
         with:
             target_files: ${{ needs.file-changes.outputs.all }}
     
-    # clang-format:
-    #     uses: ./.github/workflows/clang-format.yaml
-    #     needs: [build, file-changes]
+    clang-format:
+        uses: ./.github/workflows/clang-format.yaml
+        needs: [build, file-changes]
+        with:
+            target_files: ${{ needs.file-changes.outputs.all }}
