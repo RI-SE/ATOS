@@ -6,22 +6,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Check out repository
-      uses: actions/checkout@v3
-      with:
-        submodules: recursive
-    
-    - name: Restore build cache
-      id: cache-build
-      uses: actions/cache@v4
-      with:
-        path: |
-          /github/home/atos_ws/build
-          /github/home/atos_ws/install
-        key: ${{ runner.os }}-build
+      - name: Check out repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
-    - name: Install ATOS
-      if: steps.cache-build.outputs.cache-hit != 'true'
-      run: |
-        ./setup_atos.sh
-      shell: bash
+      - name: Restore build cache
+        id: cache-build-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            /github/home/atos_ws/build
+            /github/home/atos_ws/install
+          key: ${{ runner.os }}-build
+
+      - name: Install ATOS
+        run: |
+          ./setup_atos.sh
+        shell: bash
