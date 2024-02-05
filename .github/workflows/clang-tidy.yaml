@@ -15,13 +15,15 @@ jobs:
         with:
           submodules: recursive
 
+      - run: echo $HOME
+      - run: echo ${{ github.workspace }}
       - name: Restore build cache
         id: cache-build-restore
         uses: actions/cache/restore@v4
         with:
           path: |
-            $HOME/atos_ws/build
-            $HOME/atos_ws/install
+            ${{ github.workspace }}/atos_ws/build
+            ${{ github.workspace }}/atos_ws/install
           key: ${{ runner.os }}-build
 
       - name: Install ATOS
@@ -34,8 +36,8 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: |
-            $HOME/atos_ws/build
-            $HOME/atos_ws/install
+            ${{ github.workspace }}/atos_ws/build
+            ${{ github.workspace }}/atos_ws/install
           key: ${{ runner.os }}-build
 
       - name: Install Clang-Tidy
@@ -47,9 +49,6 @@ jobs:
       - name: Get changed files
         id: target-files
         uses: jitterbit/get-changed-files@v1
-      - run: |
-          echo ${{ steps.target-files.outputs.all }}
-        shell: bash
 
       - name: Analyze
         if: ${{ steps.target-files.outputs.all != '' }}
