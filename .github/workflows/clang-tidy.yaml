@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     container: ros:humble
     outputs: 
-      output1: ${{ steps.target-files.outputs.all }}
+      output1: ${{ steps.target-files.outputs.target_files }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -45,22 +45,28 @@ jobs:
         shell: bash
 
       - name: Get changed files
-        id: target-files
+        id: changed-files
         uses: jitterbit/get-changed-files@v1
-
-      - name: List all changed files
-        env:
-          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all }}
+      
+      - name: Remove deleted files from changed files list
+        id: target-files
         run: |
-          for file in ${ALL_CHANGED_FILES}; do
-            echo "$file was changed"
+          existing_files=()
+          for file in $(cat ${{ steps.changed-files.outputs.all }}); do
+            if [ -f $file ]; then
+              existing_files+=("$file")
+            fi
           done
-          echo "All changed files as one string: ${ALL_CHANGED_FILES}"
+          {
+            echo 'target_files<<EOF'
+            echo ${existing_files[@]}
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
 
       - name: Analyze
         if: ${{ steps.target-files.outputs.all != '' }}
         env: 
-          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all }}
+          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.target_files }}
         run: |
           mkdir /tmp/clang-tidy-result
           clang-tidy -p $HOME/atos_ws/build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml ${ALL_CHANGED_FILES} || true
@@ -92,7 +98,7 @@ jobs:
       - name: Run clang-format style check.
         id: clang-format
         env: 
-          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.all }}
+          ALL_CHANGED_FILES: ${{ steps.target-files.outputs.target_files }}
         run: |
           mkdir /tmp/clang-format-result
           for file_path in ${ALL_CHANGED_FILES}; do
