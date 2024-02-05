@@ -1,6 +1,9 @@
-/*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2016 CHRONOS project
-  ------------------------------------------------------------------------------
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+ /* ----------------------------------------------------------------------------
   -- File        : util.h
   -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS
@@ -8,12 +11,9 @@
   -- Reference   :
   ------------------------------------------------------------------------------*/
 
-#ifndef __UTIL_H_INCLUDED__
-#define __UTIL_H_INCLUDED__
+#pragma once
 
-#ifdef __cplusplus
-extern "C"{
-#endif
+
 
 /*------------------------------------------------------------
   -- Include files.
@@ -30,15 +30,17 @@ extern "C"{
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
-#include "mqbus.h"
 #include "iso22133.h"
-#include "logging.h"
 #include "positioning.h"
+
+#ifdef __cplusplus
+extern "C"{
+#endif
 
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-#define MaestroVersion  "0.5.0"
+#define ATOSVersion  "1.0.0"
 
 #define DEFAULT_ORIGIN_LAT 57.777073115
 #define DEFAULT_ORIGIN_LOG 12.781295498333
@@ -62,17 +64,14 @@ extern "C"{
 #define DEFAULT_SUPERVISOR_TCP_PORT 53010
 #define DEFAULT_RVSS_CONF 3
 #define DEFAULT_RVSS_RATE 1
-#define DEFAULT_MAX_PACKETS_LOST 20
+#define DEFAULT_MAX_PACKETS_LOST 0
 #define DEFAULT_TRANSMITTER_ID 0
-
-#define MBUS_MAX_DATALEN (MQ_MSG_SIZE-9) // Message queue data minus one byte for the command and 8 for the data length
 
 #define MAX_OBJECTS 10
 #define MAX_FILE_PATH PATH_MAX
 
 #define MAX_UTIL_VARIBLE_SIZE 512
 
-#define PI	3.141592653589793
 #define ORIGO_DISTANCE_CALC_ITERATIONS 14
 #define TRAJECTORY_LINE_LENGTH 100
 #define NUMBER_CHAR_LENGTH 20
@@ -121,9 +120,7 @@ extern "C"{
 // 60 * 1000
 #define MINUTE_TIME_MS 60000
 
-#define CONF_FILE_NAME "test.conf"
-#define ADAPTIVE_SYNC_FILE_NAME "adaptivesync.conf"
-#define TRIGGER_ACTION_FILE_NAME "triggeraction.conf"
+#define PARAMS_FILE_NAME "params.yaml"
 
 #define MASTER_FILE_EXTENSION ".sync.m"
 #define SLAVE_FILE_EXTENSION ".sync.s"
@@ -161,6 +158,8 @@ enum ObjectFileParameter {
 	OBJECT_SETTING_ID,
 	OBJECT_SETTING_IP,
 	OBJECT_SETTING_TRAJ,
+  OBJECT_SETTING_OPENDRIVE,
+  OBJECT_SETTING_OPENSCENARIO,
 	OBJECT_SETTING_IS_ANCHOR,
 	OBJECT_SETTING_INJECTOR_IDS,
 	OBJECT_SETTING_ORIGIN_LATITUDE,
@@ -170,24 +169,6 @@ enum ObjectFileParameter {
 	OBJECT_SETTING_MAX_SPEED,
 	OBJECT_SETTING_IS_OSI_COMPATIBLE
 };
-
-
-#define UNKNOWN 0
-#define C8_CODE  1
-#define U8_CODE  2
-#define I8_CODE  3
-#define U16_CODE  4
-#define I16_CODE  5
-#define U32_CODE  6
-#define I32_CODE  7
-#define U48_CODE  8
-#define I48_CODE  9
-#define U64_CODE  10
-#define I64_CODE  11
-#define DBL_CODE  12
-#define FLT_CODE  13
-#define STRUCT_CODE  254
-#define RESERVED_CODE  255
 
 #define C8 uint8_t
 #define U8 uint8_t
@@ -258,13 +239,15 @@ COMM_REMOTECTRL_ENABLE = 31,
 COMM_REMOTECTRL_DISABLE = 32,
 COMM_REMOTECTRL_MANOEUVRE = 33,
 COMM_ENABLE_OBJECT = 34,
+COMM_CONTROL_SIGNAL_PERCENTAGE = 35,
+COMM_START_OBJECT = 36,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
 COMM_INV = 255
 };
 
 typedef struct {
-	RemoteControlManoeuvreCommandType manoeuvre;
+	enum RemoteControlManoeuvreCommandType manoeuvre;
 	in_addr_t objectIP;
 } ManoeuvreCommandType;
 
@@ -274,7 +257,7 @@ typedef struct
   double Longitude;
   double Altitude;
   double Heading;
-} GeoPosition;
+} GeoPositionType;
 
 
 typedef enum {
@@ -299,7 +282,7 @@ typedef struct {
 	ObjectPropertiesType properties;
 	bool propertiesReceived;
 	struct timeval lastDataUpdate;
-  GeoPosition origin;
+  GeoPositionType origin;
 	RequestControlActionType requestedControlAction;
 } ObjectDataType;
 
@@ -379,10 +362,12 @@ typedef enum {
     OBC_STATE_INITIALIZED,
     OBC_STATE_CONNECTED,
     OBC_STATE_ARMED,
+    OBC_STATE_DISARMING,
     OBC_STATE_RUNNING,
 	  OBC_STATE_REMOTECTRL,
     OBC_STATE_ERROR,
-    OBC_STATE_ABORTING
+    OBC_STATE_ABORTING,
+    OBC_STATE_CLEARING
 } OBCState_t;
 
 typedef struct
@@ -609,7 +594,7 @@ typedef struct
   U32 ChannelCodeU32;
   U8 OBCStateU8;
   U8 SysCtrlStateU8;
-} RVSSMaestroType;
+} RVSSATOSType;
 
 #pragma pack(pop)
 
@@ -647,27 +632,14 @@ void UtilgetDateTimefromUTCCSVformat(int64_t utc_ms, char *buffer, int size_t);
 void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int size_t);
 
 void util_error(const char *message);
-int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
-int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
-
-// Message bus functions
-int iCommInit(void);
-int iCommClose(void);
-ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, struct timeval *timeRecv);
-int iCommSend(const enum COMMAND iCommand, const char* data, size_t dataLength);
-
-int iCommSendTREO(TREOData data);
-int iCommSendTRCM(TRCMData data);
-int iCommSendEXAC(EXACData data);
-int iCommSendACCM(ACCMData data);
 
 // File system functions
-int UtilVerifyTestDirectory();
-int UtilCopyFile(const char* source, const size_t sourceLen, const char* dest, const size_t destLen);
 void UtilGetTestDirectoryPath(char* path, size_t pathLen);
 void UtilGetJournalDirectoryPath(char* path, size_t pathLen);
 void UtilGetConfDirectoryPath(char* path, size_t pathLen);
 void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
+void UtilGetOdrDirectoryPath(char* path, size_t pathLen);
+void UtilGetOscDirectoryPath(char* path, size_t pathLen);
 void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
 void UtilGetObjectDirectoryPath(char* path, size_t pathLen);
 
@@ -716,7 +688,7 @@ int UtilAddFourBytesMessageData(unsigned char *MessageBuffer, int StartIndex, un
 int UtilAddTwoBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned short Data);
 int UtilAddOneByteMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned char Data);
 int UtilAddNBytesMessageData(unsigned char *MessageBuffer, int StartIndex, int Length, unsigned char *Data);
-C8 * UtilSearchTextFile(C8 *Filename, C8 *Text1, C8 *Text2, C8 *Result);
+C8 * UtilSearchTextFile(const C8 *Filename, C8 *Text1, C8 *Text2, C8 *Result);
 int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
@@ -748,15 +720,11 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
-int32_t UtilWriteConfigurationParameter(const enum ConfigurationFileParameter parameter, const char* newValue, const size_t bufferLength);
-int32_t UtilReadConfigurationParameter(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength);
-char* UtilGetConfigurationParameterAsString(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength);
-enum ConfigurationFileParameter UtilParseConfigurationParameter(const char* parameter, const size_t bufferLength);
 char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter, char *returnValue, const size_t bufferLength);
 int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char* objectFilePath,
 							 const size_t filePathLength, char* objectSetting,
 							 const size_t objectSettingSize);
-int UtilReadOriginConfiguration(GeoPosition* origin);
+int UtilReadOriginConfiguration(GeoPositionType* origin);
 
 int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectDataType *monitorData);
 int UtilPopulateTREODataStructFromMQ(char* rawTREO, size_t rawTREOsize, TREOData *treoData);
@@ -796,4 +764,3 @@ void traj2ldm ( float      time ,
 }
 #endif
 
-#endif //__UTIL_H_INCLUDED__

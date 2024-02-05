@@ -1,0 +1,874 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OpenSCENARIO xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="OpenScenario.xsd">
+    <FileHeader description="GaragePlanScenario" author="AstaZero 1.0" revMajor="1" revMinor="1" date="2023-02-27T13:53:18.006905"/>
+    <ParameterDeclarations/>
+    <CatalogLocations>
+        <VehicleCatalog>
+            <Directory path="../Catalogs/Vehicles"/>
+        </VehicleCatalog>
+        <ControllerCatalog>
+            <Directory path="../Catalogs/Controllers"/>
+        </ControllerCatalog>
+    </CatalogLocations>
+    <RoadNetwork>
+        <LogicFile filepath="../odr/GaragePlanHighRes.xodr"/>
+    </RoadNetwork>
+    <Entities>
+        <ScenarioObject name="1">
+            <CatalogReference catalogName="VehicleCatalog" entryName="mondeo"/>
+            <ObjectController>
+                <CatalogReference catalogName="ControllerCatalog" entryName="externalController"/>
+            </ObjectController>
+        </ScenarioObject>
+        <ScenarioObject name="2">
+            <CatalogReference catalogName="VehicleCatalog" entryName="humanetics"/>
+            <ObjectController>
+                <CatalogReference catalogName="ControllerCatalog" entryName="externalController"/>
+            </ObjectController>
+        </ScenarioObject>
+        <ScenarioObject name="4">
+            <CatalogReference catalogName="VehicleCatalog" entryName="virtual_object"/>
+            <ObjectController>
+                <CatalogReference catalogName="ControllerCatalog" entryName="externalController"/>
+            </ObjectController>
+        </ScenarioObject>
+        <ScenarioObject name="3">
+            <CatalogReference catalogName="VehicleCatalog" entryName="flexible_target_carrier"/>
+            <ObjectController>
+                <CatalogReference catalogName="ControllerCatalog" entryName="externalController"/>
+            </ObjectController>
+        </ScenarioObject>
+        <ScenarioObject name="6">
+            <CatalogReference catalogName="VehicleCatalog" entryName="marker_drone"/>
+            <ObjectController>
+                <CatalogReference catalogName="ControllerCatalog" entryName="externalController"/>
+            </ObjectController>
+        </ScenarioObject>
+        <ScenarioObject name="5">
+            <CatalogReference catalogName="VehicleCatalog" entryName="camera_drone"/>
+            <ObjectController>
+                <CatalogReference catalogName="ControllerCatalog" entryName="externalController"/>
+            </ObjectController>
+        </ScenarioObject>
+    </Entities>
+    <Storyboard>
+        <Init>
+            <Actions>
+                <Private entityRef="1">
+                    <PrivateAction>
+                        <TeleportAction>
+                            <Position>
+                                <LanePosition roadId="3" laneId="1" s="16.0" offset="0.0"/>
+                            </Position>
+                        </TeleportAction>
+                    </PrivateAction>
+                    <PrivateAction>
+                        <LongitudinalAction>
+                            <SpeedAction>
+                                <SpeedActionDynamics dynamicsShape="linear" value="0.51" dynamicsDimension="rate"/>
+                                <SpeedActionTarget>
+                                    <AbsoluteTargetSpeed value="4.166666666666667"/>
+                                </SpeedActionTarget>
+                            </SpeedAction>
+                        </LongitudinalAction>
+                    </PrivateAction>
+                </Private>
+                <Private entityRef="2">
+                    <PrivateAction>
+                        <TeleportAction>
+                            <Position>
+                                <LanePosition roadId="1" laneId="1" s="7.5" offset="0.0"/>
+                            </Position>
+                        </TeleportAction>
+                    </PrivateAction>
+                </Private>
+                <Private entityRef="3">
+                    <PrivateAction>
+                        <TeleportAction>
+                            <Position>
+                                <LanePosition roadId="0" laneId="-1" s="20.0" offset="0.0"/>
+                            </Position>
+                        </TeleportAction>
+                    </PrivateAction>
+                </Private>
+                <Private entityRef="4">
+                    <PrivateAction>
+                        <TeleportAction>
+                            <Position>
+                                <LanePosition roadId="0" laneId="1" s="5.0" offset="0.0">
+                                    <Orientation h="0.0" p="0.0" r="0.0" type="absolute"/>
+                                </LanePosition>
+                            </Position>
+                        </TeleportAction>
+                    </PrivateAction>
+                </Private>
+                <Private entityRef="5">
+                    <PrivateAction>
+                        <TeleportAction>
+                            <Position>
+                                <LanePosition roadId="1" laneId="-1" s="7.5" offset="0.0"/>
+                            </Position>
+                        </TeleportAction>
+                    </PrivateAction>
+                </Private>
+                <Private entityRef="6">
+                    <PrivateAction>
+                        <TeleportAction>
+                            <Position>
+                                <LanePosition roadId="0" laneId="1" s="5.0" offset="0.0">
+                                    <Orientation h="0.0" p="0.0" r="0.0" type="absolute"/>
+                                </LanePosition>
+                            </Position>
+                        </TeleportAction>
+                    </PrivateAction>
+                </Private>
+            </Actions>
+        </Init>
+        <Story name="story_start">
+            <ParameterDeclarations/>
+            <Act name="start">
+                <ManeuverGroup name="1,maneuver_group" maximumExecutionCount="1">
+                    <Actors selectTriggeringEntities="false">
+                        <EntityRef entityRef="1"/>
+                    </Actors>
+                    <Maneuver name="1,maneuver">
+                        <Event name="1,mondeo_follow_trajectory_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="1,init_follow_trajectory">
+                                <PrivateAction>
+                                    <RoutingAction>
+                                        <FollowTrajectoryAction>
+                                            <TrajectoryRef>
+                                                <Trajectory name="1,init_follow_trajectory" closed="false">
+                                                    <ParameterDeclarations/>
+                                                    <Shape>
+                                                        <Polyline>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="3" laneId="1" s="16.0" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="3" laneId="1" s="0.0" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="7" laneId="1" s="8.094064831733704" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="7" laneId="1" s="7.094064831733704" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="7" laneId="1" s="6.094064831733704" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="7" laneId="1" s="5.094064831733704" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="7" laneId="1" s="4.094064831733704" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="7" laneId="1" s="3.0940648317337036" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="7" laneId="1" s="2.0940648317337036" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="7" laneId="1" s="1.0940648317337036" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="0" laneId="1" s="30.0" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="0" laneId="1" s="20.0" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                        </Polyline>
+                                                    </Shape>
+                                                </Trajectory>
+                                            </TrajectoryRef>
+                                            <TimeReference>
+                                                <Timing domainAbsoluteRelative="relative" scale="1.0" offset="0.0"/>
+                                            </TimeReference>
+                                            <TrajectoryFollowingMode followingMode="position"/>
+                                        </FollowTrajectoryAction>
+                                    </RoutingAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="1,scenario_started" delay="0.0" conditionEdge="none">
+                                        <ByValueCondition>
+                                            <SimulationTimeCondition value="0.0" rule="greaterThan"/>
+                                        </ByValueCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                        <Event name="1,mondeo_slow_down_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="1,slow_down">
+                                <PrivateAction>
+                                    <LongitudinalAction>
+                                        <SpeedAction>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="-2.17" dynamicsDimension="rate"/>
+                                            <SpeedActionTarget>
+                                                <AbsoluteTargetSpeed value="2.7777777777777777"/>
+                                            </SpeedActionTarget>
+                                        </SpeedAction>
+                                    </LongitudinalAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="1,reach_slow_down_position" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="1"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <ReachPositionCondition tolerance="1.0">
+                                                    <Position>
+                                                        <LanePosition roadId="3" laneId="1" s="2.0" offset="0.0"/>
+                                                    </Position>
+                                                </ReachPositionCondition>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                        <Event name="1,mondeo_accelerate_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="1,mondeo_accelerate">
+                                <PrivateAction>
+                                    <LongitudinalAction>
+                                        <SpeedAction>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="0.51" dynamicsDimension="rate"/>
+                                            <SpeedActionTarget>
+                                                <AbsoluteTargetSpeed value="4.166666666666667"/>
+                                            </SpeedActionTarget>
+                                        </SpeedAction>
+                                    </LongitudinalAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="1,reach_accelerate_position" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="1"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <ReachPositionCondition tolerance="1.0">
+                                                    <Position>
+                                                        <LanePosition roadId="0" laneId="1" s="30.0" offset="0.0"/>
+                                                    </Position>
+                                                </ReachPositionCondition>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                        <Event name="1,mondeo_brake_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="1,brake_to_stop">
+                                <PrivateAction>
+                                    <LongitudinalAction>
+                                        <SpeedAction>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="-2.17" dynamicsDimension="rate"/>
+                                            <SpeedActionTarget>
+                                                <AbsoluteTargetSpeed value="0.0"/>
+                                            </SpeedActionTarget>
+                                        </SpeedAction>
+                                    </LongitudinalAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="1,reach_brake_position" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="1"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <ReachPositionCondition tolerance="1.0">
+                                                    <Position>
+                                                        <LanePosition roadId="0" laneId="1" s="20.0" offset="0.0"/>
+                                                    </Position>
+                                                </ReachPositionCondition>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                        <Event name="1,high_speed_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="1,send_denm">
+                                <PrivateAction>
+                                    <VisibilityAction graphics="true" traffic="true" sensors="true"/>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="1,high_speed_detected" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="1"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <SpeedCondition value="2.7777777777777777" rule="greaterThan"/>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                    </Maneuver>
+                </ManeuverGroup>
+                <ManeuverGroup name="5,maneuver_group" maximumExecutionCount="1">
+                    <Actors selectTriggeringEntities="false">
+                        <EntityRef entityRef="5"/>
+                    </Actors>
+                    <Maneuver name="5,maneuver">
+                        <Event name="5,stop_event" priority="overwrite" maximumExecutionCount="1">
+                            <Action name="5,brake_to_stop">
+                                <PrivateAction>
+                                    <LongitudinalAction>
+                                        <SpeedAction>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="-1.96" dynamicsDimension="rate"/>
+                                            <SpeedActionTarget>
+                                                <AbsoluteTargetSpeed value="0.0"/>
+                                            </SpeedActionTarget>
+                                        </SpeedAction>
+                                    </LongitudinalAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="5,reach_brake_position" delay="0.0" conditionEdge="rising">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="5"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <ReachPositionCondition tolerance="1.0">
+                                                    <Position>
+                                                        <LanePosition roadId="0" laneId="-1" s="10.0" offset="0.0"/>
+                                                    </Position>
+                                                </ReachPositionCondition>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                        <Event name="5,start_move_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="5,start_follow_trajectory">
+                                <PrivateAction>
+                                    <RoutingAction>
+                                        <FollowTrajectoryAction>
+                                            <TrajectoryRef>
+                                                <Trajectory name="5,start_follow_trajectory" closed="false">
+                                                    <ParameterDeclarations/>
+                                                    <Shape>
+                                                        <Polyline>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="1" laneId="-1" s="7.5" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="0" laneId="-1" s="10.0" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                        </Polyline>
+                                                    </Shape>
+                                                </Trajectory>
+                                            </TrajectoryRef>
+                                            <TimeReference>
+                                                <Timing domainAbsoluteRelative="relative" scale="1.0" offset="0.0"/>
+                                            </TimeReference>
+                                            <TrajectoryFollowingMode followingMode="position"/>
+                                        </FollowTrajectoryAction>
+                                    </RoutingAction>
+                                </PrivateAction>
+                            </Action>
+                            <Action name="5,set_speed">
+                                <PrivateAction>
+                                    <LongitudinalAction>
+                                        <SpeedAction>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="1.38" dynamicsDimension="rate"/>
+                                            <SpeedActionTarget>
+                                                <AbsoluteTargetSpeed value="2.7777777777777777"/>
+                                            </SpeedActionTarget>
+                                        </SpeedAction>
+                                    </LongitudinalAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="1,reached_camera_drone_trigger_position" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="1"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <ReachPositionCondition tolerance="2.0">
+                                                    <Position>
+                                                        <LanePosition roadId="3" laneId="1" s="0.0" offset="0.0"/>
+                                                    </Position>
+                                                </ReachPositionCondition>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                    </Maneuver>
+                </ManeuverGroup>
+                <ManeuverGroup name="2,maneuver_group" maximumExecutionCount="1">
+                    <Actors selectTriggeringEntities="false">
+                        <EntityRef entityRef="2"/>
+                    </Actors>
+                    <Maneuver name="2,maneuver">
+                        <Event name="2,brake_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="2,brake_to_stop">
+                                <PrivateAction>
+                                    <LongitudinalAction>
+                                        <SpeedAction>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="-1.83" dynamicsDimension="rate"/>
+                                            <SpeedActionTarget>
+                                                <AbsoluteTargetSpeed value="0.0"/>
+                                            </SpeedActionTarget>
+                                        </SpeedAction>
+                                    </LongitudinalAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="2,reach_stop_position" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="2"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <ReachPositionCondition tolerance="1.0">
+                                                    <Position>
+                                                        <LanePosition roadId="0" laneId="1" s="25.0" offset="0.0"/>
+                                                    </Position>
+                                                </ReachPositionCondition>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                        <Event name="2,start_move_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="2,start_follow_trajectory">
+                                <PrivateAction>
+                                    <RoutingAction>
+                                        <FollowTrajectoryAction>
+                                            <TrajectoryRef>
+                                                <Trajectory name="2,start_follow_trajectory" closed="false">
+                                                    <ParameterDeclarations/>
+                                                    <Shape>
+                                                        <Polyline>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="1" laneId="1" s="7.5" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="0" laneId="1" s="25.0" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                        </Polyline>
+                                                    </Shape>
+                                                </Trajectory>
+                                            </TrajectoryRef>
+                                            <TimeReference>
+                                                <Timing domainAbsoluteRelative="relative" scale="1.0" offset="0.0"/>
+                                            </TimeReference>
+                                            <TrajectoryFollowingMode followingMode="position"/>
+                                        </FollowTrajectoryAction>
+                                    </RoutingAction>
+                                </PrivateAction>
+                            </Action>
+                            <Action name="2,set_speed">
+                                <PrivateAction>
+                                    <LongitudinalAction>
+                                        <SpeedAction>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="1.38" dynamicsDimension="rate"/>
+                                            <SpeedActionTarget>
+                                                <AbsoluteTargetSpeed value="2.7777777777777777"/>
+                                            </SpeedActionTarget>
+                                        </SpeedAction>
+                                    </LongitudinalAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="1,reached_ufo_trigger_position" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="1"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <ReachPositionCondition tolerance="1.0">
+                                                    <Position>
+                                                        <LanePosition roadId="3" laneId="1" s="0.0" offset="0.0"/>
+                                                    </Position>
+                                                </ReachPositionCondition>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                    </Maneuver>
+                </ManeuverGroup>
+                <ManeuverGroup name="4,maneuver_group" maximumExecutionCount="1">
+                    <Actors selectTriggeringEntities="false">
+                        <EntityRef entityRef="4"/>
+                    </Actors>
+                    <Maneuver name="4,maneuver">
+                        <Event name="4,brake_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="4,brake_to_stop">
+                                <PrivateAction>
+                                    <LongitudinalAction>
+                                        <SpeedAction>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="-10.32" dynamicsDimension="rate"/>
+                                            <SpeedActionTarget>
+                                                <AbsoluteTargetSpeed value="0.0"/>
+                                            </SpeedActionTarget>
+                                        </SpeedAction>
+                                    </LongitudinalAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="4,reach_stop_position" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="4"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <ReachPositionCondition tolerance="1.0">
+                                                    <Position>
+                                                        <LanePosition roadId="0" laneId="1" s="18.0" offset="0.0"/>
+                                                    </Position>
+                                                </ReachPositionCondition>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                        <Event name="4,start_move_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="4,start_follow_trajectory">
+                                <PrivateAction>
+                                    <RoutingAction>
+                                        <FollowTrajectoryAction>
+                                            <TrajectoryRef>
+                                                <Trajectory name="6,start_follow_trajectory" closed="false">
+                                                    <ParameterDeclarations/>
+                                                    <Shape>
+                                                        <Polyline>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="0" laneId="1" s="5.0" offset="0.0">
+                                                                        <Orientation h="0.0" p="0.0" r="0.0" type="absolute"/>
+                                                                    </LanePosition>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="0" laneId="1" s="18.0" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                        </Polyline>
+                                                    </Shape>
+                                                </Trajectory>
+                                            </TrajectoryRef>
+                                            <TimeReference>
+                                                <Timing domainAbsoluteRelative="relative" scale="1.0" offset="0.0"/>
+                                            </TimeReference>
+                                            <TrajectoryFollowingMode followingMode="position"/>
+                                        </FollowTrajectoryAction>
+                                    </RoutingAction>
+                                </PrivateAction>
+                            </Action>
+                            <Action name="4,set_speed">
+                                <PrivateAction>
+                                    <LongitudinalAction>
+                                        <SpeedAction>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="3.53" dynamicsDimension="rate"/>
+                                            <SpeedActionTarget>
+                                                <AbsoluteTargetSpeed value="13.88888888888889"/>
+                                            </SpeedActionTarget>
+                                        </SpeedAction>
+                                    </LongitudinalAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="1,reached_virtual_trigger_position" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="1"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <ReachPositionCondition tolerance="1.0">
+                                                    <Position>
+                                                        <LanePosition roadId="3" laneId="1" s="5.0" offset="0.0"/>
+                                                    </Position>
+                                                </ReachPositionCondition>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                    </Maneuver>
+                </ManeuverGroup>
+                <ManeuverGroup name="3,maneuver_group" maximumExecutionCount="1">
+                    <Actors selectTriggeringEntities="false">
+                        <EntityRef entityRef="3"/>
+                    </Actors>
+                    <Maneuver name="3,maneuver">
+                        <Event name="3,brake_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="3,brake_to_stop">
+                                <PrivateAction>
+                                    <LongitudinalAction>
+                                        <SpeedAction>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="-1.03" dynamicsDimension="rate"/>
+                                            <SpeedActionTarget>
+                                                <AbsoluteTargetSpeed value="0.0"/>
+                                            </SpeedActionTarget>
+                                        </SpeedAction>
+                                    </LongitudinalAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="3,reach_stop_position" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="3"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <ReachPositionCondition tolerance="1.0">
+                                                    <Position>
+                                                        <LanePosition roadId="1" laneId="-1" s="6.957085132598877" offset="0.0"/>
+                                                    </Position>
+                                                </ReachPositionCondition>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                        <Event name="3,start_move_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="3,start_follow_trajectory">
+                                <PrivateAction>
+                                    <RoutingAction>
+                                        <FollowTrajectoryAction>
+                                            <TrajectoryRef>
+                                                <Trajectory name="3,start_follow_trajectory" closed="false">
+                                                    <ParameterDeclarations/>
+                                                    <Shape>
+                                                        <Polyline>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="0" laneId="-1" s="20.0" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="1" laneId="-1" s="6.957085132598877" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                        </Polyline>
+                                                    </Shape>
+                                                </Trajectory>
+                                            </TrajectoryRef>
+                                            <TimeReference>
+                                                <Timing domainAbsoluteRelative="relative" scale="1.0" offset="0.0"/>
+                                            </TimeReference>
+                                            <TrajectoryFollowingMode followingMode="position"/>
+                                        </FollowTrajectoryAction>
+                                    </RoutingAction>
+                                </PrivateAction>
+                            </Action>
+                            <Action name="3,set_speed">
+                                <PrivateAction>
+                                    <LongitudinalAction>
+                                        <SpeedAction>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="1.12" dynamicsDimension="rate"/>
+                                            <SpeedActionTarget>
+                                                <AbsoluteTargetSpeed value="4.166666666666667"/>
+                                            </SpeedActionTarget>
+                                        </SpeedAction>
+                                    </LongitudinalAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="1,reached_carrier_trigger_position" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="1"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <ReachPositionCondition tolerance="1.0">
+                                                    <Position>
+                                                        <LanePosition roadId="3" laneId="1" s="5.0" offset="0.0"/>
+                                                    </Position>
+                                                </ReachPositionCondition>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                    </Maneuver>
+                </ManeuverGroup>
+                <ManeuverGroup name="6,maneuver_group" maximumExecutionCount="1">
+                    <Actors selectTriggeringEntities="false">
+                        <EntityRef entityRef="6"/>
+                    </Actors>
+                    <Maneuver name="6,maneuver">
+                        <Event name="6,brake_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="6,brake_to_stop">
+                                <PrivateAction>
+                                    <LongitudinalAction>
+                                        <SpeedAction>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="-10.32" dynamicsDimension="rate"/>
+                                            <SpeedActionTarget>
+                                                <AbsoluteTargetSpeed value="0.0"/>
+                                            </SpeedActionTarget>
+                                        </SpeedAction>
+                                    </LongitudinalAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="6,reach_stop_position" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="6"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <ReachPositionCondition tolerance="1.0">
+                                                    <Position>
+                                                        <LanePosition roadId="0" laneId="1" s="18.0" offset="0.0"/>
+                                                    </Position>
+                                                </ReachPositionCondition>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                        <Event name="6,start_move_event" priority="parallel" maximumExecutionCount="1">
+                            <Action name="6,start_follow_trajectory">
+                                <PrivateAction>
+                                    <RoutingAction>
+                                        <FollowTrajectoryAction>
+                                            <TrajectoryRef>
+                                                <Trajectory name="6,start_follow_trajectory" closed="false">
+                                                    <ParameterDeclarations/>
+                                                    <Shape>
+                                                        <Polyline>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="0" laneId="1" s="5.0" offset="0.0">
+                                                                        <Orientation h="0.0" p="0.0" r="0.0" type="absolute"/>
+                                                                    </LanePosition>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="0" laneId="1" s="18.0" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                        </Polyline>
+                                                    </Shape>
+                                                </Trajectory>
+                                            </TrajectoryRef>
+                                            <TimeReference>
+                                                <Timing domainAbsoluteRelative="relative" scale="1.0" offset="0.0"/>
+                                            </TimeReference>
+                                            <TrajectoryFollowingMode followingMode="position"/>
+                                        </FollowTrajectoryAction>
+                                    </RoutingAction>
+                                </PrivateAction>
+                            </Action>
+                            <Action name="6,set_speed">
+                                <PrivateAction>
+                                    <LongitudinalAction>
+                                        <SpeedAction>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="3.53" dynamicsDimension="rate"/>
+                                            <SpeedActionTarget>
+                                                <AbsoluteTargetSpeed value="13.88888888888889"/>
+                                            </SpeedActionTarget>
+                                        </SpeedAction>
+                                    </LongitudinalAction>
+                                </PrivateAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="1,reached_marker_drone_trigger_position" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="1"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <ReachPositionCondition tolerance="1.0">
+                                                    <Position>
+                                                        <LanePosition roadId="3" laneId="1" s="5.0" offset="0.0"/>
+                                                    </Position>
+                                                </ReachPositionCondition>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
+                    </Maneuver>
+                </ManeuverGroup>
+                <StartTrigger>
+                    <ConditionGroup>
+                        <Condition name="act_start" delay="0.0" conditionEdge="none">
+                            <ByValueCondition>
+                                <SimulationTimeCondition value="0.0" rule="greaterThan"/>
+                            </ByValueCondition>
+                        </Condition>
+                    </ConditionGroup>
+                </StartTrigger>
+                <StopTrigger/>
+            </Act>
+        </Story>
+        <StopTrigger/>
+    </Storyboard>
+</OpenSCENARIO>

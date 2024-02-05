@@ -1,9 +1,13 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #include "objectconfig.hpp"
 #include "util.h"
-#include "logging.h"
 #include <iomanip>
 
-ObjectConfig::ObjectConfig() {
+ObjectConfig::ObjectConfig(rclcpp::Logger lg) : Loggable(lg), trajectory(lg) {
 	origin.latitude_deg = origin.longitude_deg = origin.altitude_m = 0.0;
 	origin.isLongitudeValid = origin.isLatitudeValid = origin.isAltitudeValid = false;
 }
@@ -31,23 +35,51 @@ std::string ObjectConfig::toString() const {
 		idsString += std::to_string(id) + " ";
 	}
 
-	retval += "Object ID: " + std::to_string(transmitterID)
-			+ ", IP: " + ipAddr + ", Trajectory: " + trajectory.name.c_str()
-			+ ", Turning diameter: " + std::to_string(turningDiameter) + ", Max speed: " + std::to_string(maximumSpeed)
-			+ ", Object file: " + objectFile.filename().string() + ", Anchor: " + (isAnchorObject? "Yes":"No")
-			+ ", OSI compatible: " + (isOSICompatible? "Yes":"No")
-			+ ", Injection IDs: " + idsString;
+	retval += "\n Object ID: " + std::to_string(transmitterID)
+			+ "\n IP: " + ipAddr + "\n Trajectory: " + trajectory.name.c_str()
+			+ "\n OpenDRIVE: " + opendriveFile.filename().string().c_str()
+			+ "\n OpenSCENARIO: " + openscenarioFile.filename().string().c_str()
+			+ "\n Turning diameter: " + std::to_string(turningDiameter) + "\n Max speed: " + std::to_string(maximumSpeed)
+			+ "\n Object file: " + objectFile.filename().string() + "\n Anchor: " + (isAnchorObject? "Yes":"No")
+			+ "\n OSI compatible: " + (isOSICompatible? "Yes":"No")
+			+ "\n Injection IDs: " + idsString;
 	return retval;
 }
+
+void ObjectConfig::parseObjectIdFromConfigurationFile(const fs::path& objectFile){
+	char setting[100];
+
+	// Get ID setting
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_ID, objectFile.c_str(),
+								 objectFile.string().length(),
+								 setting, sizeof (setting)) == -1) {
+		throw std::invalid_argument("Cannot find ID setting in file " + objectFile.string());
+	}
+	char *endptr;
+	uint32_t id = static_cast<uint32_t>(strtoul(setting, &endptr, 10));
+
+	if (endptr == setting) {
+		throw std::invalid_argument("ID " + std::string(setting) + " in file "
+									+ objectFile.string() + " is invalid");
+	}
+	this->transmitterID = id;
+}
+
+
 
 void ObjectConfig::parseConfigurationFile(
 		const fs::path &objectFile) {
 
 	char setting[100];
 	int result;
-	char path[MAX_FILE_PATH];
+	char trajDirPath[MAX_FILE_PATH];
+	char odrDirPath[MAX_FILE_PATH];
+	char oscDirPath[MAX_FILE_PATH];
 
-	UtilGetTrajDirectoryPath(path, sizeof (path));
+	UtilGetTrajDirectoryPath(trajDirPath, sizeof (trajDirPath));
+	UtilGetOdrDirectoryPath(odrDirPath, sizeof (odrDirPath));
+	UtilGetOscDirectoryPath(oscDirPath, sizeof (oscDirPath));
+
 
 	// Get IP setting
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_IP, objectFile.c_str(),
@@ -93,19 +125,44 @@ void ObjectConfig::parseConfigurationFile(
 
 	// Get trajectory file setting
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_TRAJ, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find trajectory setting in file " + objectFile.string());
-	}
+								objectFile.string().length(),
+								setting, sizeof (setting)) == 0) {
 
-	fs::path trajFile(std::string(path) + std::string(setting));
-	if (!fs::exists(trajFile.string())) {
-		throw std::invalid_argument("Configured trajectory file " + std::string(setting)
-									+ " in file " + objectFile.string() + " not found");
+		fs::path trajFile(std::string(trajDirPath) + std::string(setting));
+		if (!fs::exists(trajFile.string())) {
+			throw std::invalid_argument("Configured trajectory file " + std::string(setting)
+										+ " in file " + objectFile.string() + " not found");
+		}
+		this->trajectoryFile = trajFile;
+		this->trajectory.initializeFromFile(setting);
+		RCLCPP_DEBUG(get_logger(), "Loaded trajectory with %lu points", trajectory.points.size());
 	}
-	this->trajectoryFile = trajFile;
-	this->trajectory.initializeFromFile(setting);
-	LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectory.points.size());
+	
+	// Get opendrive file setting
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_OPENDRIVE, objectFile.c_str(),
+								objectFile.string().length(),
+								setting, sizeof(setting)) == 0) {
+
+		fs::path odrFile(std::string(odrDirPath) + std::string(setting));
+		if (!fs::exists(odrFile.string())) {
+			throw std::invalid_argument("Configured OpenDRIVE file " + std::string(setting)
+										+ " in file " + objectFile.string() + " not found");
+		}
+		this->opendriveFile = odrFile;
+	}
+	
+	// Get openscenario file setting
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_OPENSCENARIO, objectFile.c_str(),
+								objectFile.string().length(),
+								setting, sizeof(setting)) == 0) {
+
+		fs::path oscFile(std::string(oscDirPath) + std::string(setting));
+		if (!fs::exists(oscFile.string())) {
+			throw std::invalid_argument("Configured OpenSCENARIO file " + std::string(setting)
+										+ " in file " + objectFile.string() + " not found");
+		}
+		this->openscenarioFile = oscFile;
+	}
 
 	// Get origin settings
 	this->origin = {};
@@ -139,7 +196,7 @@ void ObjectConfig::parseConfigurationFile(
 	if (origin.isAltitudeValid == origin.isLatitudeValid
 			&& origin.isLatitudeValid == origin.isLongitudeValid) {
 		if (!origin.isAltitudeValid) {
-			GeoPosition orig;
+			GeoPositionType orig;
 			if (UtilReadOriginConfiguration(&orig) != -1) {
 				this->origin.latitude_deg = orig.Latitude;
 				this->origin.longitude_deg = orig.Longitude;
@@ -208,7 +265,7 @@ void ObjectConfig::parseConfigurationFile(
 		this->injectionMap.targetIDs.clear();
 
 		for (const auto& id : ids) {
-			LogMessage(LOG_LEVEL_DEBUG, "Injection ID %d", id);
+			RCLCPP_DEBUG(get_logger(), "Injection ID %d", id);
 			this->injectionMap.sourceIDs.insert(static_cast<uint32_t>(id));
 		}
 	}

@@ -1,6 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 /*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2016 CHRONOS project
-  ------------------------------------------------------------------------------
   -- File        : util.c
   -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS
@@ -26,10 +29,11 @@
 #include <float.h>
 #include <sys/stat.h>
 #include <limits.h>
+#include <fcntl.h>
+
 
 #include "util.h"
-#include "maestroTime.h"
-#include "datadictionary.h"
+#include "atosTime.h"
 
 
 /*------------------------------------------------------------
@@ -46,14 +50,15 @@
 #define SMALL_BUFFER_SIZE_64 64
 
 // File paths
-#define TEST_DIR_ENV_VARIABLE_NAME "MAESTRO_TEST_DIR"
-#define SYSCONF_DIR_NAME "/usr/etc"
 #define JOURNAL_DIR_NAME "journal"
-#define MAESTRO_TEST_DIR_NAME ".maestro"
+#define ATOS_TEST_DIR_NAME ".astazero/ATOS"
 #define CONFIGURATION_DIR_NAME "conf"
 #define TRAJECTORY_DIR_NAME "traj"
 #define GEOFENCE_DIR_NAME "geofence"
 #define OBJECT_DIR_NAME "objects"
+#define OPENDRIVE_DIR_NAME "odr"
+#define OPENSCENARIO_DIR_NAME "osc"
+#define POINTCLOUD_DIR_NAME "pointclouds"
 
 /* Message priorities on message queue */
 // Abort message
@@ -131,6 +136,8 @@ static const char ParameterNameMiscData[] = "MiscData";
 static const char ObjectSettingNameID[] = "ID";
 static const char ObjectSettingNameIP[] = "IP";
 static const char ObjectSettingNameTraj[] = "traj";
+static const char ObjectSettingNameOpendrive[] = "odr";
+static const char ObjectSettingNameOpenscenario[] = "osc";
 static const char ObjectSettingNameIsAnchor[] = "isAnchor";
 static const char ObjectSettingNameInjectorIDs[] = "injectorIDs";
 static const char ObjectSettingNameLatitude[] = "originLatitude";
@@ -210,7 +217,7 @@ void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetCont
 	// Check length
 	fieldLength = lastPos - firstPos;
 	if (fieldLength >= targetContainerSize) {
-		LogMessage(LOG_LEVEL_WARNING, "Received too long HTTP header field: %s", fieldName);
+		fprintf(stderr, "Received too long HTTP header field: %s\n", fieldName);
 		targetContainer[0] = '\0';
 		return;
 	}
@@ -222,6 +229,30 @@ void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetCont
 
 }
 
+/*! \brief Makes a directory and all parent directories if they do not exist.
+ * \param dir The path to the directory to be created.
+ * \param mode The permissions to be set on the directory.
+ * \return 0 if it could successfully create the directory, non-zero if it could not.
+*/
+static int recursiveMkdir(const char *dir, int mode) {
+	char tmp[256];
+	char *p = NULL;
+	size_t len;
+	int res = 0;
+
+	snprintf(tmp, sizeof(tmp),"%s",dir);
+	len = strlen(tmp);
+	if (tmp[len - 1] == '/')
+		tmp[len - 1] = 0;
+	for (p = tmp + 1; *p; p++)
+		if (*p == '/') {
+			*p = 0;
+			res = mkdir(tmp, mode);
+			*p = '/';
+		}
+	res = mkdir(tmp, mode);
+	}
+
 /*!
  * \brief deleteFile Deletes the file given in the parameter ::path
  * \param path The path to the file on the machine.
@@ -230,12 +261,12 @@ void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetCont
  */
 int deleteFile(char *path, size_t pathLen) {
 	if (path == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Path is null-pointer");
+		fprintf(stderr, "Path is null-pointer\n");
 		errno = EINVAL;
 		return -1;
 	}
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too large to handle");
+		fprintf(stderr, "Path variable too large to handle\n");
 		errno = EINVAL;
 		return -1;
 	}
@@ -243,13 +274,13 @@ int deleteFile(char *path, size_t pathLen) {
 	FILE *fd = fopen(path, "a");
 
 	if (fd == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Path <%s> could not be opened", path);
+		fprintf(stderr, "Path <%s> could not be opened\n", path);
 		return -1;
 	}
 	fclose(fd);
 
 	if (remove(path) != 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Path <%s> could not be deleted", path);
+		fprintf(stderr, "Path <%s> could not be deleted\n", path);
 		return -1;
 	}
 	return 0;
@@ -263,12 +294,12 @@ int deleteFile(char *path, size_t pathLen) {
  */
 int deleteDirectoryContents(char *path, size_t pathLen) {
 	if (path == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Path is null-pointer.");
+		fprintf(stderr, "Path is null-pointer.\n");
 		errno = EINVAL;
 		return -1;
 	}
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too large to handle");
+		fprintf(stderr, "Path variable too large to handle.\n");
 		errno = EINVAL;
 		return -1;
 	}
@@ -276,7 +307,7 @@ int deleteDirectoryContents(char *path, size_t pathLen) {
 	DIR *theFolder = opendir(path);
 
 	if (theFolder == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Path: %s could not be opened", path);
+		fprintf(stderr, "Path: %s could not be opened.\n", path);
 		errno = ENOENT;
 		return -1;
 	}
@@ -448,7 +479,7 @@ void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int 
 	strcat(buffer, tmp_buffer_ms);
 }
 void util_error(const char *message) {
-	LogMessage(LOG_LEVEL_ERROR, message);
+	fprintf(stderr, "%s\n", message);
 	exit(EXIT_FAILURE);
 }
 
@@ -613,44 +644,6 @@ int UtilAddNBytesMessageData(unsigned char *MessageBuffer, int StartIndex, int L
 }
 
 
-int iUtilGetParaConfFile(char *pcParameter, char *pcValue) {
-	FILE *filefd;
-	int iFindResult;
-	char pcTemp[512];
-	char confPathDir[MAX_FILE_PATH];
-
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcat(confPathDir, CONF_FILE_NAME);
-
-	iFindResult = 0;
-
-	filefd = fopen(confPathDir, "rb");
-
-	if (filefd == NULL) {
-		return 0;
-	}
-
-	while (fgets(pcTemp, 512, filefd) != NULL) {
-		if ((strstr(pcTemp, pcParameter)) != NULL) {
-
-			/* Does contain any value? */
-			if (strlen(pcTemp) > (strlen(pcParameter) + 1)) {
-				/* replace new line */
-				if (pcTemp[strlen(pcTemp) - 1] == '\n') {
-					pcTemp[strlen(pcTemp) - 1] = 0;
-				}
-				strcpy(pcValue, &pcTemp[strlen(pcParameter) + 1]);
-			}
-			iFindResult = 1;
-		}
-	}
-
-	if (filefd) {
-		fclose(filefd);
-	}
-
-	return 1;
-}
 
 
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint * ASP, FILE * filefd, char debug) {
@@ -697,11 +690,11 @@ int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint * ASP, FILE * filefd, char debug)
 	ASP->TestPort = 0;
 
 	if (debug) {
-		LogPrint("MasterIP: %s", ASP->MasterIP);
-		LogPrint("SlaveIP: %s", ASP->SlaveIP);
-		LogPrint("MasterTrajSyncTime %3.2f", ASP->MasterTrajSyncTime);
-		LogPrint("SlaveTrajSyncTime %3.2f", ASP->SlaveTrajSyncTime);
-		LogPrint("SlaveSyncStopTime %3.2f", ASP->SlaveSyncStopTime);
+		fprintf(stderr, "MasterIP: %s\n", ASP->MasterIP);
+		fprintf(stderr, "SlaveIP: %s\n", ASP->SlaveIP);
+		fprintf(stderr, "MasterTrajSyncTime %3.2f\n", ASP->MasterTrajSyncTime);
+		fprintf(stderr, "SlaveTrajSyncTime %3.2f\n", ASP->SlaveTrajSyncTime);
+		fprintf(stderr, "SlaveSyncStopTime %3.2f\n", ASP->SlaveSyncStopTime);
 	}
 
 	return 0;
@@ -734,7 +727,7 @@ int UtilSetMasterObject(ObjectPosition * OP, char *Filename, char debug) {
 		fclose(filefd);
 
 		if (debug)
-			LogPrint("Master object set: %s, SyncTime: %3.4f", FilenameBuffer, Time);
+			fprintf(stderr, "Master object set: %s, SyncTime: %3.4f\n", FilenameBuffer, Time);
 
 	}
 	else {
@@ -769,7 +762,7 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
 		OP->SyncStopTime = Time;
 		fclose(filefd);
 		if (debug)
-			LogPrint("Slave object set: %s, SyncTime: %3.4f", FilenameBuffer, Time);
+			fprintf(stderr, "Slave object set: %s, SyncTime: %3.4f\n", FilenameBuffer, Time);
 	}
 
 
@@ -1033,10 +1026,10 @@ int UtilVincentyDirect(double refLat, double refLon, double a1, double distance,
 }
 
 double UtilDegToRad(double Deg) {
-	return (PI * Deg / 180);
+	return (M_PI * Deg / 180);
 }
 double UtilRadToDeg(double Rad) {
-	return (180 * Rad / PI);
+	return (180 * Rad / M_PI);
 }
 
 
@@ -1111,7 +1104,7 @@ int UtilPopulateSpaceTimeArr(ObjectPosition * OP, char *TrajFile) {
 		fclose(Trajfd);
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to open file:%s", TrajFile);
+		fprintf(stderr, "Failed to open file:%s\n", TrajFile);
 	}
 
 	return 0;
@@ -1319,13 +1312,13 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 		i = 0;
 	//OP->BestFoundTrajectoryIndex = 0;
 	if (debug)
-		LogPrint("OPOrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d", OP->OrigoDistance, OP->x, OP->y,
-				 OP->SyncIndex);
+		fprintf(stderr, "UtilFindCurrentTrajectoryPosition: StartIndex=%d, CurrentTime=%4.3f, MaxTrajDiff=%4.3f, MaxTimeDiff=%4.3f\n",
+				OP->OrigoDistance, OP->x, OP->y, OP->SyncIndex);
 
 	Init = 1;
 	while (i < (OP->TrajectoryPositionCount - 1) && i <= OP->SyncIndex) {
 
-		Angle1 = PI / 2 - atan(fabs(OP->SpaceTimeArr[i].y) / fabs(OP->SpaceTimeArr[i].x));
+		Angle1 = M_PI / 2 - atan(fabs(OP->SpaceTimeArr[i].y) / fabs(OP->SpaceTimeArr[i].x));
 		Q1 = 0;
 		if (OP->SpaceTimeArr[i].y >= 0 && OP->SpaceTimeArr[i].x >= 0)
 			Q1 = 1;
@@ -1336,7 +1329,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 		else if (OP->SpaceTimeArr[i].y < 0 && OP->SpaceTimeArr[i].x > 0)
 			Q1 = 4;
 
-		Angle2 = PI / 2 - atan(fabs(OP->y) / fabs(OP->x));
+		Angle2 = M_PI / 2 - atan(fabs(OP->y) / fabs(OP->x));
 		Q2 = 0;
 		if (OP->y >= 0 && OP->x >= 0)
 			Q2 = 1;
@@ -1350,8 +1343,8 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 		if (debug == 2) {
 			R1 = sqrt(pow(OP->SpaceTimeArr[i].x, 2) + pow(OP->SpaceTimeArr[i].y, 2));
 			R2 = sqrt(pow(OP->x, 2) + pow(OP->y, 2));
-			LogPrint("%d, %3.5f, %3.5f, %3.5f, %d, %d, %3.6f", i, fabs(R1 - R2), fabs(R1 - OP->OrigoDistance),
-					 fabs(Angle1 - Angle2), Q1, Q2, fabs(Angle1 - OP->ForwardAzimuth1));
+			fprintf(stderr, "%d, %3.5f, %3.5f, %3.5f, %d, %d, %3.6f\n", i, fabs(R1 - R2), fabs(R1 - OP->OrigoDistance),
+					fabs(Angle1 - Angle2), Q1, Q2, fabs(Angle1 - OP->ForwardAzimuth1));
 		}
 
 
@@ -1365,7 +1358,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 				if ((AngleDiff < PrevAngleDiff) && (i > OP->BestFoundTrajectoryIndex) && RDiff <= MaxTrajDiff) {
 					PositionFound = i;
 					if (debug == 2)
-						LogPrint("Minimum: %d, %3.6f, %3.6f", i, AngleDiff, RDiff);
+						fprintf(stderr, "Minimum: %d, %3.6f, %3.6f\n", i, AngleDiff, RDiff);
 					PrevAngleDiff = AngleDiff;
 				}
 			}
@@ -1378,7 +1371,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 	}
 
 	if (debug)
-		LogPrint("Selected time: %3.3f", OP->SpaceTimeArr[PositionFound].Time);
+		fprintf(stderr, "Selected time: %3.3f\n", OP->SpaceTimeArr[PositionFound].Time);
 
 	if (PositionFound == -1)
 		OP->BestFoundTrajectoryIndex = TRAJ_POSITION_NOT_FOUND;
@@ -1388,14 +1381,14 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 	}
 
 	if (debug == 2) {
-		LogPrint("BestFoundTrajectoryIndex=%d", OP->BestFoundTrajectoryIndex);
-		LogPrint("Current origo distance=%4.3f m", OP->OrigoDistance);
-		LogPrint("Current time=%4.3f s", CurrentTime);
-		LogPrint("Matched origo distance=%4.3f m", OP->SpaceTimeArr[PositionFound].OrigoDistance);
-		LogPrint("Distance error=%4.3f m", OP->OrigoDistance - OP->SpaceTimeArr[PositionFound].OrigoDistance);
-		LogPrint("Expected time=%4.3f s (index=%d)", OP->SpaceTimeArr[PositionFound].Time,
-				 OP->SpaceTimeArr[PositionFound].Index);
-		LogPrint("Time error=%4.3f s", CurrentTime - OP->SpaceTimeArr[PositionFound].Time);
+		fprintf(stderr, "BestFoundTrajectoryIndex=%d\n", OP->BestFoundTrajectoryIndex);
+		fprintf(stderr, "Current origo distance=%4.3f m\n", OP->OrigoDistance);
+		fprintf(stderr, "Current time=%4.3f s\n", CurrentTime);
+		fprintf(stderr, "Matched origo distance=%4.3f m\n", OP->SpaceTimeArr[PositionFound].OrigoDistance);
+		fprintf(stderr, "Distance error=%4.3f m\n", OP->OrigoDistance - OP->SpaceTimeArr[PositionFound].OrigoDistance);
+		fprintf(stderr, "Expected time=%4.3f s (index=%d)\n", OP->SpaceTimeArr[PositionFound].Time,
+				OP->SpaceTimeArr[PositionFound].Index);
+		fprintf(stderr, "Time error=%4.3f s\n", CurrentTime - OP->SpaceTimeArr[PositionFound].Time);
 	}
 
 	return PositionFound;
@@ -1413,8 +1406,8 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition * OP, int StartIndex, do
 	if (i <= -1)
 		i = 0;
 	OP->BestFoundTrajectoryIndex = 0;
-	LogMessage(LOG_LEVEL_DEBUG, "OPOrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d", OP->OrigoDistance,
-			   OP->x, OP->y, OP->SyncIndex);
+	fprintf("UtilFindCurrentTrajectoryPositionNew: TrajectoryPositionCount=%d, SyncIndex=%d, OrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d\n",
+			OP->TrajectoryPositionCount, OP->SyncIndex, OP->OrigoDistance, OP->x, OP->y, OP->SyncIndex);
 
 	Init = 1;
 	while (i < (OP->TrajectoryPositionCount - 1) && i <= OP->SyncIndex) {
@@ -1424,7 +1417,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition * OP, int StartIndex, do
 		FutDiff = (fabs(OP->SpaceTimeArr[i + 2].OrigoDistance - OP->OrigoDistance));
 		BearingDiff = fabs(OP->SpaceTimeArr[i].Bearing - OP->ForwardAzimuth2);
 
-		Angle1 = PI / 2 - atan(fabs(OP->SpaceTimeArr[i].y) / fabs(OP->SpaceTimeArr[i].x));
+		Angle1 = M_PI / 2 - atan(fabs(OP->SpaceTimeArr[i].y) / fabs(OP->SpaceTimeArr[i].x));
 		Q1 = 0;
 		if (OP->SpaceTimeArr[i].y >= 0 && OP->SpaceTimeArr[i].x >= 0)
 			Q1 = 1;
@@ -1435,7 +1428,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition * OP, int StartIndex, do
 		else if (OP->SpaceTimeArr[i].y < 0 && OP->SpaceTimeArr[i].x > 0)
 			Q1 = 4;
 
-		Angle2 = PI / 2 - atan(fabs(OP->y) / fabs(OP->x));
+		Angle2 = M_PI / 2 - atan(fabs(OP->y) / fabs(OP->x));
 		Q2 = 0;
 		if (OP->y >= 0 && OP->x >= 0)
 			Q2 = 1;
@@ -1449,7 +1442,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition * OP, int StartIndex, do
 		R1 = sqrt(pow(OP->SpaceTimeArr[i].x, 2) + pow(OP->SpaceTimeArr[i].y, 2));
 		R2 = sqrt(pow(OP->x, 2) + pow(OP->y, 2));
 		if (debug == 2)
-			LogPrint("%d, %3.5f, %3.5f, %3.5f, %d, %d, %3.6f", i, fabs(R1 - R2), fabs(R1 - OP->OrigoDistance),
+			fprintf(stderr, "%d, %3.5f, %3.5f, %3.5f, %d, %d, %3.6f", i, fabs(R1 - R2), fabs(R1 - OP->OrigoDistance),
 					 fabs(Angle1 - Angle2), Q1, Q2, fabs(Angle1 - OP->ForwardAzimuth1));
 
 		if (Q1 == Q2) {
@@ -1463,7 +1456,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition * OP, int StartIndex, do
 					//SampledSpaceIndex[j] = i;
 					//j++ ;
 					if (debug == 2)
-						LogPrint("Minimum: %d, %3.6f, %3.6f", i, AngleDiff, RDiff);
+						fprintf("Minimum: %d, %3.6f, %3.6f", i, AngleDiff, RDiff);
 					PrevAngleDiff = AngleDiff;
 				}
 
@@ -1477,7 +1470,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition * OP, int StartIndex, do
 	}
 
 	if (debug)
-		LogPrint("Selected time: %3.3f", OP->SpaceTimeArr[PositionFound].Time);
+		fprintf(stderr, "Selected time: %3.3f\n", OP->SpaceTimeArr[PositionFound].Time);
 
 	if (PositionFound == -1)
 		OP->BestFoundTrajectoryIndex = TRAJ_POSITION_NOT_FOUND;
@@ -1511,8 +1504,8 @@ int UtilFindCurrentTrajectoryPositionPrev(ObjectPosition * OP, int StartIndex, d
 	if (i <= -1)
 		i = 2;
 	OP->BestFoundTrajectoryIndex = 0;
-	LogMessage(LOG_LEVEL_DEBUG, "OPOrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d", OP->OrigoDistance,
-			   OP->x, OP->y, OP->SyncIndex);
+	fprintf(stderr, "UtilFindCurrentTrajectoryPosition: StartIndex=%d, CurrentTime=%4.3f, MaxTrajDiff=%4.3f, MaxTimeDiff=%4.3f, SyncIndex=%d\n",
+			StartIndex, CurrentTime, MaxTrajDiff, MaxTimeDiff, OP->SyncIndex);
 
 	Init = 1;
 	while (i < (OP->TrajectoryPositionCount - 1) && i <= OP->SyncIndex) {
@@ -1523,7 +1516,7 @@ int UtilFindCurrentTrajectoryPositionPrev(ObjectPosition * OP, int StartIndex, d
 		BearingDiff = fabs(OP->SpaceTimeArr[i].Bearing - OP->ForwardAzimuth2);
 
 		if (debug == 2)
-			LogPrint("%d, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.6f", i, PrevDiff, Diff, FutDiff,
+			fprintf(stderr, "%d, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.6f\n", i, PrevDiff, Diff, FutDiff,
 					 OP->SpaceTimeArr[i].x, OP->x, OP->SpaceTimeArr[i].y, OP->y,
 					 fabs(OP->SpaceTimeArr[i].Bearing - tan(OP->y / OP->x)));
 
@@ -1535,7 +1528,7 @@ int UtilFindCurrentTrajectoryPositionPrev(ObjectPosition * OP, int StartIndex, d
 				SampledSpaceIndex[j] = i;
 				j++;
 				if (debug == 1)
-					LogPrint("Minimum: %d, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.6f", i,
+					fprintf(stderr, "Minimum: %d, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.6f\n", i,
 							 PrevDiff, Diff, FutDiff, OP->SpaceTimeArr[i].x, OP->x, OP->SpaceTimeArr[i].y,
 							 OP->y, fabs(OP->SpaceTimeArr[i].Bearing - tan(OP->y / OP->x)));
 			}
@@ -1559,7 +1552,7 @@ int UtilFindCurrentTrajectoryPositionPrev(ObjectPosition * OP, int StartIndex, d
 	}
 
 	if (debug)
-		LogPrint("Selected time: %3.3f", OP->SpaceTimeArr[PositionFound].Time);
+		fprintf(stderr, "Selected time: %3.3f\n", OP->SpaceTimeArr[PositionFound].Time);
 
 	if (PositionFound == -1)
 		OP->BestFoundTrajectoryIndex = TRAJ_POSITION_NOT_FOUND;
@@ -1835,7 +1828,7 @@ int UtilGetRowInFile(const char *path, const size_t pathLength,
 		for(int i = 0; i < rows; i ++){
 			length = UtilReadLine(fd, rowBuffer);
 			if(length > bufferLength){ 
-				LogMessage(LOG_LEVEL_ERROR, "Buffer to small for read row in file");
+				fprintf(stderr, "Buffer to small for read row in file\n");
 				return -1;
 			}
 			if(rowIndex == i){
@@ -1848,7 +1841,7 @@ int UtilGetRowInFile(const char *path, const size_t pathLength,
 	return -1;
 }
 
-C8 *UtilSearchTextFile(C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
+C8 *UtilSearchTextFile(const C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
 
 	FILE *fd;
 
@@ -1860,17 +1853,17 @@ C8 *UtilSearchTextFile(C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
 	U8 Found = 0;
 	int RowCount = 0;
 
-	fd = fopen(Filename, "r");
+	fd = fopen( (const char*)Filename, "r");
 
 	if (fd == NULL) {
-		sprintf(RowBuffer, "Unable to open file <%s>", Filename);
+		sprintf(RowBuffer, "Unable to open file <%s>", (const char*) Filename);
 		util_error(RowBuffer);
 	}
 
 	RowCount = UtilCountFileRows(fd);
 	fclose(fd);
 
-	fd = fopen(Filename, "r");
+	fd = fopen((const char*) Filename, "r");
 	if (fd != NULL) {
 		do {
 			bzero(RowBuffer, MAX_ROW_SIZE);
@@ -1897,7 +1890,7 @@ C8 *UtilSearchTextFile(C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
 		fclose(fd);
 	}
 	else {
-		sprintf(RowBuffer, "Unable to open file <%s>", Filename);
+		sprintf(RowBuffer, "Unable to open file <%s>", (const char*) Filename);
 		util_error(RowBuffer);
 	}
 
@@ -1907,625 +1900,11 @@ C8 *UtilSearchTextFile(C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
 }
 
 
-int iUtilGetIntParaConfFile(char *pcParameter, int *iValue) {
-	int iResult;
-	char pcValue[512];
-
-	bzero(pcValue, 512);
-	iResult = iUtilGetParaConfFile(pcParameter, pcValue);
-
-	if (iResult > 0) {
-		*iValue = atoi(pcValue);
-	}
-
-	return iResult;
-}
-
-/*******************************************************
-* Message queue bus wrapper functions
-********************************************************/
-/*!
- * \brief iCommInit Connects to the message queue bus
- * \return 0 upon success, -1 if there was an error
- */
-int iCommInit(void) {
-	enum MQBUS_ERROR result = MQBusConnect();
-
-	switch (result) {
-	case MQBUS_OK:
-		LogMessage(LOG_LEVEL_DEBUG, "Connected to message queue bus");
-		return 0;
-	case MQBUS_QUEUE_NOT_EXIST:
-		LogMessage(LOG_LEVEL_ERROR, "Unable to fetch available message queue bus slots");
-		break;
-	case MQBUS_OPEN_FAIL:
-		LogMessage(LOG_LEVEL_ERROR, "Unable to open message queue");
-		break;
-	case MQBUS_MAX_QUEUES_LIMIT_REACHED:
-		LogMessage(LOG_LEVEL_ERROR, "Unable to find an available message queue slot");
-		break;
-	case MQBUS_EMPTY:
-		LogMessage(LOG_LEVEL_ERROR, "Message queue empty");
-		break;
-	case MQBUS_CLOSE_FAIL:
-		LogMessage(LOG_LEVEL_ERROR, "Unable to close message queue");
-		break;
-	case MQBUS_NO_READABLE_MQ:
-		LogMessage(LOG_LEVEL_ERROR, "Unable to find assigned message queue slot");
-		break;
-	case MQBUS_RESOURCE_NOT_EXIST:
-		LogMessage(LOG_LEVEL_ERROR, "Resource queue unavailable");
-		break;
-	case MQBUS_DESCRIPTOR_NOT_FOUND:
-		LogMessage(LOG_LEVEL_ERROR, "Message queue descriptor not found");
-		break;
-	case MQBUS_INVALID_INPUT_ARGUMENT:
-		LogMessage(LOG_LEVEL_ERROR, "Invalid argument to message queue connect");
-		break;
-	case MQBUS_MQ_COULD_NOT_BE_DESTROYED:
-		LogMessage(LOG_LEVEL_ERROR, "Unable to delete message queue");
-		break;
-	case MQBUS_MQ_FULL:
-		LogMessage(LOG_LEVEL_ERROR, "Message queue full");
-		break;
-	case MQBUS_WRITE_FAIL:
-		LogMessage(LOG_LEVEL_ERROR, "Message queue write failed");
-		break;
-	}
-	return -1;
-}
-
-
-/*!
- * \brief iCommClose Releases the claimed slot on the message bus so that it can be claimed by others.
- * \return 0 upon success, -1 on error
- */
-int iCommClose() {
-	enum MQBUS_ERROR result = MQBusDisconnect();
-
-	switch (result) {
-	case MQBUS_OK:
-		return 0;
-	case MQBUS_RESOURCE_NOT_EXIST:
-		LogMessage(LOG_LEVEL_ERROR, "Unable to release claimed message bus slot");
-		return -1;
-	case MQBUS_NO_READABLE_MQ:
-		LogMessage(LOG_LEVEL_WARNING, "Attempted to release message bus slot when none was claimed");
-		return 0;
-	default:
-		LogMessage(LOG_LEVEL_WARNING, "Unexpected message bus error when closing");
-		return -1;
-	}
-}
-
-
-/*!
- * \brief iCommRecv Poll message queue bus for received data in a nonblocking way, returning the oldest message
- * with lowest priority value found on the queue, as well as the command identifier and time of receipt in UTC
- * \param command Received command output variable
- * \param data Received command data output variable
- * \param messageSize Size of data array
- * \param timeRecv Receive time output variable
- * \return Size (in bytes) of received data
- */
-ssize_t iCommRecv(enum COMMAND *command, char *data, const size_t messageSize, struct timeval *timeRecv) {
-	char message[MQ_MSG_SIZE];
-	ssize_t result = MQBusRecv(message, MQ_MSG_SIZE);
-	size_t dataLength = 0;
-	const size_t headerSize = sizeof (char) + sizeof (dataLength);
-
-	if (result < 1 && errno != EAGAIN)
-		util_error("Message queue error when receiving");
-
-	if (timeRecv != NULL) {
-		// Store time of receipt
-		TimeSetToCurrentSystemTime(timeRecv);
-	}
-
-	if (result >= (ssize_t) (sizeof (char) + sizeof (dataLength))) {
-		// A message was received: extract the command, data length and data
-		*command = (unsigned char)message[0];
-		memcpy(&dataLength, message + sizeof (char), sizeof (dataLength));
-
-		if (dataLength != (size_t)(result)) {
-			LogMessage(LOG_LEVEL_ERROR,
-					   "Received message with invalid length specification field: %d bytes, but %d bytes were received",
-					   dataLength, result);
-			*command = COMM_INV;
-			return 0;
-		}
-		else if (dataLength > headerSize && data != NULL) {
-			if (messageSize < dataLength - headerSize) {
-				LogMessage(LOG_LEVEL_ERROR, "Array too small to hold received message data");
-				*command = COMM_INV;
-				return 0;
-			}
-			memcpy(data, message + headerSize, dataLength - headerSize);
-			result -= headerSize;
-		}
-	}
-	else if (result > 0) {
-		// Message length was not long enough to hold message length
-		LogMessage(LOG_LEVEL_ERROR, "Received message bus message with incorrect format");
-		*command = COMM_INV;
-		result = -1;
-	}
-	else {
-		// Result was less than 0, and errno is EAGAIN meaning no data was received
-		*command = COMM_INV;
-		result = 0;
-	}
-	return result;
-}
-
-/*!
- * \brief iCommSend Sends a command over the message bus
- * \param iCommand Command number
- * \param cpData Command data
- * \param dataLength Length of command data array
- * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
- */
-int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength) {
-	unsigned int uiMessagePrio = 0;
-	char cpMessage[MQ_MSG_SIZE];
-	enum MQBUS_ERROR sendResult;
-	const size_t headerSize = sizeof (char) + sizeof (dataLength);
-
-	// Force array and its length to be coupled
-	if (cpData == NULL || dataLength == 0) {
-		cpData = NULL;
-		dataLength = 0;
-	}
-
-	// Include header in data length
-	dataLength += headerSize;
-
-	// Check if message is too large to send
-	if (dataLength > MQ_MSG_SIZE) {
-		LogMessage(LOG_LEVEL_ERROR, "Cannot send message %d of size %lu: maximum size is %lu", iCommand,
-				   dataLength + 1, MQ_MSG_SIZE);
-		return -1;
-	}
-
-	// Clear send array
-	bzero(cpMessage, MQ_MSG_SIZE);
-
-	// Map command to a priority
-	switch (iCommand) {
-	case COMM_STRT:
-		uiMessagePrio = PRIO_COMM_STRT;
-		break;
-	case COMM_ARM:
-		uiMessagePrio = PRIO_COMM_ARM;
-		break;
-	case COMM_DISARM:
-		uiMessagePrio = PRIO_COMM_DISARM;
-		break;
-	case COMM_STOP:
-		uiMessagePrio = PRIO_COMM_STOP;
-		break;
-	case COMM_EXIT:
-		uiMessagePrio = PRIO_COMM_EXIT;
-		break;
-	case COMM_REPLAY:
-		uiMessagePrio = PRIO_COMM_REPLAY;
-		break;
-	case COMM_ABORT:
-		uiMessagePrio = PRIO_COMM_ABORT;
-		break;
-	case COMM_ABORT_DONE:
-		uiMessagePrio = PRIO_COMM_ABORTING_DONE;
-	break;
-	case COMM_INIT:
-		uiMessagePrio = PRIO_COMM_INIT;
-		break;
-	case COMM_CONNECT:
-		uiMessagePrio = PRIO_COMM_CONNECT;
-		break;
-	case COMM_OBC_STATE:
-		uiMessagePrio = PRIO_COMM_OBC_STATE;
-		break;
-	case COMM_DISCONNECT:
-		uiMessagePrio = PRIO_COMM_DISCONNECT;
-		break;
-	case COMM_OSEM:
-		uiMessagePrio = PRIO_COMM_OSEM;
-		break;
-	case COMM_VIOP:
-		uiMessagePrio = PRIO_COMM_VIOP;
-		break;
-	case COMM_TRAJ:
-		uiMessagePrio = PRIO_COMM_TRAJ;
-		break;
-	case COMM_ASP:
-		uiMessagePrio = PRIO_COMM_ASP;
-		break;
-	case COMM_TRAJ_TOSUP:
-		uiMessagePrio = PRIO_COMM_TRAJ_TOSUP;
-		break;
-	case COMM_TRAJ_FROMSUP:
-		uiMessagePrio = PRIO_COMM_TRAJ_FROMSUP;
-		break;
-	case COMM_DATA_DICT:
-		uiMessagePrio = PRIO_COMM_DATA_DICT;
-		break;
-	case COMM_EXAC:
-		uiMessagePrio = PRIO_COMM_EXAC;
-		break;
-	case COMM_ACCM:
-		uiMessagePrio = PRIO_COMM_ACCM;
-		break;
-	case COMM_TREO:
-		uiMessagePrio = PRIO_COMM_TREO;
-		break;
-	case COMM_TRCM:
-		uiMessagePrio = PRIO_COMM_TRCM;
-		break;
-	case COMM_OBJECTS_CONNECTED:
-		uiMessagePrio = PRIO_OBJECTS_CONNECTED;
-		break;
-	case COMM_REMOTECTRL_ENABLE:
-		uiMessagePrio = PRIO_COMM_REMOTECTRL_ENABLE;
-		break;
-	case COMM_REMOTECTRL_DISABLE:
-		uiMessagePrio = PRIO_COMM_REMOTECTRL_DISABLE;
-		break;
-	case COMM_REMOTECTRL_MANOEUVRE:
-		uiMessagePrio = PRIO_COMM_REMOTECTRL_MANOEUVRE;
-		break;
-	case COMM_BACKTOSTART_CALL:
-        uiMessagePrio = PRIO_COMM_BACKTOSTART;
-        break;
-	case COMM_BACKTOSTART_RESPONSE:
-		uiMessagePrio = PRIO_COMM_BACKTOSTART;
-		break;
-	case COMM_ENABLE_OBJECT:
-		uiMessagePrio = PRIO_COMM_ENABLE_OBJECT;
-		break;
-	case COMM_FAILURE:
-		uiMessagePrio = PRIO_COMM_FAILURE;
-		break;
-	case COMM_GETSTATUS:
-		uiMessagePrio = PRIO_COMM_GETSTATUS;
-		break;
-	case COMM_GETSTATUS_OK:
-		uiMessagePrio = PRIO_COMM_GETSTATUS_OK;
-		break;
-	default:
-		util_error("Unknown command");
-	}
-
-	cpMessage[0] = (char)iCommand;
-
-	// Append message length to command data
-	memcpy(cpMessage + sizeof (char), &dataLength, sizeof (dataLength));
-
-	// Append message to command data
-	if (dataLength > headerSize)
-		memcpy(cpMessage + headerSize, cpData, dataLength - headerSize);
-
-	// Send message
-	sendResult = MQBusSend(cpMessage, dataLength, uiMessagePrio);
-
-	// Check for send success
-	switch (sendResult) {
-	case MQBUS_OK:
-		return 0;
-	case MQBUS_MQ_FULL:
-		LogMessage(LOG_LEVEL_WARNING,
-				   "Attempted to write to full message queue - message may be lost: <%d><%s>", iCommand,
-				   cpData);
-		return 1;
-	case MQBUS_INVALID_INPUT_ARGUMENT:
-		LogMessage(LOG_LEVEL_WARNING, "Invalid message queue message length");
-		return 1;
-	case MQBUS_WRITE_FAIL:
-		LogMessage(LOG_LEVEL_ERROR, "Failed to write to message queue");
-		break;
-	case MQBUS_QUEUE_NOT_EXIST:
-		LogMessage(LOG_LEVEL_ERROR, "Unable to fetch available message queue bus slots");
-		break;
-	case MQBUS_OPEN_FAIL:
-		LogMessage(LOG_LEVEL_ERROR, "Unable to open message queue");
-		break;
-	case MQBUS_MAX_QUEUES_LIMIT_REACHED:
-		LogMessage(LOG_LEVEL_ERROR, "Unable to find an available message queue slot");
-		break;
-	case MQBUS_EMPTY:
-		LogMessage(LOG_LEVEL_ERROR, "Message queue empty");
-		break;
-	case MQBUS_CLOSE_FAIL:
-		LogMessage(LOG_LEVEL_ERROR, "Unable to close message queue");
-		break;
-	case MQBUS_NO_READABLE_MQ:
-		LogMessage(LOG_LEVEL_ERROR, "Unable to find assigned message queue slot");
-		break;
-	case MQBUS_RESOURCE_NOT_EXIST:
-		LogMessage(LOG_LEVEL_ERROR, "Resource queue unavailable");
-		break;
-	case MQBUS_DESCRIPTOR_NOT_FOUND:
-		LogMessage(LOG_LEVEL_ERROR, "Message queue descriptor not found");
-		break;
-	case MQBUS_MQ_COULD_NOT_BE_DESTROYED:
-		LogMessage(LOG_LEVEL_ERROR, "Unable to delete message queue");
-		break;
-	}
-
-	return -1;
-}
-
-/*!
- * \brief iCommSendTREO Sends a trigger event occurred command over message bus
- * \param data Related trigger data
- * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
- */
-int iCommSendTREO(TREOData data) {
-	char sendBuffer[sizeof (TREOData)];
-	char *ptr = sendBuffer;
-
-	memcpy(ptr, &data.triggerID, sizeof (data.triggerID));
-	ptr += sizeof (data.triggerID);
-
-	memcpy(ptr, &data.timestamp_qmsow, sizeof (data.timestamp_qmsow));
-	ptr += sizeof (data.timestamp_qmsow);
-
-	memcpy(ptr, &data.ip, sizeof (data.ip));
-
-	return iCommSend(COMM_TREO, sendBuffer, sizeof (sendBuffer));
-}
-
-/*!
- * \brief iCommSendEXAC Sends an action execute command over message bus
- * \param data Related action data
- * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
- */
-int iCommSendEXAC(EXACData data) {
-	char sendBuffer[sizeof (EXACData)];
-	char *ptr = sendBuffer;
-
-	memcpy(ptr, &data.actionID, sizeof (data.actionID));
-	ptr += sizeof (data.actionID);
-
-	memcpy(ptr, &data.executionTime_qmsoW, sizeof (data.executionTime_qmsoW));
-	ptr += sizeof (data.executionTime_qmsoW);
-
-	memcpy(ptr, &data.ip, sizeof (data.ip));
-
-	return iCommSend(COMM_EXAC, sendBuffer, sizeof (sendBuffer));
-}
-
-/*!
- * \brief iCommSendTRCM Sends a trigger event configuration command over message bus
- * \param data Related trigger data
- * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
- */
-int iCommSendTRCM(TRCMData data) {
-	char sendBuffer[sizeof (TRCMData)];
-	char *ptr = sendBuffer;
-
-	memcpy(ptr, &data.triggerID, sizeof (data.triggerID));
-	ptr += sizeof (data.triggerID);
-
-	memcpy(ptr, &data.triggerType, sizeof (data.triggerType));
-	ptr += sizeof (data.triggerType);
-
-	memcpy(ptr, &data.triggerTypeParameter1, sizeof (data.triggerTypeParameter1));
-	ptr += sizeof (data.triggerTypeParameter1);
-
-	memcpy(ptr, &data.triggerTypeParameter2, sizeof (data.triggerTypeParameter2));
-	ptr += sizeof (data.triggerTypeParameter2);
-
-	memcpy(ptr, &data.triggerTypeParameter3, sizeof (data.triggerTypeParameter3));
-	ptr += sizeof (data.triggerTypeParameter3);
-
-	memcpy(ptr, &data.ip, sizeof (data.ip));
-
-	return iCommSend(COMM_TRCM, sendBuffer, sizeof (sendBuffer));
-}
-
-/*!
- * \brief iCommSendACCM Sends an action configuration command over message bus
- * \param data Related action data
- * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
- */
-int iCommSendACCM(ACCMData data) {
-	char sendBuffer[sizeof (ACCMData)];
-	char *ptr = sendBuffer;
-
-	memcpy(ptr, &data.actionID, sizeof (data.actionID));
-	ptr += sizeof (data.actionID);
-
-	memcpy(ptr, &data.actionType, sizeof (data.actionType));
-	ptr += sizeof (data.actionType);
-
-	memcpy(ptr, &data.actionTypeParameter1, sizeof (data.actionTypeParameter1));
-	ptr += sizeof (data.actionTypeParameter1);
-
-	memcpy(ptr, &data.actionTypeParameter2, sizeof (data.actionTypeParameter2));
-	ptr += sizeof (data.actionTypeParameter2);
-
-	memcpy(ptr, &data.actionTypeParameter3, sizeof (data.actionTypeParameter3));
-	ptr += sizeof (data.actionTypeParameter3);
-
-	memcpy(ptr, &data.ip, sizeof (data.ip));
-
-	return iCommSend(COMM_ACCM, sendBuffer, sizeof (sendBuffer));
-}
-
-
-/*------------------------------------------------------------
-  -- File system functions
-  ------------------------------------------------------------*/
-/*!
- * \brief UtilVerifyTestDirectory Copies a file from source to destination
- * \param source File to be copied
- * \param sourceLen Length of path to file to be copied
- * \param dest Target path
- * \param destLen Length of path to target
- * \return 0 if successfully verified, -1 otherwise
- */
-int UtilCopyFile(
-	const char* source,
-	const size_t sourceLen,
-	const char* dest,
-	const size_t destLen)
-{
-	int fd_to, fd_from;
-    char buf[4096];
-    ssize_t nread;
-
-    fd_from = open(source, O_RDONLY);
-    if (fd_from < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to open file %s", source);
-        return -1;
-	}
-
-    fd_to = open(dest, O_WRONLY | O_CREAT | O_EXCL, S_IWUSR | S_IRUSR | S_IWGRP | S_IRGRP | S_IROTH);
-    if (fd_to < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to open file %s", dest);
-		close(fd_from);
-		return -1;
-	}
-
-    while ((nread = read(fd_from, buf, sizeof buf)) > 0) {
-        char *out_ptr = buf;
-
-        do {
-        	ssize_t nwritten = write(fd_to, out_ptr, nread);
-
-            if (nwritten >= 0) {
-                nread -= nwritten;
-                out_ptr += nwritten;
-            }
-            else if (errno != EINTR) {
-				close(fd_from);
-				close(fd_to);
-				LogMessage(LOG_LEVEL_ERROR, "Failed to write to file %s", dest);
-            }
-        } while (nread > 0);
-    }
-	close(fd_to);
-	close(fd_from);
-
-    if (nread == 0) {
-        return 0;
-	}
-	else {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to read from file %s", source);
-		return -1;
-	}
-}
-
-/*!
- * \brief UtilVerifyTestDirectory Checks so that all the required directories exist
- * (i.e. traj, conf etc.) and that a configuration file exists.
- * \return 0 if successfully verified, -1 otherwise
- */
-int UtilVerifyTestDirectory() {
-	DIR *dir;
-	FILE *file;
-	char testDir[MAX_FILE_PATH];
-	char subDir[MAX_FILE_PATH];
-
-	const char expectedDirs[][MAX_FILE_PATH] = { CONFIGURATION_DIR_NAME,
-		GEOFENCE_DIR_NAME,
-		JOURNAL_DIR_NAME,
-		TRAJECTORY_DIR_NAME
-	};
-	char *envVar;
-	int result;
-
-	envVar = getenv(TEST_DIR_ENV_VARIABLE_NAME);
-	if (envVar == NULL) {
-		strcpy(testDir, getenv("HOME"));
-		strcat(testDir, "/");
-		strcat(testDir, MAESTRO_TEST_DIR_NAME);
-
-		LogMessage(LOG_LEVEL_INFO, "Environment variable %s unset: defaulting to directory %s",
-				   TEST_DIR_ENV_VARIABLE_NAME, testDir);
-	}
-	else {
-		strcpy(testDir, envVar);
-		LogMessage(LOG_LEVEL_INFO, "Using specified test directory %s", testDir);
-	}
-
-	// Check top level dir
-	dir = opendir(testDir);
-	if (dir) {
-		closedir(dir);
-	}
-	else if (errno == ENOENT) {
-		result = mkdir(testDir, 0755);
-		if (result < 0) {
-			LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", testDir);
-			return -1;
-		}
-	}
-	else if (errno == EACCES) {
-		LogMessage(LOG_LEVEL_ERROR,
-				   "Permission to access top level test directory %s denied (please do not run me as root)",
-				   testDir);
-		return -1;
-	}
-	else if (errno == ENOTDIR) {
-		LogMessage(LOG_LEVEL_ERROR, "Top level test directory %s is not a directory", testDir);
-		return -1;
-	}
-	else {
-		LogMessage(LOG_LEVEL_ERROR, "Error opening top level directory %s", testDir);
-		return -1;
-	}
-
-	// Check so that all expected directories exist
-	strcat(testDir, "/");
-	for (unsigned int i = 0; i < sizeof (expectedDirs) / sizeof (expectedDirs[0]); ++i) {
-		strcpy(subDir, testDir);
-		strcat(subDir, expectedDirs[i]);
-
-		dir = opendir(subDir);
-		if (dir) {	
-			closedir(dir);
-		}
-		else if (errno == ENOENT) {
-			// It did not exist: create it
-			LogMessage(LOG_LEVEL_INFO, "Directory %s does not exist: creating it", subDir);
-			result = mkdir(subDir, 0755);
-			if (result < 0) {
-				LogMessage(LOG_LEVEL_ERROR, "Unable to create directory %s", subDir);
-				return -1;
-			}
-		}
-		else {
-			LogMessage(LOG_LEVEL_ERROR, "Error opening directory %s", subDir);
-			return -1;
-		}
-	}
-
-	// Check so that a configuration file exists
-	strcpy(subDir, testDir);
-	strcat(subDir, CONFIGURATION_DIR_NAME "/" CONF_FILE_NAME);
-	file = fopen(subDir, "r+");
-
-	if (file != NULL) {
-		fclose(file);
-	}
-	else {
-		char sysConfDir[MAX_FILE_PATH];
-		strcpy(sysConfDir, SYSCONF_DIR_NAME "/" CONF_FILE_NAME);
-		LogMessage(LOG_LEVEL_INFO, "Configuration file %s does not exist, copying default from %s",
-			subDir, sysConfDir);
-		if (UtilCopyFile(sysConfDir, sizeof(sysConfDir), subDir, sizeof(subDir)) < 0) {
-			LogMessage(LOG_LEVEL_ERROR, "Failed to copy file");
-			return -1;
-		}
-	}
-}
-
 /*!
  * \brief getTestDirectoryPath Gets the absolute path to the directory where subdirectories for
  * trajectories, geofences, configuration etc. are stored, ending with a forward slash. The
  * function defaults to a subdirectory of the user's home directory if the environment variable
- * MAESTRO_TEST_DIR is not set.
+ * ATOS_TEST_DIR is not set.
  * \param path Char array to hold path name
  * \param pathLen Length of char array
  */
@@ -2533,22 +1912,16 @@ void UtilGetTestDirectoryPath(char *path, size_t pathLen) {
 	char *envVar;
 
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
 
-	envVar = getenv(TEST_DIR_ENV_VARIABLE_NAME);
-	if (envVar == NULL) {
-		strcpy(path, getenv("HOME"));
-		strcat(path, "/");
-		strcat(path, MAESTRO_TEST_DIR_NAME);
-		strcat(path, "/");
-	}
-	else {
-		strcpy(path, envVar);
-		strcat(path, "/");
-	}
+	strcpy(path, getenv("HOME"));
+	strcat(path, "/");
+	strcat(path, ATOS_TEST_DIR_NAME);
+	strcat(path, "/");
+
 }
 
 /*!
@@ -2559,7 +1932,7 @@ void UtilGetTestDirectoryPath(char *path, size_t pathLen) {
  */
 void UtilGetJournalDirectoryPath(char *path, size_t pathLen) {
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
@@ -2576,7 +1949,7 @@ void UtilGetJournalDirectoryPath(char *path, size_t pathLen) {
  */
 void UtilGetConfDirectoryPath(char *path, size_t pathLen) {
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
@@ -2593,7 +1966,7 @@ void UtilGetConfDirectoryPath(char *path, size_t pathLen) {
  */
 void UtilGetTrajDirectoryPath(char *path, size_t pathLen) {
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
@@ -2603,6 +1976,41 @@ void UtilGetTrajDirectoryPath(char *path, size_t pathLen) {
 }
 
 /*!
+ * \brief UtilGetOdrDirectoryPath Fetches the absolute path to where OpenDRIVE files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetOdrDirectoryPath(char *path, size_t pathLen) {
+	if (pathLen > MAX_FILE_PATH) {
+		fprintf(stderr, "Path variable too small to hold path data\n");
+		path[0] = '\0';
+		return;
+	}
+	UtilGetTestDirectoryPath(path, pathLen);
+	strcat(path, OPENDRIVE_DIR_NAME);
+	strcat(path, "/");
+}
+
+/*!
+ * \brief UtilGetOscDirectoryPath Fetches the absolute path to where OpenSCENARIO files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetOscDirectoryPath(char *path, size_t pathLen) {
+	if (pathLen > MAX_FILE_PATH) {
+		fprintf(stderr, "Path variable too small to hold path data\n");
+		path[0] = '\0';
+		return;
+	}
+	UtilGetTestDirectoryPath(path, pathLen);
+	strcat(path, OPENSCENARIO_DIR_NAME);
+	strcat(path, "/");
+}
+
+
+/*!
  * \brief UtilGetGeofenceDirectoryPath Fetches the absolute path to where geofence files
  * are stored, ending with a forward slash.
  * \param path Char array to hold the path
@@ -2610,7 +2018,7 @@ void UtilGetTrajDirectoryPath(char *path, size_t pathLen) {
  */
 void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
@@ -2627,7 +2035,7 @@ void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
  */
 void UtilGetObjectDirectoryPath(char *path, size_t pathLen) {
 	if (pathLen > MAX_FILE_PATH) {
-		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		fprintf(stderr, "Path variable too small to hold path data\n");
 		path[0] = '\0';
 		return;
 	}
@@ -2648,18 +2056,17 @@ int UtilDeleteTrajectoryFile(const char *name, const size_t nameLen) {
 
 	if (name == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on null trajectory file");
+		fprintf(stderr, "Attempt to call delete on null trajectory file\n");
 		return -1;
 	}
 	if (strstr(name, "..") != NULL || strstr(name, "/") != NULL) {
 		errno = EPERM;
-		LogMessage(LOG_LEVEL_ERROR,
-				   "Attempt to call delete on trajectory file and navigate out of directory");
+		fprintf(stderr, "Attempt to call delete on trajectory file and navigate out of directory\n");
 		return -1;
 	}
 	if (strlen(filePath) + nameLen > MAX_FILE_PATH) {
 		errno = ENOBUFS;
-		LogMessage(LOG_LEVEL_ERROR, "Trajectory file name too long");
+		fprintf(stderr, "Trajectory file name too long\n");
 		return -1;
 	}
 
@@ -2682,17 +2089,17 @@ int UtilDeleteGeofenceFile(const char *name, const size_t nameLen) {
 
 	if (name == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on null geofence file");
+		fprintf(stderr, "Attempt to call delete on null geofence file\n");
 		return -1;
 	}
 	if (strstr(name, "..") != NULL || strstr(name, "/") != NULL) {
 		errno = EPERM;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on geofence file and navigate out of directory");
+		fprintf(stderr, "Attempt to call delete on geofence file and navigate out of directory\n");
 		return -1;
 	}
 	if (strlen(filePath) + nameLen > MAX_FILE_PATH) {
 		errno = ENOBUFS;
-		LogMessage(LOG_LEVEL_ERROR, "Geofence file name too long");
+		fprintf(stderr, "Geofence file name too long\n");
 		return -1;
 	}
 
@@ -2715,17 +2122,17 @@ int UtilDeleteObjectFile(const char *name, const size_t nameLen) {
 
 	if (name == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on null object file");
+		fprintf(stderr, "Attempt to call delete on null object file\n");
 		return -1;
 	}
 	if (strstr(name, "..") != NULL || strstr(name, "/") != NULL) {
 		errno = EPERM;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on object file and navigate out of directory");
+		fprintf(stderr, "Attempt to call delete on object file and navigate out of directory\n");
 		return -1;
 	}
 	if (strlen(filePath) + nameLen > MAX_FILE_PATH) {
 		errno = ENOBUFS;
-		LogMessage(LOG_LEVEL_ERROR, "Object file name too long");
+		fprintf(stderr, "Object file name too long\n");
 		return -1;
 	}
 
@@ -2747,19 +2154,19 @@ int UtilDeleteGenericFile(const char *pathRelativeToWorkspace, const size_t name
 
 	if (pathRelativeToWorkspace == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on null generic file");
+		fprintf(stderr, "Attempt to call delete on null generic file\n");
 		return -1;
 	}
 
 	if (strstr(pathRelativeToWorkspace, "..") != NULL) {
 		errno = EPERM;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on generic file and navigate out of directory");
+		fprintf(stderr, "Attempt to call delete on generic file and navigate out of directory\n");
 		return -1;
 	}
 
 	if (strlen(filePath) + nameLen > MAX_FILE_PATH) {
 		errno = ENOBUFS;
-		LogMessage(LOG_LEVEL_ERROR, "Generic path name too long");
+		fprintf(stderr, "Generic path name too long\n");
 		return -1;
 	}
 
@@ -2836,7 +2243,7 @@ int UtilParseTrajectoryFileHeader(char *line, TrajectoryFileHeader * header) {
 				break;
 			case 2:
 				if (strlen(token) > sizeof (header->name)) {
-					LogMessage(LOG_LEVEL_ERROR, "Name field \"%s\" in trajectory too long", token);
+					fprintf(stderr, "Name field \"%s\" in trajectory too long\n", token);
 					retval = -1;
 				}
 				else {
@@ -2857,18 +2264,18 @@ int UtilParseTrajectoryFileHeader(char *line, TrajectoryFileHeader * header) {
 				if (noOfLines >= 0)
 					header->numberOfLines = (unsigned int)noOfLines;
 				else {
-					LogMessage(LOG_LEVEL_ERROR, "Found negative number of lines in trajectory");
+					fprintf(stderr, "Found negative number of lines in trajectory\n");
 					retval = -1;
 				}
 				break;
 			default:
-				LogMessage(LOG_LEVEL_ERROR, "Found unexpected \"%s\" in header", token);
+				fprintf(stderr, "Found unexpected \"%s\" in header\n", token);
 				retval = -1;
 			}
 		}
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Cannot parse line \"%s\" as trajectory header", line);
+		fprintf(stderr, "Cannot parse line \"%s\" as trajectory header\n", line);
 		retval = -1;
 	}
 
@@ -2918,7 +2325,7 @@ int UtilParseTrajectoryFileLine(char *line, TrajectoryFileLine * fileLine) {
 		switch (column) {
 		case 1:
 			if (strcmp(token, "LINE")) {
-				LogMessage(LOG_LEVEL_ERROR, "Line start badly formatted");
+				fprintf(stderr, "Line start badly formatted\n");
 				retval = -1;
 			}
 			break;
@@ -2972,19 +2379,19 @@ int UtilParseTrajectoryFileLine(char *line, TrajectoryFileLine * fileLine) {
 			break;
 		case 13:
 			if (strcmp(token, "ENDLINE")) {
-				LogMessage(LOG_LEVEL_ERROR, "Line end badly formatted");
+				fprintf(stderr, "Line end badly formatted\n");
 				retval = -1;
 			}
 			break;
 		default:
-			LogMessage(LOG_LEVEL_ERROR, "Superfluous delimiter in line");
+			fprintf(stderr, "Superfluous delimiter in line\n");
 			retval = -1;
 			break;
 		}
 		tokenIndex = nextTokenIndex + 1;
 	}
 	if (column != 13 && retval == 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Wrong number of fields (%u) in trajectory line", column);
+		fprintf(stderr, "Wrong number of fields (%u) in trajectory line\n", column);
 		retval = -1;
 	}
 
@@ -3004,7 +2411,7 @@ int UtilParseTrajectoryFileFooter(char *line) {
 	token = strtok(line, delimiter);
 	if (!strcmp(token, "ENDTRAJECTORY")) {
 		while ((token = strtok(NULL, delimiter)) != NULL) {
-			LogMessage(LOG_LEVEL_ERROR, "Footer contained unexpected \"%s\"", token);
+			fprintf(stderr, "Footer contained unexpected \"%s\"\n", token);
 			retval = -1;
 		}
 	}
@@ -3037,7 +2444,7 @@ int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen) {
 	memset(&fileLine, 0, sizeof (fileLine));
 
 	if (fp == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Could not open file <%s>", path);
+		fprintf(stderr, "Could not open file <%s>\n", path);
 		return -1;
 	}
 
@@ -3047,31 +2454,31 @@ int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen) {
 		if (row == 1) {			// Header parsing
 			// If header parsing failed, parsing the rest of the file could be risky
 			if ((retval = UtilParseTrajectoryFileHeader(line, &header)) == -1) {
-				LogMessage(LOG_LEVEL_ERROR, "Failed to parse header of file <%s>", path);
+				fprintf(stderr, "Failed to parse header of file <%s>\n", path);
 				break;
 			}
 		}
 		else if (row == header.numberOfLines + 2) {	// Footer parsing
 			if ((retval = UtilParseTrajectoryFileFooter(line)) != 0) {
 				if (UtilParseTrajectoryFileLine(line, &fileLine) == 0) {
-					LogMessage(LOG_LEVEL_ERROR, "File <%s> contains more rows than specified", path);
+					fprintf(stderr, "File <%s> contains %u rows than were specified\n", path);
 					break;
 				}
-				LogMessage(LOG_LEVEL_ERROR, "Failed to parse footer of file <%s>", path);
+				fprintf(stderr, "Failed to parse footer of file <%s>\n", path);
 			}
 		}
 		else if (row > header.numberOfLines + 2) {
-			LogMessage(LOG_LEVEL_ERROR, "File <%s> contains more rows than specified", path);
+			fprintf(stderr, "File <%s> contains more rows than specified\n", path);
 			retval = -1;
 			break;
 		}
 		else {					// Line parsing
 			if (UtilParseTrajectoryFileLine(line, &fileLine) != 0) {
 				if (UtilParseTrajectoryFileFooter(line) == 0)
-					LogMessage(LOG_LEVEL_ERROR, "File <%s> contains %u rows but %u were specified", path,
+					fprintf(stderr, "File <%s> contains %u rows but %u were specified\n", path,
 							   row - 2, header.numberOfLines);
 				else
-					LogMessage(LOG_LEVEL_ERROR, "Failed to parse line %u of file <%s>", row, path);
+					fprintf(stderr, "Failed to parse line %u of file <%s>\n", row, path);
 				retval = -1;
 			}
 		}
@@ -3095,50 +2502,6 @@ int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen) {
 	return retval;
 }
 
-/*------------------------------------------------------------
-  -- Function traj2ldm
-  --  converts a traj file format to a ldm:monitor_t
-  ------------------------------------------------------------*/
-
-void traj2ldm(float time, double x, double y, double z, float hdg, float vel, monitor_t * ldm) {
-
-	char pcTempBuffer[512];
-
-	double earth_radius = EARTH_EQUATOR_RADIUS_M;
-
-	double lat_origin = 0.0;
-	double lon_origin = 0.0;
-	double alt_origin = 0.0;
-	double lat = 0.0;
-	double lon = 0.0;
-	double alt = 0.0;
-
-	ldm->timestamp = (uint64_t) (time * 100);
-	ldm->speed = (uint16_t) (vel * 100);
-	ldm->heading = (uint16_t) (hdg * 100);
-
-	bzero(pcTempBuffer, 512);
-	iUtilGetParaConfFile("OrigoLatitude=", pcTempBuffer);
-	sscanf(pcTempBuffer, "%lf", &lat_origin);
-
-	bzero(pcTempBuffer, 512);
-	iUtilGetParaConfFile("OrigoLongitude=", pcTempBuffer);
-	sscanf(pcTempBuffer, "%lf", &lon_origin);
-
-	bzero(pcTempBuffer, 512);
-	iUtilGetParaConfFile("OrigoAltitude=", pcTempBuffer);
-	sscanf(pcTempBuffer, "%lf", &alt_origin);
-
-	lat = ((y * 180) / (PI * earth_radius)) + lat_origin;
-	lon =
-		((x * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * (lat_origin + lat))))) + lon_origin;
-	alt = z + alt_origin;
-
-	ldm->latitude = (uint32_t) (lat * 10000000);
-	ldm->longitude = (uint32_t) (lon * 10000000);
-	ldm->altitude = (uint32_t) (alt * 100);
-
-}
 
 
 static void init_crc16_tab(void);
@@ -3251,12 +2614,12 @@ I32 UtilConnectTCPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 	*Sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
 	if (*Sockfd < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to open control socket");
+		fprintf(stderr, "Failed to open control socket\n");
 	}
 
 	server = gethostbyname(IP);
 	if (server == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Unknown host");
+		fprintf(stderr, "Unknown host\n");
 	}
 
 	bzero((char *)&serv_addr, sizeof (serv_addr));
@@ -3265,29 +2628,26 @@ I32 UtilConnectTCPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 	bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
 	serv_addr.sin_port = htons(Port);
 
-
-	LogMessage(LOG_LEVEL_INFO, "Attempting to connect to control socket: %s:%i", IP, Port);
+	fprintf(stderr, "Attempting to connect to control socket: %s:%i\n", IP, Port);
 
 	do {
 		iResult = connect(*Sockfd, (struct sockaddr *)&serv_addr, sizeof (serv_addr));
 
 		if (iResult < 0) {
 			if (errno == ECONNREFUSED) {
-				LogMessage(LOG_LEVEL_WARNING, "Unable to connect to %s port %d, retrying in 3 sec...", IP,
-						   Port);
+				fprintf(stderr, "Unable to connect to %s port %d, retrying in 3 sec...\n", IP, Port);
 				fflush(stdout);
 				(void)sleep(3);
 			}
 			else {
-				LogMessage(LOG_LEVEL_ERROR, "Failed to connect to control socket");
+				fprintf(stderr, "Failed to connect to control socket\n");
 			}
 		}
 	} while (iResult < 0);
 
 
 	iResult = fcntl(*Sockfd, F_SETFL, fcntl(*Sockfd, F_GETFL, 0) | O_NONBLOCK);
-
-	LogMessage(LOG_LEVEL_INFO, "Maestro connected to %s:%d", IP, Port);
+	fprintf(stderr, "ATOS connected to %s:%i\n", IP, Port);
 	return iResult;
 
 }
@@ -3313,15 +2673,15 @@ void UtilSendTCPData(const C8 * Module, const C8 * Data, I32 Length, const int *
 	retval = getsockopt(*Sockfd, SOL_SOCKET, SO_ERROR, &error, &len);
 
 	if (retval != 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to get socket error code = %s", strerror(retval));
+		fprintf(stderr, "Failed to get socket error code = %s\n", strerror(retval));
 	}
 
 	if (error != 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Socket error: %s", strerror(error));
+		fprintf(stderr, "Socket error: %s\n", strerror(error));
 	}
 
 	if (n < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to send on control socket, length = %d", Length);
+		fprintf(stderr, "Failed to send on control socket, length = %d\n", Length);
 	}
 }
 
@@ -3360,14 +2720,14 @@ void UtilCreateUDPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 
 	*Sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (*Sockfd < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to connect to CPC socket");
+		fprintf(stderr, "Failed to create CPC socket\n");
 	}
 
 	/* Set address to object */
 	object = gethostbyname(IP);
 
 	if (object == 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Unknown host");
+		fprintf(stderr, "Unknown host\n");
 	}
 
 	bcopy((char *)object->h_addr, (char *)&Addr->sin_addr.s_addr, object->h_length);
@@ -3377,10 +2737,9 @@ void UtilCreateUDPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 	/* set socket to non-blocking */
 	result = fcntl(*Sockfd, F_SETFL, fcntl(*Sockfd, F_GETFL, 0) | O_NONBLOCK);
 	if (result < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Error calling fcntl");
+		fprintf(stderr, "Error calling fcntl\n");
 	}
-
-	LogMessage(LOG_LEVEL_INFO, "Created UDP channel to address: %s:%d", IP, Port);
+	fprintf(stderr, "Created UDP channel to address: %s:%d\n", IP, Port);
 
 
 }
@@ -3401,7 +2760,7 @@ void UtilSendUDPData(const C8 * Module, I32 * Sockfd, struct sockaddr_in *Addr, 
 	}
 
 	if (result < 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to send on process control socket");
+		fprintf(stderr, "Failed to send on process control socket\n");
 	}
 
 }
@@ -3417,22 +2776,22 @@ void UtilReceiveUDPData(const C8 * Module, I32 * Sockfd, C8 * Data, I32 Length, 
 
 		if (Result < 0) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK) {
-				LogMessage(LOG_LEVEL_ERROR, "Failed to receive from monitor socket");
+				fprintf(stderr, "Failed to receive from monitor socket\n");
 			}
 			else {
-				LogMessage(LOG_LEVEL_DEBUG, "No data received");
+				fprintf(stderr, "No data received\n");
 			}
 		}
 		else {
 			*ReceivedNewData = 1;
-			LogMessage(LOG_LEVEL_DEBUG, "Received: <%s>", Data);
+			fprintf(stderr, "Received UDP data: %s\n", Data);
 			// TODO: Change this when bytes thingy has been implemented in logging
 			if (Debug == 1) {
-				printf("[%s] Received UDP data: ", Module);
+				fprintf(stderr,"[%s] Received UDP data: ", Module);
 				i = 0;
 				for (i = 0; i < Result; i++)
-					printf("%x-", (C8) * (Data + i));
-				printf("\n");
+					fprintf(stderr,"%x-", (C8) * (Data + i));
+				fprintf(stderr,"\n");
 			}
 
 		}
@@ -3651,269 +3010,6 @@ U16 UtilGetMillisecond(TimeType * GPSTime) {
 	return MilliU16;
 }
 
-
-/*
-UtilWriteConfigurationParameter updates parameters in the file test.conf.
-
-- *ParameterName the name of the parameter in test.conf
-- *NewValue the value of the parameter.
-- Debug enable(1)/disable(0) debug printouts
-*/
-int32_t UtilWriteConfigurationParameter(const enum ConfigurationFileParameter parameterName,
-										const char *newValue, const size_t bufferLength) {
-
-	int32_t RowCount, i;
-	char Parameter[SMALL_BUFFER_SIZE_64];
-	char Row[SMALL_BUFFER_SIZE_128];
-	char NewRow[SMALL_BUFFER_SIZE_128];
-	FILE *fd, *TempFd;
-	char *ptr1, *ptr2;
-	uint8_t ParameterFound = 0;
-	char confPathDir[MAX_FILE_PATH];
-	char tempConfPathDir[MAX_FILE_PATH];
-	const char TEMP_FILE_NAME[] = "temp-util.conf";
-
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcpy(tempConfPathDir, confPathDir);
-	strcat(confPathDir, CONF_FILE_NAME);
-	strcat(tempConfPathDir, TEMP_FILE_NAME);
-
-	memset(Parameter, 0, sizeof (Parameter));
-
-	UtilGetConfigurationParameterAsString(parameterName, Parameter, sizeof (Parameter));
-
-	strcat(Parameter, "=");
-
-	//Remove temporary file
-	remove(tempConfPathDir);
-
-	//Create temporary file
-	TempFd = fopen(tempConfPathDir, "w+");
-
-	//Open configuration file
-	fd = fopen(confPathDir, "r");
-
-	if (fd != NULL) {
-		RowCount = UtilCountFileRows(fd);
-		fclose(fd);
-		fd = fopen(confPathDir, "r");
-
-		for (i = 0; i < RowCount; i++) {
-			bzero(Row, SMALL_BUFFER_SIZE_128);
-			UtilReadLine(fd, Row);
-
-			ptr1 = strstr(Row, Parameter);
-			ptr2 = strstr(Row, "//");
-			if (ptr2 == NULL)
-				ptr2 = ptr1;	//No comment found
-			if (ptr1 != NULL && (U64) ptr2 >= (U64) ptr1 && ParameterFound == 0) {
-				ParameterFound = 1;
-				bzero(NewRow, SMALL_BUFFER_SIZE_128);
-				strncpy(NewRow, Row, (U64) ptr1 - (U64) Row + strlen(Parameter));
-				strncat(NewRow, newValue, bufferLength);
-				if ((U64) ptr2 > (U64) ptr1) {
-					strcat(NewRow, " ");	// Add space
-					strcat(NewRow, ptr2);	// Add the comment
-				}
-				LogMessage(LOG_LEVEL_DEBUG, "Changed parameter: %s", NewRow);
-
-				strcat(NewRow, "\n");
-				(void)fwrite(NewRow, 1, strlen(NewRow), TempFd);
-
-			}
-			else {
-				strcat(Row, "\n");
-				(void)fwrite(Row, 1, strlen(Row), TempFd);
-			}
-		}
-		fclose(TempFd);
-		fclose(fd);
-
-		//Remove test.conf
-		remove(confPathDir);
-
-		//Rename temp.conf to test.conf
-		rename(tempConfPathDir, confPathDir);
-
-		//Remove temporary file
-		remove(tempConfPathDir);
-	}
-	else {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to open configuration file %s", confPathDir);
-	}
-
-	return (int32_t) ParameterFound;
-}
-
-int32_t UtilReadConfigurationParameter(const enum ConfigurationFileParameter parameter,
-									   char *returnValue, const size_t bufferLength) {
-
-	char TextBuffer[SMALL_BUFFER_SIZE_128];
-	char confPathDir[MAX_FILE_PATH];
-
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcat(confPathDir, CONF_FILE_NAME);
-
-	memset(TextBuffer, 0, sizeof (TextBuffer));
-	memset(returnValue, 0, bufferLength);
-
-	UtilGetConfigurationParameterAsString(parameter, TextBuffer, sizeof (TextBuffer));
-	strcat(TextBuffer, "=");
-
-	UtilSearchTextFile(confPathDir, TextBuffer, "", returnValue);
-
-	LogMessage(LOG_LEVEL_DEBUG, "Read parameter: %s%s\n", TextBuffer, returnValue);
-
-	return strnlen(returnValue, bufferLength);
-}
-
-char *UtilGetConfigurationParameterAsString(const enum ConfigurationFileParameter parameter,
-											char *returnValue, const size_t bufferLength) {
-	const char *outputString = NULL;
-
-	switch (parameter) {
-	case CONFIGURATION_PARAMETER_SCENARIO_NAME:
-		outputString = ParameterNameScenarioName;
-		break;
-	case CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE:
-		outputString = ParameterNameOriginLongitude;
-		break;
-	case CONFIGURATION_PARAMETER_ORIGIN_LATITUDE:
-		outputString = ParameterNameOriginLatitude;
-		break;
-	case CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE:
-		outputString = ParameterNameOriginAltitude;
-		break;
-	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
-		outputString = ParameterNameVisualizationServerName;
-		break;
-	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
-		outputString = ParameterNameASPMaxTimeDiff;
-		break;
-	case CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF:
-		outputString = ParameterNameASPMaxTrajDiff;
-		break;
-	case CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT:
-		outputString = ParameterNameASPStepBackCount;
-		break;
-	case CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL:
-		outputString = ParameterNameASPFilterLevel;
-		break;
-	case CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME:
-		outputString = ParameterNameASPMaxDeltaTime;
-		break;
-	case CONFIGURATION_PARAMETER_TIME_SERVER_IP:
-		outputString = ParameterNameTimeServerIP;
-		break;
-	case CONFIGURATION_PARAMETER_TIME_SERVER_PORT:
-		outputString = ParameterNameTimeServerPort;
-		break;
-	case CONFIGURATION_PARAMETER_SIMULATOR_IP:
-		outputString = ParameterNameSimulatorIP;
-		break;
-	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP:
-		outputString = ParameterNameSimulatorPortTCP;
-		break;
-	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP:
-		outputString = ParameterNameSimulatorPortUDP;
-		break;
-	case CONFIGURATION_PARAMETER_SIMULATOR_MODE:
-		outputString = ParameterNameSimulatorMode;
-		break;
-	case CONFIGURATION_PARAMETER_VOIL_RECEIVERS:
-		outputString = ParameterNameVOILReceivers;
-		break;
-	case CONFIGURATION_PARAMETER_DTM_RECEIVERS:
-		outputString = ParameterNameDTMReceivers;
-		break;
-	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP:
-		outputString = ParameterNameExternalSupervisorIP;
-		break;
-	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP:
-		outputString = ParameterNameExternalSupervisorPortTCP;
-		break;
-	case CONFIGURATION_PARAMETER_RVSS_CONFIG:
-		outputString = ParameterNameRVSSConfig;
-		break;
-	case CONFIGURATION_PARAMETER_RVSS_RATE:
-		outputString = ParameterNameRVSSRate;
-		break;
-	case CONFIGURATION_PARAMETER_MAX_PACKETS_LOST:
-		outputString = ParameterNameMaxPacketsLost;
-		break;
-	case CONFIGURATION_PARAMETER_TRANSMITTER_ID:
-		outputString = ParameterNameTransmitterID;
-		break;
-	case CONFIGURATION_PARAMETER_MISC_DATA:
-		outputString = ParameterNameMiscData;
-		break;
-	default:
-		LogMessage(LOG_LEVEL_ERROR, "No matching configuration parameter for enumerated input");
-		outputString = "";
-	}
-	if (strlen(outputString) + 1 > bufferLength) {
-		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold configuration parameter name");
-		returnValue = "";
-	}
-	else {
-		strncpy(returnValue, outputString, bufferLength);
-	}
-	return returnValue;
-}
-
-
-enum ConfigurationFileParameter UtilParseConfigurationParameter(const char *parameter,
-																const size_t bufferLength) {
-	if (strncmp(ParameterNameScenarioName, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_SCENARIO_NAME;
-	if (strncmp(ParameterNameOriginLatitude, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ORIGIN_LATITUDE;
-	else if (strncmp(ParameterNameOriginLongitude, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE;
-	else if (strncmp(ParameterNameOriginAltitude, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE;
-	else if (strncmp(ParameterNameVisualizationServerName, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME;
-	else if (strncmp(ParameterNameASPMaxTimeDiff, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF;
-	else if (strncmp(ParameterNameASPMaxTrajDiff, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF;
-	else if (strncmp(ParameterNameASPStepBackCount, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT;
-	else if (strncmp(ParameterNameASPFilterLevel, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL;
-	else if (strncmp(ParameterNameASPMaxDeltaTime, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME;
-	else if (strncmp(ParameterNameTimeServerIP, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_TIME_SERVER_IP;
-	else if (strncmp(ParameterNameTimeServerPort, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_TIME_SERVER_PORT;
-	else if (strncmp(ParameterNameSimulatorIP, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_SIMULATOR_IP;
-	else if (strncmp(ParameterNameSimulatorPortTCP, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP;
-	else if (strncmp(ParameterNameSimulatorPortUDP, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP;
-	else if (strncmp(ParameterNameSimulatorMode, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_SIMULATOR_MODE;
-	else if (strncmp(ParameterNameVOILReceivers, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_VOIL_RECEIVERS;
-	else if (strncmp(ParameterNameDTMReceivers, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_DTM_RECEIVERS;
-	else if (strncmp(ParameterNameExternalSupervisorIP, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP;
-	else if (strncmp(ParameterNameExternalSupervisorPortTCP, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP;
-	else if (strncmp(ParameterNameMiscData, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_MISC_DATA;
-	else if (strncmp(ParameterNameRVSSConfig, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_RVSS_CONFIG;
-	else if (strncmp(ParameterNameRVSSRate, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_RVSS_RATE;
-	else
-		return CONFIGURATION_PARAMETER_INVALID;
-}
-
 /*!
  * \brief UtilGetObjectFileSetting Gets the specified setting from an object file
  * \param setting Setting to get
@@ -3934,7 +3030,7 @@ int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char 
 	memset(objectSetting, 0, objectSettingSize);
 	UtilSearchTextFile(objectFilePath, textBuffer, "", objectSetting);
 
-	LogMessage(LOG_LEVEL_DEBUG, "Read object parameter: %s%s", textBuffer, objectSetting);
+	fprintf(stderr, "Read object parameter: %s%s\n", textBuffer, objectSetting);
 
 	return objectSetting[0] == '\0' ? -1 : 0;
 }
@@ -3961,6 +3057,12 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 	case OBJECT_SETTING_TRAJ:
 		outputString = ObjectSettingNameTraj;
 		break;
+	case OBJECT_SETTING_OPENDRIVE:
+		outputString = ObjectSettingNameOpendrive;
+		break;
+	case OBJECT_SETTING_OPENSCENARIO:
+		outputString = ObjectSettingNameOpenscenario;
+		break;	
 	case OBJECT_SETTING_IS_ANCHOR:
 		outputString = ObjectSettingNameIsAnchor;
 		break;
@@ -3986,12 +3088,12 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 		outputString = ObjectSettingNameMaxSpeed;
 		break;
 	default:
-		LogMessage(LOG_LEVEL_ERROR, "No matching configuration parameter for enumerated input");
+		fprintf(stderr, "No matching configuration parameter for enumerated input\n");
 		outputString = "";
 	}
 
 	if (strlen(outputString) + 1 > bufferLength) {
-		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold object setting parameter name");
+		fprintf(stderr, "Buffer too small to hold object setting parameter name\n");
 		returnValue = "";
 	}
 	else {
@@ -4000,31 +3102,31 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 	return returnValue;
 }
 
-int UtilReadOriginConfiguration(GeoPosition* origin) {
-	GeoPosition retval;
+int UtilReadOriginConfiguration(GeoPositionType* origin) {
+	GeoPositionType retval;
 	char setting[20];
 	char* endptr;
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
-									   setting, sizeof (setting))) {
-		retval.Latitude = strtod(setting, &endptr);
-		if (endptr == setting) {
-			return -1;
-		}
-	}
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
-									   setting, sizeof (setting))) {
-		retval.Longitude = strtod(setting, &endptr);
-		if (endptr == setting) {
-			return -1;
-		}
-	}
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE,
-									   setting, sizeof (setting))) {
-		retval.Altitude = strtod(setting, &endptr);
-		if (endptr == setting) {
-			return -1;
-		}
-	}
+	// if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
+	// 								   setting, sizeof (setting))) {
+	// 	retval.Latitude = strtod(setting, &endptr);
+	// 	if (endptr == setting) {
+	// 		return -1;
+	// 	}
+	// }
+	// if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
+	// 								   setting, sizeof (setting))) {
+	// 	retval.Longitude = strtod(setting, &endptr);
+	// 	if (endptr == setting) {
+	// 		return -1;
+	// 	}
+	// }
+	// if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE,
+	// 								   setting, sizeof (setting))) {
+	// 	retval.Altitude = strtod(setting, &endptr);
+	// 	if (endptr == setting) {
+	// 		return -1;
+	// 	}
+	// }
 	retval.Heading = 0; // TODO
 	*origin = retval;
 	return 0;
@@ -4041,8 +3143,8 @@ int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize,
 
 	if (rawDataSize != sizeof (ObjectDataType)) {
 		errno = EMSGSIZE;
-		LogMessage(LOG_LEVEL_ERROR, "Raw monitor data array wrong size, %d != %d",
-				   rawDataSize, sizeof (ObjectDataType));
+		fprintf(stderr, "Raw monitor data array wrong size, %d != %d\n",
+				rawDataSize, sizeof (ObjectDataType));
 		return -1;
 	}
 
@@ -4061,7 +3163,7 @@ int UtilPopulateTREODataStructFromMQ(char * rawTREO, size_t rawTREOsize, TREODat
 	char *rdPtr = rawTREO;
 
 	if (rawTREOsize < sizeof (TREOData)) {
-		LogMessage(LOG_LEVEL_ERROR, "Raw TREO array too small to hold all necessary TREO data");
+		fprintf(stderr, "Raw TREO array too small to hold all necessary TREO data\n");
 		return -1;
 	}
 
@@ -4087,7 +3189,7 @@ int UtilPopulateEXACDataStructFromMQ(char * rawEXAC, size_t rawEXACsize, EXACDat
 	char *rdPtr = rawEXAC;
 
 	if (rawEXACsize < sizeof (EXACData)) {
-		LogMessage(LOG_LEVEL_ERROR, "Raw EXAC array too small to hold all necessary EXAC data");
+		fprintf(stderr, "Raw EXAC array too small to hold all necessary EXAC data\n");
 		return -1;
 	}
 
@@ -4113,7 +3215,7 @@ int UtilPopulateTRCMDataStructFromMQ(char * rawTRCM, size_t rawTRCMsize, TRCMDat
 	char *rdPtr = rawTRCM;
 
 	if (rawTRCMsize < sizeof (TRCMData)) {
-		LogMessage(LOG_LEVEL_ERROR, "Raw TRCM array too small to hold all necessary TRCM data");
+		fprintf(stderr, "Raw TRCM array too small to hold all necessary TRCM data\n");
 		return -1;
 	}
 
@@ -4148,7 +3250,7 @@ int UtilPopulateACCMDataStructFromMQ(char * rawACCM, size_t rawACCMsize, ACCMDat
 	char *rdPtr = rawACCM;
 
 	if (rawACCMsize < sizeof (ACCMData)) {
-		LogMessage(LOG_LEVEL_ERROR, "Raw ACCM array too small to hold all necessary ACCM data");
+		fprintf(stderr, "Raw ACCM array too small to hold all necessary ACCM data\n");
 		return -1;
 	}
 
@@ -4189,13 +3291,13 @@ struct timeval UtilGetPIDUptime(pid_t pID) {
 
 	pidstat = fopen(filename, "r");
 	if (pidstat == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Error: Couldn't open [%s]\n", filename);
+		fprintf(stderr, "Error: Couldn't open [%s]\n", filename);
 		timeSinceStart.tv_sec = -1;
 		timeSinceStart.tv_usec = -1;
 		return timeSinceStart;
 	}
 
-	char strval1[100] = { 0 };
+	char strval1[255] = { 0 };
 	fgets(strval1, 255, pidstat);
 
 	fclose(pidstat);

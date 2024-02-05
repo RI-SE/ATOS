@@ -1,188 +1,75 @@
-# Maestro 
-<img align="left" width="100" height="100" src="/doc/MaestroServer.svg">
+# ATOS - AV Test Operating System
+<img align="left" width="100" height="100" src="./docs/res/ATOS_icon.svg">
+<img align="right" width="400" height="300" src="https://user-images.githubusercontent.com/15685739/227924215-d5ff67f8-1e03-45d0-ae20-8e60819b2ff7.png">
 
-The Maestro server is a communication hub for all test objects. The server monitors and controls the test objects and is also responsible for creating logfiles.
+ATOS stands for AV Test Operating System, and is an ISO 22133-compliant and ROS2-based scenario execution engine, controls, monitors and coordinates both physical and virtual vehicles and equipment according to scenarios specified in the ASAM OpenSCENARIO® format. It is made for running in real-time and uses GPS time to ensure exact and repeatable execution between runs.
 
 <br />
 <br />
+To build ATOS follow the guide below. More documentation can be found [here](https://atos.readthedocs.io/en/latest/).
+
+<br />
+<br />
+<br />
 
 
-To build Maestro follow the guide below.
+# <a name="ATOS"></a> Installing ATOS
+There are two ways to start using ATOS: using the docker image or building from source. The docker image is the easiest way to get started, but if you intend to make changes to ATOS, we recommend building from source.
 
-
-## How to build and run the server
-
-Prerequisites: C/C++ compiler, CMake (minimum version 3.10.2)
-
-**Ubuntu**
-
-Make sure to have an updated package index (apt update).
-
-##### Dependencies (required)
-
-Install necessary development packages:
-
-```sh
-sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev
+## <a name="docker"></a> Using the docker image
+To run ATOS using the docker image, first install docker on your computer. Then, run the following command from the root repo directory:
+```bash
+docker compose up
 ```
 
-Install OpenSimulationInterface (see [https://github.com/OpenSimulationInterface](https://github.com/OpenSimulationInterface/open-simulation-interface#installation)):
+You can also start ATOS without the compose file with docker run:
 
-```sh
-git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git
-cd open-simulation-interface
-mkdir build
-cd build
-cmake ..
-make
-sudo make install
+If you run Docker Engine you can start ATOS using the computers own network stack with
+```bash
+docker run --network="host"  --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
 ```
-
-##### Dependencies (optional)
-Install SWIG:
-
-See https://github.com/RI-SE/iso22133#readme
-
-
-##### Build and run the server
-
-Clone the repo and make sure you run the following command to update all submodules:
-
-```sh
-git submodule update --init --recursive
+If you run Docker Desktop you will need to specify the ports to expose to the host computer.
+```bash
+docker run --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ -p 80:80 -p 8080:8080 -p 8081:8081 -p 8082:8082 -p 3000:3000 -p 3443:3443 -p 55555:55555 -p 443:443 -p 9090:9090 astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
 ```
 
-Navigate to the the repo and enter the build directory 
+You might wish to mount the config directory at ~/.astazero/ATOS/ to a different location on your host computer. This can be done by changing the path after the -v flag in the above command. You might also wish to inspect the image with instead of running the launch_basic.py script. This can be done by removing the last "bash -c ..." part of the command.
 
-```sh
-mkdir build && cd build
-```
-create project
-```sh
-cmake ..
-```
 
-make the project and install (requires superuser privileges). This will create required directories for logs, configuration files etc.:
-```sh
-make && sudo make install
+## <a name="Installation script"></a> Using the installation script
+ATOS comes with an installation script that automates the installation process. It is intended for use on Ubuntu 22.04. The script will install ROS2 Humble, ATOS dependencies, and ATOS itself. It will also create a workspace (~/atos_ws) and build ATOS. The script can be executed using the following command:
+```bash
+./setup_atos.sh
 ```
 
-Start the server
-```sh
-bin/Core
-```
+## <a name="Native build"></a> Building from source manually
+You can find instructions on how to manually install ATOS and its dependencies from source [here](https://atos.readthedocs.io/en/latest/Installation/installation/).
 
-To get debug printouts, add the verbose option when running:
-```
-bin/Core -v
-```
+# <a name="usage"></a> Using ATOS with a Graphical User Interface (GUI)
+Please click [here](https://atos.readthedocs.io/en/latest/Usage/GUI/foxglove/) for instructions on how to use ATOS with a GUI.
 
-To run one or several of the modules along with Core, either run them in a separate terminal after starting Core (with the required number of additional message queue slots with `-m`):
-```
-# Core binary
-bin/Core -m 2
-# Module binaries in new terminals
-bin/RelativeKinematics
-bin/Visualization
-```
+# Funded by
+This project has partly been funded by the below organisations. The herein expressed views of the contributors do not necessarily reflect the views of the organisations.
 
-or, modify the runServer.sh script by adding the modules you wish to execute in the variable near the top. Then run the script from the top level directory:
-```sh
-./runServer.sh
-```
-To see which modules are available, check the build output inside the ```build/bin``` directory
 
-### Installation
-To install the server (recommended) navigate to the build directory and configure the project:
-```sh
-cd build
-cmake ..
-```
-then build and install the server (be aware that this requires superuser privileges)
-```sh
-sudo make install
-```
+<br>
+<br>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/15685739/229127771-1d7e9c89-fc0d-4271-a7da-d805f2e6b884.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/15685739/229127758-612ec1a7-89cf-4d51-86bc-cb6ab47e422f.svg">
+  <img alt="AstaZero logo" src="https://user-images.githubusercontent.com/15685739/229127758-612ec1a7-89cf-4d51-86bc-cb6ab47e422f.svg">
+</picture>
 
-### Installation via dpkg
-First install dependencies
-```sh
-sudo apt install libsystemd-dev libprotobuf-dev libeigen3-dev
-```
-then navigate to the .deb file and install it
-```sh
-sudo dpkg -i Maestro-x.x.x-Linux.deb
-```
-on first install, it is necessary to reboot to reload groups
+<br>
+<br>
+<br>
+<br>
 
-## Troubleshooting
-The command
-```sh
-groups
-```
-should show the current user belonging to the maestro group, and
-```sh
-mount -l | grep -E "(shm|mqueue)"
-```
-should show two mount points on /dev/shm and /dev/mqueue. The directory
-```sh
-ls -lad /var/log/maestro
-```
-should be owned by the maestro group.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/15685739/229121585-34dc9018-e142-4841-bc19-2485cdf03eac.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/15685739/229119880-8c0a30eb-f805-4da4-a6d7-544ed7dbea87.png">
+  <img alt="Vinnova logo" src="https://user-images.githubusercontent.com/15685739/229119880-8c0a30eb-f805-4da4-a6d7-544ed7dbea87.png">
+</picture>
+<br>
+<br>
 
-## Building the server with CITS module and mqtt
-
-The CITS module uses PAHO MQTT, which can be found through the following link:
-https://www.eclipse.org/paho/
-
-To be able to run the server with the CITS module you must first build and install paho mqtt. 
-
-Paho mqtt requires OpenSSL to be able to run. To install OpenSSL do
-```sh
-apt-get install libssl-dev
-```
-In order to get and build the documentation for paho mqtt, do the following
-```sh
-apt-get install doxygen graphviz
-```
-
-Now get the latest source code for paho mqtt
-```sh
-git clone https://github.com/eclipse/paho.mqtt.c.git
-```
-
-Go to the root of the cloned git repo and build the documentation by doing
-```sh
-cd paho.mqtt.c.git
-make html
-```
-This will build the documentation for all the code. Then proceede to build and install paho
-```sh
-make
-sudo make install
-```
-
-The server will not build the CITS module by default. This is to prevent the use of the CITS module when it is not necessary. To enable building of the module, run `cmake` from the `build/` directory
-```sh
-cmake "Unix Makefiles" -DUSE_CITS:BOOL=TRUE ..
-```
-then you can build and run the server as normal
-```sh
-make && cd bin
-./Core
-```
-
-To disable the CITS module, remake the `cmake` procedure
-```sh
-cmake "Unix Makefiles" -DUSE_CITS:BOOL=FALSE ..
-```
-
-## How to build with RelativeKinematics instead of ObjectControl
-
-The server will build ObjectControl thread in Core by default. It's possible to replace ObjectControl with the RelativeKinematics module remaking the `cmake` procedure with the argument -DWITH_RELATIVE_KINEMATICS=ON, see following command
-```sh
-cmake .. -DWITH_RELATIVE_KINEMATICS=ON
-```
-To include ObjectControl in the build again run the same command with OFF, see following command
-```sh
-cmake .. -DWITH_RELATIVE_KINEMATICS=OFF
-```

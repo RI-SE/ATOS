@@ -1,3 +1,8 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 #ifndef TRAJECTORY_H
 #define TRAJECTORY_H
 
@@ -10,19 +15,25 @@
 #include <eigen3/Eigen/Dense>
 #include <math.h>
 #include <chrono>
+#include <nav_msgs/msg/path.hpp>
+#include <foxglove_msgs/msg/geo_json.hpp>
+
+#include "loggable.hpp"
+#include "atos_interfaces/msg/cartesian_trajectory.hpp"
 
 #include "util.h"
-
-class Trajectory {
+//! ATOS Namespace
+namespace ATOS {
+class Trajectory : public Loggable {
 public:
-	class TrajectoryPoint {
+	class TrajectoryPoint : public Loggable {
 	public:
 		typedef enum {
 			CONTROLLED_BY_DRIVE_FILE,
 			CONTROLLED_BY_VEHICLE
 		} ModeType;
 
-		TrajectoryPoint() {
+		TrajectoryPoint(rclcpp::Logger log) : Loggable(log) {
 			position[2] = std::numeric_limits<double>::quiet_NaN();
 			velocity[0] = std::numeric_limits<double>::quiet_NaN();
 			velocity[1] = std::numeric_limits<double>::quiet_NaN();
@@ -117,7 +128,7 @@ public:
 		template<typename T, int rows>
 		Eigen::Matrix<T, rows, 1> zeroNaNs(
 				const Eigen::Matrix<T, rows, 1>& v) const {
-			static_assert(v.SizeAtCompileTime != 0, "Zero size matrix passed to zeroNaNs");
+			assert(v.SizeAtCompileTime != 0 && "Zero size matrix passed to zeroNaNs");
 			Eigen::Matrix<T, rows, 1> ret(v);
 			for (int i = 0; i < ret.SizeAtCompileTime; ++i) {
 				ret[i] = isnan(ret[i]) ? 0.0 : ret[i];
@@ -130,7 +141,7 @@ public:
 	typedef std::vector<TrajectoryPoint>::reverse_iterator reverse_iterator;
 	typedef std::vector<TrajectoryPoint>::const_reverse_iterator const_reverse_iterator;
 
-	Trajectory() = default;
+	Trajectory(rclcpp::Logger log) : Loggable(log) {}
 	~Trajectory() { points.clear(); }
 	Trajectory(const Trajectory& other);
 	std::vector<TrajectoryPoint> points;
@@ -138,15 +149,23 @@ public:
 	unsigned short version = 0;
 	unsigned short id = 0;
 
+	Trajectory& operator=(const Trajectory& other);
+
 	void initializeFromFile(const std::string& fileName);
+	void initializeFromCartesianTrajectory(const atos_interfaces::msg::CartesianTrajectory& cartesianTrajectory);
 	Trajectory relativeTo(const Trajectory& other) const;
 	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
 	std::string toString() const;
+	atos_interfaces::msg::CartesianTrajectory toCartesianTrajectory();
+	nav_msgs::msg::Path toPath() const;
+	foxglove_msgs::msg::GeoJSON toGeoJSON(std::array<double,3> llh_0) const;
+	std::size_t size() const { return points.size(); }
 
 	void saveToFile(const std::string& fileName) const;
 	Trajectory reversed() const;
 	Trajectory rescaledToVelocity(const double vel_m_s) const;
-	static Trajectory createWilliamsonTurn(double turnRadius = 5, double acceleration = 1, TrajectoryPoint startPoint = TrajectoryPoint(), std::chrono::milliseconds startTime = std::chrono::milliseconds(0));
+	static Trajectory createWilliamsonTurn(double turnRadius, double acceleration, double minSpeed, double maxSpeed, 
+										  TrajectoryPoint startPoint, std::chrono::milliseconds startTime = std::chrono::milliseconds(0));
 
 	Trajectory appendedWith(const Trajectory& other);
 	template<class Rep,class Period>
@@ -168,6 +187,6 @@ private:
 
 	bool areTimestampsIncreasing() const;
 };
-
+} // namespace ATOS
 
 #endif

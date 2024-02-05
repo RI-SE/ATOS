@@ -1,0 +1,40 @@
+site_name: ATOS Docs
+repo_url: https://github.com/RI-SE/ATOS
+theme:
+    name: readthedocs
+    logo: res/ATOS_icon.png
+
+markdown_extensions:
+  - admonition
+nav:
+  - ATOS Doxygen: html/index.html
+  - About:
+      - "index.md"
+      - "About/aboutATOS.md"
+      - "Usage/Summary/summary_of_states.md"
+  - Installation:
+      - "Installation/installation.md"
+  - Using ATOS:
+      - "Installation/quickstart.md"
+      - "Usage/How-to/configuration.md"
+      - "Usage/GUI/foxglove.md"
+      - "Usage/GUI/controlpanel.md"
+  - Modules:
+      - "Usage/Modules/ATOSBase.md"
+      - "Usage/Modules/BackToStart.md"
+      - "Usage/Modules/DirectControl.md"
+      - "Usage/Modules/EsminiAdapter.md"
+      - "Usage/Modules/IntegrationTesting.md"
+      - "Usage/Modules/JournalControl.md"
+      - "Usage/Modules/MQTTBridge.md"
+      - "Usage/Modules/OSIAdapter.md"
+      - "Usage/Modules/ObjectControl.md"
+      - "Usage/Modules/PointcloudPublisher.md"
+      - "Usage/Modules/SampleModule.md"
+      - "Usage/Modules/TrajectoryletStreamer.md"
+  - Contributing:
+      - "Contributing/Contributing.md"
+      - "Contributing/Feature Requests/Feature_requests.md"
+      - "Contributing/Issues/issues.md"
+      - "Contributing/Pull Requests/pull_requests.md"
+      - "Contributing/Testing/testing.md"

@@ -3,12 +3,13 @@
 #include <cmath>
 #include <vector>
 #include <iostream>
+#include <rclcpp/logging.hpp>
 #define TIME_TOL_S 0.000001
 #define POS_TOL_M 0.001
 #define VEL_TOL_M_S 0.001
 #define ACC_TOL_M_S2 0.001
 #define HDG_TOL_DEG 0.1
-
+using namespace ATOS;
 using traj_pt = Trajectory::TrajectoryPoint;
 static void time_test();
 static void position_test();
@@ -52,7 +53,7 @@ void set_default(traj_pt& pt) {
 }
 
 void time_test() {
-	traj_pt p1, p2;
+	traj_pt p1(rclcpp::get_logger("test")), p2(rclcpp::get_logger("test"));
 	set_default(p1);
 	set_default(p2);
 
@@ -82,7 +83,7 @@ void time_test() {
 }
 
 void position_test() {
-	traj_pt p1, p2;
+	traj_pt p1(rclcpp::get_logger("test")), p2(rclcpp::get_logger("test"));
 	set_default(p1);
 	set_default(p2);
 	typedef struct {
@@ -162,7 +163,7 @@ void position_test() {
 }
 
 void heading_test() {
-	traj_pt p1, p2;
+	traj_pt p1(rclcpp::get_logger("test")), p2(rclcpp::get_logger("test"));
 	set_default(p1);
 	set_default(p2);
 
@@ -196,7 +197,7 @@ void heading_test() {
 }
 
 void velocity_test() {
-	traj_pt p1, p2;
+	traj_pt p1(rclcpp::get_logger("test")), p2(rclcpp::get_logger("test"));
 	set_default(p1);
 	set_default(p2);
 
@@ -296,7 +297,7 @@ void velocity_test() {
 }
 
 void acceleration_test() {
-	traj_pt p1, p2;
+	traj_pt p1(rclcpp::get_logger("test")), p2(rclcpp::get_logger("test"));
 	set_default(p1);
 	set_default(p2);
 
@@ -398,7 +399,7 @@ void curvature_test() {
 }
 
 void mode_test() {
-	traj_pt p1, p2;
+	traj_pt p1(rclcpp::get_logger("test")), p2(rclcpp::get_logger("test"));
 	set_default(p1);
 	set_default(p2);
 

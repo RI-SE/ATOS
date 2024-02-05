@@ -1,0 +1,183 @@
+{
+  "configById": {
+    "atos_simple_control.Simple Control!494eifz": {
+      "atosHostname": "localhost",
+      "atosPort": "3443",
+      "atosProtocol": "https"
+    },
+    "map!2s6yzns": {
+      "center": {
+        "lat": 57.777672270673726,
+        "lon": 12.781346216797829
+      },
+      "customTileUrl": "",
+      "disabledTopics": [
+        "/atos/object_1/object_monitor"
+      ],
+      "followTopic": "",
+      "layer": "satellite",
+      "topicColors": {
+        "/atos/object_1/gnss_fix": "#4d87ff",
+        "/atos/object_1/gnss_path": "#4d87ff",
+        "/atos/object_2/gnss_fix": "#ffffff",
+        "/atos/object_2/gnss_path": "#ffffff",
+        "/atos/object_3/gnss_fix": "#b2883f",
+        "/atos/object_3/gnss_path": "#b2883f",
+        "/atos/object_4/gnss_fix": "#ff0000",
+        "/atos/object_4/gnss_path": "#ff0000",
+        "/atos/object_5/gnss_fix": "#6ae34f",
+        "/atos/object_5/gnss_path": "#6ae34f",
+        "/atos/object_6/gnss_fix": "#e3d34f",
+        "/atos/object_6/gnss_path": "#e3d34f"
+      },
+      "zoomLevel": 20,
+      "foxglovePanelTitle": "Map",
+      "maxNativeZoom": 18
+    },
+    "3D!2yjwohu": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 75.89554049183577,
+        "phi": 43.83172400634453,
+        "thetaOffset": 24.23382261497037,
+        "targetOffset": [
+          0.24389553747049852,
+          9.039596099781724,
+          -1.7979191765864265e-15
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {
+        "/atos/object_1/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#6b7bff"
+        },
+        "/atos/object_1/path": {
+          "visible": true,
+          "gradient": [
+            "#6b7bffff",
+            "#6b7bffff"
+          ]
+        },
+        "/atos/object_2/path": {
+          "visible": true,
+          "gradient": [
+            "#ffffffff",
+            "#ffffffff"
+          ]
+        },
+        "/atos/object_3/path": {
+          "visible": true,
+          "gradient": [
+            "#dba652ff",
+            "#dba652ff"
+          ]
+        },
+        "/atos/object_4/path": {
+          "visible": true,
+          "gradient": [
+            "#ff6b6bff",
+            "#ff6b6bff"
+          ]
+        },
+        "/atos/object_5/path": {
+          "visible": true,
+          "gradient": [
+            "#86ff6bff",
+            "#86ff6bff"
+          ]
+        },
+        "/atos/object_6/path": {
+          "visible": true,
+          "gradient": [
+            "#fffd6bff",
+            "#fffd6bff"
+          ]
+        },
+        "/atos/object_2/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#ffffff"
+        },
+        "/atos/object_3/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#dba652"
+        },
+        "/atos/object_4/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#ff6b6b"
+        },
+        "/atos/object_5/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#86ff6b"
+        },
+        "/atos/object_6/object_monitor": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#fffd6b"
+        },
+        "/atos/site_scan/FLXZone": {
+          "visible": true,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo"
+        },
+        "/initialpose": {
+          "visible": false
+        },
+        "/move_base_simple/goal": {
+          "visible": false
+        }
+      },
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    }
+  },
+  "globalVariables": {
+    "": "lat:"
+  },
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "first": "atos_simple_control.Simple Control!494eifz",
+      "second": "map!2s6yzns",
+      "direction": "column",
+      "splitPercentage": 22.626441881100266
+    },
+    "second": "3D!2yjwohu",
+    "direction": "row",
+    "splitPercentage": 51.74904972888746
+  }
+}
