@@ -3,5 +3,13 @@ name: Clang
 on: [pull_request]
 
 jobs:
+    checkout:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Check out repository
+          uses: actions/checkout@v3
+          with:
+            submodules: recursive
+    
     build:
         uses: ./.github/workflows/build.yaml
