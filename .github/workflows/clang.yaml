@@ -3,6 +3,24 @@ name: Clang
 on: [pull_request]
 
 jobs:
-  build:
-    uses: ./.github/workflows/build.yaml
-
+    build:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Check out repository
+          uses: actions/checkout@v3
+          with:
+            submodules: recursive
+  
+        - name: Restore build cache
+          id: cache-build-restore
+          uses: actions/cache/restore@v4
+          with:
+            path: |
+              /github/home/atos_ws/build
+              /github/home/atos_ws/install
+            key: ${{ runner.os }}-build
+  
+        - name: Install ATOS
+          run: |
+            ./setup_atos.sh
+          shell: bash
