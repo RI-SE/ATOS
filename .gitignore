@@ -58,6 +58,7 @@ CMakeCache.txt
 scripts/*.xosc
 scripts/openscenario/*.xosc
 docs/html/*
+log/
 
 #
 *.env
