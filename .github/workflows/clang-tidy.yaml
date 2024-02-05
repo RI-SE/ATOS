@@ -86,9 +86,8 @@ jobs:
           mkdir /tmp/clang-format-result
           for file_path in ${{ steps.target-files.outputs.all }}; do
             folder_name="${file_path%/*}/"
-            echo $folder_name
             mkdir -p /tmp/clang-format-result/$folder_name
-            clang-format ${file_path} > /tmp/clang-format-result/file_path || true
+            clang-format ${file_path} > /tmp/clang-format-result/${file_path} || true
           done
 
       - name: Upload artifacts
