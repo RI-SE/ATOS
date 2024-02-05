@@ -36,7 +36,7 @@ jobs:
           path: |
             $HOME/atos_ws/build
             $HOME/atos_ws/install
-          key: ${{ steps.cache-build-restore.outputs.cache-primary-key }}
+          key: ${{ runner.os }}-build
 
       - name: Install Clang-Tidy
         run: |
