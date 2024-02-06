@@ -44,14 +44,14 @@ jobs:
         shell: bash
 
       - name: Upload cppcheck result
-        if: ${{ steps.check-cppcheck-result-empty.outputs.empty == 'true' }}
+        if: ${{ steps.check-cppcheck-result-empty.outputs.empty == 'false' }}
         uses: actions/upload-artifact@v4
         with:
           name: cppcheck-result
           path: /tmp/cppcheck-result/
 
-      - name: Mark the workflow as failed if the fixes.yaml file exists
-        if: ${{ steps.check-cppcheck-result-empty.outputs.empty == 'true' }}
+      - name: Mark the workflow as failed if the cppcheck-results.txt file contains errors
+        if: ${{ steps.check-cppcheck-result-empty.outputs.empty == 'false' }}
         run: |
           exit 1
         shell: bash
