@@ -11,3 +11,4 @@
     lsb-release
     python3-pip
     proj-bin
+    clang
