@@ -32,3 +32,8 @@ atos:
   integration_testing_handler:
     ros__parameters:
       scenario_execution: true
+  back_to_start:
+    ros__parameters:
+      turn_radius: 5.0
+      min_speed: 4.0
+      max_speed: 12.0

@@ -22,7 +22,7 @@ services:
     #   - "55555:55555"
     #   - "443:443"
     #   - "9090:9090" 
-    command: bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
+    command: bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py insecure:=True"
   foxglove-studio:
     image: ghcr.io/foxglove/studio:1.76
     network_mode: host

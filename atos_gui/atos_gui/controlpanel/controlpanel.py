@@ -1,10 +1,15 @@
+"""This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+"""
+
 from atos_interfaces.srv import *
 
 import rclpy
 from std_msgs.msg import Empty
 from rclpy.node import Node
 
-from nicegui import Client, ui
+from nicegui import ui
 
 QOS = rclpy.qos.QoSProfile(depth=10)
 
@@ -40,26 +45,22 @@ class ControlPanelNode(Node):
         self.OBC_state = {'state': "UNDEFINED"}
         self.lost_connection = True
 
-        with Client.auto_index_client:
-            pass
-
-
         @ui.page(path='/control', title="ATOS Control Panel")
         def render_page():
             with ui.row().bind_visibility_from(self, 'lost_connection'):
-                ui.label('Lost connection to ATOS...')
+                ui.label('Lost connection to ATOS...').tailwind.text_color('red')
             with ui.row():
-                ui.button('Abort', on_click=lambda: self.abortPub.publish(Empty()), color='red')
+                ui.button('Abort', on_click=lambda: self.abortPub.publish(Empty()), color='red').props('size=large ')
             with ui.row():
                 ui.button('Init', on_click=lambda: self.initPub.publish(Empty()), color='blue')
                 ui.button('Connect', on_click=lambda: self.connectPub.publish(Empty()), color='blue')
-                ui.button('Disconnect', on_click=lambda: self.disconnectPub.publish(Empty()), color='blue')
-                ui.button('Arm', on_click=lambda: self.armPub.publish(Empty()), color='yellow')
-                ui.button('Disarm', on_click=lambda: self.disarmPub.publish(Empty()), color='grey')
+                ui.button('Disconnect', on_click=lambda: self.disconnectPub.publish(Empty()), color='grey')
+                ui.button('Arm', on_click=lambda: self.armPub.publish(Empty()), color='orange')
+                ui.button('Disarm', on_click=lambda: self.disarmPub.publish(Empty()), color='orange')
                 ui.button('Start', on_click=lambda: self.startPub.publish(Empty()), color='green')
-                ui.button('All Clear', on_click=lambda: self.allClearPub.publish(Empty()), color='blue')
+                ui.button('All Clear', on_click=lambda: self.allClearPub.publish(Empty()), color='grey')
             with ui.row():
-                ui.label().bind_text_from(self.OBC_state, 'state', backward=lambda n: f'Object Control State: {n}')
+                ui.label().bind_text_from(self.OBC_state, 'state', backward=lambda n: f'State: {n}').classes('text-lg')
             with ui.row():
                 ui.button('Reset Test Objects', on_click=lambda: self.resetTestObjectsPub.publish(Empty()), color='grey')
                 ui.button('Reload Object Settings', on_click=lambda: self.reloadObjectSettingsPub.publish(Empty()), color='grey')

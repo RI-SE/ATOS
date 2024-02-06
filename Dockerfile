@@ -10,9 +10,6 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
 
 ENV ROS_DISTRO=${ROS_DISTRO}
 ENV REPO_DIR=/root/atos_git
-# NODE_VERSION is also specified in the install_atos.sh script
-ENV NODE_VERSION=16.20.0
-ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
 SHELL ["/bin/bash", "-c"]
 
 WORKDIR /root/atos_git

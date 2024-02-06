@@ -13,8 +13,9 @@ sudo -E docker compose up
 
 If you run Docker Engine you can start ATOS using the computers own network stack with
 ```bash
-docker run --network="host"  --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
+docker run --network="host"  --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py insecure:=True"
 ```
+See the [GUI](../Usage/GUI/foxglove.md) documentation on how to enable secure connections. 
 If you run Docker Desktop, special care must be taken to allow the container running in the Docker Desktop VM to communicate with clients running on the host network. If uncertain about this we suggest installing Docker Engine instead. 
 
 Note: If no preexisting .astazero/ATOS folder is found, the docker image will create one. This folder will have root user permissions due to the way the docker image is built. For ease of use, change owner to your own user, run the following command on the host machine:
@@ -174,6 +175,6 @@ Also add the above line to ~/.bashrc or similar.
 ## <a name="running"></a> Running ATOS
 Launch ATOS
 ```bash
-ros2 launch atos launch_basic.py
+ros2 launch atos launch_basic.py insecure:=True
 ```
 When running ATOS for the first time and the no pre-existing .astazero/ATOS folder is found, ATOS will create some barebone configuration files which you can read more about in the configuration section [here](../Usage/How-to/configuration.md).

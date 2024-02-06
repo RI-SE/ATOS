@@ -41,7 +41,7 @@ void CRSTransformation::apply(std::vector<ATOS::Trajectory::TrajectoryPoint> &tr
 		in[i].xyz.z = trajPoints[i].getZCoord();
 	}
 
-	RCLCPP_DEBUG(logger, "Converting trajectory with %d points", arraySize);
+	RCLCPP_DEBUG(logger, "Converting trajectory with %ld points", arraySize);
 	if (0 != proj_trans_array(projection.get(), PJ_FWD, arraySize, in)){
 		throw std::runtime_error("Failed to convert trajectory");
 	}

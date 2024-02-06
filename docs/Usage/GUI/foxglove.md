@@ -18,10 +18,10 @@ In order for everything to be displayed correctly, some extensions needs to be a
 The premade layouts for ATOS are located [here](https://github.com/RI-SE/ATOS/tree/dev/plugins/foxglove). To add a layout in Foxglove Studio, go to `Layouts -> Import layout` and select one of the layouts for ATOS.
 
 ## Panels in Foxglove Studio
-The panels used in layouts for ATOS are Simple Control, Map, and 3D. To change settings for the panels, press `Settings` that are located at the top right of each panel.
+The panels used in layouts for ATOS are Control Panel, Map, and 3D. To change settings for the panels, press `Settings` that are located at the top right of each panel.
 
-### Simple Control
-This is a panel for Simple Control as described previously. It has the following settings:
+### Control Panel
+This is a panel for viewing the Control Panel as described [here](controlpanel.md). It has the following settings:
 
 - `ATOS hostname` - The host address of ATOS.
 - `ATOS port` - The port to connect to.

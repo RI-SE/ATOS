@@ -26,13 +26,14 @@ You can also start ATOS without the compose file with docker run:
 
 If you run Docker Engine you can start ATOS using the computers own network stack with
 ```bash
-docker run --network="host"  --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
+docker run --network="host"  --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py insecure:=True"
 ```
 If you run Docker Desktop you will need to specify the ports to expose to the host computer.
 ```bash
-docker run --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ -p 80:80 -p 8080:8080 -p 8081:8081 -p 8082:8082 -p 3000:3000 -p 3443:3443 -p 55555:55555 -p 443:443 -p 9090:9090 astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py"
+docker run --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ -p 80:80 -p 8080:8080 -p 8081:8081 -p 8082:8082 -p 3000:3000 -p 3443:3443 -p 55555:55555 -p 443:443 -p 9090:9090 astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py insecure:=True"
 ```
 
+See the [GUI](../Usage/GUI/foxglove.md) documentation on how to enable secure connections. 
 You might wish to mount the config directory at ~/.astazero/ATOS/ to a different location on your host computer. This can be done by changing the path after the -v flag in the above command. You might also wish to inspect the image with instead of running the launch_basic.py script. This can be done by removing the last "bash -c ..." part of the command.
 
 

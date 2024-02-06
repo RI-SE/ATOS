@@ -1,11 +1,11 @@
 # Don't launch this file directly, rather use the launch files one level up instead
 import os
 from launch_ros.actions import Node
-from ament_index_python.packages import get_package_prefix
-from launch.substitutions import LaunchConfiguration, PythonExpression, FindExecutable
-from launch.actions import DeclareLaunchArgument, ExecuteProcess
+from ament_index_python.packages import get_package_prefix, get_package_share_directory
+from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
-import subprocess
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from pathlib import Path
 from .validate_files import validate_atos_dir
 import rclpy.logging as logging
@@ -21,10 +21,6 @@ def get_files():
 
 def get_base_nodes():
     files = get_files()
-    atos_install_dir = get_package_prefix('atos')
-
-    # start control-gui server
-    control_gui_dir = Path(atos_install_dir) / Path("controlpanel/")
 
     insecure_websockets = LaunchConfiguration('insecure')
     foxbridge = LaunchConfiguration('foxbridge')
@@ -52,16 +48,12 @@ def get_base_nodes():
     return [
         foxbridge_launch_arg,
         insecure_launch_arg,
-        # ExecuteProcess(
-        #     name='control_gui',
-        #     output={'both': 'log'}, #print to log to avoid cluttering the terminal
-        #     cmd=[[
-        #         FindExecutable(name='npm'),
-        #         ' start --prefix ',
-        #         str(control_gui_dir)
-        #     ]],
-        #     shell=True
-        # ),
+        IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory('atos_gui'),
+                'launch/gui.py'))
+        ),
         Node(
             package='atos',
             namespace='atos',

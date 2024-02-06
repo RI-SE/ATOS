@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>gui</name>
+  <name>atos_gui</name>
   <version>1.0.0</version>
   <description>This is an GUI for ATOS running in a ROS2 node</description>
   <maintainer email="robert.brenick@astazero.com">Robert Brenick</maintainer>

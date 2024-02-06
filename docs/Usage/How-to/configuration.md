@@ -5,7 +5,7 @@ After starting ATOS the first time, you will find the test directory `.astazero/
 This directory contains all configuration settings and journals which are located in the following directories:
 
 - **Catalogs**
-    - Explanation: Catalog directory containing various OpenSCENARIO-files with settings and parameters used by esmini. 
+    - Explanation: Catalog directory containing various OpenSCENARIO-files with settings and parameters used by scenario engine esmini. 
         - Vehicle/VehicleCatalog.xosc - Contains object details about vehicles that can be used in a test.
         Mandatory properties are the "ip" and "model_id". The "ip" is the IP-address of the vehicle and the "model_id" is the ID which must be the same as the ID in the object .opro file in the objects folder.
 - **certs**
@@ -23,7 +23,7 @@ This directory contains all configuration settings and journals which are locate
 - **osc**
     - Explanation: Directory containing the OpenSCENARIO-files.
 - **pointclouds**
-    - Explanation: Directory containing site scans as pointclouds.
+    - Explanation: Directory containing site scans as point clouds.
 
 
 ## Changing ROS parameters
