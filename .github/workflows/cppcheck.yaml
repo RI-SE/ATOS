@@ -32,9 +32,26 @@ jobs:
         run: |
           mkdir /tmp/cppcheck-result
           cppcheck --output-file=/tmp/cppcheck-result/cppcheck-result.txt ${ALL_CHANGED_FILES}
-  
+
+      - name: Check if the cppcheck-result.txt file is empty
+        id: check-cppcheck-result-empty
+        run: |
+          if [ -s /tmp/cppcheck-result/cppcheck-result.txt ]; then
+            echo "::set-output name=empty::false"
+          else
+            echo "::set-output name=empty::true"
+          fi
+        shell: bash
+
       - name: Upload cppcheck result
+        if: ${{ steps.check-cppcheck-result-empty.outputs.empty == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: cppcheck-result
           path: /tmp/cppcheck-result/
+
+      - name: Mark the workflow as failed if the fixes.yaml file exists
+        if: ${{ steps.check-cppcheck-result-empty.outputs.empty == 'true' }}
+        run: |
+          exit 1
+        shell: bash
