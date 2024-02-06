@@ -1,0 +1,40 @@
+name: cppcheck
+
+on: 
+  workflow_call:
+    inputs:
+      target_files: 
+        description: 'The list of files to be checked by cppcheck'
+        required: true
+        default: ''
+        type: string
+
+jobs:
+  cppcheck:
+    runs-on: ubuntu-latest
+    container: ros:humble
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install cppcheck
+        run: |
+          sudo apt-get -yqq update
+          sudo apt-get -yqq install cppcheck
+        shell: bash
+  
+      - name: Run cppcheck.
+        id: cppcheck
+        env: 
+          ALL_CHANGED_FILES: ${{ inputs.target_files }}
+        run: |
+          mkdir /tmp/cppcheck-result
+          cppcheck --output-file=/tmp/cppcheck-result/cppcheck-result.txt ${ALL_CHANGED_FILES}
+  
+      - name: Upload cppcheck result
+        uses: actions/upload-artifact@v4
+        with:
+          name: cppcheck-result
+          path: /tmp/cppcheck-result/
