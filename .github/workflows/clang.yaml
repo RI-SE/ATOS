@@ -9,10 +9,9 @@ jobs:
     file-changes:
       runs-on: ubuntu-latest
       outputs: 
-        all: ${{ steps.target-files.outputs.all }}
+        all: ${{ steps.changed-files.outputs.all }}
         existing: ${{ steps.existing-files.outputs.all }}
-        cpp: ${{ steps.existing-files.outputs.all }}
-        target: ${{ steps.target-files.outputs.all }}
+        target: ${{ steps.existing-files.outputs.all }}
       steps:
         - name: Get changed files
           id: changed-files
