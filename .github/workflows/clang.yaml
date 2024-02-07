@@ -10,7 +10,7 @@ jobs:
       runs-on: ubuntu-latest
       outputs: 
         all: ${{ steps.changed-files.outputs.all }}
-        existing: ${{ steps.existing-files.outputs.EXISTING_FILES }}
+        # existing: ${{ steps.existing-files.outputs.EXISTING_FILES }}
         target: ${{ steps.existing-files.outputs.TARGET_FILES }}
       steps:
         - name: Check out repository
@@ -22,22 +22,22 @@ jobs:
           id: changed-files
           uses: jitterbit/get-changed-files@v1
 
-        - name: Get only existing files
-          id: existing-files
-          run: |
-            existing_files=$(echo "${{ steps.changed-files.outputs.all }}" | xargs -I {} echo {} | grep -E '\.cpp|\.hpp|\.c|\.h' | tr '\n' ' ')
-            echo "Existing files: $existing_files"
-            { 
-              echo 'EXISTING_FILES<<EOF'
-              echo '$existing_files'
-              echo EOF
-            } >> "$GITHUB_OUTPUT"
-          shell: bash
+        # - name: Get only existing files
+        #   id: existing-files
+        #   run: |
+        #     existing_files=$(echo "${{ steps.changed-files.outputs.all }}" | xargs -I {} echo {} | grep -E '\.cpp|\.hpp|\.c|\.h' | tr '\n' ' ')
+        #     echo "Existing files: $existing_files"
+        #     { 
+        #       echo 'EXISTING_FILES<<EOF'
+        #       echo '$existing_files'
+        #       echo EOF
+        #     } >> "$GITHUB_OUTPUT"
+        #   shell: bash
 
         - name: Get only cpp, hpp, c, and h files
           id: target-files
           run: |
-            input_files=(${{ steps.existing-files.outputs.EXISTING_FILES }})
+            input_files=(${{ steps.changed-files.outputs.all }})
             echo "Input files: $input_files"
             target_files=()
             for f in "${input_files[@]}"; do
