@@ -2,12 +2,6 @@ name: cppcheck
 
 on: 
   workflow_call:
-    inputs:
-      target_files: 
-        description: 'The list of files to be checked by cppcheck'
-        required: true
-        default: ''
-        type: string
 
 jobs:
   cppcheck:
@@ -27,11 +21,9 @@ jobs:
   
       - name: Run cppcheck.
         id: cppcheck
-        env: 
-          ALL_CHANGED_FILES: ${{ inputs.target_files }}
         run: |
           mkdir /tmp/cppcheck-result
-          cppcheck --output-file=/tmp/cppcheck-result/cppcheck-result.txt ${ALL_CHANGED_FILES}
+          cppcheck --output-file=/tmp/cppcheck-result/cppcheck-result.txt .
 
       - name: Check if the cppcheck-result.txt file is empty
         id: check-cppcheck-result-empty
