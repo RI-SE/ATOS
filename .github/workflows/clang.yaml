@@ -28,8 +28,8 @@ jobs:
             existing_files=$(echo "${{ steps.changed-files.outputs.all }}" | xargs -I {} echo {} | grep -E '\.cpp|\.hpp|\.c|\.h' | tr '\n' ' ')"
             { 
               echo 'EXISTING_FILES<<EOF'
-              echo '$existing_files'
-              echo 'EOF'
+              echo $existing_files
+              echo EOF
             } >> $GITHUB_OUTPUT
           shell: bash
 
@@ -56,7 +56,7 @@ jobs:
               for f in "${target_files[@]}"; do
                 echo "$f"
               done
-              echo 'EOF'
+              echo EOF
             } >> $GITHUB_OUTPUT
           
         - name: Print all files
