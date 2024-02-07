@@ -40,6 +40,6 @@ jobs:
     
     clang-format:
         uses: ./.github/workflows/clang-format.yaml
-        needs: [build, file-changes]
+        needs: [file-changes]
         with:
             target_files: ${{ needs.file-changes.outputs.target }}
