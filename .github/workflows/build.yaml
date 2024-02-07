@@ -33,7 +33,7 @@ jobs:
       shell: bash
 
     - name: Upload build folder
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: build-folder
         path: /github/home/atos_ws/build
