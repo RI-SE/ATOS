@@ -10,19 +10,36 @@ jobs:
       runs-on: ubuntu-latest
       outputs: 
         all: ${{ steps.target-files.outputs.all }}
+        existing: ${{ steps.existing-files.outputs.all }}
+        cpp: ${{ steps.existing-files.outputs.all }}
+        target: ${{ steps.target-files.outputs.all }}
       steps:
         - name: Get changed files
-          id: target-files
+          id: changed-files
           uses: jitterbit/get-changed-files@v1
+
+        - name: Get only existing files
+          id: existing-files
+          run: |
+            echo "::set-output name=all::$(echo "${{ steps.changed-files.outputs.all }}" | xargs -I {} test -f {} && echo {} | tr '\n' ' ')"
+        
+        - name: Get only cpp, hpp, c, and h files
+          id: target-files
+          run: |
+            echo "::set-output name=all::$(echo "${{ steps.existing-files.outputs.all }}" | xargs -I {} echo {} | grep -E '\.cpp|\.hpp|\.c|\.h' | tr '\n' ' ')"
+          
+        - name: Print all files
+          run: |
+            echo ${{ steps.target-files.outputs.all }}
 
     clang-tidy:
         uses: ./.github/workflows/clang-tidy.yaml
         needs: [build, file-changes]
         with:
-            target_files: ${{ needs.file-changes.outputs.all }}
+            target_files: ${{ needs.file-changes.outputs.target }}
     
     clang-format:
         uses: ./.github/workflows/clang-format.yaml
         needs: [build, file-changes]
         with:
-            target_files: ${{ needs.file-changes.outputs.all }}
+            target_files: ${{ needs.file-changes.outputs.target }}
