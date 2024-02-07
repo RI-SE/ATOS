@@ -58,6 +58,15 @@ sudo apt install -y \
     ros-${ROS_DISTRO}-launch-pytest
 check_command_failed $? "Failed to install ROS2 packages."
 
+###############################################
+######## Install ATOS GUI dependencies ########
+###############################################
+
+pip install -r ${ATOS_REPO_PATH}/gui/requirements.txt 
+
+# Install pyOpenSSL
+pip install pyOpenSSL
+
 ###########################################
 ###### Install some deps from source ######
 ###########################################
