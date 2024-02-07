@@ -20,6 +20,8 @@ jobs:
         - name: Get only existing files
           id: existing-files
           run: |
+            echo $PWD
+            ls
             input_files=(${{ steps.changed-files.outputs.all }})
             found_files=()
             for f in "${input_files[@]}"; do
