@@ -52,7 +52,7 @@ int IntegrationTesting::getObjectControlState() {
  */
 void IntegrationTesting::checkState(const std::string& command) {
 	auto state = getObjectControlState();
-	int expectedState;
+	int expectedState = OBCState_t::OBC_STATE_UNDEFINED;
 	if (command == initTopic) {
 		expectedState = OBCState_t::OBC_STATE_INITIALIZED;
 	}

@@ -1032,84 +1032,6 @@ double UtilRadToDeg(double Rad) {
 	return (180 * Rad / M_PI);
 }
 
-
-int UtilPopulateSpaceTimeArr(ObjectPosition * OP, char *TrajFile) {
-
-	FILE *Trajfd;
-	int Rows, j = 0;
-	char TrajRow[TRAJECTORY_LINE_LENGTH];
-
-	Trajfd = fopen(TrajFile, "r");
-	if (Trajfd) {
-		Rows = OP->TrajectoryPositionCount;
-		double x, y, z;
-		float t;
-		char ValueStr[NUMBER_CHAR_LENGTH];
-		char *src1;
-		char *src2;
-
-		do {
-			memset(TrajRow, 0, sizeof (TrajRow));
-			if (UtilReadLineCntSpecChars(Trajfd, TrajRow) >= 10) {
-				bzero(ValueStr, NUMBER_CHAR_LENGTH);
-				src1 = strchr(TrajRow, ';');
-				src2 = strchr(src1 + 1, ';');
-				strncpy(ValueStr, src1 + 1, (uint64_t) src2 - (uint64_t) src1);
-				t = atof(ValueStr);
-				//printf("%d :t = %3.3f\n", j, t);
-				bzero(ValueStr, NUMBER_CHAR_LENGTH);
-				src1 = strchr(src2, ';');
-				src2 = strchr(src1 + 1, ';');
-				strncpy(ValueStr, src1 + 1, (uint64_t) src2 - (uint64_t) src1);
-				x = atof(ValueStr);
-
-				bzero(ValueStr, NUMBER_CHAR_LENGTH);
-				src1 = strchr(src2, ';');
-				src2 = strchr(src1 + 1, ';');
-				strncpy(ValueStr, src1 + 1, (uint64_t) src2 - (uint64_t) src1);
-				y = atof(ValueStr);
-
-				/*
-				   bzero(ValueStr, NUMBER_CHAR_LENGTH);
-				   src1 = strchr(src2, ';');
-				   src2 = strchr(src1+1, ';');
-				   strncpy(ValueStr, src1+1, (uint64_t)src2 - (uint64_t)src1);
-				   z = atof(ValueStr);
-				 */
-
-				OP->SpaceArr[j] = (float)sqrt(pow(x, 2) + pow(y, 2));
-				OP->TimeArr[j] = (float)t;
-
-				OP->SpaceTimeArr[j].Index = j;
-				OP->SpaceTimeArr[j].Time = (float)t;
-				OP->SpaceTimeArr[j].OrigoDistance = (float)sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
-				OP->SpaceTimeArr[j].Bearing = tan(y / x);
-				OP->SpaceTimeArr[j].x = x;
-				OP->SpaceTimeArr[j].y = y;
-				//printf("t = %5.3f\n", OP->TimeArr[j]);
-				//printf("t = %5.3f\n", OP->TimeArr[j]);
-				j++;
-			}
-
-
-		} while (--Rows >= 0 /*j < 10 */ );
-
-		//UtilSortSpaceTimeAscending(OP);
-
-		//for(int g=0; g < OP->TrajectoryPositionCount; g ++)
-		//{
-		//  printf("OrigoDistance=%4.3f, Time=%4.3f, Index=%d\n", OP->SpaceTimeArr[g].OrigoDistance, OP->SpaceTimeArr[g].Time, OP->SpaceTimeArr[g].Index);
-		//}
-
-		fclose(Trajfd);
-	}
-	else {
-		fprintf(stderr, "Failed to open file:%s\n", TrajFile);
-	}
-
-	return 0;
-}
-
 int UtilSetSyncPoint(ObjectPosition * OP, double x, double y, double z, double Time) {
 
 	int i = 0;
@@ -2461,7 +2383,7 @@ int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen) {
 		else if (row == header.numberOfLines + 2) {	// Footer parsing
 			if ((retval = UtilParseTrajectoryFileFooter(line)) != 0) {
 				if (UtilParseTrajectoryFileLine(line, &fileLine) == 0) {
-					fprintf(stderr, "File <%s> contains %u rows than were specified\n", path);
+					fprintf(stderr, "File <%s> contains %u rows than were specified\n", path, row);
 					break;
 				}
 				fprintf(stderr, "Failed to parse footer of file <%s>\n", path);
@@ -3106,27 +3028,9 @@ int UtilReadOriginConfiguration(GeoPositionType* origin) {
 	GeoPositionType retval;
 	char setting[20];
 	char* endptr;
-	// if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
-	// 								   setting, sizeof (setting))) {
-	// 	retval.Latitude = strtod(setting, &endptr);
-	// 	if (endptr == setting) {
-	// 		return -1;
-	// 	}
-	// }
-	// if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
-	// 								   setting, sizeof (setting))) {
-	// 	retval.Longitude = strtod(setting, &endptr);
-	// 	if (endptr == setting) {
-	// 		return -1;
-	// 	}
-	// }
-	// if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE,
-	// 								   setting, sizeof (setting))) {
-	// 	retval.Altitude = strtod(setting, &endptr);
-	// 	if (endptr == setting) {
-	// 		return -1;
-	// 	}
-	// }
+	retval.Latitude = 0;
+	retval.Longitude = 0;
+	retval.Altitude = 0;
 	retval.Heading = 0; // TODO
 	*origin = retval;
 	return 0;
