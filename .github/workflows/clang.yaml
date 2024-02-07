@@ -37,9 +37,8 @@ jobs:
         - name: Get only cpp, hpp, c, and h files
           id: target-files
           run: |
-            echo $PWD
-            ls
             input_files=(${{ steps.existing-files.outputs.EXISTING_FILES }})
+            echo "Input files: $input_files"
             target_files=()
             for f in "${input_files[@]}"; do
               echo "Checking file: $f"
