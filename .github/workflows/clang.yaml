@@ -39,12 +39,11 @@ jobs:
           run: |
             input_files=(${{ steps.changed-files.outputs.all }})
             echo "Input files: $input_files"
-            target_files=()
+            target_files=""
             for f in "${input_files[@]}"; do
-              echo "Checking file: $f"
               if [[ $f == *.cpp || $f == *.hpp ]]; then
                 echo "File ending correct: $f"
-                target_files+=("$f")
+                target_files+="$f "
               else
                 echo "File ending incorrect: $f"
               fi
