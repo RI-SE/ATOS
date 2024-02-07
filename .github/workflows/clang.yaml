@@ -10,8 +10,7 @@ jobs:
       runs-on: ubuntu-latest
       outputs: 
         all: ${{ steps.changed-files.outputs.all }}
-        # existing: ${{ steps.existing-files.outputs.EXISTING_FILES }}
-        target: ${{ steps.target-files.outputs.TARGET_FILES }}
+        cpp: ${{ steps.cpp-files.outputs.CPP }}
       steps:
         - name: Check out repository
           uses: actions/checkout@v3
@@ -22,40 +21,40 @@ jobs:
           id: changed-files
           uses: jitterbit/get-changed-files@v1
 
-        - name: Get only cpp, hpp, c, and h files
-          id: target-files
+        - name: Filter on only cpp, hpp, c, and h files
+          id: cpp-files
           run: |
             input_files=(${{ steps.changed-files.outputs.all }})
             echo "Input files: $input_files"
-            target_files=""
+            cpp_files=""
             for f in "${input_files[@]}"; do
-              if [[ $f == *.cpp || $f == *.hpp ]]; then
+              if [[ $f == *.cpp || $f == *.hpp || $f == *.c || $f == *.h ]]; then
                 echo "File ending correct: $f"
-                target_files+="$f "
+                cpp_files+="$f "
               else
                 echo "File ending incorrect: $f"
               fi
             done
-            echo "Target files: $target_files"
+            echo "Target files: $cpp_files"
 
             { 
-              echo 'TARGET_FILES<<EOF'
-              echo "$target_files"
+              echo 'CPP<<EOF'
+              echo "$cpp_files"
               echo EOF
             } >> $GITHUB_OUTPUT
           
         - name: Print all files
           run: |
-            echo ${{ steps.target-files.outputs.TARGET_FILES }}
+            echo ${{ steps.cpp-files.outputs.CPP }}
 
     clang-tidy:
         uses: ./.github/workflows/clang-tidy.yaml
         needs: [build, file-changes]
         with:
-            target_files: ${{ needs.file-changes.outputs.target }}
+            target_files: ${{ needs.file-changes.outputs.cpp }}
     
     clang-format:
         uses: ./.github/workflows/clang-format.yaml
         needs: [file-changes]
         with:
-            target_files: ${{ needs.file-changes.outputs.target }}
+            target_files: ${{ needs.file-changes.outputs.cpp }}

@@ -25,13 +25,19 @@ jobs:
           mkdir -p $HOME/atos_ws/src
           ln -s $GITHUB_WORKSPACE $HOME/atos_ws/src/atos
 
-      - name: Restore build cache
-        uses: actions/cache@v2
+      # - name: Restore build cache
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: |
+      #       /github/home/atos_ws/build
+      #       /github/home/atos_ws/install
+      #     key: ${{ runner.os }}-build
+
+      - name: Download build folder
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            /github/home/atos_ws/build
-            /github/home/atos_ws/install
-          key: ${{ runner.os }}-build
+          name: build-folder
+          path: /github/home/atos_ws/build
 
       - name: Install Clang-Tidy
         run: |
@@ -46,6 +52,7 @@ jobs:
         run: |
           echo "running clang-tidy on $ALL_CHANGED_FILES"
           ls $HOME/atos_ws/
+          ls $HOME/atos_ws/src/
           ls $HOME/atos_ws/build/
           mkdir /tmp/clang-tidy-result
           clang-tidy -p $HOME/atos_ws/build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml --checks=cppcoreguidelines-* ${ALL_CHANGED_FILES} || true
