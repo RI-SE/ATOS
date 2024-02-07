@@ -22,18 +22,6 @@ jobs:
           id: changed-files
           uses: jitterbit/get-changed-files@v1
 
-        # - name: Get only existing files
-        #   id: existing-files
-        #   run: |
-        #     existing_files=$(echo "${{ steps.changed-files.outputs.all }}" | xargs -I {} echo {} | grep -E '\.cpp|\.hpp|\.c|\.h' | tr '\n' ' ')
-        #     echo "Existing files: $existing_files"
-        #     { 
-        #       echo 'EXISTING_FILES<<EOF'
-        #       echo '$existing_files'
-        #       echo EOF
-        #     } >> "$GITHUB_OUTPUT"
-        #   shell: bash
-
         - name: Get only cpp, hpp, c, and h files
           id: target-files
           run: |

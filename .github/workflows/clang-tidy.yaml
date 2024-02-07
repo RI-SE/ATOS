@@ -20,6 +20,10 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Prepare atos workspace
+        run: |
+          mkdir -p $HOME/atos_ws/src
+
       - name: Restore build cache
         uses: actions/cache@v2
         with:
