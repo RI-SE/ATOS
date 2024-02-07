@@ -10,8 +10,8 @@ jobs:
       runs-on: ubuntu-latest
       outputs: 
         all: ${{ steps.changed-files.outputs.all }}
-        existing: ${{ steps.existing-files.outputs.all }}
-        target: ${{ steps.existing-files.outputs.all }}
+        existing: ${{ steps.existing-files.outputs.EXISTING_FILES }}
+        target: ${{ steps.existing-files.outputs.TARGET_FILES }}
       steps:
         - name: Check out repository
           uses: actions/checkout@v3
@@ -25,17 +25,43 @@ jobs:
         - name: Get only existing files
           id: existing-files
           run: |
-            echo "::set-output name=all::$(echo "${{ steps.changed-files.outputs.all }}" | xargs -I {} echo {} | grep -E '\.cpp|\.hpp|\.c|\.h' | tr '\n' ' ')"
+            existing_files=$(echo "${{ steps.changed-files.outputs.all }}" | xargs -I {} echo {} | grep -E '\.cpp|\.hpp|\.c|\.h' | tr '\n' ' ')"
+            { 
+              echo 'EXISTING_FILES<<EOF'
+              echo '$existing_files'
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
           shell: bash
 
         - name: Get only cpp, hpp, c, and h files
           id: target-files
           run: |
-            echo "::set-output name=all::$(echo "${{ steps.existing-files.outputs.all }}" | xargs -I {} echo {} | grep -E '\.cpp|\.hpp|\.c|\.h' | tr '\n' ' ')"
+            echo $PWD
+            ls
+            input_files=(${{ steps.existing-files.outputs.EXISTING_FILES }})
+            target_files=()
+            for f in "${input_files[@]}"; do
+              echo "Checking file: $f"
+              if [[ $f == *.cpp || $f == *.hpp ]]; then
+                echo "File ending correct: $f"
+                target_files+=("$f")
+              else
+                echo "File does not have correct ending: $f"
+              fi
+            done
+            echo "Target files: $target_files"
+
+            { 
+              echo 'TARGET_FILES<<EOF'
+              for f in "${target_files[@]}"; do
+                echo "$f"
+              done
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
           
         - name: Print all files
           run: |
-            echo ${{ steps.target-files.outputs.all }}
+            echo ${{ steps.target-files.outputs.TARGET_FILES }}
 
     clang-tidy:
         uses: ./.github/workflows/clang-tidy.yaml
