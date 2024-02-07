@@ -25,31 +25,17 @@ jobs:
         - name: Get only existing files
           id: existing-files
           run: |
-            echo $PWD
-            ls
-            input_files=(${{ steps.changed-files.outputs.all }})
-            found_files=()
-            for f in "${input_files[@]}"; do
-              file="$PWD/$f"
-              echo "Checking file: $file"
-              if [[ -f $file ]]; then
-                echo "File exists: $file"
-                found_files+=("$file")
-              else
-                echo "File does not exist: $file"
-              fi
-            done
-            echo "Found files: $found_files"
+            echo "::set-output name=all::$(echo "${{ steps.changed-files.outputs.all }}" | xargs -I {} echo {} | grep -E '\.cpp|\.hpp|\.c|\.h' | tr '\n' ' ')"
           shell: bash
 
-        # - name: Get only cpp, hpp, c, and h files
-        #   id: target-files
-        #   run: |
-        #     echo "::set-output name=all::$(echo "${{ steps.existing-files.outputs.all }}" | xargs -I {} echo {} | grep -E '\.cpp|\.hpp|\.c|\.h' | tr '\n' ' ')"
+        - name: Get only cpp, hpp, c, and h files
+          id: target-files
+          run: |
+            echo "::set-output name=all::$(echo "${{ steps.existing-files.outputs.all }}" | xargs -I {} echo {} | grep -E '\.cpp|\.hpp|\.c|\.h' | tr '\n' ' ')"
           
-        # - name: Print all files
-        #   run: |
-        #     echo ${{ steps.target-files.outputs.all }}
+        - name: Print all files
+          run: |
+            echo ${{ steps.target-files.outputs.all }}
 
     clang-tidy:
         uses: ./.github/workflows/clang-tidy.yaml
