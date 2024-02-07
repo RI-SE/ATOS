@@ -13,6 +13,11 @@ jobs:
         existing: ${{ steps.existing-files.outputs.all }}
         target: ${{ steps.existing-files.outputs.all }}
       steps:
+        - name: Check out repository
+          uses: actions/checkout@v3
+          with:
+            submodules: recursive
+
         - name: Get changed files
           id: changed-files
           uses: jitterbit/get-changed-files@v1
@@ -25,7 +30,7 @@ jobs:
             input_files=(${{ steps.changed-files.outputs.all }})
             found_files=()
             for f in "${input_files[@]}"; do
-              file="./$f"
+              file="$PWD/$f"
               echo "Checking file: $file"
               if [[ -f $file ]]; then
                 echo "File exists: $file"
