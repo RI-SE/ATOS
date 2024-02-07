@@ -23,12 +23,13 @@ jobs:
             input_files=(${{ steps.changed-files.outputs.all }})
             found_files=()
             for f in "${input_files[@]}"; do
-              echo "Checking file: $f"
-              if [[ -f $f ]]; then
-                echo "File exists: $f"
-                found_files+=("$f")
+              file="./$f"
+              echo "Checking file: $file"
+              if [[ -f $file ]]; then
+                echo "File exists: $file"
+                found_files+=("$file")
               else
-                echo "File does not exist: $f"
+                echo "File does not exist: $file"
               fi
             done
             echo "Found files: $found_files"
