@@ -25,7 +25,7 @@ jobs:
         - name: Get only existing files
           id: existing-files
           run: |
-            existing_files=$(echo "${{ steps.changed-files.outputs.all }}" | xargs -I {} echo {} | grep -E '\.cpp|\.hpp|\.c|\.h' | tr '\n' ' ')"
+            existing_files=$(echo "${{ steps.changed-files.outputs.all }}" | xargs -I {} echo {} | grep -E '\.cpp|\.hpp|\.c|\.h' | tr '\n' ' ')
             echo "Existing files: $existing_files"
             { 
               echo 'EXISTING_FILES<<EOF'
