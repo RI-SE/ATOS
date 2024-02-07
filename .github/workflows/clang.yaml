@@ -11,7 +11,7 @@ jobs:
       outputs: 
         all: ${{ steps.changed-files.outputs.all }}
         # existing: ${{ steps.existing-files.outputs.EXISTING_FILES }}
-        target: ${{ steps.existing-files.outputs.TARGET_FILES }}
+        target: ${{ steps.target-files.outputs.TARGET_FILES }}
       steps:
         - name: Check out repository
           uses: actions/checkout@v3
@@ -46,16 +46,14 @@ jobs:
                 echo "File ending correct: $f"
                 target_files+=("$f")
               else
-                echo "File does not have correct ending: $f"
+                echo "File ending incorrect: $f"
               fi
             done
             echo "Target files: $target_files"
 
             { 
               echo 'TARGET_FILES<<EOF'
-              for f in "${target_files[@]}"; do
-                echo "$f"
-              done
+              echo "$target_files"
               echo EOF
             } >> $GITHUB_OUTPUT
           
