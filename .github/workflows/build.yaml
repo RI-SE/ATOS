@@ -23,7 +23,7 @@ jobs:
 
     - name: Print build folder
       run: |
-        ls /github/home/atos_ws/build
+        ls -R /github/home/atos_ws/build
       shell: bash
 
     - name: Install ATOS
