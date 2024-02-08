@@ -20,13 +20,16 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Restore build cache
-        uses: actions/cache@v2
+      - name: Prepare atos workspace
+        run: |
+          mkdir -p $HOME/atos_ws/src
+          ln -s $GITHUB_WORKSPACE $HOME/atos_ws/src/atos
+
+      - name: Download build folder
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            /github/home/atos_ws/build
-            /github/home/atos_ws/install
-          key: ${{ runner.os }}-build
+          name: build-folder
+          path: /github/home/atos_ws/build
 
       - name: Install Clang-Tidy
         run: |
@@ -39,8 +42,10 @@ jobs:
         env: 
           ALL_CHANGED_FILES: ${{ inputs.target_files }}
         run: |
+          echo "running clang-tidy on $ALL_CHANGED_FILES"
+          ls $HOME/atos_ws/build/
           mkdir /tmp/clang-tidy-result
-          clang-tidy -p $HOME/atos_ws/build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml ${ALL_CHANGED_FILES} || true
+          clang-tidy -p $HOME/atos_ws/build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml --checks=cppcoreguidelines-*,clang-analyzer-* ${ALL_CHANGED_FILES} || true
           echo "${{ github.event.number }}" > /tmp/clang-tidy-result/pr-id.txt
           echo "${{ github.event.pull_request.head.repo.full_name }}" > /tmp/clang-tidy-result/pr-head-repo.txt
           echo "${{ github.event.pull_request.head.ref }}" > /tmp/clang-tidy-result/pr-head-ref.txt

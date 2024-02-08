@@ -9,23 +9,55 @@ jobs:
     file-changes:
       runs-on: ubuntu-latest
       outputs: 
-        all: ${{ steps.target-files.outputs.all }}
+        all: ${{ steps.changed-files.outputs.all }}
+        cpp: ${{ steps.cpp-files.outputs.CPP }}
       steps:
+        - name: Check out repository
+          uses: actions/checkout@v3
+          with:
+            submodules: recursive
+
         - name: Get changed files
-          id: target-files
+          id: changed-files
           uses: jitterbit/get-changed-files@v1
+
+        - name: Filter on only cpp, hpp, c, and h files
+          id: cpp-files
+          run: |
+            input_files=(${{ steps.changed-files.outputs.all }})
+            echo "Input files: $input_files"
+            cpp_files=""
+            for f in "${input_files[@]}"; do
+              if [[ $f == *.cpp || $f == *.hpp || $f == *.c || $f == *.h ]]; then
+                echo "File ending correct: $f"
+                cpp_files+="$f "
+              else
+                echo "File ending incorrect: $f"
+              fi
+            done
+            echo "Target files: $cpp_files"
+
+            { 
+              echo 'CPP<<EOF'
+              echo "$cpp_files"
+              echo EOF
+            } >> $GITHUB_OUTPUT
+          
+        - name: Print all files
+          run: |
+            echo ${{ steps.cpp-files.outputs.CPP }}
 
     clang-tidy:
         uses: ./.github/workflows/clang-tidy.yaml
         needs: [build, file-changes]
         with:
-            target_files: ${{ needs.file-changes.outputs.all }}
+            target_files: ${{ needs.file-changes.outputs.cpp }}
     
     clang-format:
         uses: ./.github/workflows/clang-format.yaml
-        needs: [build, file-changes]
+        needs: [file-changes]
         with:
-            target_files: ${{ needs.file-changes.outputs.all }}
+            target_files: ${{ needs.file-changes.outputs.cpp }}
 
     cppcheck:
         uses: ./.github/workflows/cppcheck.yaml

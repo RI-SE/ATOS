@@ -20,14 +20,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Restore build cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            /github/home/atos_ws/build
-            /github/home/atos_ws/install
-          key: ${{ runner.os }}-build
-
       - name: Install clang-format
         run: |
           sudo apt-get -yqq update
