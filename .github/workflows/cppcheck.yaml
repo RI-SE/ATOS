@@ -28,9 +28,9 @@ jobs:
         id: check-cppcheck-result-empty
         run: |
           if [ -s /tmp/cppcheck-result/cppcheck-result.txt ]; then
-            echo "::set-output name=empty::false"
+            echo "empty=false" >> "$GITHUB_OUTPUT"
           else
-            echo "::set-output name=empty::true"
+            echo "empty=true" >> "$GITHUB_OUTPUT"
           fi
         shell: bash
 
