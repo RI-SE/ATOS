@@ -21,15 +21,15 @@ jobs:
           /github/home/atos_ws/install
         key: ${{ runner.os }}-build
 
-    - name: Print build folder
-      run: |
-        ls -R /github/home/atos_ws/build
-      shell: bash
-
     - name: Install ATOS
       if: steps.cache-build.outputs.cache-hit != 'true'
       run: |
         ./setup_atos.sh
+      shell: bash
+
+    - name: Print build folder
+      run: |
+        ls -R /github/home/atos_ws/build
       shell: bash
 
     - name: Upload build folder
