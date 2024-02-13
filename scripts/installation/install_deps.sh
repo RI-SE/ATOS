@@ -11,10 +11,11 @@ ATOS_REPO_PATH="$1"
 #fail unless var is set
 source "${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 
-# Update and install required dependencies specified in dependencies.txt file
+# Update and install required dependencies specified in dependencies.txt and requirements.txt file
 apt_deps=$(cat ${ATOS_REPO_PATH}/scripts/installation/dependencies.txt | tr '\n' ' ')
 echo "Installing dependencies... $apt_deps"
 sudo apt update && sudo apt install -y ${apt_deps}
+pip install -r ${ATOS_REPO_PATH}/scripts/installation/requirements.txt
 
 # Check if apt failed to install dependencies
 check_command_failed $? "Failed to install dependencies."
