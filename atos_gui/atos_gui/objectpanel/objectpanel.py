@@ -1,4 +1,4 @@
-from atos_interfaces.srv import *
+from atos_interfaces.srv import GetObjectIds, GetObjectIp, SetObjectIp
 
 from rclpy.node import Node
 
@@ -26,9 +26,13 @@ class ObjectPanelNode(Node):
                 with ui.button(text='Refresh', on_click=self.refresh):
                     ui.icon('refresh')
             for object_id in self.object_id_ip_map.keys():
-                with ui.row():
-                    ui.input(label=f'Object {object_id}').bind_value(self.object_id_ip_map, object_id
-                            ).on('keydown.enter', lambda result, object_id=object_id: self.update_object_ip(object_id, result.sender.value))
+                with ui.element('div').classes('p-2 bg-blue-100'):
+                    with ui.row():
+                        ui.label(f'Object {object_id}: ')
+                        ui.label(self.object_id_ip_map[object_id]) 
+                        # Will be used in the future
+                        # ui.input(label=f'Object {object_id}').bind_value(self.object_id_ip_map, object_id
+                        #         ).on('keydown.enter', lambda result, object_id=object_id: self.update_object_ip(object_id, result.sender.value))
 
     def get_object_ids(self):
         # Call the service
