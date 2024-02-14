@@ -14,6 +14,7 @@ SHELL ["/bin/bash", "-c"]
 
 WORKDIR /root/atos_git
 COPY ./scripts/installation/ ./scripts/installation/
+COPY ./.git /root/atos_git/.git
 RUN --mount=type=cache,target=/var/cache/apt \ 
         ./scripts/installation/install_deps.sh ${REPO_DIR}
 COPY . .
