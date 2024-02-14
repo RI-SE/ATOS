@@ -88,18 +88,4 @@ void waitForFuture(
     " milliseconds\n";
 }
 
-
-template<typename ModuleUnderTest>
-  rclcpp::executors::SingleThreadedExecutor getTestNodeExecutor(
-  std::string const & testNodeName
-  )
-{
-  auto moduleUnderTest =  std::make_shared<ModuleUnderTest>();
-  auto testNode = rclcpp::Node::make_shared(testNodeName);
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(moduleUnderTest);
-  executor.add_node(testNode);
-  return executor;
-}
-
 }  // namespace testUtils

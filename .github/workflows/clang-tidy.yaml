@@ -1,0 +1,65 @@
+name: clang-tidy-review
+
+# You can be more specific, but it currently only works on pull requests
+on: 
+  workflow_call:
+    inputs:
+      target_files: 
+        description: 'The list of files to be checked by clang-tidy'
+        required: true
+        default: ''
+        type: string
+
+jobs:
+  clang-tidy:
+    runs-on: ubuntu-latest
+    container: ros:humble
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Prepare atos workspace
+        run: |
+          mkdir -p $HOME/atos_ws/src
+          ln -s $GITHUB_WORKSPACE $HOME/atos_ws/src/atos
+
+      - name: Download build folder
+        uses: actions/download-artifact@v4
+        with:
+          name: build-folder
+          path: /github/home/atos_ws/build
+
+      - name: Install Clang-Tidy
+        run: |
+          sudo apt-get -yqq update
+          sudo apt-get -yqq install clang-tidy libomp-dev
+        shell: bash
+
+      - name: Run clang-tidy linter
+        if: ${{ inputs.target_files != '' }}
+        env: 
+          ALL_CHANGED_FILES: ${{ inputs.target_files }}
+        run: |
+          echo "running clang-tidy on $ALL_CHANGED_FILES"
+          ls $HOME/atos_ws/build/
+          mkdir /tmp/clang-tidy-result
+          clang-tidy -p $HOME/atos_ws/build/ -export-fixes /tmp/clang-tidy-result/fixes.yaml --checks=cppcoreguidelines-*,clang-analyzer-* ${ALL_CHANGED_FILES} || true
+          echo "${{ github.event.number }}" > /tmp/clang-tidy-result/pr-id.txt
+          echo "${{ github.event.pull_request.head.repo.full_name }}" > /tmp/clang-tidy-result/pr-head-repo.txt
+          echo "${{ github.event.pull_request.head.ref }}" > /tmp/clang-tidy-result/pr-head-ref.txt
+        shell: bash
+
+      - name: Check if the fixes.yaml file exists
+        id: check-fixes-yaml-existence
+        uses: autowarefoundation/autoware-github-actions/check-file-existence@v1
+        with:
+          files: /tmp/clang-tidy-result/fixes.yaml
+
+      - name: Upload clang-tidy result
+        if: ${{ steps.check-fixes-yaml-existence.outputs.exists == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-tidy-result
+          path: /tmp/clang-tidy-result/

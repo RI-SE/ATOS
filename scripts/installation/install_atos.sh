@@ -23,14 +23,8 @@ if [ ! -d "$HOME/atos_ws/src" ]; then
 fi
 cd $HOME/atos_ws
 
-# Set ATOS_INTERFACES_PATH using ATOS_PATH
-ATOS_INTERFACES_PATH="$ATOS_REPO_PATH/atos_interfaces"
-ATOS_GUI_PATH="$ATOS_REPO_PATH/atos_gui"
-
 # Update symlinks to atos and atos_interfaces
 update_symlink "$ATOS_REPO_PATH" $HOME/atos_ws/src/atos
-update_symlink "$ATOS_INTERFACES_PATH" $HOME/atos_ws/src/atos_interfaces
-update_symlink "$ATOS_GUI_PATH" $HOME/atos_ws/src/atos_gui
 
 # Change directory into the workspace and build, check with the user before continuing
 echo "Dependecy installation done and ATOS workspace created."
@@ -45,7 +39,7 @@ cd -
 echo "Building ATOS..."
 cd $HOME/atos_ws
 source /opt/ros/$ROS_DISTRO/setup.bash
-MAKEFLAGS=-j4 colcon build --symlink-install
+MAKEFLAGS=-j4 colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 check_command_failed $? "Failed to build ATOS."
 cd -
 
