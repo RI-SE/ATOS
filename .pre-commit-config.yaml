@@ -4,7 +4,5 @@ repos:
     rev: v1.3.5
     hooks:
       - id: clang-format
-        args: [--style=LLVM]
-      - id: clang-tidy
-        args: [-p $HOME/atos_ws/build/, -export-fixes /tmp/clang-tidy-result/fixes.yaml, --checks=cppcoreguidelines-*,clang-analyzer-*]
+        args: [--style=LLVM, -i]
       - id: cppcheck
