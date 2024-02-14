@@ -81,9 +81,8 @@ class ObjectPanelNode(Node):
             object_ip (GetObjectIp.Response): IP address for the given object ID.
         
         """
-        if object_ip.ip != "":
-            self.object_id_ip_map[object_ip.id] = object_ip.ip
-            self.get_logger().debug(f'Object {object_ip.id} IP: {object_ip.ip}')
+        self.object_id_ip_map[object_ip.id] = object_ip.ip
+        self.get_logger().debug(f'Object {object_ip.id} IP: {object_ip.ip}')
 
     def update_object_ip(self, object_id, object_ip):
         """ Updates the IP address for a given object ID in the current scenario.
