@@ -667,7 +667,6 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 int UtilVincentyDirect(double refLat, double refLon, double a1, double distance, double *resLat, double *resLon, double *a2);
 double UtilDegToRad(double Deg);
 double UtilRadToDeg(double Rad);
-int UtilPopulateSpaceTimeArr(ObjectPosition *OP, char* TrajFile);
 int UtilSortSpaceTimeAscending(ObjectPosition *OP);
 int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double CurrentTime, double MaxTrajDiff, double MaxTimeDiff, char debug);
 int UtilFindCurrentTrajectoryPositionNew(ObjectPosition *OP, int StartIndex, double CurrentTime, double MaxTrajDiff, double MaxTimeDiff, char debug);

@@ -58,3 +58,6 @@ jobs:
         needs: [file-changes]
         with:
             target_files: ${{ needs.file-changes.outputs.cpp }}
+
+    cppcheck:
+        uses: ./.github/workflows/cppcheck.yaml
