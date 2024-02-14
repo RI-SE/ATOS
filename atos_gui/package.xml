@@ -9,6 +9,7 @@
   
   <depend>rclpy</depend>
   <depend>rcl_interfaces</depend>
+  <depend>atos_interfaces</depend>
 
   <export>
     <build_type>ament_python</build_type>

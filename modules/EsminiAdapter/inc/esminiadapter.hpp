@@ -23,6 +23,7 @@
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "atos_interfaces/srv/get_object_trigger_start.hpp"
 #include "atos_interfaces/srv/get_object_ip.hpp"
+#include "atos_interfaces/srv/set_object_ip.hpp"
 
 /*!
  * \brief The EsminiAdapter class is a singleton class that 
@@ -53,6 +54,7 @@ private:
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTriggerStart>> startOnTriggerService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectIp>> objectIpService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetTestOrigin>> testOriginService;
+	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::SetObjectIp>> setObjectIpService;
 
 
 	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
@@ -96,6 +98,9 @@ private:
 
 	static void onRequestTestOrigin(const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,
 							std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response>);
+			
+	static void onSetObjectIP(const std::shared_ptr<atos_interfaces::srv::SetObjectIp::Request>,
+							std::shared_ptr<atos_interfaces::srv::SetObjectIp::Response>);
 	
 
 	static std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> testOriginClient;
