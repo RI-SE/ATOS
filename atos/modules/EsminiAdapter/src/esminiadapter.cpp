@@ -25,6 +25,7 @@ using TestOriginSrv = atos_interfaces::srv::GetTestOrigin;
 using ObjectTrajectorySrv = atos_interfaces::srv::GetObjectTrajectory;
 using ObjectTriggerSrv = atos_interfaces::srv::GetObjectTriggerStart;
 using ObjectIpSrv = atos_interfaces::srv::GetObjectIp;
+using SetObjectIpSrv = atos_interfaces::srv::SetObjectIp;
 using std::placeholders::_1;
 using std::placeholders::_2;
 using namespace std::chrono_literals;
@@ -42,6 +43,7 @@ std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>> EsminiAdapter::objectTraje
 std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>> EsminiAdapter::startOnTriggerService = std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>>();
 std::shared_ptr<rclcpp::Service<ObjectIpSrv>> EsminiAdapter::objectIpService = std::shared_ptr<rclcpp::Service<ObjectIpSrv>>();
 std::shared_ptr<rclcpp::Service<TestOriginSrv>> EsminiAdapter::testOriginService = std::shared_ptr<rclcpp::Service<TestOriginSrv>>();
+std::shared_ptr<rclcpp::Service<SetObjectIpSrv>> EsminiAdapter::setObjectIpService = std::shared_ptr<rclcpp::Service<SetObjectIpSrv>>();
 std::vector<uint32_t> EsminiAdapter::delayedStartIds = std::vector<uint32_t>();
 geographic_msgs::msg::GeoPose EsminiAdapter::testOrigin = geographic_msgs::msg::GeoPose();
 
@@ -786,6 +788,22 @@ void EsminiAdapter::onRequestObjectIP(
 	}
 }
 
+void EsminiAdapter::onSetObjectIP(
+	const std::shared_ptr<SetObjectIpSrv::Request> req,
+	std::shared_ptr<SetObjectIpSrv::Response> res)
+{
+	res->id = req->id;
+	res->ip = req->ip;
+	try {
+		me->idToIp.at(req->id) = req->ip;
+		res->success = true;
+	}
+	catch (std::out_of_range& e){
+		RCLCPP_ERROR(me->get_logger(), "Esmini set IP service called, no object with ID %d found", req->id);
+		res->success = false;
+	}
+}
+
 /*!
  * \brief initializeModule Initializes this module by creating log,
  *			connecting to the message queue bus, setting up signal handers etc.
@@ -804,6 +822,8 @@ int EsminiAdapter::initializeModule() {
 		std::bind(&EsminiAdapter::onRequestObjectTrajectory, _1, _2));
 	me->testOriginService = me->create_service<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin,
 		std::bind(&EsminiAdapter::onRequestTestOrigin, _1, _2));
+	me->setObjectIpService = me->create_service<atos_interfaces::srv::SetObjectIp>(SetObjectIpSrv::Request::SERVICE_NAME,
+		std::bind(&EsminiAdapter::onSetObjectIP, _1, _2));
 
 	return retval;
 }
