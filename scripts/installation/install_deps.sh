@@ -46,18 +46,14 @@ fi
 echo "Installing ROS2 packages..."
 sudo apt install -y \
     ros-${ROS_DISTRO}-desktop \
-    ros-${ROS_DISTRO}-geographic-msgs \
-    ros-${ROS_DISTRO}-geometry-msgs \
-    ros-${ROS_DISTRO}-std-msgs \
-    ros-${ROS_DISTRO}-std-srvs \
-    ros-${ROS_DISTRO}-nav-msgs \
-    ros-${ROS_DISTRO}-geographic-msgs \
-    ros-${ROS_DISTRO}-foxglove-msgs \
-    ros-${ROS_DISTRO}-pcl-conversions \
-    ros-${ROS_DISTRO}-rosbridge-suite \
-    ros-${ROS_DISTRO}-foxglove-bridge \
+    python3-rosdep \
     ros-${ROS_DISTRO}-launch-pytest
 check_command_failed $? "Failed to install ROS2 packages."
+
+sudo rosdep init && \
+    rosdep update && \
+    rosdep install --from-paths ${ATOS_REPO_PATH} --ignore-src --rosdistro $ROS_DISTRO -y
+check_command_failed $? "Failed to install ROS2 dependencies."
 
 ###############################################
 ######## Install ATOS GUI dependencies ########
