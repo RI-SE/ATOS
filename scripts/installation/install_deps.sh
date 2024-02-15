@@ -17,14 +17,6 @@ echo "Installing dependencies... $apt_deps"
 sudo apt update && sudo apt install -y ${apt_deps}
 pip install -r ${ATOS_REPO_PATH}/scripts/installation/requirements.txt
 
-# Install pre-commit hooks for the ATOS repo
-echo "Installing pre-commit hooks for the ATOS repo..."
-cd $ATOS_REPO_PATH
-# Check if we are in a git repo
-if [ -d ".git" ]; then
-    pre-commit install
-fi
-
 # Check if apt failed to install dependencies
 check_command_failed $? "Failed to install dependencies."
 
