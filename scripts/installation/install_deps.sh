@@ -50,8 +50,8 @@ sudo apt install -y \
     ros-${ROS_DISTRO}-launch-pytest
 check_command_failed $? "Failed to install ROS2 packages."
 
-sudo rosdep init && \
-    rosdep update && \
+sudo rosdep init || true && \
+    rosdep update || true && \
     rosdep install --from-paths ${ATOS_REPO_PATH} --ignore-src --rosdistro $ROS_DISTRO -y
 check_command_failed $? "Failed to install ROS2 dependencies."
 
