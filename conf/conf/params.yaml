@@ -18,11 +18,12 @@ atos:
   mqtt_bridge:
     ros__parameters:
       broker_ip: ""
-      pub_client_id: ""
+      port: 1883
+      client_id: ""
       username: ""
       password: ""
       topic: ""
-      quality_of_service: ""
+      quality_of_service: 1
   trajectorylet_streamer:
     ros__parameters:
       chunk_duration: 2.0

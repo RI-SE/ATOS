@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "mqttbridge.hpp"
-#include "mqtt.hpp"
+#include "mqttclient.hpp"
 #include <random>
 
 
@@ -16,27 +16,26 @@ MqttBridge::MqttBridge() : Module(MqttBridge::moduleName),
 						   v2xMsgSub(*this, std::bind(&MqttBridge::onV2xMsg, this, _1))
 {
 	declare_parameter("broker_ip","");
-	declare_parameter("pub_client_id","");
+	declare_parameter("port", 1883);
+	declare_parameter("client_id","");
 	declare_parameter("username","");
 	declare_parameter("password","");
 	declare_parameter("topic","");
-	declare_parameter("quality_of_service","1");
+	declare_parameter("quality_of_service", 1);
 
 	get_parameter("broker_ip", brokerIP);
-	get_parameter("pub_client_id", pubClientId);
+	get_parameter("port", port);	
+	get_parameter("client_id", clientId);
 	get_parameter("username", username);
 	get_parameter("password", password);
 	get_parameter("topic", topic);
 	get_parameter("quality_of_service", QoS);
-
-	timer = this->create_wall_timer(SEND_INTERVAL, std::bind(&MqttBridge::yieldMqttClient, this));
 
 	this->initialize();
 }
 
 /*!
  * \brief initializeModule Initializes this module by starting the mqtt client with ros parameter settings.
- *		  return 0 if successfully initalized. None 0 otherwise. 
  */
 void MqttBridge::initialize()
 {
@@ -51,30 +50,12 @@ void MqttBridge::initialize()
 	}
 }
 
-/*!
- * \brief Yield MQTT client at intervals shorter then the MQTT_KEEPALIVE_INTERVAL_S to keep the connection open
- *        if no messages are published for a while.
- */
-void MqttBridge::yieldMqttClient()
-{
-	MQTTClient_yield();
-}
-
 void MqttBridge::setupConnection()
 {
-	// Add a random number to avoid conflicting client IDs
-	std::random_device rd;
-	std::uniform_int_distribution<int> dist(10000, 99999);
-	static const std::string client_id = pubClientId + std::to_string(dist(rd));
+	RCLCPP_INFO(this->get_logger(), "Setting up connection with clientID: %s, and broker IP: %s", clientId.c_str(), brokerIP.c_str());
 
-	RCLCPP_INFO(this->get_logger(), "Setting up connection with clientID: %s, and broker IP: %s", client_id.c_str(), brokerIP.c_str());
-
-	MQTTClient mqttClient = MQTT::setupConnection(brokerIP.c_str(),
-												  client_id.c_str(),
-												  username.c_str(),
-												  password.c_str(),
-												  MQTT::clientType::publisher,
-												  "");
+	mqttClient = std::make_shared<MQTTClient>(brokerIP, port, username, password);
+	mqttClient->connect();
 
 	if (mqttClient == nullptr)
 	{
@@ -84,22 +65,20 @@ void MqttBridge::setupConnection()
 	else
 	{
 		RCLCPP_DEBUG(this->get_logger(), "Successfully initialized MQTT connection to broker");
-		this->mqttClient = mqttClient;
 	}
 }
 
 void MqttBridge::onV2xMsg(const V2X::message_type::SharedPtr v2x_msg)
 {
-	if (MQTTClient_isConnected(this->mqttClient))
+	if (mqttClient->isConnected())
 	{
 		json payload = v2xToJson(v2x_msg);
-		const MQTT::Message mqttMsg = MQTT::Message(payload.dump(), topic.c_str());
 		bool retained = false;
 
 		try
 		{
 			RCLCPP_DEBUG(this->get_logger(), "Publishing MQTT v2x msg to broker %s", payload.dump().c_str());
-			MQTT::publishMessage(mqttMsg, this->mqttClient, retained);
+			mqttClient->publishMessage(topic, payload.dump());
 		}
 		catch (std::runtime_error&)
 		{

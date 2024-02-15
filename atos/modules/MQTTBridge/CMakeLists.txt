@@ -12,7 +12,7 @@ project(mqtt_bridge)
 find_package(rclcpp REQUIRED)
 find_package(atos_interfaces REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
-find_package(eclipse-paho-mqtt-c REQUIRED)
+find_package(PahoMqttCpp REQUIRED)
 
 # Define target names
 set(MQTT_BRIDGE_TARGET ${PROJECT_NAME})
@@ -24,7 +24,8 @@ include(GNUInstallDirs)
 # Create project main executable target
 add_executable(${MQTT_BRIDGE_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/mqtt.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/mqttclient.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/mqttsubscribercallback.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/mqttbridge.cpp
 )
 
@@ -32,8 +33,8 @@ add_executable(${MQTT_BRIDGE_TARGET}
 target_link_libraries(${MQTT_BRIDGE_TARGET}
 	${ATOS_COMMON_LIBRARY}
 	${nlohmann_json}
-	eclipse-paho-mqtt-c::paho-mqtt3a
-	eclipse-paho-mqtt-c::paho-mqtt3c
+	paho-mqttpp3
+	paho-mqtt3as
 )
 
 target_include_directories(${MQTT_BRIDGE_TARGET} PUBLIC SYSTEM
@@ -46,7 +47,6 @@ target_include_directories(${MQTT_BRIDGE_TARGET} PUBLIC SYSTEM
 ament_target_dependencies(${MQTT_BRIDGE_TARGET}
   rclcpp
   atos_interfaces
-  eclipse-paho-mqtt-c
 )
 
 # Installation rules
