@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 # Check if called without arguments
 if [ $# -eq 0 ]; then
     echo "Don't call this file directly, use setup_atos.sh instead."
@@ -68,7 +68,7 @@ check_command_failed $? "Failed to install ROS2 packages."
 ######## Install ATOS GUI dependencies ########
 ###############################################
 
-pip install -r ${ATOS_REPO_PATH}/gui/requirements.txt 
+pip install -r ${ATOS_REPO_PATH}/atos_gui/requirements.txt 
 
 # Install pyOpenSSL
 pip install pyOpenSSL
