@@ -20,7 +20,10 @@ pip install -r ${ATOS_REPO_PATH}/scripts/installation/requirements.txt
 # Install pre-commit hooks for the ATOS repo
 echo "Installing pre-commit hooks for the ATOS repo..."
 cd $ATOS_REPO_PATH
-pre-commit install
+# Check if we are in a git repo
+if [ -d ".git" ]; then
+    pre-commit install
+fi
 
 # Check if apt failed to install dependencies
 check_command_failed $? "Failed to install dependencies."
