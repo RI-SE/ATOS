@@ -13,3 +13,5 @@
     proj-bin
     clang
     libstdc++-12-dev
+    librabbitmq4
+    librabbitmw-dev
