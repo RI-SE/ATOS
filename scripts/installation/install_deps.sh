@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 # Check if called without arguments
 if [ $# -eq 0 ]; then
     echo "Don't call this file directly, use setup_atos.sh instead."
@@ -16,11 +16,6 @@ apt_deps=$(cat ${ATOS_REPO_PATH}/scripts/installation/dependencies.txt | tr '\n'
 echo "Installing dependencies... $apt_deps"
 sudo apt update && sudo apt install -y ${apt_deps}
 pip install -r ${ATOS_REPO_PATH}/scripts/installation/requirements.txt
-
-# Install pre-commit hooks for the ATOS repo
-echo "Installing pre-commit hooks for the ATOS repo..."
-cd $ATOS_REPO_PATH
-pre-commit install
 
 # Check if apt failed to install dependencies
 check_command_failed $? "Failed to install dependencies."
@@ -51,24 +46,20 @@ fi
 echo "Installing ROS2 packages..."
 sudo apt install -y \
     ros-${ROS_DISTRO}-desktop \
-    ros-${ROS_DISTRO}-geographic-msgs \
-    ros-${ROS_DISTRO}-geometry-msgs \
-    ros-${ROS_DISTRO}-std-msgs \
-    ros-${ROS_DISTRO}-std-srvs \
-    ros-${ROS_DISTRO}-nav-msgs \
-    ros-${ROS_DISTRO}-geographic-msgs \
-    ros-${ROS_DISTRO}-foxglove-msgs \
-    ros-${ROS_DISTRO}-pcl-conversions \
-    ros-${ROS_DISTRO}-rosbridge-suite \
-    ros-${ROS_DISTRO}-foxglove-bridge \
+    python3-rosdep \
     ros-${ROS_DISTRO}-launch-pytest
 check_command_failed $? "Failed to install ROS2 packages."
+
+sudo rosdep init || true && \
+    rosdep update || true && \
+    rosdep install --from-paths ${ATOS_REPO_PATH} --ignore-src --rosdistro $ROS_DISTRO -y
+check_command_failed $? "Failed to install ROS2 dependencies."
 
 ###############################################
 ######## Install ATOS GUI dependencies ########
 ###############################################
 
-pip install -r ${ATOS_REPO_PATH}/gui/requirements.txt 
+pip install -r ${ATOS_REPO_PATH}/atos_gui/requirements.txt 
 
 # Install pyOpenSSL
 pip install pyOpenSSL

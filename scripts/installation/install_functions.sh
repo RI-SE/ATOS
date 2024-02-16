@@ -44,7 +44,7 @@ add_source_line_if_needed() {
     if ! grep -qF "$source_line" "$file"; then
         # Ask the user if they want to add the source line.
         # First check for noninteractive shell with DEBAIN_FRONTEND=noninteractive
-        if [ -z "$DEBIAN_FRONTEND" ]; then
+        if [ -z "$DEBIAN_FRONTEND" && ! -z $GITHUB_ACTION]; then
             echo "Do you want to add the following line to your $shell_type config file $file:"
             echo "$source_line"
             echo "y/n"

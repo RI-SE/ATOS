@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 
 # Check if called without arguments
 if [ $# -eq 0 ]; then

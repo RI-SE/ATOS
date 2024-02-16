@@ -12,9 +12,14 @@ ENV ROS_DISTRO=${ROS_DISTRO}
 ENV REPO_DIR=/root/atos_git
 SHELL ["/bin/bash", "-c"]
 
-WORKDIR /root/atos_git
+WORKDIR ${REPO_DIR}
+
 COPY ./scripts/installation/ ./scripts/installation/
-COPY ./.git /root/atos_git/.git
+COPY ./atos_gui/requirements.txt ./atos_gui/requirements.txt
+COPY ./atos_gui/package.xml ./atos_gui/package.xml
+COPY ./atos_interfaces/package.xml ./atos_interfaces/package.xml
+COPY ./atos/package.xml ./atos/package.xml
+
 RUN --mount=type=cache,target=/var/cache/apt \ 
         ./scripts/installation/install_deps.sh ${REPO_DIR}
 COPY . .
