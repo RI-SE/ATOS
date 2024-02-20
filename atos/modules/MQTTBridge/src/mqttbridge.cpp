@@ -27,7 +27,7 @@ MqttBridge::MqttBridge()
   get_parameter("port", port);
   get_parameter("username", username);
   get_parameter("password", password);
-  get_parameter("topic_prefix", topic);
+  get_parameter("topic_prefix", topic_prefix);
   get_parameter("quality_of_service", QoS);
 
   this->initialize();
@@ -82,7 +82,7 @@ void MqttBridge::onMessage(T msg, std::string mqtt_topic,
   try {
     RCLCPP_DEBUG(this->get_logger(), "Publishing MQTT msg to broker %s",
                  payload.dump().c_str());
-    mqttClient->publishMessage(topic_prefix + mqtt_topic, payload.dump());
+    mqttClient->publishMessage(self.topic_prefix + mqtt_topic, payload.dump());
   } catch (std::runtime_error &) {
     RCLCPP_ERROR(this->get_logger(), "Failed to publish MQTT message");
   }
