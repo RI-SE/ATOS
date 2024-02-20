@@ -13,7 +13,8 @@ using namespace ROSChannels;
 using std::placeholders::_1;
 
 MqttBridge::MqttBridge() : Module(MqttBridge::moduleName),
-						   v2xMsgSub(*this, std::bind(&MqttBridge::onV2xMsg, this, _1))
+						   v2xMsgSub(*this, std::bind(&MqttBridge::onV2xMsg, this, _1)),
+						   obcStateChangeSub(*this, std::bind(&MqttBridge::onObcStateChangeMsg, this, _1))
 {
 	declare_parameter("broker_ip","");
 	declare_parameter("port", 1883);
@@ -70,25 +71,35 @@ void MqttBridge::setupConnection()
 
 void MqttBridge::onV2xMsg(const V2X::message_type::SharedPtr v2x_msg)
 {
-	if (mqttClient->isConnected())
-	{
-		json payload = v2xToJson(v2x_msg);
-		bool retained = false;
+	this->onMessage<V2X::message_type::SharedPtr>(v2x_msg, v2xToJson);
+}
 
-		try
-		{
-			RCLCPP_DEBUG(this->get_logger(), "Publishing MQTT v2x msg to broker %s", payload.dump().c_str());
-			mqttClient->publishMessage(topic, payload.dump());
-		}
-		catch (std::runtime_error&)
-		{
-			RCLCPP_ERROR(this->get_logger(), "Failed to publish MQTT message");
-		}
-	}
-	else
-	{
-		RCLCPP_ERROR(this->get_logger(), "Received v2x msg while the client is disconnected, dropping msg...");
-	}
+void MqttBridge::onObcStateChangeMsg(const ObjectStateChange::message_type::SharedPtr obc_msg)
+{
+	this->onMessage<ObjectStateChange::message_type::SharedPtr>(obc_msg, obcStateChangeToJson);
+}
+
+template <typename T>
+void MqttBridge::onMessage(T msg, std::function<json(T)> convertFunc)
+{
+    if (mqttClient->isConnected())
+    {
+        json payload = convertFunc(msg);
+
+        try
+        {
+            RCLCPP_DEBUG(this->get_logger(), "Publishing MQTT msg to broker %s", payload.dump().c_str());
+            mqttClient->publishMessage(topic, payload.dump());
+        }
+        catch (std::runtime_error&)
+        {
+            RCLCPP_ERROR(this->get_logger(), "Failed to publish MQTT message");
+        }
+    }
+    else
+    {
+        RCLCPP_ERROR(this->get_logger(), "Received msg while the client is disconnected, dropping msg...");
+    }
 }
 
 json MqttBridge::v2xToJson(const V2X::message_type::SharedPtr v2x_msg)
@@ -101,5 +112,14 @@ json MqttBridge::v2xToJson(const V2X::message_type::SharedPtr v2x_msg)
 	j["altitude"] = v2x_msg->altitude;
 	j["latitude"] = v2x_msg->latitude;
 	j["longitude"] = v2x_msg->longitude;
+	return j;
+}
+
+json MqttBridge::obcStateChangeToJson(const ObjectStateChange::message_type::SharedPtr obc_msg)
+{
+	json j;
+	j["id"] = obc_msg->id;
+	j["state"] = obc_msg->state.state;
+	j["prev_state"] = obc_msg->prev_state.state;
 	return j;
 }
