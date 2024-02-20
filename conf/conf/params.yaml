@@ -19,10 +19,9 @@ atos:
     ros__parameters:
       broker_ip: ""
       port: 1883
-      client_id: ""
       username: ""
       password: ""
-      topic: ""
+      topic_prefix: "atos"
       quality_of_service: 1
   trajectorylet_streamer:
     ros__parameters:
