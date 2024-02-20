@@ -21,7 +21,6 @@ MqttBridge::MqttBridge() : Module(MqttBridge::moduleName),
 	declare_parameter("client_id","");
 	declare_parameter("username","");
 	declare_parameter("password","");
-	declare_parameter("topic","");
 	declare_parameter("quality_of_service", 1);
 
 	get_parameter("broker_ip", brokerIP);
@@ -29,7 +28,6 @@ MqttBridge::MqttBridge() : Module(MqttBridge::moduleName),
 	get_parameter("client_id", clientId);
 	get_parameter("username", username);
 	get_parameter("password", password);
-	get_parameter("topic", topic);
 	get_parameter("quality_of_service", QoS);
 
 	this->initialize();
@@ -71,16 +69,16 @@ void MqttBridge::setupConnection()
 
 void MqttBridge::onV2xMsg(const V2X::message_type::SharedPtr v2x_msg)
 {
-	this->onMessage<V2X::message_type::SharedPtr>(v2x_msg, v2xToJson);
+	this->onMessage<V2X::message_type::SharedPtr>(v2x_msg, "v2x", v2xToJson);
 }
 
-void MqttBridge::onObcStateChangeMsg(const ObjectStateChange::message_type::SharedPtr obc_msg)
+void MqttBridge::onObcStateChangeMsg(const StateChange::message_type::SharedPtr obc_msg)
 {
-	this->onMessage<ObjectStateChange::message_type::SharedPtr>(obc_msg, obcStateChangeToJson);
+	this->onMessage<StateChange::message_type::SharedPtr>(obc_msg, "state", obcStateChangeToJson);
 }
 
 template <typename T>
-void MqttBridge::onMessage(T msg, std::function<json(T)> convertFunc)
+void MqttBridge::onMessage(T msg, std::string mqtt_topic, std::function<json(T)> convertFunc)
 {
     if (mqttClient->isConnected())
     {
@@ -89,7 +87,7 @@ void MqttBridge::onMessage(T msg, std::function<json(T)> convertFunc)
         try
         {
             RCLCPP_DEBUG(this->get_logger(), "Publishing MQTT msg to broker %s", payload.dump().c_str());
-            mqttClient->publishMessage(topic, payload.dump());
+            mqttClient->publishMessage(mqtt_topic, payload.dump());
         }
         catch (std::runtime_error&)
         {
@@ -115,11 +113,10 @@ json MqttBridge::v2xToJson(const V2X::message_type::SharedPtr v2x_msg)
 	return j;
 }
 
-json MqttBridge::obcStateChangeToJson(const ObjectStateChange::message_type::SharedPtr obc_msg)
+json MqttBridge::obcStateChangeToJson(const StateChange::message_type::SharedPtr obc_msg)
 {
 	json j;
-	j["id"] = obc_msg->id;
-	j["state"] = obc_msg->state.state;
-	j["prev_state"] = obc_msg->prev_state.state;
+	j["current_state"] = obc_msg->current_state;
+	j["prev_state"] = obc_msg->prev_state;
 	return j;
 }
