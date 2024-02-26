@@ -6,7 +6,7 @@
 #pragma once
 
 #include "module.hpp"
-#include "mqttclient.hpp"
+#include "mqttclientwrapper.hpp"
 #include "roschannels/statechange.hpp"
 #include "roschannels/v2xchannel.hpp"
 #include <chrono>

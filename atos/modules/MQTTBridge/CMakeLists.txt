@@ -24,7 +24,7 @@ include(GNUInstallDirs)
 # Create project main executable target
 add_executable(${MQTT_BRIDGE_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/mqttclient.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/mqttclientwrapper.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/mqttsubscribercallback.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/mqttbridge.cpp
 )
