@@ -12,21 +12,21 @@ using std::placeholders::_1;
 
 MqttBridge::MqttBridge()
     : Module(MqttBridge::moduleName),
-      v2xMsgSub(*this, std::bind(&MqttBridge::onV2xMsg, this, _1)) {
+      v2xMsgSub(*this, std::bind(&MqttBridge::onV2xMsg, this, _1)),
+      obcStateChangeSub(*this,
+                        std::bind(&MqttBridge::onObcStateChangeMsg, this, _1)) {
   declare_parameter("broker_ip", "");
   declare_parameter("port", 1883);
-  declare_parameter("client_id", "");
   declare_parameter("username", "");
   declare_parameter("password", "");
-  declare_parameter("topic", "");
+  declare_parameter("topic_prefix", "atos");
   declare_parameter("quality_of_service", 1);
 
   get_parameter("broker_ip", brokerIP);
   get_parameter("port", port);
-  get_parameter("client_id", clientId);
   get_parameter("username", username);
   get_parameter("password", password);
-  get_parameter("topic", topic);
+  get_parameter("topic_prefix", topic_prefix);
   get_parameter("quality_of_service", QoS);
 
   this->initialize();
@@ -66,21 +66,26 @@ void MqttBridge::setupConnection() {
 }
 
 void MqttBridge::onV2xMsg(const V2X::message_type::SharedPtr v2x_msg) {
-  if (mqttClientWrapper->isConnected()) {
-    json payload = v2xToJson(v2x_msg);
-    bool retained = false;
+  this->onMessage<V2X::message_type::SharedPtr>(v2x_msg, "v2x", v2xToJson);
+}
 
-    try {
-      RCLCPP_DEBUG(this->get_logger(), "Publishing MQTT v2x msg to broker %s",
-                   payload.dump().c_str());
-      mqttClientWrapper->publishMessage(topic, payload.dump(), QoS);
-    } catch (std::runtime_error &) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to publish MQTT message");
-    }
-  } else {
-    RCLCPP_ERROR(
-        this->get_logger(),
-        "Received v2x msg while the client is disconnected, dropping msg...");
+void MqttBridge::onObcStateChangeMsg(
+    const StateChange::message_type::SharedPtr obc_msg) {
+  this->onMessage<StateChange::message_type::SharedPtr>(obc_msg, "state",
+                                                        obcStateChangeToJson);
+}
+
+template <typename T>
+void MqttBridge::onMessage(T msg, std::string mqtt_topic,
+                           std::function<json(T)> convertFunc) {
+  json payload = convertFunc(msg);
+  try {
+    RCLCPP_DEBUG(this->get_logger(), "Publishing MQTT msg to broker %s",
+                 payload.dump().c_str());
+    mqttClientWrapper->publishMessage(topic_prefix + mqtt_topic, payload.dump(),
+                                      QoS);
+  } catch (std::runtime_error &) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to publish MQTT message");
   }
 }
 
@@ -93,5 +98,13 @@ json MqttBridge::v2xToJson(const V2X::message_type::SharedPtr v2x_msg) {
   j["altitude"] = v2x_msg->altitude;
   j["latitude"] = v2x_msg->latitude;
   j["longitude"] = v2x_msg->longitude;
+  return j;
+}
+
+json MqttBridge::obcStateChangeToJson(
+    const StateChange::message_type::SharedPtr obc_msg) {
+  json j;
+  j["current_state"] = obc_msg->current_state;
+  j["prev_state"] = obc_msg->prev_state;
   return j;
 }

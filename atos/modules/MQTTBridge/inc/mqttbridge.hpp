@@ -7,6 +7,7 @@
 
 #include "module.hpp"
 #include "mqttclientwrapper.hpp"
+#include "roschannels/statechange.hpp"
 #include "roschannels/v2xchannel.hpp"
 #include <chrono>
 #include <nlohmann/json.hpp>
@@ -33,12 +34,24 @@ private:
   std::string clientId;
   std::string username;
   std::string password;
-  std::string topic;
+  std::string topic_prefix;
   int QoS;
 
   ROSChannels::V2X::Sub v2xMsgSub; //!< Subscriber to v2x messages requests
+  ROSChannels::StateChange::Sub
+      obcStateChangeSub; //!< Subscriber to object state change requests
 
   void setupConnection();
   void onV2xMsg(const ROSChannels::V2X::message_type::SharedPtr);
-  json v2xToJson(const ROSChannels::V2X::message_type::SharedPtr v2x_msg);
+  void
+  onObcStateChangeMsg(const ROSChannels::StateChange::message_type::SharedPtr);
+
+  template <typename T>
+  void onMessage(T msg, std::string mqtt_topic,
+                 std::function<json(T)> convertFunc);
+
+  static json
+  v2xToJson(const ROSChannels::V2X::message_type::SharedPtr v2x_msg);
+  static json obcStateChangeToJson(
+      const ROSChannels::StateChange::message_type::SharedPtr obc_msg);
 };
