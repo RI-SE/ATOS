@@ -25,7 +25,7 @@ public:
   void initialize();
 
 private:
-  std::shared_ptr<MQTTClient> mqttClient;
+  std::shared_ptr<MQTTClientWrapper> mqttClientWrapper;
   static inline std::string const moduleName = "mqtt_bridge";
   constexpr static std::chrono::milliseconds SEND_INTERVAL =
       std::chrono::milliseconds(5000);

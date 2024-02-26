@@ -52,10 +52,11 @@ void MqttBridge::setupConnection() {
               "Setting up connection with clientID: %s, and broker IP: %s",
               clientId.c_str(), brokerIP.c_str());
 
-  mqttClient = std::make_shared<MQTTClient>(brokerIP, port, username, password);
-  mqttClient->connect();
+  mqttClientWrapper =
+      std::make_shared<MQTTClientWrapper>(brokerIP, port, username, password);
+  mqttClientWrapper->connect();
 
-  if (mqttClient == nullptr) {
+  if (mqttClientWrapper == nullptr) {
     RCLCPP_ERROR(this->get_logger(),
                  "Failed to initialize MQTT connection to broker, exiting...");
     rclcpp::shutdown();
