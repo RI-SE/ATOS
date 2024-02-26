@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-#include "mqttclient.hpp"
+#include "mqttclientwrapper.hpp"
 
 MQTTClientWrapper::MQTTClientWrapper(const std::string &host, const int &port,
                                      const std::string &username,
@@ -77,7 +77,7 @@ std::string MQTTClientWrapper::getMqttMessage() const {
  */
 void MQTTClientWrapper::publishMessage(const std::string &topic,
                                        const std::string &message,
-                                       const int &qos) {
+                                       const int qos) {
   if (mqttClient->is_connected()) {
     mqtt::message_ptr pubmsg = mqtt::make_message(topic, message);
     pubmsg->set_qos(qos);

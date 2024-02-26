@@ -20,7 +20,8 @@ public:
   std::string getMqttMessage() const;
   void connect();
   void setupSubscriptions(std::vector<std::string> &mqttTopics);
-  void publishMessage(const std::string &topic, const std::string &message);
+  void publishMessage(const std::string &topic, const std::string &message,
+                      const int QoS);
   bool isConnected() { return mqttClient->is_connected(); }
 
 private:
