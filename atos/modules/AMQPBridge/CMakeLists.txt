@@ -11,6 +11,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(amqp_bridge)
 find_package(rclcpp REQUIRED)
 find_package(atos_interfaces REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_search_module(PKG_AMQPCLIENT REQUIRED IMPORTED_TARGET libSimpleAmqpClient)
+# find_package(libSimpleAmqpClient)
+# find_package(amqpcpp REQUIRED)
 
 # Define target names
 set(AMQP_BRIDGE_TARGET ${PROJECT_NAME})
@@ -21,13 +25,15 @@ include(GNUInstallDirs)
 
 # Create project main executable target
 add_executable(${AMQP_BRIDGE_TARGET}
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+  	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/amqpbridge.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/amqpclient.cpp
 )
 
 # Link project executable to util libraries
 target_link_libraries(${AMQP_BRIDGE_TARGET}
 	${ATOS_COMMON_LIBRARY}
+	PkgConfig::PKG_AMQPCLIENT
 )
 
 target_include_directories(${AMQP_BRIDGE_TARGET} PUBLIC SYSTEM
