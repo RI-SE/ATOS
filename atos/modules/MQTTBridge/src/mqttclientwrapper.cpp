@@ -52,12 +52,9 @@ void MQTTClientWrapper::connect() { mqttClient->connect(connectionOptions); }
  * the broker.
  *
  */
-void MQTTClientWrapper::setupSubscriptions(
-    std::vector<std::string> &mqttTopics) {
-  mqttSubscriberCallback = std::make_unique<MQTTSubscriberCallback>(
-      *mqttClient, connectionOptions, mqttTopics);
-  mqttClient->set_callback(*mqttSubscriberCallback);
-  mqttClient->connect(connectionOptions, nullptr, *mqttSubscriberCallback);
+void MQTTClientWrapper::subscribe(const std::string &mqttTopics,
+                                  const int QoS) {
+  mqttClient->subscribe(mqttTopics, QoS);
 }
 
 /**
