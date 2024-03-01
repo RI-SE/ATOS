@@ -108,6 +108,25 @@ void MqttBridge::initialize() {
             "~/new_mqtt2ros_bridge",
             std::bind(&MqttBridge::newMqtt2RosBridge, this,
                       std::placeholders::_1, std::placeholders::_2));
+
+    // Do a service call to create the MQTT2ROS bridges for each MQTT topic in
+    // the parameter list
+    for (const auto &mqtt2ros : mqtt2ros_) {
+      atos_interfaces::srv::NewMqtt2RosBridge::Request::SharedPtr request =
+          std::make_shared<atos_interfaces::srv::NewMqtt2RosBridge::Request>();
+      request->mqtt_topic = mqtt2ros.first;
+      request->ros_topic = mqtt2ros.second.ros.topic;
+      request->mqtt_qos = mqtt2ros.second.mqtt.qos;
+      request->ros_queue_size = mqtt2ros.second.ros.queue_size;
+      atos_interfaces::srv::NewMqtt2RosBridge::Response::SharedPtr response =
+          std::make_shared<atos_interfaces::srv::NewMqtt2RosBridge::Response>();
+      newMqtt2RosBridge(request, response);
+      if (!response->success) {
+        RCLCPP_ERROR(this->get_logger(),
+                     "Failed to create MQTT2ROS bridge for topic '%s'",
+                     mqtt2ros.first.c_str());
+      }
+    }
   }
 }
 
@@ -172,6 +191,8 @@ void MqttBridge::newMqtt2RosBridge(
   mqtt2ros.ros.is_stale = true;
   mqtt2ros.ros.topic = request->ros_topic;
   mqtt2ros.mqtt.qos = request->mqtt_qos;
+  mqtt2ros.ros.publisher = this->create_publisher<std_msgs::msg::Empty>(
+      mqtt2ros.ros.topic, request->ros_queue_size);
   mqtt2ros.ros.queue_size = request->ros_queue_size;
 
   RCLCPP_INFO(get_logger(), "Bridging MQTT topic '%s' to ROS topic '%s'",
@@ -193,6 +214,18 @@ void MqttBridge::onObcStateChangeMsg(
     const StateChange::message_type::SharedPtr obc_msg) {
   this->onMessage<StateChange::message_type::SharedPtr>(obc_msg, "state",
                                                         obcStateChangeToJson);
+}
+
+void MqttBridge::message_arrived(mqtt::const_message_ptr mqtt_msg) {
+  std::string mqtt_topic = mqtt_msg->get_topic();
+  RCLCPP_DEBUG(get_logger(), "Received MQTT message on topic '%s'",
+               mqtt_topic.c_str());
+  Mqtt2RosInterface &mqtt2ros = mqtt2ros_[mqtt_topic];
+
+  // Publish empty message to ROS topic
+  mqtt2ros.ros.publisher->publish(std_msgs::msg::Empty());
+  RCLCPP_DEBUG(get_logger(), "Published empty message to ROS topic '%s'",
+               mqtt2ros.ros.topic.c_str());
 }
 
 template <typename T>

@@ -65,6 +65,35 @@ private:
   mqtt::connect_options connect_options_;
 
   /**
+   * @brief Callback for when the client receives a MQTT message from the
+   * broker.
+   *
+   * Overrides mqtt::callback::message_arrived(mqtt::const_message_ptr).
+   * If the received MQTT message contains information about a ROS message type,
+   * the corresponding ROS publisher is configured. If the received MQTT message
+   * is a ROS message, the mqtt2ros conversion is called.
+   *
+   * @param   mqtt_msg     MQTT message
+   */
+  void message_arrived(mqtt::const_message_ptr mqtt_msg) override;
+
+  /**
+   * @brief Publishes a ROS message received via MQTT to ROS.
+   *
+   * This utilizes the generic publisher stored for the MQTT topic on which the
+   * message was received. The publisher has to be configured to the ROS message
+   * type of the message.
+   *
+   * The MQTT payload is expected to carry the following:
+   * - serialized ROS message
+   *
+   * @param   mqtt_msg       MQTT message
+   * @param   arrival_stamp  arrival timestamp used for latency computation
+   */
+  void mqtt2ros(mqtt::const_message_ptr mqtt_msg,
+                const rclcpp::Time &arrival_stamp);
+
+  /**
    * @brief Callback for when a MQTT action succeeds.
    *
    * Overrides mqtt::iaction_listener::on_success(const mqtt::token&).
