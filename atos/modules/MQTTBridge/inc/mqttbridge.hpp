@@ -5,11 +5,13 @@
  */
 #pragma once
 
+#include "Imqtt2ros.hpp"
 #include "module.hpp"
 #include "mqttclientwrapper.hpp"
 #include "roschannels/statechange.hpp"
 #include "roschannels/v2xchannel.hpp"
 #include <chrono>
+#include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -24,7 +26,18 @@ public:
   MqttBridge();
   void initialize();
 
+protected:
+  /**
+   * @brief Loads ROS parameters from parameter server.
+   */
+  void loadParameters();
+
 private:
+  /**
+   * @brief MQTT2ROS connection variables sorted by MQTT topic
+   */
+  std::map<std::string, Mqtt2RosInterface> mqtt2ros_;
+
   std::shared_ptr<MQTTClientWrapper> mqttClientWrapper;
   static inline std::string const moduleName = "mqtt_bridge";
   constexpr static std::chrono::milliseconds SEND_INTERVAL =
