@@ -98,13 +98,12 @@ private:
   std::string username;
   std::string password;
   std::string topic_prefix;
-  int QoS;
 
   ROSChannels::V2X::Sub v2xMsgSub; //!< Subscriber to v2x messages requests
   ROSChannels::StateChange::Sub
       obcStateChangeSub; //!< Subscriber to object state change requests
 
-  void setupConnection();
+  void setupClient();
   void onV2xMsg(const ROSChannels::V2X::message_type::SharedPtr);
   void
   onObcStateChangeMsg(const ROSChannels::StateChange::message_type::SharedPtr);
