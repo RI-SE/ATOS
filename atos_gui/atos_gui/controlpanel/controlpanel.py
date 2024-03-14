@@ -19,11 +19,14 @@ OBC_STATES = {
         2: 'INITIALIZED',
         3: 'CONNECTED',
         4: 'ARMED',
-        5: 'RUNNING',
-        6: 'REMOTE_CTRL',
-        7: 'ERROR',
-        8: 'ABORTING'
+        5: 'DISARMING',
+        6: 'RUNNING',
+        7: 'REMOTECTRL',
+        8: 'ERROR',
+        9: 'ABORTING',
+        10: 'CLEARING'
     }
+
 class ControlPanelNode(Node):
     def __init__(self) -> None:
         super().__init__('control_panel')
