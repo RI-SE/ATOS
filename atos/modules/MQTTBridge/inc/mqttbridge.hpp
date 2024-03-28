@@ -5,11 +5,14 @@
  */
 #pragma once
 
+#include "Imqtt2ros.hpp"
+#include "atos_interfaces/srv/new_mqtt2_ros_bridge.hpp"
 #include "module.hpp"
-#include "mqttclientwrapper.hpp"
 #include "roschannels/statechange.hpp"
 #include "roschannels/v2xchannel.hpp"
 #include <chrono>
+#include <fmt/format.h>
+#include <mqtt/async_client.h>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -19,13 +22,102 @@ using json = nlohmann::json;
  * publisher
  */
 
-class MqttBridge : public Module {
+class MqttBridge : public Module,
+                   public virtual mqtt::callback,
+                   public virtual mqtt::iaction_listener {
 public:
   MqttBridge();
   void initialize();
 
+protected:
+  /**
+   * @brief Loads ROS parameters from parameter server.
+   */
+  void loadParameters();
+
+  void connect();
+
+  void newMqtt2RosBridge(
+      const std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Request>
+          request,
+      std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Response>
+          response);
+
 private:
-  std::shared_ptr<MQTTClientWrapper> mqttClientWrapper;
+  /**
+   * @brief MQTT2ROS connection variables sorted by MQTT topic
+   */
+  std::map<std::string, Mqtt2RosInterface> mqtt2ros_;
+
+  /** @brief ROS Service server for providing dynamic MQTT to ROS mappings.
+   */
+  rclcpp::Service<atos_interfaces::srv::NewMqtt2RosBridge>::SharedPtr
+      new_mqtt2ros_bridge_service_;
+
+  /**
+   * @brief MQTT client variable
+   */
+  std::shared_ptr<mqtt::async_client> client_;
+
+  /**
+   * @brief MQTT client connection options
+   */
+  mqtt::connect_options connect_options_;
+
+  /**
+   * @brief Callback for when the client receives a MQTT message from the
+   * broker.
+   *
+   * Overrides mqtt::callback::message_arrived(mqtt::const_message_ptr).
+   * If the received MQTT message contains information about a ROS message type,
+   * the corresponding ROS publisher is configured. If the received MQTT message
+   * is a ROS message, the mqtt2ros conversion is called.
+   *
+   * @param   mqtt_msg     MQTT message
+   */
+  void message_arrived(mqtt::const_message_ptr mqtt_msg) override;
+
+  /**
+   * @brief Publishes a ROS message received via MQTT to ROS.
+   *
+   * This utilizes the generic publisher stored for the MQTT topic on which the
+   * message was received. The publisher has to be configured to the ROS message
+   * type of the message.
+   *
+   * The MQTT payload is expected to carry the following:
+   * - serialized ROS message
+   *
+   * @param   mqtt_msg       MQTT message
+   * @param   arrival_stamp  arrival timestamp used for latency computation
+   */
+  void mqtt2ros(mqtt::const_message_ptr mqtt_msg,
+                const rclcpp::Time &arrival_stamp);
+
+  /**
+   * @brief Callback for when a MQTT action succeeds.
+   *
+   * Overrides mqtt::iaction_listener::on_success(const mqtt::token&).
+   * Does nothing.
+   *
+   * @param   token        token tracking the action
+   */
+  void on_success(const mqtt::token &token) override;
+
+  /**
+   * @brief Callback for when a MQTT action fails.
+   *
+   * Overrides mqtt::iaction_listener::on_failure(const mqtt::token&).
+   * Logs error.
+   *
+   * @param   token        token tracking the action
+   */
+  void on_failure(const mqtt::token &token) override;
+
+  /**
+   * @brief Status variable keeping track of connection status to broker
+   */
+  bool is_connected_ = false;
+
   static inline std::string const moduleName = "mqtt_bridge";
   constexpr static std::chrono::milliseconds SEND_INTERVAL =
       std::chrono::milliseconds(5000);
@@ -35,13 +127,12 @@ private:
   std::string username;
   std::string password;
   std::string topic_prefix;
-  int QoS;
 
   ROSChannels::V2X::Sub v2xMsgSub; //!< Subscriber to v2x messages requests
   ROSChannels::StateChange::Sub
       obcStateChangeSub; //!< Subscriber to object state change requests
 
-  void setupConnection();
+  void setupClient();
   void onV2xMsg(const ROSChannels::V2X::message_type::SharedPtr);
   void
   onObcStateChangeMsg(const ROSChannels::StateChange::message_type::SharedPtr);

@@ -55,7 +55,7 @@ ui_run.APP_IMPORT_STRING = f'{__name__}:app'  # ROS2 uses a non-standard module 
 # Prepare the arguments for ui.run()
 uvicorn_args = {
     'uvicorn_reload_dirs': str(Path(__file__).parent.resolve()),
-    'favicon': '/images/favicon.ico',
+    # 'favicon': '/images/favicon.ico',
     'port': 3000,
     'show': False, # Disable auto-opening the browser
     'title': 'ATOS GUI'
