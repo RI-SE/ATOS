@@ -199,9 +199,6 @@ void MqttBridge::connect() {
     RCLCPP_ERROR(get_logger(), "Connection to broker failed: %s", e.what());
     exit(EXIT_FAILURE);
   }
-
-  // Wait for the connection to be established,
-  // rclcpp::sleep_for(std::chrono::milliseconds(100));
 }
 
 void MqttBridge::newMqtt2RosBridge(
