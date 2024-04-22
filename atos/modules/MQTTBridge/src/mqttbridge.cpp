@@ -111,8 +111,12 @@ void MqttBridge::initialize() {
             std::bind(&MqttBridge::newMqtt2RosBridge, this,
                       std::placeholders::_1, std::placeholders::_2));
 
-    // Do a service call to create the MQTT2ROS bridges for each MQTT topic in
-    // the parameter list
+    // Create a request and response for each mqtt2ros bridge and put into a
+    // map
+
+    auto serviceCallMap = std::map<
+        std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Response>,
+        std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Request>>();
     for (const auto &mqtt2ros : mqtt2ros_) {
       atos_interfaces::srv::NewMqtt2RosBridge::Request::SharedPtr request =
           std::make_shared<atos_interfaces::srv::NewMqtt2RosBridge::Request>();
@@ -122,12 +126,26 @@ void MqttBridge::initialize() {
       request->ros_queue_size = mqtt2ros.second.ros.queue_size;
       atos_interfaces::srv::NewMqtt2RosBridge::Response::SharedPtr response =
           std::make_shared<atos_interfaces::srv::NewMqtt2RosBridge::Response>();
-      newMqtt2RosBridge(request, response);
-      if (!response->success) {
-        RCLCPP_ERROR(this->get_logger(),
-                     "Failed to create MQTT2ROS bridge for topic '%s'",
-                     mqtt2ros.first.c_str());
+      serviceCallMap[response] = request;
+    }
+
+    // Loop through the map until all response objects are true
+    while (std::any_of(serviceCallMap.begin(), serviceCallMap.end(),
+                       [](const auto &pair) { return !pair.first->success; })) {
+      // Get all unsuccesful responses
+      auto failedResponses = std::vector<
+          std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Response>>();
+      for (const auto &pair : serviceCallMap) {
+        if (!pair.first->success) {
+          failedResponses.push_back(pair.first);
+        }
       }
+      // Retry all failed responses
+      for (const auto &response : failedResponses) {
+        newMqtt2RosBridge(serviceCallMap[response], response);
+      }
+      // Wait for a second before retrying
+      rclcpp::sleep_for(std::chrono::seconds(1));
     }
   }
 }
@@ -140,8 +158,7 @@ void MqttBridge::setupClient() {
   // basic client connection options
   connect_options_.set_automatic_reconnect(true);
   connect_options_.set_clean_session(true);
-  connect_options_.set_keep_alive_interval(true);
-  connect_options_.set_max_inflight(true);
+  connect_options_.set_keep_alive_interval(5);
 
   // user authentication
   if (!username.empty()) {
@@ -183,16 +200,8 @@ void MqttBridge::connect() {
     exit(EXIT_FAILURE);
   }
 
-  // Wait for the connection to be established, otherwise try again
-  rclcpp::sleep_for(std::chrono::milliseconds(100));
-  if (is_connected_) {
-    RCLCPP_INFO(get_logger(), "Connected to broker at '%s'%s",
-                client_->get_server_uri().c_str(), as_client.c_str());
-  } else {
-    RCLCPP_ERROR(get_logger(), "Connection to broker failed, retrying...");
-    rclcpp::sleep_for(std::chrono::seconds(1));
-    connect();
-  }
+  // Wait for the connection to be established,
+  // rclcpp::sleep_for(std::chrono::milliseconds(100));
 }
 
 void MqttBridge::newMqtt2RosBridge(
@@ -208,8 +217,8 @@ void MqttBridge::newMqtt2RosBridge(
       mqtt2ros.ros.topic, request->ros_queue_size);
   mqtt2ros.ros.queue_size = request->ros_queue_size;
 
-  RCLCPP_INFO(get_logger(), "Bridging MQTT topic '%s' to ROS topic '%s'",
-              request->mqtt_topic.c_str(), mqtt2ros.ros.topic.c_str());
+  RCLCPP_DEBUG(get_logger(), "Bridging MQTT topic '%s' to ROS topic '%s'",
+               request->mqtt_topic.c_str(), mqtt2ros.ros.topic.c_str());
 
   // subscribe to the MQTT topic
   std::string mqtt_topic_to_subscribe = request->mqtt_topic;
@@ -285,6 +294,7 @@ json MqttBridge::obcStateChangeToJson(
 void MqttBridge::on_success(const mqtt::token &token) {
 
   (void)token; // Avoid compiler warning for unused parameter.
+  RCLCPP_INFO(get_logger(), "Connected to broker successfully");
   is_connected_ = true;
 }
 
