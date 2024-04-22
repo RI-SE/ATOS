@@ -157,49 +157,52 @@ void MqttBridge::initialize() {
   } else {
     this->setupClient();
     this->connect();
+    this->setupMqtt2RosBridge();
+  }
+}
 
-    new_mqtt2ros_bridge_service_ =
-        create_service<atos_interfaces::srv::NewMqtt2RosBridge>(
-            "~/new_mqtt2ros_bridge",
-            std::bind(&MqttBridge::newMqtt2RosBridge, this,
-                      std::placeholders::_1, std::placeholders::_2));
+void MqttBridge::setupMqtt2RosBridge() {
+  new_mqtt2ros_bridge_service_ =
+      create_service<atos_interfaces::srv::NewMqtt2RosBridge>(
+          "~/new_mqtt2ros_bridge",
+          std::bind(&MqttBridge::newMqtt2RosBridge, this, std::placeholders::_1,
+                    std::placeholders::_2));
 
-    // Create a request and response for each mqtt2ros bridge and put into a
-    // map
+  // Create a request and response for each mqtt2ros bridge and put into a
+  // map
 
-    auto serviceCallMap = std::map<
-        std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Response>,
-        std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Request>>();
-    for (const auto &mqtt2ros : mqtt2ros_) {
-      atos_interfaces::srv::NewMqtt2RosBridge::Request::SharedPtr request =
-          std::make_shared<atos_interfaces::srv::NewMqtt2RosBridge::Request>();
-      request->mqtt_topic = mqtt2ros.first;
-      request->ros_topic = mqtt2ros.second.ros.topic;
-      request->mqtt_qos = mqtt2ros.second.mqtt.qos;
-      request->ros_queue_size = mqtt2ros.second.ros.queue_size;
-      atos_interfaces::srv::NewMqtt2RosBridge::Response::SharedPtr response =
-          std::make_shared<atos_interfaces::srv::NewMqtt2RosBridge::Response>();
-      serviceCallMap[response] = request;
-    }
+  auto serviceCallMap = std::map<
+      std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Response>,
+      std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Request>>();
+  for (const auto &mqtt2ros : mqtt2ros_) {
+    atos_interfaces::srv::NewMqtt2RosBridge::Request::SharedPtr request =
+        std::make_shared<atos_interfaces::srv::NewMqtt2RosBridge::Request>();
+    request->mqtt_topic = mqtt2ros.first;
+    request->ros_topic = mqtt2ros.second.ros.topic;
+    request->mqtt_qos = mqtt2ros.second.mqtt.qos;
+    request->ros_queue_size = mqtt2ros.second.ros.queue_size;
+    atos_interfaces::srv::NewMqtt2RosBridge::Response::SharedPtr response =
+        std::make_shared<atos_interfaces::srv::NewMqtt2RosBridge::Response>();
+    serviceCallMap[response] = request;
+  }
 
-    // Loop through the map until all response objects are true
-    while (std::any_of(serviceCallMap.begin(), serviceCallMap.end(),
-                       [](const auto &pair) { return !pair.first->success; })) {
-      // Get all unsuccesful responses
-      auto failedResponses = std::vector<
-          std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Response>>();
-      for (const auto &pair : serviceCallMap) {
-        if (!pair.first->success) {
-          failedResponses.push_back(pair.first);
-        }
+  // Loop through the map until all response objects are true
+  while (std::any_of(serviceCallMap.begin(), serviceCallMap.end(),
+                     [](const auto &pair) { return !pair.first->success; })) {
+    // Get all unsuccesful responses
+    auto failedResponses = std::vector<
+        std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Response>>();
+    for (const auto &pair : serviceCallMap) {
+      if (!pair.first->success) {
+        failedResponses.push_back(pair.first);
       }
-      // Retry all failed responses
-      for (const auto &response : failedResponses) {
-        newMqtt2RosBridge(serviceCallMap[response], response);
-      }
-      // Wait for a second before retrying
-      rclcpp::sleep_for(std::chrono::seconds(1));
     }
+    // Retry all failed responses
+    for (const auto &response : failedResponses) {
+      newMqtt2RosBridge(serviceCallMap[response], response);
+    }
+    // Wait for a second before retrying
+    rclcpp::sleep_for(std::chrono::seconds(1));
   }
 }
 

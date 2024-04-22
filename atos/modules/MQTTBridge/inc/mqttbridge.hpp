@@ -130,6 +130,7 @@ private:
       obcStateChangeSub; //!< Subscriber to object state change requests
 
   void setupClient();
+  void setupMqtt2RosBridge();
   void onV2xMsg(const ROSChannels::V2X::message_type::SharedPtr);
   void
   onObcStateChangeMsg(const ROSChannels::StateChange::message_type::SharedPtr);
