@@ -6,6 +6,7 @@
 #pragma once
 
 #include "Imqtt2ros.hpp"
+#include "Iros2mqtt.hpp"
 #include "atos_interfaces/srv/new_mqtt2_ros_bridge.hpp"
 #include "module.hpp"
 #include "roschannels/statechange.hpp"
@@ -48,6 +49,11 @@ private:
    * @brief MQTT2ROS connection variables sorted by MQTT topic
    */
   std::map<std::string, Mqtt2RosInterface> mqtt2ros_;
+
+  /**
+   * @brief ROS2MQTT connection variables sorted by ROS topic
+   */
+  std::map<std::string, Ros2MqttInterface> ros2mqtt_;
 
   /** @brief ROS Service server for providing dynamic MQTT to ROS mappings.
    */

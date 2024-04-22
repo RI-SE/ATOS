@@ -52,6 +52,23 @@ void MqttBridge::loadParameters() {
         rclcpp::ParameterType::PARAMETER_INTEGER, param_desc);
   }
 
+  param_desc.description = "The list of topics to bridge from ROS to MQTT";
+  const auto ros2mqtt_ros_topics = declare_parameter<std::vector<std::string>>(
+      "ros2mqtt.ros_topics", std::vector<std::string>(), param_desc);
+  for (const auto &ros_topic : ros2mqtt_ros_topics) {
+    param_desc.description = "MQTT topic on which the corresponding ROS "
+                             "messages are sent to the broker";
+    declare_parameter(fmt::format("ros2mqtt.{}.mqtt_topic", ros_topic),
+                      rclcpp::ParameterType::PARAMETER_STRING, param_desc);
+    param_desc.description = "ROS subscriber queue size";
+    declare_parameter(
+        fmt::format("ros2mqtt.{}.advanced.ros.queue_size", ros_topic),
+        rclcpp::ParameterType::PARAMETER_INTEGER, param_desc);
+    param_desc.description = "MQTT QoS value";
+    declare_parameter(fmt::format("ros2mqtt.{}.advanced.mqtt.qos", ros_topic),
+                      rclcpp::ParameterType::PARAMETER_INTEGER, param_desc);
+  }
+
   // mqtt2ros
   for (const auto &mqtt_topic : mqtt2ros_mqtt_topics) {
 
@@ -87,6 +104,42 @@ void MqttBridge::loadParameters() {
                   fmt::format("Parameter 'ros2mqtt.{}' is missing subparameter "
                               "'ros_topic', will be ignored",
                               mqtt_topic)
+                      .c_str());
+    }
+  }
+
+  // ros2mqtt
+  for (const auto &ros_topic : ros2mqtt_ros_topics) {
+
+    rclcpp::Parameter mqtt_topic_param;
+    if (get_parameter(fmt::format("ros2mqtt.{}.mqtt_topic", ros_topic),
+                      mqtt_topic_param)) {
+
+      // ros2mqtt[k]/ros_topic and ros2mqtt[k]/mqtt_topic
+      const std::string mqtt_topic = mqtt_topic_param.as_string();
+      Ros2MqttInterface &ros2mqtt = ros2mqtt_[ros_topic];
+      ros2mqtt.mqtt.topic = mqtt_topic;
+
+      // ros2mqtt[k]/advanced/ros/queue_size
+      rclcpp::Parameter queue_size_param;
+      if (get_parameter(
+              fmt::format("ros2mqtt.{}.advanced.ros.queue_size", ros_topic),
+              queue_size_param))
+        ros2mqtt.ros.queue_size = queue_size_param.as_int();
+
+      // ros2mqtt[k]/advanced/mqtt/qos
+      rclcpp::Parameter qos_param;
+      if (get_parameter(fmt::format("ros2mqtt.{}.advanced.mqtt.qos", ros_topic),
+                        qos_param))
+        ros2mqtt.mqtt.qos = qos_param.as_int();
+
+      RCLCPP_INFO(get_logger(), "Bridging ROS topic '%s' to MQTT topic '%s'",
+                  ros2mqtt.ros.topic.c_str(), ros2mqtt.mqtt.topic.c_str());
+    } else {
+      RCLCPP_WARN(get_logger(),
+                  fmt::format("Parameter 'ros2mqtt.{}' is missing subparameter "
+                              "'mqtt_topic', will be ignored",
+                              ros_topic)
                       .c_str());
     }
   }

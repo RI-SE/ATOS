@@ -34,6 +34,16 @@ atos:
               qos: 1               # [0] MQTT QoS value
             ros:
               queue_size: 1        # [1] ROS publisher queue size
+      ros2mqtt:
+        ros_topics:
+          - placeholder
+        placeholder:
+          mqtt_topic: placeholder
+          advanced:
+            mqtt:
+              qos: 1
+            ros:
+              queue_size: 1
   trajectorylet_streamer:
     ros__parameters:
       chunk_duration: 2.0
