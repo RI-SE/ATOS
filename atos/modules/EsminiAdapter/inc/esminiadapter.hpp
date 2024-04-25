@@ -6,6 +6,11 @@
 #pragma once
 
 #include "CRSTransformation.hpp"
+#include "atos_interfaces/srv/get_object_ip.hpp"
+#include "atos_interfaces/srv/get_object_trajectory.hpp"
+#include "atos_interfaces/srv/get_object_trigger_start.hpp"
+#include "atos_interfaces/srv/get_test_origin.hpp"
+#include "atos_interfaces/srv/set_object_ip.hpp"
 #include "esmini/esminiLib.hpp"
 #include "esmini/esminiRMLib.hpp"
 #include "module.hpp"
@@ -14,16 +19,11 @@
 #include "roschannels/monitorchannel.hpp"
 #include "roschannels/pathchannel.hpp"
 #include "roschannels/statechange.hpp"
+#include "roschannels/triggereventchannel.hpp"
 #include "roschannels/v2xchannel.hpp"
+#include "trajectory.hpp"
 #include <filesystem>
 #include <unordered_map>
-
-#include "atos_interfaces/srv/get_object_ip.hpp"
-#include "atos_interfaces/srv/get_object_trajectory.hpp"
-#include "atos_interfaces/srv/get_object_trigger_start.hpp"
-#include "atos_interfaces/srv/get_test_origin.hpp"
-#include "atos_interfaces/srv/set_object_ip.hpp"
-#include "trajectory.hpp"
 
 enum ElementType { STORY = 1,
                    ACT = 2,
@@ -58,6 +58,7 @@ private:
   ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;
   ROSChannels::Exit::Sub exitSub;
   ROSChannels::StateChange::Sub stateChangeSub;
+  ROSChannels::TriggerEventOccurred::Pub triggerEventPub;
   std::unordered_map<uint32_t, ROSChannels::Path::Pub> pathPublishers;
   std::unordered_map<uint32_t, ROSChannels::GNSSPath::Pub> gnssPathPublishers;
 
@@ -81,7 +82,7 @@ private:
   static std::filesystem::path getOpenScenarioFileParameter();
   static std::filesystem::path getOpenDriveFile();
   static void setOpenScenarioFile(const std::filesystem::path &);
-  static void handleStoryBoardElementChange(const char *name, ElementType type, ElementState state);
+  static void handleStoryBoardElementChange(const char *name, int type, int state);
   static void handleActionElementStateChange(const char *name, ElementState state);
   static void InitializeEsmini();
   static void getObjectStates(double timeStep, std::map<uint32_t, std::vector<SE_ScenarioObjectState>> &states);
@@ -91,6 +92,7 @@ private:
   static std::pair<uint32_t, std::string> parseAction(const std::string &action);
   static bool isStartAction(const std::string &action);
   static bool isSendDenmAction(const std::string &action);
+  static bool isTriggerAction(const std::string &action);
   static void collectStartAction(const char *name, int type, int state);
   static ROSChannels::V2X::message_type denmFromTestOrigin(double *llh);
 

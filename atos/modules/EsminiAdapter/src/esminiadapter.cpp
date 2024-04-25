@@ -48,6 +48,7 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
                                  connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage),
                                  exitSub(*this, &EsminiAdapter::onStaticExitMessage),
                                  stateChangeSub(*this, &EsminiAdapter::onStaticStateChangeMessage),
+                                 triggerEventPub(*this),
                                  applyTrajTransform(false),
                                  testOriginSet(false) {
   declare_parameter("open_scenario_file", "");
@@ -229,6 +230,15 @@ bool EsminiAdapter::isSendDenmAction(const std::string &action) {
 }
 
 /*!
+ * brief Check if action is a trigger action.
+ * \param action Action name
+ * \return true if action is a trigger action, false otherwise
+ */
+bool EsminiAdapter::isTriggerAction(const std::string &action) {
+  return std::regex_search(action, std::regex("trigger", std::regex_constants::icase));
+}
+
+/*!
  * \brief Add delayed start to object state if start action occurred.
  * \param name Name of the StoryBoardElement whose state has changed.
  * \param type Possible values: STORY = 1, ACT = 2, MANEUVER_GROUP = 3, MANEUVER = 4, EVENT = 5, ACTION = 6, UNDEFINED_ELEMENT_TYPE = 0.
@@ -261,13 +271,13 @@ void EsminiAdapter::collectStartAction(
  */
 void EsminiAdapter::handleStoryBoardElementChange(
     const char *name,
-    ElementType type,
-    ElementState state) {
+    int type,
+    int state) {
   RCLCPP_DEBUG(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d", name, type, state);
   // switch on type
   switch (type) {
   case ElementType::ACTION:
-    me->handleActionElementStateChange(name, state);
+    me->handleActionElementStateChange(name, static_cast<ElementState>(state));
     break;
   case ElementType::STORY: // Ignore all other types for now
   case ElementType::ACT:
@@ -301,6 +311,11 @@ void EsminiAdapter::handleActionElementStateChange(
       double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
       CRSTransformation::llhOffsetMeters(llh, offset);
       me->v2xPub.publish(denmFromTestOrigin(llh));
+    } else if (isTriggerAction(action) && state == ElementState::COMPLETE) {
+      RCLCPP_INFO(me->get_logger(), "Running trigger action for object %d", objectId);
+      ROSChannels::TriggerEventOccurred::message_type triggerEventMsg;
+      triggerEventMsg.trigger_id = objectId;
+      me->triggerEventPub.publish(triggerEventMsg);
     } else {
       RCLCPP_DEBUG(me->get_logger(), "Action %s is not supported", action.c_str());
     }
