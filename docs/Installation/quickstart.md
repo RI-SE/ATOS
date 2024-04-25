@@ -1,5 +1,5 @@
 #### Prerequisites
-Make sure you have installed ATOS by following the instructions in the [Installation](installation.md) section.
+Make sure you are ready to run ATOS with docker by following the instructions in the [Installation](installation.md) section.
 
 -------------------------
 
@@ -26,7 +26,7 @@ This section will walk you through the steps of starting ATOS, connecting it wit
 
 * Start a virtual test object by running 
 
-        docker run -it --rm --network host -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ --name iso_object_demo astazero/iso_object_demo:latest
+        docker run -it --rm --hostname isoObject --network atos_atos-net --name isoObject astazero/iso_object_demo:latest
 
   This docker command creates a virtual object which will respond to control messages from ATOS. You can find the source code for the _ISO\_objectDemo_ at the [isoObject repo](https://github.com/RI-SE/isoObject).
 
