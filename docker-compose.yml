@@ -9,9 +9,11 @@ services:
     privileged: true
     stdin_open: true
     tty: true
-    network_mode: bridge
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
     volumes:
       - ~/.astazero/ATOS/:/root/.astazero/ATOS/
+    network_mode: bridge
     ports: # Switch to port mapping if you want to use the container with a remote machine
       - "3000:3000" 
       - "3443:3443"
