@@ -17,6 +17,7 @@ nav:
   - Using ATOS:
       - "Installation/quickstart.md"
       - "Usage/How-to/configuration.md"
+      - "Usage/How-to/docker_networking.md"
       - "Usage/GUI/foxglove.md"
       - "Usage/GUI/controlpanel.md"
   - Modules:
