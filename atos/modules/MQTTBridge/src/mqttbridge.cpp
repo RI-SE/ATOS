@@ -245,7 +245,7 @@ void MqttBridge::setupSubscriptions() {
                      e.what());
         return;
       }
-      RCLCPP_INFO(get_logger(), "Subscribed ROS topic '%s' of type '%s'",
+      RCLCPP_INFO(get_logger(), "Subscribed to ROS topic '%s' of type '%s'",
                   ros_topic.c_str(), msg_type.c_str());
     }
   }
