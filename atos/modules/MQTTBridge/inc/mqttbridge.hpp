@@ -69,9 +69,7 @@ private:
    * broker.
    *
    * Overrides mqtt::callback::message_arrived(mqtt::const_message_ptr).
-   * If the received MQTT message contains information about a ROS message type,
-   * the corresponding ROS publisher is configured. If the received MQTT message
-   * is a ROS message, the mqtt2ros conversion is called.
+   * Publishes any empty ROS message to the corresponding ROS topic.
    *
    * @param   mqtt_msg     MQTT message
    */
@@ -79,13 +77,6 @@ private:
 
   /**
    * @brief Publishes a ROS message received via MQTT to ROS.
-   *
-   * This utilizes the generic publisher stored for the MQTT topic on which the
-   * message was received. The publisher has to be configured to the ROS message
-   * type of the message.
-   *
-   * The MQTT payload is expected to carry the following:
-   * - serialized ROS message
    *
    * @param   mqtt_msg       MQTT message
    * @param   arrival_stamp  arrival timestamp used for latency computation
