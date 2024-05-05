@@ -134,7 +134,7 @@ void MqttBridge::loadParameters() {
         ros2mqtt.mqtt.qos = qos_param.as_int();
 
       RCLCPP_INFO(get_logger(), "Bridging ROS topic '%s' to MQTT topic '%s'",
-                  ros2mqtt.ros.topic.c_str(), ros2mqtt.mqtt.topic.c_str());
+                  ros_topic.c_str(), ros2mqtt.mqtt.topic.c_str());
     } else {
       RCLCPP_WARN(get_logger(),
                   fmt::format("Parameter 'ros2mqtt.{}' is missing subparameter "
@@ -158,6 +158,7 @@ void MqttBridge::initialize() {
     this->setupClient();
     this->connect();
     this->setupMqtt2RosBridge();
+    this->setupRos2MqttBridge();
   }
 }
 
@@ -170,7 +171,6 @@ void MqttBridge::setupMqtt2RosBridge() {
 
   // Create a request and response for each mqtt2ros bridge and put into a
   // map
-
   auto serviceCallMap = std::map<
       std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Response>,
       std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Request>>();
@@ -203,6 +203,77 @@ void MqttBridge::setupMqtt2RosBridge() {
     }
     // Wait for a second before retrying
     rclcpp::sleep_for(std::chrono::seconds(1));
+  }
+}
+
+void MqttBridge::setupRos2MqttBridge() {
+  new_ros2mqtt_bridge_service_ =
+      create_service<atos_interfaces::srv::NewRos2MqttBridge>(
+          "~/new_ros2mqtt_bridge",
+          std::bind(&MqttBridge::newRos2MqttBridge, this, std::placeholders::_1,
+                    std::placeholders::_2));
+
+  // setup subscribers
+  this->setupSubscriptions();
+}
+
+void MqttBridge::setupSubscriptions() {
+
+  // get info of all topics
+  const auto all_topics_and_types = get_topic_names_and_types();
+
+  // check for ros2mqtt topics
+  for (auto &[ros_topic, ros2mqtt] : ros2mqtt_) {
+    if (all_topics_and_types.count(ros_topic)) {
+
+      // check if message type has changed or if mapping is stale
+      const std::string &msg_type = all_topics_and_types.at(ros_topic)[0];
+      if (msg_type == ros2mqtt.ros.msg_type && !ros2mqtt.ros.is_stale)
+        continue;
+      ros2mqtt.ros.is_stale = false;
+      ros2mqtt.ros.msg_type = msg_type;
+
+      // create new generic subscription, if message type has changed
+      std::function<void(const std::shared_ptr<rclcpp::SerializedMessage> msg)>
+          bound_callback_func = std::bind(&MqttBridge::ros2mqtt, this,
+                                          std::placeholders::_1, ros_topic);
+      try {
+        ros2mqtt.ros.subscriber = create_generic_subscription(
+            ros_topic, msg_type, ros2mqtt.ros.queue_size, bound_callback_func);
+      } catch (rclcpp::exceptions::RCLError &e) {
+        RCLCPP_ERROR(get_logger(), "Failed to create generic subscriber: %s",
+                     e.what());
+        return;
+      }
+      RCLCPP_INFO(get_logger(), "Subscribed ROS topic '%s' of type '%s'",
+                  ros_topic.c_str(), msg_type.c_str());
+    }
+  }
+}
+
+void MqttBridge::ros2mqtt(
+    const std::shared_ptr<rclcpp::SerializedMessage> &serialized_msg,
+    const std::string &ros_topic) {
+
+  Ros2MqttInterface &ros2mqtt = ros2mqtt_[ros_topic];
+  std::string mqtt_topic = ros2mqtt.mqtt.topic;
+  std::vector<uint8_t> payload_buffer;
+
+  RCLCPP_INFO(get_logger(), "Received ROS message on topic '%s'",
+              ros_topic.c_str());
+
+  try {
+    mqtt::message_ptr mqtt_msg =
+        mqtt::make_message(mqtt_topic, payload_buffer.data(),
+                           payload_buffer.size(), ros2mqtt.mqtt.qos, true);
+    client_->publish(mqtt_msg);
+    RCLCPP_INFO(get_logger(), "Published ROS message to MQTT topic '%s'",
+                mqtt_topic.c_str());
+  } catch (const mqtt::exception &e) {
+    RCLCPP_WARN(
+        get_logger(),
+        "Publishing ROS message type information to MQTT topic '%s' failed: %s",
+        mqtt_topic.c_str(), e.what());
   }
 }
 
@@ -287,6 +358,26 @@ void MqttBridge::newMqtt2RosBridge(
                 mqtt_topic_to_subscribe.c_str(), e.what());
     response->success = false;
   }
+}
+
+void MqttBridge::newRos2MqttBridge(
+    atos_interfaces::srv::NewRos2MqttBridge::Request::SharedPtr request,
+    atos_interfaces::srv::NewRos2MqttBridge::Response::SharedPtr response) {
+
+  // add mapping definition to ros2mqtt_
+  Ros2MqttInterface &ros2mqtt = ros2mqtt_[request->ros_topic];
+  ros2mqtt.ros.is_stale = true;
+  ros2mqtt.ros.topic = request->ros_topic;
+  ros2mqtt.mqtt.topic = request->mqtt_topic;
+  ros2mqtt.mqtt.qos = request->mqtt_qos;
+
+  RCLCPP_DEBUG(get_logger(), "Bridging ROS topic '%s' to MQTT topic '%s'",
+               ros2mqtt.ros.topic.c_str(), ros2mqtt.mqtt.topic.c_str());
+
+  // setup ROS subscriptions
+  setupSubscriptions();
+
+  response->success = true;
 }
 
 void MqttBridge::onV2xMsg(const V2X::message_type::SharedPtr v2x_msg) {

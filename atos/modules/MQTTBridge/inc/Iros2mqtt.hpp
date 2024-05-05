@@ -11,10 +11,9 @@ struct Ros2MqttInterface {
   } mqtt;              ///< MQTT-related variables
   struct {
     std::string topic;    ///< ROS topic
-    std::string msg_type; ///< message type of publisher
-    rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr
-        subscriber;     ///< ROS publisher
-    int queue_size = 1; ///< ROS publisher queue size
+    std::string msg_type; ///< message type of subscriber
+    rclcpp::GenericSubscription::SharedPtr subscriber; ///< ROS subscriber
+    int queue_size = 1; ///< ROS subscriber queue size
     bool is_stale =
         false; ///< whether a new generic publisher/subscriber is required
   } ros;       ///< ROS-related variables
