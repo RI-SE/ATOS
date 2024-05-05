@@ -20,19 +20,19 @@ MqttBridge::MqttBridge()
 }
 
 void MqttBridge::loadParameters() {
-  declare_parameter("broker_ip", "");
-  declare_parameter("port", 1883);
-  declare_parameter("username", "");
-  declare_parameter("password", "");
+  declare_parameter("broker.broker_ip", "");
+  declare_parameter("broker.port", 1883);
+  declare_parameter("client.username", "");
+  declare_parameter("client.password", "");
+  declare_parameter("client.id", "");
   declare_parameter("topic_prefix", "atos");
-  declare_parameter("quality_of_service", 1);
 
-  get_parameter("broker_ip", brokerIP);
-  get_parameter("port", port);
-  get_parameter("username", username);
-  get_parameter("password", password);
+  get_parameter("broker.broker_ip", brokerIP);
+  get_parameter("broker.port", port);
+  get_parameter("client.username", username);
+  get_parameter("client.password", password);
+  declare_parameter("client.id", clientId);
   get_parameter("topic_prefix", topic_prefix);
-  get_parameter("quality_of_service", QoS);
 
   rcl_interfaces::msg::ParameterDescriptor param_desc;
   param_desc.description = "The list of topics to bridge from MQTT to ROS";
@@ -115,17 +115,76 @@ void MqttBridge::setupConnection() {
               "Setting up connection with clientID: %s, and broker IP: %s",
               clientId.c_str(), brokerIP.c_str());
 
-  mqttClientWrapper =
-      std::make_shared<MQTTClientWrapper>(brokerIP, port, username, password);
-  mqttClientWrapper->connect();
+  // basic client connection options
+  connect_options_.set_automatic_reconnect(true);
+  connect_options_.set_clean_session(true);
+  connect_options_.set_keep_alive_interval(true);
+  connect_options_.set_max_inflight(true);
 
-  if (mqttClientWrapper == nullptr) {
-    RCLCPP_ERROR(this->get_logger(),
-                 "Failed to initialize MQTT connection to broker, exiting...");
-    rclcpp::shutdown();
-  } else {
-    RCLCPP_DEBUG(this->get_logger(),
-                 "Successfully initialized MQTT connection to broker");
+  // user authentication
+  if (!username.empty()) {
+    connect_options_.set_user_name(username);
+    connect_options_.set_password(password);
+  }
+
+  // // SSL/TLS
+  // if (broker_config_.tls.enabled) {
+  //   mqtt::ssl_options ssl;
+  //   ssl.set_trust_store(broker_config_.tls.ca_certificate);
+  //   if (!client_config_.tls.certificate.empty() &&
+  //       !client_config_.tls.key.empty()) {
+  //     ssl.set_key_store(client_config_.tls.certificate);
+  //     ssl.set_private_key(client_config_.tls.key);
+  //     if (!client_config_.tls.password.empty())
+  //       ssl.set_private_key_password(client_config_.tls.password);
+  //   }
+  //   ssl.set_ssl_version(client_config_.tls.version);
+  //   ssl.set_verify(client_config_.tls.verify);
+  //   ssl.set_alpn_protos(client_config_.tls.alpn_protos);
+  //   connect_options_.set_ssl(ssl);
+  // }
+
+  // create MQTT client
+  // const std::string protocol = broker_config_.tls.enabled ? "ssl" : "tcp";
+
+  auto timeNanoseconds =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  auto id = clientId + "_" + std::to_string(timeNanoseconds);
+
+  const std::string uri = fmt::format("{}://{}:{}", "tcp", brokerIP, port);
+  try {
+    // if (client_config_.buffer.enabled) {
+    //   client_ = std::shared_ptr<mqtt::async_client>(new mqtt::async_client(
+    //     uri, client_config_.id, client_config_.buffer.size,
+    //     client_config_.buffer.directory));
+    // } else {
+    client_ =
+        std::shared_ptr<mqtt::async_client>(new mqtt::async_client(uri, id));
+    // }
+  } catch (const mqtt::exception &e) {
+    RCLCPP_ERROR(get_logger(), "Client could not be initialized: %s", e.what());
+    exit(EXIT_FAILURE);
+  }
+
+  // setup MQTT callbacks
+  client_->set_callback(*this);
+}
+
+void MqttBridge::connect() {
+
+  std::string as_client =
+      clientId.empty() ? ""
+                       : std::string(" as '") + clientId + std::string("'");
+  RCLCPP_INFO(get_logger(), "Connecting to broker at '%s'%s ...",
+              client_->get_server_uri().c_str(), as_client.c_str());
+
+  try {
+    client_->connect(connect_options_, nullptr, *this);
+  } catch (const mqtt::exception &e) {
+    RCLCPP_ERROR(get_logger(), "Connection to broker failed: %s", e.what());
+    exit(EXIT_FAILURE);
   }
 }
 
@@ -145,7 +204,7 @@ void MqttBridge::newMqtt2RosBridge(
 
   // subscribe to the MQTT topic
   std::string mqtt_topic_to_subscribe = request->mqtt_topic;
-  mqttClientWrapper->subscribe(mqtt_topic_to_subscribe, mqtt2ros.mqtt.qos);
+  client_->subscribe(mqtt_topic_to_subscribe, mqtt2ros.mqtt.qos);
   RCLCPP_INFO(get_logger(), "Subscribed MQTT topic '%s'",
               mqtt_topic_to_subscribe.c_str());
   response->success = true;
@@ -168,8 +227,7 @@ void MqttBridge::onMessage(T msg, std::string mqtt_topic,
   try {
     RCLCPP_DEBUG(this->get_logger(), "Publishing MQTT msg to broker %s",
                  payload.dump().c_str());
-    mqttClientWrapper->publishMessage(topic_prefix + mqtt_topic, payload.dump(),
-                                      QoS);
+    // client_->publishMessage(topic_prefix + mqtt_topic, payload.dump(), QoS);
   } catch (std::runtime_error &) {
     RCLCPP_ERROR(this->get_logger(), "Failed to publish MQTT message");
   }
@@ -193,4 +251,20 @@ json MqttBridge::obcStateChangeToJson(
   j["current_state"] = obc_msg->current_state;
   j["prev_state"] = obc_msg->prev_state;
   return j;
+}
+
+void MqttBridge::on_success(const mqtt::token &token) {
+
+  (void)token; // Avoid compiler warning for unused parameter.
+  is_connected_ = true;
+}
+
+void MqttBridge::on_failure(const mqtt::token &token) {
+
+  RCLCPP_ERROR(
+      get_logger(),
+      "Connection to broker failed (return code %d), will automatically "
+      "retry...",
+      token.get_return_code());
+  is_connected_ = false;
 }

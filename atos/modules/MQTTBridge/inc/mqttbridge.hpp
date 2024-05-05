@@ -8,11 +8,11 @@
 #include "Imqtt2ros.hpp"
 #include "atos_interfaces/srv/new_mqtt2_ros_bridge.hpp"
 #include "module.hpp"
-#include "mqttclientwrapper.hpp"
 #include "roschannels/statechange.hpp"
 #include "roschannels/v2xchannel.hpp"
 #include <chrono>
 #include <fmt/format.h>
+#include <mqtt/async_client.h>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -22,7 +22,9 @@ using json = nlohmann::json;
  * publisher
  */
 
-class MqttBridge : public Module {
+class MqttBridge : public Module,
+                   public virtual mqtt::callback,
+                   public virtual mqtt::iaction_listener {
 public:
   MqttBridge();
   void initialize();
@@ -32,6 +34,8 @@ protected:
    * @brief Loads ROS parameters from parameter server.
    */
   void loadParameters();
+
+  void connect();
 
   void newMqtt2RosBridge(
       const std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Request>
@@ -50,7 +54,41 @@ private:
   rclcpp::Service<atos_interfaces::srv::NewMqtt2RosBridge>::SharedPtr
       new_mqtt2ros_bridge_service_;
 
-  std::shared_ptr<MQTTClientWrapper> mqttClientWrapper;
+  /**
+   * @brief MQTT client variable
+   */
+  std::shared_ptr<mqtt::async_client> client_;
+
+  /**
+   * @brief MQTT client connection options
+   */
+  mqtt::connect_options connect_options_;
+
+  /**
+   * @brief Callback for when a MQTT action succeeds.
+   *
+   * Overrides mqtt::iaction_listener::on_success(const mqtt::token&).
+   * Does nothing.
+   *
+   * @param   token        token tracking the action
+   */
+  void on_success(const mqtt::token &token) override;
+
+  /**
+   * @brief Callback for when a MQTT action fails.
+   *
+   * Overrides mqtt::iaction_listener::on_failure(const mqtt::token&).
+   * Logs error.
+   *
+   * @param   token        token tracking the action
+   */
+  void on_failure(const mqtt::token &token) override;
+
+  /**
+   * @brief Status variable keeping track of connection status to broker
+   */
+  bool is_connected_ = false;
+
   static inline std::string const moduleName = "mqtt_bridge";
   constexpr static std::chrono::milliseconds SEND_INTERVAL =
       std::chrono::milliseconds(5000);
