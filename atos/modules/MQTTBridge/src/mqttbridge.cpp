@@ -68,15 +68,17 @@ void MqttBridge::loadParameters() {
       rclcpp::Parameter qos_param;
       if (get_parameter(
               fmt::format("mqtt2ros.{}.advanced.mqtt.qos", mqtt_topic),
-              qos_param))
+              qos_param)) {
         mqtt2ros.mqtt.qos = qos_param.as_int();
+      }
 
       // mqtt2ros[k]/advanced/ros/queue_size
       rclcpp::Parameter queue_size_param;
       if (get_parameter(
               fmt::format("mqtt2ros.{}.advanced.ros.queue_size", mqtt_topic),
-              queue_size_param))
+              queue_size_param)) {
         mqtt2ros.ros.queue_size = queue_size_param.as_int();
+      }
 
       RCLCPP_INFO(get_logger(), "Bridging MQTT topic '%s' to ROS topic '%s'",
                   mqtt_topic.c_str(), mqtt2ros.ros.topic.c_str());
@@ -180,6 +182,17 @@ void MqttBridge::connect() {
     RCLCPP_ERROR(get_logger(), "Connection to broker failed: %s", e.what());
     exit(EXIT_FAILURE);
   }
+
+  // Wait for the connection to be established, otherwise try again
+  rclcpp::sleep_for(std::chrono::milliseconds(100));
+  if (is_connected_) {
+    RCLCPP_INFO(get_logger(), "Connected to broker at '%s'%s",
+                client_->get_server_uri().c_str(), as_client.c_str());
+  } else {
+    RCLCPP_ERROR(get_logger(), "Connection to broker failed, retrying...");
+    rclcpp::sleep_for(std::chrono::seconds(1));
+    connect();
+  }
 }
 
 void MqttBridge::newMqtt2RosBridge(
@@ -200,10 +213,18 @@ void MqttBridge::newMqtt2RosBridge(
 
   // subscribe to the MQTT topic
   std::string mqtt_topic_to_subscribe = request->mqtt_topic;
-  client_->subscribe(mqtt_topic_to_subscribe, mqtt2ros.mqtt.qos);
-  RCLCPP_INFO(get_logger(), "Subscribed MQTT topic '%s'",
-              mqtt_topic_to_subscribe.c_str());
-  response->success = true;
+  try {
+    client_->subscribe(mqtt_topic_to_subscribe, mqtt2ros.mqtt.qos);
+    RCLCPP_INFO(get_logger(), "Subscribed to MQTT topic '%s'",
+                mqtt_topic_to_subscribe.c_str());
+    response->success = true;
+  }
+  // Catch exception if the topic is already subscribed
+  catch (const mqtt::exception &e) {
+    RCLCPP_WARN(get_logger(), "Failed to subscribe MQTT topic '%s': %s",
+                mqtt_topic_to_subscribe.c_str(), e.what());
+    response->success = false;
+  }
 }
 
 void MqttBridge::onV2xMsg(const V2X::message_type::SharedPtr v2x_msg) {
