@@ -101,6 +101,12 @@ void MqttBridge::initialize() {
     rclcpp::shutdown();
   } else {
     this->setupConnection();
+
+    new_mqtt2ros_bridge_service_ =
+        create_service<atos_interfaces::srv::NewMqtt2RosBridge>(
+            "~/new_mqtt2ros_bridge",
+            std::bind(&MqttBridge::newMqtt2RosBridge, this,
+                      std::placeholders::_1, std::placeholders::_2));
   }
 }
 
@@ -121,6 +127,28 @@ void MqttBridge::setupConnection() {
     RCLCPP_DEBUG(this->get_logger(),
                  "Successfully initialized MQTT connection to broker");
   }
+}
+
+void MqttBridge::newMqtt2RosBridge(
+    atos_interfaces::srv::NewMqtt2RosBridge::Request::SharedPtr request,
+    atos_interfaces::srv::NewMqtt2RosBridge::Response::SharedPtr response) {
+
+  // add mapping definition to mqtt2ros_
+  Mqtt2RosInterface &mqtt2ros = mqtt2ros_[request->mqtt_topic];
+  mqtt2ros.ros.is_stale = true;
+  mqtt2ros.ros.topic = request->ros_topic;
+  mqtt2ros.mqtt.qos = request->mqtt_qos;
+  mqtt2ros.ros.queue_size = request->ros_queue_size;
+
+  RCLCPP_INFO(get_logger(), "Bridging MQTT topic '%s' to %sROS topic '%s'",
+              request->mqtt_topic.c_str(), mqtt2ros.ros.topic.c_str());
+
+  // subscribe to the MQTT topic
+  std::string mqtt_topic_to_subscribe = request->mqtt_topic;
+  mqttClientWrapper->subscribe(mqtt_topic_to_subscribe, mqtt2ros.mqtt.qos);
+  RCLCPP_INFO(get_logger(), "Subscribed MQTT topic '%s'",
+              mqtt_topic_to_subscribe.c_str());
+  response->success = true;
 }
 
 void MqttBridge::onV2xMsg(const V2X::message_type::SharedPtr v2x_msg) {

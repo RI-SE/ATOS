@@ -6,6 +6,7 @@
 #pragma once
 
 #include "Imqtt2ros.hpp"
+#include "atos_interfaces/srv/new_mqtt2_ros_bridge.hpp"
 #include "module.hpp"
 #include "mqttclientwrapper.hpp"
 #include "roschannels/statechange.hpp"
@@ -32,11 +33,22 @@ protected:
    */
   void loadParameters();
 
+  void newMqtt2RosBridge(
+      const std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Request>
+          request,
+      std::shared_ptr<atos_interfaces::srv::NewMqtt2RosBridge::Response>
+          response);
+
 private:
   /**
    * @brief MQTT2ROS connection variables sorted by MQTT topic
    */
   std::map<std::string, Mqtt2RosInterface> mqtt2ros_;
+
+  /** @brief ROS Service server for providing dynamic MQTT to ROS mappings.
+   */
+  rclcpp::Service<atos_interfaces::srv::NewMqtt2RosBridge>::SharedPtr
+      new_mqtt2ros_bridge_service_;
 
   std::shared_ptr<MQTTClientWrapper> mqttClientWrapper;
   static inline std::string const moduleName = "mqtt_bridge";
