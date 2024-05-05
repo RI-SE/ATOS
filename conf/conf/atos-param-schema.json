@@ -64,40 +64,6 @@
                 }
             }
         },
-        "mqtt_bridge": {
-            "ros__parameters": {
-                "broker_ip": {
-                    "type": "string",
-                    "default": "",
-                    "description": "Required. IP address of the MQTT broker."
-                },
-                "pub_client_id": {
-                    "type": "string",
-                    "default": "",
-                    "description": "Name of the MQTT client used for publishing. A random number is appended to the name to avoid name collisions."
-                },
-                "username": {
-                    "type": "string",
-                    "default": "",
-                    "description": "Username if required by the broker."
-                },
-                "password": {
-                    "type": "string",
-                    "default": "",
-                    "description": "Password if required by the broker."
-                },
-                "topic": {
-                    "type": "string",
-                    "default": "",
-                    "description": "Topic to publish to."
-                },
-                "quality_of_service": {
-                    "type": "string",
-                    "default": "",
-                    "description": "QoS level to use for publishing. Can be 0, 1 or 2."
-                }
-            }
-        },
         "trajectorylet_streamer": {
             "ros__parameters": {
                 "chunk_duration": {
