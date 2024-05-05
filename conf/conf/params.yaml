@@ -24,21 +24,21 @@ atos:
         id: "ATOS"
         username: ""
         password: ""
-      mqtt2ros:            # Object specifying which MQTT topics to map to which ROS topics
-        mqtt_topics:         # Array specifying which ROS topics to bridge
-          - placeholder # The MQTT topic that should be bridged, corresponds to the sub-object in the YAML
-        drone_supervisor/estop:
-          ros_topic: placeholder # ROS topic on which corresponding MQTT messages are published
-          advanced:
+      mqtt2ros:             # Object specifying which MQTT topics to map to which ROS topics
+        mqtt_topics:        # Array specifying which ROS topics to bridge
+          - placeholder1     # The MQTT topic that should be bridged, corresponds to the sub-object in the YAML
+        placeholder1:
+          ros_topic: placeholder1 # ROS topic on which corresponding MQTT messages are published
+          advanced:         # Optional settings for each topic
             mqtt:
               qos: 1               # [0] MQTT QoS value
             ros:
               queue_size: 1        # [1] ROS publisher queue size
-      ros2mqtt:
+      ros2mqtt:           # Object specifying which ROS topics to map to which MQTT topics
         ros_topics:
-          - placeholder
-        placeholder:
-          mqtt_topic: placeholder
+          - placeholder2
+        placeholder2:
+          mqtt_topic: placeholder2
           advanced:
             mqtt:
               qos: 1
