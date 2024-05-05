@@ -20,18 +20,18 @@ MqttBridge::MqttBridge()
 }
 
 void MqttBridge::loadParameters() {
-  declare_parameter("broker.broker_ip", "");
+  declare_parameter("broker.host", "");
   declare_parameter("broker.port", 1883);
   declare_parameter("client.username", "");
   declare_parameter("client.password", "");
   declare_parameter("client.id", "");
   declare_parameter("topic_prefix", "atos");
 
-  get_parameter("broker.broker_ip", brokerIP);
+  get_parameter("broker.host", brokerIP);
   get_parameter("broker.port", port);
   get_parameter("client.username", username);
   get_parameter("client.password", password);
-  declare_parameter("client.id", clientId);
+  get_parameter("client.id", clientId);
   get_parameter("topic_prefix", topic_prefix);
 
   rcl_interfaces::msg::ParameterDescriptor param_desc;
@@ -78,7 +78,7 @@ void MqttBridge::loadParameters() {
               queue_size_param))
         mqtt2ros.ros.queue_size = queue_size_param.as_int();
 
-      RCLCPP_INFO(get_logger(), "Bridging MQTT topic '%s' to %sROS topic '%s'",
+      RCLCPP_INFO(get_logger(), "Bridging MQTT topic '%s' to ROS topic '%s'",
                   mqtt_topic.c_str(), mqtt2ros.ros.topic.c_str());
     } else {
       RCLCPP_WARN(get_logger(),
@@ -100,7 +100,8 @@ void MqttBridge::initialize() {
                 "No Broker IP provided in configuration. Shutting down...");
     rclcpp::shutdown();
   } else {
-    this->setupConnection();
+    this->setupClient();
+    this->connect();
 
     new_mqtt2ros_bridge_service_ =
         create_service<atos_interfaces::srv::NewMqtt2RosBridge>(
@@ -110,7 +111,7 @@ void MqttBridge::initialize() {
   }
 }
 
-void MqttBridge::setupConnection() {
+void MqttBridge::setupClient() {
   RCLCPP_INFO(this->get_logger(),
               "Setting up connection with clientID: %s, and broker IP: %s",
               clientId.c_str(), brokerIP.c_str());
@@ -127,26 +128,6 @@ void MqttBridge::setupConnection() {
     connect_options_.set_password(password);
   }
 
-  // // SSL/TLS
-  // if (broker_config_.tls.enabled) {
-  //   mqtt::ssl_options ssl;
-  //   ssl.set_trust_store(broker_config_.tls.ca_certificate);
-  //   if (!client_config_.tls.certificate.empty() &&
-  //       !client_config_.tls.key.empty()) {
-  //     ssl.set_key_store(client_config_.tls.certificate);
-  //     ssl.set_private_key(client_config_.tls.key);
-  //     if (!client_config_.tls.password.empty())
-  //       ssl.set_private_key_password(client_config_.tls.password);
-  //   }
-  //   ssl.set_ssl_version(client_config_.tls.version);
-  //   ssl.set_verify(client_config_.tls.verify);
-  //   ssl.set_alpn_protos(client_config_.tls.alpn_protos);
-  //   connect_options_.set_ssl(ssl);
-  // }
-
-  // create MQTT client
-  // const std::string protocol = broker_config_.tls.enabled ? "ssl" : "tcp";
-
   auto timeNanoseconds =
       std::chrono::duration_cast<std::chrono::nanoseconds>(
           std::chrono::system_clock::now().time_since_epoch())
@@ -155,14 +136,8 @@ void MqttBridge::setupConnection() {
 
   const std::string uri = fmt::format("{}://{}:{}", "tcp", brokerIP, port);
   try {
-    // if (client_config_.buffer.enabled) {
-    //   client_ = std::shared_ptr<mqtt::async_client>(new mqtt::async_client(
-    //     uri, client_config_.id, client_config_.buffer.size,
-    //     client_config_.buffer.directory));
-    // } else {
     client_ =
         std::shared_ptr<mqtt::async_client>(new mqtt::async_client(uri, id));
-    // }
   } catch (const mqtt::exception &e) {
     RCLCPP_ERROR(get_logger(), "Client could not be initialized: %s", e.what());
     exit(EXIT_FAILURE);
@@ -199,7 +174,7 @@ void MqttBridge::newMqtt2RosBridge(
   mqtt2ros.mqtt.qos = request->mqtt_qos;
   mqtt2ros.ros.queue_size = request->ros_queue_size;
 
-  RCLCPP_INFO(get_logger(), "Bridging MQTT topic '%s' to %sROS topic '%s'",
+  RCLCPP_INFO(get_logger(), "Bridging MQTT topic '%s' to ROS topic '%s'",
               request->mqtt_topic.c_str(), mqtt2ros.ros.topic.c_str());
 
   // subscribe to the MQTT topic
@@ -227,7 +202,7 @@ void MqttBridge::onMessage(T msg, std::string mqtt_topic,
   try {
     RCLCPP_DEBUG(this->get_logger(), "Publishing MQTT msg to broker %s",
                  payload.dump().c_str());
-    // client_->publishMessage(topic_prefix + mqtt_topic, payload.dump(), QoS);
+    client_->publish(mqtt_topic, payload.dump().c_str(), payload.dump().size());
   } catch (std::runtime_error &) {
     RCLCPP_ERROR(this->get_logger(), "Failed to publish MQTT message");
   }
