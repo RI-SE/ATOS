@@ -157,6 +157,8 @@ void MqttBridge::initialize() {
   } else {
     this->setupClient();
     this->connect();
+    // Wait for all ros topics to be announced
+    rclcpp::sleep_for(std::chrono::seconds(1));
     this->setupMqtt2RosBridge();
     this->setupRos2MqttBridge();
   }
@@ -221,11 +223,9 @@ void MqttBridge::setupSubscriptions() {
 
   // get info of all topics
   const auto all_topics_and_types = get_topic_names_and_types();
-
   // check for ros2mqtt topics
   for (auto &[ros_topic, ros2mqtt] : ros2mqtt_) {
     if (all_topics_and_types.count(ros_topic)) {
-
       // check if message type has changed or if mapping is stale
       const std::string &msg_type = all_topics_and_types.at(ros_topic)[0];
       if (msg_type == ros2mqtt.ros.msg_type && !ros2mqtt.ros.is_stale)
