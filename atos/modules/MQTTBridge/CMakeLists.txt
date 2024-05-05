@@ -13,6 +13,7 @@ find_package(rclcpp REQUIRED)
 find_package(atos_interfaces REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(PahoMqttCpp REQUIRED)
+find_package(fmt REQUIRED)
 
 # Define target names
 set(MQTT_BRIDGE_TARGET ${PROJECT_NAME})
@@ -35,6 +36,7 @@ target_link_libraries(${MQTT_BRIDGE_TARGET}
 	${nlohmann_json}
 	paho-mqttpp3
 	paho-mqtt3as
+	fmt
 )
 
 target_include_directories(${MQTT_BRIDGE_TARGET} PUBLIC SYSTEM
