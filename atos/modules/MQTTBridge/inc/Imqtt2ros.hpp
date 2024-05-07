@@ -3,6 +3,8 @@
 
 /**
  * @brief Struct containing variables related to a MQTT2ROS connection.
+ * @details This struct is intended to be used in a map structure where the key
+ * is the MQTT topic name.
  */
 struct Mqtt2RosInterface {
   struct {
