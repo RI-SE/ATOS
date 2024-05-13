@@ -13,6 +13,7 @@ find_package(rclcpp REQUIRED)
 find_package(atos_interfaces REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(PahoMqttCpp REQUIRED)
+find_package(fmt REQUIRED)
 
 # Define target names
 set(MQTT_BRIDGE_TARGET ${PROJECT_NAME})
@@ -24,8 +25,6 @@ include(GNUInstallDirs)
 # Create project main executable target
 add_executable(${MQTT_BRIDGE_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/mqttclientwrapper.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/mqttsubscribercallback.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/mqttbridge.cpp
 )
 
@@ -35,6 +34,7 @@ target_link_libraries(${MQTT_BRIDGE_TARGET}
 	${nlohmann_json}
 	paho-mqttpp3
 	paho-mqtt3as
+	fmt
 )
 
 target_include_directories(${MQTT_BRIDGE_TARGET} PUBLIC SYSTEM
