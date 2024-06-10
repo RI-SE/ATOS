@@ -57,6 +57,7 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	testOriginSet(false)
  {
 	declare_parameter("open_scenario_file","");
+	declare_parameter("timestep", 0.1);
 }
 
 /*!
@@ -688,7 +689,7 @@ void EsminiAdapter::InitializeEsmini()
 	SE_RegisterStoryBoardElementStateChangeCallback(&collectStartAction);
 
 	RCLCPP_INFO(me->get_logger(), "Starting extracting trajs");
-	double timeStep = 0.1;
+	double timeStep = me->get_parameter("timestep").as_double();
 	me->extractTrajectories(timeStep, me->idToTraj);
 	RCLCPP_INFO(me->get_logger(), "Done extracting trajs");
 
