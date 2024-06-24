@@ -22,7 +22,7 @@
                 "timestep": {
                     "type": "double",
                     "default": 0.1,
-                    "description": "The time step used in the scenario simulation."
+                    "description": "The time step (in seconds) used in the scenario simulation."
                 }
             }
         },
