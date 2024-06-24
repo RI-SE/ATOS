@@ -784,7 +784,7 @@ void EsminiAdapter::onRequestObjectIP(
 		res->success = true;
 	}
 	catch (std::out_of_range& e){
-		RCLCPP_ERROR(me->get_logger(), "Esmini IP service called, no IP found for object %d", req->id);
+		RCLCPP_WARN(me->get_logger(), "Esmini IP service called, no IP found for object %d", req->id);
 		res->success = false;
 	}
 }
@@ -800,7 +800,7 @@ void EsminiAdapter::onSetObjectIP(
 		res->success = true;
 	}
 	catch (std::out_of_range& e){
-		RCLCPP_ERROR(me->get_logger(), "Esmini set IP service called, no object with ID %d found", req->id);
+		RCLCPP_WARN(me->get_logger(), "Esmini set IP service called, no object with ID %d found", req->id);
 		res->success = false;
 	}
 }

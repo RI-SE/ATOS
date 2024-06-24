@@ -1,4 +1,7 @@
 version: "3.2"
+networks:
+  atos-net:
+    driver: bridge
 services:
   atos:
     image: astazero/atos_docker_env:latest
@@ -13,10 +16,23 @@ services:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
     volumes:
       - ~/.astazero/ATOS/:/root/.astazero/ATOS/
-    network_mode: "host"
+    networks:
+      - atos-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3000:3000" 
+      - "3443:3443"
+      - "55555:55555"
+      - "443:443"
+      - "9090:9090"
+      - "8765:8765"
     command: bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py insecure:=True"
   foxglove-studio:
     image: ghcr.io/foxglove/studio:1.76
-    network_mode: "host"
+    networks:
+      - atos-net
+    ports:
+      - 8080:8080
     volumes:
       - ./plugins/foxglove/Map, 3D and control layout.json:/foxglove/default-layout.json
