@@ -3,12 +3,20 @@ set -e
 # Check if called without arguments
 if [ $# -eq 0 ]; then
     echo "Don't call this file directly, use setup_atos.sh instead."
-    echo "Usage: ./install_deps.sh <path to ATOS git repo>"           
+    echo "Usage: ./install_deps.sh <path to ATOS git repo> [flags]"
+    echo "Flags:"
+    echo "  -r             Reinstall all dependencies, including esmini and OpenSimulationInterface"
     exit 0
 fi
 # Take the first argument as the PATH to the ATOS git repo
 ATOS_REPO_PATH="$1"
-#fail unless var is set
+
+# Check if the FULL_INSTALL flag is set
+REINSTALL=false
+if [ "$2" == "-r" ]; then
+    REINSTALL=true
+fi
+
 source "${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 
 # Update and install required dependencies specified in dependencies.txt and requirements.txt file
@@ -61,9 +69,6 @@ check_command_failed $? "Failed to install ROS2 dependencies."
 
 pip install -r ${ATOS_REPO_PATH}/atos_gui/requirements.txt 
 
-# Install pyOpenSSL
-pip install pyOpenSSL
-
 ###########################################
 ###### Install some deps from source ######
 ###########################################
@@ -79,7 +84,7 @@ echo "Creating custom path for source installation at $SOURCE_PATH"
 mkdir -p $SOURCE_PATH
 
 # Install OpenSimulationInterface but first check if the library is already installed
-if [ -d "/usr/local/lib/osi3" ]; then
+if [ -d "/usr/local/lib/osi3" ] && [ "$REINSTALL" = false ]; then
     echo "OpenSimulationInterface already installed, skipping installation..."
 else
     echo "Installing OpenSimulationInterface..."
@@ -95,8 +100,8 @@ else
     check_command_failed $? "Failed ldconfig after installing OpenSimulationInterface."
 fi
 
-# Install esmini but first check if the library is already installed
-if [ -d "/usr/local/include/esmini" ]; then
+# Install esmini but first check if the library is already installed, override check if FULL_INSTALL is set
+if [ -d "/usr/local/include/esmini" ] && [ "$REINSTALL" = false ]; then
     echo "esmini already installed, skipping installation..."
 else
     echo "Downloading esmini binaries..."

@@ -1,1 +1,2 @@
 pre-commit
+pyOpenSSL >= 23.2.0
