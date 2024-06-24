@@ -71,7 +71,7 @@ private:
 	static std::filesystem::path getOpenScenarioFileParameter();
 	static std::filesystem::path getOpenDriveFile();
 	static void setOpenScenarioFile(const std::filesystem::path&);
-	static void handleStoryBoardElementChange(const char* name, int type, int state);
+	static void handleStoryBoardElementChange(const char* name, int type, int state, const char* full_path);
 	static void handleActionElementStateChange(const char* name, int state);
 	static void InitializeEsmini();
 	static void getObjectStates(double timeStep, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
@@ -81,7 +81,7 @@ private:
 	static std::pair<uint32_t, std::string> parseAction(const std::string& action);
 	static bool isStartAction(const std::string& action);
 	static bool isSendDenmAction(const std::string& action);
-	static void collectStartAction(const char* name, int type, int state);
+	static void collectStartAction(const char* name, int type, int state, const char* full_path);
 	static ROSChannels::V2X::message_type denmFromTestOrigin(double *llh);
 
 	static void onRequestObjectTrajectory(

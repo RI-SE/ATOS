@@ -262,8 +262,10 @@ bool EsminiAdapter::isSendDenmAction(const std::string& action)
 void EsminiAdapter::collectStartAction(
 	const char* name,
 	int type,
-	int state)
+	int state,
+	const char *full_path)
 {
+	RCLCPP_DEBUG(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d, Full path: %s", name, type, state, full_path);
 	if (type != 6 || state != 2) { return; } // Only handle actions that are started
 	try {
 		auto [objectId, action] = parseAction(name);
@@ -287,9 +289,10 @@ void EsminiAdapter::collectStartAction(
 void EsminiAdapter::handleStoryBoardElementChange(
 	const char *name,
 	int type,
-	int state)
+	int state,
+	const char *full_path)
 {
-	RCLCPP_DEBUG(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d", name, type, state);
+	RCLCPP_DEBUG(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d, Full path: %s", name, type, state, full_path);
 	// switch on type
 	switch (type)
 	{
