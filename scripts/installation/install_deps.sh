@@ -100,7 +100,7 @@ if [ -d "/usr/local/include/esmini" ]; then
     echo "esmini already installed, skipping installation..."
 else
     echo "Downloading esmini binaries..."
-    wget https://github.com/esmini/esmini/releases/download/v2.32.0/esmini-bin_Linux.zip -O $SOURCE_PATH/esmini-bin_Linux.zip
+    wget https://github.com/esmini/esmini/releases/download/v2.37.13/esmini-bin_Linux.zip -O $SOURCE_PATH/esmini-bin_Linux.zip
     check_command_failed $? "Failed to get esmini."
     unzip $SOURCE_PATH/esmini-bin_Linux.zip -d $SOURCE_PATH/esmini-bin_Linux
     cd $SOURCE_PATH/esmini-bin_Linux
