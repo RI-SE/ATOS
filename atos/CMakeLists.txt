@@ -111,8 +111,6 @@ add_subdirectory(common)
 SET_COMPILER_WARNINGS_GCC_CLANG("ON")
 
 # Subdirectories with compiler warnings
-add_subdirectory(modules/ATOSBase)
-
 foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})
 endforeach()

@@ -6,9 +6,10 @@
 
 #pragma once
 
+#include "atos_interfaces/srv/get_object_ids.hpp"
 #include "module.hpp"
-#include "server.hpp"
-#include <thread>
+#include <string>
+#include <vector>
 
 /*!
  * \brief The ScenarioModule is a ros2 node that demonstrates how to use the
@@ -21,5 +22,9 @@ public:
 
 private:
   ROSChannels::Init::Sub initSub;
+  rclcpp::Service<atos_interfaces::srv::GetObjectIds>::SharedPtr getObjectIdsService;
+
   void onInitMessage(ROSChannels::Init::message_type::SharedPtr) override;
+  void onRequestObjectIDs(std::shared_ptr<atos_interfaces::srv::GetObjectIds::Request> req,
+                          const std::shared_ptr<atos_interfaces::srv::GetObjectIds::Response> &res);
 };

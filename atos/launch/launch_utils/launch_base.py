@@ -57,16 +57,16 @@ def get_base_nodes():
         Node(
             package='atos',
             namespace='atos',
-            executable='atos_base',
-            name='atos_base',
+            executable='object_control',
             parameters=[files["params"]]
+            # ,prefix="xterm -e gdb --args" #Useful for debugging
         ),
         Node(
             package='atos',
             namespace='atos',
-            executable='object_control',
+            executable='scenario_module',
+            name='scenario_module',
             parameters=[files["params"]]
-            # ,prefix="xterm -e gdb --args" #Useful for debugging
         ),
         Node(
             package='atos',
@@ -112,12 +112,13 @@ def get_base_nodes():
             output={'both': 'log'}, #print to log to avoid cluttering the terminal
             parameters=ros_bridge_params
         ),
-            Node(
+        Node(
             condition=IfCondition(PythonExpression(['not ', insecure_websockets, ' and not ', foxbridge])),
             package='rosbridge_server',
             executable='rosbridge_websocket',
             name='ros_bridge',
             output={'both': 'log'}, #print to log to avoid cluttering the terminal
             parameters=ros_tls_bridge_params
-        )
+        ),
+        
     ]
