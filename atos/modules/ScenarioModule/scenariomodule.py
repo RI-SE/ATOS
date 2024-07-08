@@ -8,6 +8,7 @@ import atos_interfaces.msg
 from rclpy.node import Node
 from std_msgs.msg import Empty
 from scenariogeneration import xosc
+from typing import List
 
 ATOS_DIR = "~/.astazero/ATOS/osc/"
 
@@ -24,12 +25,13 @@ class ScenarioModule(Node):
         )
 
         self.declare_parameter("open_scenario_file", "")
-        self.declare_parameter("active_object_ids", rclpy.Parameter.Type.INTEGER_ARRAY)
+        self.declare_parameter("active_object_names", rclpy.Parameter.Type.STRING_ARRAY)
+        self.names_to_ids = {}
 
     def init_callback(self, msg):
         self.get_logger().info("Init callback called")
 
-    def get_objects_in_scenario(self, scenario_file):
+    def get_objects_in_scenario(self, scenario_file) -> List[str]:
         scenario = xosc.ParseOpenScenario(scenario_file)
         scenario_objects = scenario.entities.scenario_objects
         try:
@@ -42,13 +44,16 @@ class ScenarioModule(Node):
             )
         return names
 
-    def get_object_id_array(self, request, response):
-        object_ids = (
-            self.get_parameter("active_object_ids")
+    def get_object_id_array(
+        self, request, response
+    ) -> atos_interfaces.srv.GetObjectIds.Response:
+        object_names = (
+            self.get_parameter("active_object_names")
             .get_parameter_value()
-            .integer_array_value.tolist()
+            .string_array_value
         )
-        response.ids = object_ids
+        self.names_to_ids = {name: i for i, name in enumerate(object_names, start=1)}
+        response.ids = list(self.names_to_ids.values())
         response.success = True
         return response
 

@@ -18,7 +18,7 @@ def test_get_objects_in_scenario(get_file_path):
 
 def test_get_object_ids():
     rclpy.init()
-    object_names = [1, 2, 4, 3, 6, 5]
+    active_objects = ["1"]
     scenario_module = sm.ScenarioModule()
     scenario_module.set_parameters(
         [
@@ -32,7 +32,7 @@ def test_get_object_ids():
     scenario_module.set_parameters(
         [
             rclpy.parameter.Parameter(
-                "active_object_ids", rclpy.Parameter.Type.INTEGER_ARRAY, object_names
+                "active_object_names", rclpy.Parameter.Type.STRING_ARRAY, active_objects
             )
         ]
     )
@@ -40,5 +40,5 @@ def test_get_object_ids():
     response = srv.GetObjectIds.Response()
     scenario_module.get_object_id_array(request, response)
     assert response.success == True
-    assert list(response.ids) == [1, 2, 4, 3, 6, 5]
+    assert list(response.ids) == [1]
     rclpy.shutdown()

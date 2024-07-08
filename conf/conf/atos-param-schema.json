@@ -33,13 +33,13 @@
                     "default": "GaragePlanScenario.xosc",
                     "description": "Name of the OpenSCENARIO-file. The file must end in .xosc and be located in the osc-directory."
                 },
-                "active_object_ids": {
+                "active_object_names": {
                     "type": "array",
                     "items": {
-                        "type": "number"
+                        "type": "string"
                       },
                     "default": [1],
-                    "description": "Integer array of object ids that should be used in the scenario."
+                    "description": "String array of object names that should be used in the scenario."
                 }
             }
         },
