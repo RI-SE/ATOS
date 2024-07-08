@@ -45,8 +45,12 @@ list(APPEND CMAKE_MODULE_PATH "${UTIL_CMAKE_ROOT}")
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclpy REQUIRED)
 find_package(std_msgs REQUIRED)
+
+ament_python_install_package(modules)
 
 # Enable or disable modules
 set(WITH_OBJECT_CONTROL ON CACHE BOOL "Enable ObjectControl module")
@@ -59,6 +63,7 @@ set(WITH_MQTT_BRIDGE ON CACHE BOOL "Enable MQTTBridge module")
 set(WITH_POINTCLOUD_PUBLISHER ON CACHE BOOL "Enable PointcloudPublisher module")
 set(WITH_INTEGRATION_TESTING ON CACHE BOOL "Enable IntegrationTesting module")
 set(WITH_BACK_TO_START ON CACHE BOOL "Enable BackToStart module")
+set(WITH_SCENARIO_MODUEL ON CACHE BOOL "Enable Scenario module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -116,11 +121,24 @@ endforeach()
 if(BUILD_TESTING)
   add_subdirectory(modules/SampleModule)
   find_package(ament_lint_auto REQUIRED)
+  find_package(ament_cmake_pytest REQUIRED)
 #   ament_lint_auto_find_test_dependencies() # Comment this out for now to avoid linting errors
+  set(_pytest_tests
+     modules/ScenarioModule/tests/test_scenariomodule.py
+  )
+  foreach(_test_path ${_pytest_tests})
+  get_filename_component(_test_name ${_test_path} NAME_WE)
+  ament_add_pytest_test(${_test_name} ${_test_path}
+    APPEND_ENV PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}
+    TIMEOUT 60
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  )
+  endforeach()
 endif()
 
-ament_package()
+install(PROGRAMS modules/ScenarioModule/scenariomodule.py DESTINATION lib/atos)
 
+ament_package()
 
 # Install configuration
 include(GNUInstallDirs)

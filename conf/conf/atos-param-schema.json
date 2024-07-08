@@ -26,6 +26,23 @@
                 }
             }
         },
+        "scenario_module":{
+            "ros__parameters": {
+                "open_scenario_file": {
+                    "type": "file",
+                    "default": "GaragePlanScenario.xosc",
+                    "description": "Name of the OpenSCENARIO-file. The file must end in .xosc and be located in the osc-directory."
+                },
+                "active_object_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                      },
+                    "default": [1],
+                    "description": "Integer array of object ids that should be used in the scenario."
+                }
+            }
+        },
         "object_control": {
             "ros__parameters": {
                 "max_missing_heartbeats": {

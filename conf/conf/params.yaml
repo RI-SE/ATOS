@@ -6,6 +6,10 @@ atos:
     ros__parameters:
       open_scenario_file: "GaragePlanScenario.xosc"
       timestep: 0.1
+  scenario_module:
+    ros__parameters:
+      open_scenario_file: "GaragePlanScenario.xosc"
+      active_object_ids: [1]
   object_control:
     ros__parameters:
       max_missing_heartbeats: 100
