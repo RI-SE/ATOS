@@ -29,6 +29,19 @@ class ScenarioModule(Node):
     def init_callback(self, msg):
         self.get_logger().info("Init callback called")
 
+    def get_objects_in_scenario(self, scenario_file):
+        scenario = xosc.ParseOpenScenario(scenario_file)
+        scenario_objects = scenario.entities.scenario_objects
+        try:
+            names = [scenario_object.name for scenario_object in scenario_objects]
+        except AttributeError:
+            raise AttributeError(
+                'Missing "name" attribute for ScenarioObject in scenario file {}'.format(
+                    scenario_file
+                )
+            )
+        return names
+
     def getObjectIdArray(self, request, response):
         object_ids = (
             self.get_parameter("active_object_ids")
