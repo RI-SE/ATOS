@@ -20,7 +20,7 @@ class ScenarioModule(Node):
             Empty, "init", self.init_callback, 10
         )
         self.object_ids_pub_ = self.create_service(
-            atos_interfaces.srv.GetObjectIds, "get_object_ids", self.getObjectIdArray
+            atos_interfaces.srv.GetObjectIds, "get_object_ids", self.get_object_id_array
         )
 
         self.declare_parameter("open_scenario_file", "")
@@ -42,7 +42,7 @@ class ScenarioModule(Node):
             )
         return names
 
-    def getObjectIdArray(self, request, response):
+    def get_object_id_array(self, request, response):
         object_ids = (
             self.get_parameter("active_object_ids")
             .get_parameter_value()
