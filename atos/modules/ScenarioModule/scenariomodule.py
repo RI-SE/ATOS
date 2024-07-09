@@ -45,44 +45,30 @@ class ScenarioModule(Node):
         self.scenario_objects = []
         self.vehicle_catalog = None
 
-    def init_callback(self, msg):
-        self.get_logger().info("Init callback called")
-
     def parameter_callback(self, params):
         for param in params:
             if param.name == "open_scenario_file":
-                self.scenario_file = path.join(ATOS_XOSC_DIR, param.value)
-                self.get_logger().info(
-                    "Loading scenario file: {}".format(self.scenario_file)
-                )
-            elif param.name == "active_object_names":
-                # Check so that the names are unique and they exist in the scenario file
-                names = param.value
-                if len(names) != len(set(names)):
-                    raise ValueError("Names must be unique")
-                self.scenario_objects = self.get_all_objects_in_scenario(
-                    self.scenario_file
-                )
-                for name in names:
-                    if name not in [obj.name for obj in self.scenario_objects]:
-                        raise ValueError(
-                            "Name {} not found in scenario file".format(name)
-                        )
-                # Set an unique id and get IP for each object
-                for i, obj in enumerate(self.scenario_objects):
-                    obj.id = i + 1
-                    obj.ip = self.get_ip_property_for_object(obj)
+                self.update_scenario(filename=param.value)
+            elif param.name == "active_scenario_objects":
+                self.update_active_scenario_objects()
         return SetParametersResult(successful=True)
 
-    def get_ip_property_for_object(self, obj: ScenarioObject) -> str:
-        catalog_path = xosc.ParseOpenScenario(self.scenario_file).catalog.catalogs.get(
-            obj.catalog_ref.catalogname
-        )
-        catalog_object = xosc.xosc_reader.CatalogReader(
-            obj.catalog_ref, path.join(ATOS_XOSC_DIR, catalog_path)
-        )
-        # Convert the list of tuples to a dict to get the ip property easily
-        return dict(catalog_object.properties.properties)["ip"]
+    def update_scenario(self, filename: str):
+        self.scenario_file = path.join(ATOS_XOSC_DIR, filename)
+        self.get_logger().info("Loading scenario file: {}".format(self.scenario_file))
+
+    def update_active_scenario_objects(self):
+        names = self.get_parameter("active_object_names").value
+        if len(names) != len(set(names)):
+            raise ValueError("Names must be unique")
+        self.scenario_objects = self.get_all_objects_in_scenario(self.scenario_file)
+        for name in names:
+            if name not in [obj.name for obj in self.scenario_objects]:
+                raise ValueError("Name {} not found in scenario file".format(name))
+        # Set an unique id and get IP for each object
+        for i, obj in enumerate(self.scenario_objects):
+            obj.id = i + 1
+            obj.ip = self.get_ip_property_for_object(obj)
 
     def get_all_objects_in_scenario(self, scenario_file) -> List[ScenarioObject]:
         scenario = xosc.ParseOpenScenario(scenario_file)
@@ -97,6 +83,16 @@ class ScenarioModule(Node):
             for scenario_object in scenario.entities.scenario_objects
         ]
         return scenario_objects
+
+    def get_ip_property_for_object(self, obj: ScenarioObject) -> str:
+        catalog_path = xosc.ParseOpenScenario(self.scenario_file).catalog.catalogs.get(
+            obj.catalog_ref.catalogname
+        )
+        catalog_object = xosc.xosc_reader.CatalogReader(
+            obj.catalog_ref, path.join(ATOS_XOSC_DIR, catalog_path)
+        )
+        # Convert the list of tuples to a dict to get the ip property easily
+        return dict(catalog_object.properties.properties)["ip"]
 
     def srv_get_object_id_array(self, request, response):
         active_object_names = self.get_parameter("active_object_names").value
