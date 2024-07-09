@@ -46,6 +46,27 @@ def test_get_object_ids():
 
 def test_get_object_ip():
     rclpy.init()
+    active_objects = ["1"]
     scenario_module = sm.ScenarioModule()
-    scenario_module.names_to_ids = {"1": 1, "2": 2}
-    # assert scenario_module.get_object_ip(1) == "
+    scenario_module.set_parameters(
+        [
+            rclpy.parameter.Parameter(
+                "open_scenario_file",
+                rclpy.Parameter.Type.STRING,
+                "GaragePlanScenario.xosc",
+            )
+        ]
+    )
+    scenario_module.set_parameters(
+        [
+            rclpy.parameter.Parameter(
+                "active_object_names", rclpy.Parameter.Type.STRING_ARRAY, active_objects
+            )
+        ]
+    )
+    request = srv.GetObjectIp.Request(id=1)
+    response = srv.GetObjectIp.Response()
+    scenario_module.srv_get_object_ip(request, response)
+    assert response.ip == "127.0.0.1"
+    assert response.success == True
+    rclpy.shutdown()

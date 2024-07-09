@@ -16,10 +16,11 @@ ATOS_XOSC_DIR = path.expanduser("~/.astazero/ATOS/osc/")
 
 
 class ScenarioObject:
-    def __init__(self, name: str):
+    def __init__(self, name: str, catalog_ref: xosc.CatalogReference):
         self.name = name
-        self.id: int = None
-        self.ip = None
+        self.catalog_ref: xosc.CatalogReference = catalog_ref
+        self.id: int
+        self.ip: str
 
 
 class ScenarioModule(Node):
@@ -34,9 +35,9 @@ class ScenarioModule(Node):
             "get_object_ids",
             self.srv_get_object_id_array,
         )
-        # self.get_object_ip_ = self.create_service(
-        #     atos_interfaces.srv.GetObjectIp, "get_object_ip", self.srv_get_object_ip
-        # )
+        self.get_object_ip_ = self.create_service(
+            atos_interfaces.srv.GetObjectIp, "get_object_ip", self.srv_get_object_ip
+        )
 
         self.declare_parameter("open_scenario_file", "")
         self.declare_parameter("active_object_names", rclpy.Parameter.Type.STRING_ARRAY)
@@ -54,15 +55,6 @@ class ScenarioModule(Node):
                 self.get_logger().info(
                     "Loading scenario file: {}".format(self.scenario_file)
                 )
-                vehicle_catalog_path = xosc.ParseOpenScenario(
-                    self.scenario_file
-                ).catalog.catalogs.get("VehicleCatalog")
-                if vehicle_catalog_path:
-                    self.vehicle_catalog = xosc.ParseOpenScenario(
-                        path.join(
-                            ATOS_XOSC_DIR, vehicle_catalog_path, "VehicleCatalog.xosc"
-                        )
-                    )
             elif param.name == "active_object_names":
                 # Check so that the names are unique and they exist in the scenario file
                 names = param.value
@@ -79,34 +71,31 @@ class ScenarioModule(Node):
                 # Set an unique id and get IP for each object
                 for i, obj in enumerate(self.scenario_objects):
                     obj.id = i + 1
+                    obj.ip = self.get_ip_property_for_object(obj)
         return SetParametersResult(successful=True)
 
-    # def get_ip_from_name(self, name: str) -> str:
-    #     scenario_objects = xosc.ParseOpenScenario(
-    #         self.scenario_file
-    #     ).entities.scenario_objects
-    #     for obj in scenario_objects:
-    #         if name == obj.name:
-    #             et = obj.get_element()
-    #             print(et)
-    #             # Print the entire element tree to see what is available
-    #             for e in et.iter():
-    #                 print(e.tag, e.attrib)
+    def get_ip_property_for_object(self, obj: ScenarioObject) -> str:
+        catalog_path = xosc.ParseOpenScenario(self.scenario_file).catalog.catalogs.get(
+            obj.catalog_ref.catalogname
+        )
+        catalog_object = xosc.xosc_reader.CatalogReader(
+            obj.catalog_ref, path.join(ATOS_XOSC_DIR, catalog_path)
+        )
+        # Convert the list of tuples to a dict to get the ip property easily
+        return dict(catalog_object.properties.properties)["ip"]
 
     def get_all_objects_in_scenario(self, scenario_file) -> List[ScenarioObject]:
         scenario = xosc.ParseOpenScenario(scenario_file)
-        scenario_objects = []
-        try:
-            scenario_objects = [
-                ScenarioObject(name=scenario_object.name)
-                for scenario_object in scenario.entities.scenario_objects
-            ]
-        except AttributeError:
-            raise AttributeError(
-                'Missing "name" attribute for ScenarioObject in scenario file {}'.format(
-                    scenario_file
-                )
+        scenario_objects = [
+            ScenarioObject(
+                name=scenario_object.name,
+                catalog_ref=xosc.CatalogReference(
+                    scenario_object.entityobject.catalogname,
+                    scenario_object.entityobject.entryname,
+                ),
             )
+            for scenario_object in scenario.entities.scenario_objects
+        ]
         return scenario_objects
 
     def srv_get_object_id_array(self, request, response):
@@ -116,10 +105,9 @@ class ScenarioModule(Node):
         ]
         response.success = True
 
-    # def srv_get_object_ip(
-    #     self, request, response
-    # ) -> atos_interfaces.srv.GetObjectIp.Response:
-    #     object_id = request.id
+    def srv_get_object_ip(self, request, response):
+        id = request.id
+        response.ip = [obj.ip for obj in self.scenario_objects if obj.id == id][0]
 
 
 def main(args=None):
