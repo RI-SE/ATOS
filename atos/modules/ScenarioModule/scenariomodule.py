@@ -13,6 +13,8 @@ from typing import List
 
 
 ATOS_XOSC_DIR = path.expanduser("~/.astazero/ATOS/osc/")
+ACTIVE_OBJECT_NAME_PARAMETER = "active_object_names"
+SCENARIO_FILE_PARAMETER = "open_scenario_file"
 
 
 class ScenarioObject:
@@ -39,35 +41,42 @@ class ScenarioModule(Node):
             atos_interfaces.srv.GetObjectIp, "get_object_ip", self.srv_get_object_ip
         )
 
-        self.declare_parameter("open_scenario_file", "")
-        self.declare_parameter("active_object_names", rclpy.Parameter.Type.STRING_ARRAY)
+        self.declare_parameter(SCENARIO_FILE_PARAMETER, "")
+        self.declare_parameter(
+            ACTIVE_OBJECT_NAME_PARAMETER, rclpy.Parameter.Type.STRING_ARRAY
+        )
         self.add_on_set_parameters_callback(self.parameter_callback)
         self.scenario_objects = []
         self.vehicle_catalog = None
 
+    def init_callback(self, msg):
+        self.get_logger().info("Init callback called")
+
     def parameter_callback(self, params):
         for param in params:
-            if param.name == "open_scenario_file":
-                self.update_scenario(filename=param.value)
-            elif param.name == "active_scenario_objects":
-                self.update_active_scenario_objects()
+            if param.name == SCENARIO_FILE_PARAMETER and param.value:
+                self.update_scenario(file_name=param.value)
+            elif param.name == ACTIVE_OBJECT_NAME_PARAMETER:
+                self.update_active_scenario_objects(active_objects=param.value)
         return SetParametersResult(successful=True)
 
-    def update_scenario(self, filename: str):
-        self.scenario_file = path.join(ATOS_XOSC_DIR, filename)
+    def update_scenario(self, file_name: str):
+        self.scenario_file = path.join(ATOS_XOSC_DIR, file_name)
         self.get_logger().info("Loading scenario file: {}".format(self.scenario_file))
 
-    def update_active_scenario_objects(self):
-        names = self.get_parameter("active_object_names").value
-        if len(names) != len(set(names)):
+    def update_active_scenario_objects(self, active_objects):
+        if len(active_objects) != len(set(active_objects)):
             raise ValueError("Names must be unique")
         self.scenario_objects = self.get_all_objects_in_scenario(self.scenario_file)
-        for name in names:
+        for name in active_objects:
             if name not in [obj.name for obj in self.scenario_objects]:
                 raise ValueError("Name {} not found in scenario file".format(name))
         # Set an unique id and get IP for each object
         for i, obj in enumerate(self.scenario_objects):
             obj.id = i + 1
+            self.get_logger().info(
+                "Assigning ID {} to object with name {}".format(obj.id, obj.name)
+            )
             obj.ip = self.get_ip_property_for_object(obj)
 
     def get_all_objects_in_scenario(self, scenario_file) -> List[ScenarioObject]:
@@ -95,11 +104,14 @@ class ScenarioModule(Node):
         return dict(catalog_object.properties.properties)["ip"]
 
     def srv_get_object_id_array(self, request, response):
-        active_object_names = self.get_parameter("active_object_names").value
-        response.ids = [
+        self.get_logger().info("Service get_object_id_array callback called")
+        active_object_names = self.get_parameter(ACTIVE_OBJECT_NAME_PARAMETER).value
+        ids = [
             obj.id for obj in self.scenario_objects if obj.name in active_object_names
         ]
+        response.ids = ids
         response.success = True
+        return response
 
     def srv_get_object_ip(self, request, response):
         id = request.id

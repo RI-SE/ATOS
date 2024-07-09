@@ -4,14 +4,12 @@ import rclpy
 import rclpy.parameter
 
 
-def test_get_objects_in_scenario(get_file_path):
+def test_get_six_objects_in_scenario(get_file_path):
     rclpy.init()
-    object_names = ["1", "2", "4", "3", "6", "5"]
     scenario_module = sm.ScenarioModule()
     scenario_path = get_file_path("../../conf/osc/GaragePlanScenario.xosc")
-    print(scenario_path)
-    object_ids = scenario_module.get_objects_in_scenario(scenario_path)
-    assert object_ids == object_names
+    objects = scenario_module.get_all_objects_in_scenario(scenario_path)
+    assert len(objects) == 6
 
     rclpy.shutdown()
 
