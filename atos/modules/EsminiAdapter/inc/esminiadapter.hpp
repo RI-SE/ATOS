@@ -52,9 +52,7 @@ private:
 	static std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> objectTrajectoryService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTriggerStart>> startOnTriggerService;
-	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectIp>> objectIpService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetTestOrigin>> testOriginService;
-	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::SetObjectIp>> setObjectIpService;
 
 
 	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
@@ -91,17 +89,9 @@ private:
 	static void onRequestObjectStartOnTrigger(
 		const std::shared_ptr<atos_interfaces::srv::GetObjectTriggerStart::Request> req,
 		std::shared_ptr<atos_interfaces::srv::GetObjectTriggerStart::Response> res);
-	
-	static void onRequestObjectIP(
-		const std::shared_ptr<atos_interfaces::srv::GetObjectIp::Request> req,
-		std::shared_ptr<atos_interfaces::srv::GetObjectIp::Response> res);
 
 	static void onRequestTestOrigin(const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,
 							std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response>);
-			
-	static void onSetObjectIP(const std::shared_ptr<atos_interfaces::srv::SetObjectIp::Request>,
-							std::shared_ptr<atos_interfaces::srv::SetObjectIp::Response>);
-	
 
 	static std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> testOriginClient;
 	static std::shared_ptr<EsminiAdapter> me;
