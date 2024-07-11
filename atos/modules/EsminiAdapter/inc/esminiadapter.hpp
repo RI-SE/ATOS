@@ -22,8 +22,7 @@
 #include "atos_interfaces/srv/get_test_origin.hpp"
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "atos_interfaces/srv/get_object_trigger_start.hpp"
-#include "atos_interfaces/srv/get_object_ip.hpp"
-#include "atos_interfaces/srv/set_object_ip.hpp"
+#include "atos_interfaces/srv/get_open_scenario_file_path.hpp"
 
 /*!
  * \brief The EsminiAdapter class is a singleton class that 
@@ -53,6 +52,7 @@ private:
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> objectTrajectoryService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTriggerStart>> startOnTriggerService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetTestOrigin>> testOriginService;
+	rclcpp::Client<atos_interfaces::srv::GetOpenScenarioFilePath>::SharedPtr oscFilePathClient_;	//!< Client to request the current open scenario file path
 
 
 	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
@@ -66,9 +66,7 @@ private:
 	static void onConnectedObjectIdsMessage(const ROSChannels::ConnectedObjectIds::message_type::SharedPtr msg);
 	static void reportObjectPosition(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
 	static void executeActionIfStarted(const char* name, int type, int state);
-	static std::filesystem::path getOpenScenarioFileParameter();
 	static std::filesystem::path getOpenDriveFile();
-	static void setOpenScenarioFile(const std::filesystem::path&);
 	static void handleStoryBoardElementChange(const char* name, int type, int state, const char* full_path);
 	static void handleActionElementStateChange(const char* name, int state);
 	static void InitializeEsmini();
@@ -105,5 +103,5 @@ private:
 	bool testOriginSet;
 
 	static geographic_msgs::msg::GeoPose testOrigin;
-
+	rclcpp::TimerBase::SharedPtr timer_;
 };

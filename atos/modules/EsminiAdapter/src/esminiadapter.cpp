@@ -51,31 +51,9 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	applyTrajTransform(false),
 	testOriginSet(false)
  {
-	declare_parameter("open_scenario_file","");
+	oscFilePathClient_ = create_client<atos_interfaces::srv::GetOpenScenarioFilePath>(ServiceNames::getOpenScenarioFilePath);
 	declare_parameter("timestep", 0.1);
-}
 
-/*!
- * \brief Fetches the open_scenario_file parameter from node and prepends
- * 		necessary config path.
- * \return Configured path
-*/
-std::filesystem::path EsminiAdapter::getOpenScenarioFileParameter()
-{
-	// Get the file path of xosc file
-	std::string result;
-	auto success = me->get_parameter("open_scenario_file", result);
-	if (!success) {
-		throw std::runtime_error("Could not read parameter open_scenario_file");
-	}
-	if (std::filesystem::path(result).is_absolute()) {
-		return result;
-	}
-	else {
-		char path[MAX_FILE_PATH];
-		UtilGetOscDirectoryPath(path, MAX_FILE_PATH);
-		return std::string(path) + result;
-	}
 }
 
 /*!
@@ -102,19 +80,6 @@ std::filesystem::path EsminiAdapter::getOpenDriveFile()
 		return std::string(path) + odrPath.string();
 	}
 
-}
-
-/*!
- * \brief Sets the OpenSCENARIO file path to use
- * \param path OpenSCENARIO file path
-*/
-void EsminiAdapter::setOpenScenarioFile(
-	const std::filesystem::path& path)
-{
-	if (!std::filesystem::is_regular_file(path)) {
-		throw std::runtime_error("Could not open file " + path.string());
-	}
-	oscFilePath = path;
 }
 
 /*!
@@ -177,21 +142,25 @@ void EsminiAdapter::handleAbortCommand() {
 
 void EsminiAdapter::handleInitCommand()
 {
-	try {
-		setOpenScenarioFile(getOpenScenarioFileParameter());
-	}
-	catch (std::exception& e) {
-		RCLCPP_ERROR(me->get_logger(), e.what());
-		return;
-	}
+	// Get the file path of xosc file
+	auto response = std::make_shared<atos_interfaces::srv::GetOpenScenarioFilePath::Response>();
+	auto request = std::make_shared<atos_interfaces::srv::GetOpenScenarioFilePath::Request>();
+	
+	using ServiceResponseFuture = rclcpp::Client<atos_interfaces::srv::GetOpenScenarioFilePath>::SharedFutureWithRequest;
+	// Callback to handle the response
+	auto callback = [logger = me->get_logger(), response](ServiceResponseFuture future) {
+		auto response = future.get();
+		me->oscFilePath = response.second->path;
+		me->InitializeEsmini();
 
-	me->InitializeEsmini();
-
-	std::array<double,3> llh_0 = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
-	for (auto& it : me->idToTraj) {
+		std::array<double,3> llh_0 = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
+		for (auto& it : me->idToTraj) {
 		me->gnssPathPublishers.emplace(it.first, ROSChannels::GNSSPath::Pub(*me, it.first));
 		me->gnssPathPublishers.at(it.first).publish(it.second.toGeoJSON(llh_0));
-	}
+		}
+	};
+	// Send the request
+	auto future = me->oscFilePathClient_->async_send_request(request, std::move(callback));
 }
 
 void EsminiAdapter::onStaticExitMessage(const ROSChannels::Exit::message_type::SharedPtr)
