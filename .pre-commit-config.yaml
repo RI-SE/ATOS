@@ -7,6 +7,6 @@ repos:
         args: [--style=LLVM, -i]
       - id: cppcheck
   - repo: https://github.com/ambv/black
-    rev: stable
+    rev: 24.4.2
     hooks:
       - id: black
