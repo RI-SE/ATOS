@@ -12,9 +12,10 @@ from scenariogeneration import xosc
 from typing import List
 
 
-ATOS_XOSC_DIR = path.expanduser("~/.astazero/ATOS/osc/")
+ROOT_FOLDER_PATH_PARAMETER = "root_folder_path"
 ACTIVE_OBJECT_NAME_PARAMETER = "active_object_names"
 SCENARIO_FILE_PARAMETER = "open_scenario_file"
+DEFAULT_FOLDER_PATH = path.expanduser("~/.astazero/ATOS/")
 
 
 class ScenarioObject:
@@ -42,7 +43,12 @@ class ScenarioModule(Node):
         self.get_object_ip_ = self.create_service(
             atos_interfaces.srv.SetObjectIp, "set_object_ip", self.srv_set_object_ip
         )
-
+        self.get_open_scenario_file_path_ = self.create_service(
+            atos_interfaces.srv.GetOpenScenarioFilePath,
+            "get_open_scenario_file_path",
+            self.srv_get_open_scenario_file_path,
+        )
+        self.declare_parameter(ROOT_FOLDER_PATH_PARAMETER, DEFAULT_FOLDER_PATH)
         self.declare_parameter(SCENARIO_FILE_PARAMETER, "")
         self.declare_parameter(
             ACTIVE_OBJECT_NAME_PARAMETER, rclpy.Parameter.Type.STRING_ARRAY
@@ -67,7 +73,14 @@ class ScenarioModule(Node):
         return SetParametersResult(successful=True)
 
     def update_scenario(self, file_name: str):
-        self.scenario_file = path.join(ATOS_XOSC_DIR, file_name)
+        self.scenario_file = path.join(
+            self.get_parameter(ROOT_FOLDER_PATH_PARAMETER).value, "osc", file_name
+        )
+        # Check if the file exists, else throw an error
+        if not path.exists(self.scenario_file):
+            raise FileNotFoundError(
+                f"Scenario file {self.scenario_file} does not exist"
+            )
         self.get_logger().info("Loading scenario file: {}".format(self.scenario_file))
 
     def update_active_scenario_objects(self, active_objects_name: List[str]):
@@ -113,7 +126,12 @@ class ScenarioModule(Node):
             obj.catalog_ref.catalogname
         )
         catalog_object = xosc.xosc_reader.CatalogReader(
-            obj.catalog_ref, path.join(ATOS_XOSC_DIR, catalog_path)
+            obj.catalog_ref,
+            path.join(
+                self.get_parameter(ROOT_FOLDER_PATH_PARAMETER).value,
+                "osc",
+                catalog_path,
+            ),
         )
         return catalog_object.properties.properties
 
@@ -139,6 +157,18 @@ class ScenarioModule(Node):
             response.success = False
             return response
         scenario_object.ip = request.ip
+        response.success = True
+        return response
+
+    def srv_get_open_scenario_file_path(self, request, response):
+        rclpy.logging.get_logger("scenario_module").info(
+            "Service get_open_scenario_file_path callback called"
+        )
+        response.path = path.join(
+            self.get_parameter(ROOT_FOLDER_PATH_PARAMETER).value,
+            "osc",
+            self.get_parameter(SCENARIO_FILE_PARAMETER).value,
+        )
         response.success = True
         return response
 

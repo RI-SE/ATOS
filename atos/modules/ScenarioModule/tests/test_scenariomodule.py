@@ -1,3 +1,4 @@
+import os
 import pytest
 import rclpy
 
@@ -17,14 +18,15 @@ def scenario_module():
                 "open_scenario_file",
                 rclpy.Parameter.Type.STRING,
                 "GaragePlanScenario.xosc",
-            )
-        ]
-    )
-    scenario_module.set_parameters(
-        [
+            ),
             rclpy.parameter.Parameter(
                 "active_object_names", rclpy.Parameter.Type.STRING_ARRAY, active_objects
-            )
+            ),
+            rclpy.parameter.Parameter(
+                "root_folder_path",
+                rclpy.Parameter.Type.STRING,
+                os.path.join(os.path.dirname(__file__), "resources"),
+            ),
         ]
     )
     yield scenario_module
@@ -78,4 +80,14 @@ def test_ip_is_still_user_defined_after_init(scenario_module):
     response = srv.GetObjectIp.Response()
     scenario_module.srv_get_object_ip(request, response)
     assert response.ip == "6.6.6.6"
+    assert response.success == True
+
+
+def test_srv_get_open_scenario_file_path(scenario_module):
+    request = srv.GetOpenScenarioFilePath.Request()
+    response = srv.GetOpenScenarioFilePath.Response()
+    scenario_module.srv_get_open_scenario_file_path(request, response)
+    assert response.path == os.path.join(
+        os.path.dirname(__file__), "resources", "osc", "GaragePlanScenario.xosc"
+    )
     assert response.success == True
