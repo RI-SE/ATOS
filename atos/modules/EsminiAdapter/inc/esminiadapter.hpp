@@ -12,6 +12,7 @@
 #include "roschannels/monitorchannel.hpp"
 #include "roschannels/gnsspathchannel.hpp"
 #include "roschannels/statechange.hpp"
+#include "roschannels/scenariochannel.hpp"
 #include <unordered_map>
 #include <filesystem>
 #include "esmini/esminiLib.hpp"
@@ -42,6 +43,7 @@ private:
 
 	ROSChannels::StartObject::Pub startObjectPub;
 	ROSChannels::V2X::Pub v2xPub;
+	ROSChannels::StoryBoardElementStateChange::Pub storyBoardElementStateChangePub;
 	ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;
 	ROSChannels::Exit::Sub exitSub;
 	ROSChannels::StateChange::Sub stateChangeSub;

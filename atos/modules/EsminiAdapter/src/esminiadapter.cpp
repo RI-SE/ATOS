@@ -44,6 +44,7 @@ geographic_msgs::msg::GeoPose EsminiAdapter::testOrigin = geographic_msgs::msg::
 EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	startObjectPub(*this),
 	v2xPub(*this),
+	storyBoardElementStateChangePub(*this),
 	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage),
 	exitSub(*this, &EsminiAdapter::onStaticExitMessage),
 	stateChangeSub(*this, &EsminiAdapter::onStaticStateChangeMessage),
@@ -235,7 +236,7 @@ void EsminiAdapter::collectStartAction(
 	int state,
 	const char *full_path)
 {
-	RCLCPP_DEBUG(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d, Full path: %s", name, type, state, full_path);
+	RCLCPP_INFO(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d, Full path: %s", name, type, state, full_path);
 	if (type != 7 || state != 2) { return; } // Only handle actions that are started
 	try {
 		auto [objectId, action] = parseAction(name);
@@ -262,24 +263,15 @@ void EsminiAdapter::handleStoryBoardElementChange(
 	int state,
 	const char *full_path)
 {
-	RCLCPP_DEBUG(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d, Full path: %s", name, type, state, full_path);
-	// switch on type
-	switch (type)
-	{
-	case 7: // Action
-		me->handleActionElementStateChange(name, state);
-		break;
-	case 1: // Ignore story board type
-	case 2: // Ignore story type
-	case 3: // Ignore act type
-	case 4: // Ignore maneuver group type
-	case 5: // Ignore maneuver type
-	case 6: // Ignore event type
-		break; 
-	default:
-		RCLCPP_INFO(me->get_logger(), "Type %d not recognised for element %s", type, name);
-		break;
-	}
+	RCLCPP_INFO(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d, Full path: %s", name, type, state, full_path);
+
+	atos_interfaces::msg::StoryBoardElementStateChange msg;
+	msg.name = name;
+	msg.type = type;
+	msg.state = state;
+	msg.full_path = full_path;
+
+	me->storyBoardElementStateChangePub.publish(msg);
 }
 
 void EsminiAdapter::handleActionElementStateChange(
