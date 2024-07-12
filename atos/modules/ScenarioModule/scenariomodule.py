@@ -58,7 +58,6 @@ class ScenarioModule(Node):
         self.vehicle_catalog = None
 
     def init_callback(self, msg):
-        self.get_logger().info("Init callback called")
         self.update_scenario(self.get_parameter(SCENARIO_FILE_PARAMETER).value)
         self.update_active_scenario_objects(
             self.get_parameter(ACTIVE_OBJECT_NAME_PARAMETER).value
@@ -136,7 +135,6 @@ class ScenarioModule(Node):
         return catalog_object.properties.properties
 
     def srv_get_object_id_array(self, request, response):
-        self.get_logger().info("Service get_object_id_array callback called")
         ids = [id for id, _ in self.active_objects.items()]
         response.ids = ids
         response.success = True
@@ -161,9 +159,6 @@ class ScenarioModule(Node):
         return response
 
     def srv_get_open_scenario_file_path(self, request, response):
-        rclpy.logging.get_logger("scenario_module").info(
-            "Service get_open_scenario_file_path callback called"
-        )
         response.path = path.join(
             self.get_parameter(ROOT_FOLDER_PATH_PARAMETER).value,
             "osc",
