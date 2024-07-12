@@ -17,7 +17,6 @@
 #include "rclcpp/wait_for_message.hpp"
 #include "trajectory.hpp"
 #include "string_utility.hpp"
-#include "util.h"
 
 
 using namespace ROSChannels;
@@ -62,22 +61,29 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 */
 std::filesystem::path EsminiAdapter::getOpenDriveFile()
 {
-	std::filesystem::path odrPath;
+	std::filesystem::path odrFilePath;
 	if (SE_GetODRFilename() != nullptr) {
-		odrPath = std::filesystem::path(SE_GetODRFilename()); 
-		RCLCPP_INFO(me->get_logger(), "Found ODR file %s", odrPath.string().c_str());
+		odrFilePath = std::filesystem::path(SE_GetODRFilename()); 
+		RCLCPP_INFO(me->get_logger(), "Got ODR file %s from scenario", odrFilePath.string().c_str());
 	}
 	else {
 		RCLCPP_DEBUG(me->get_logger(), "No ODR file found");
 	}
 
-	if (odrPath.is_absolute()) {
-		return odrPath;
+	if (odrFilePath.is_absolute()) {
+		return odrFilePath;
 	}
 	else {
-		char path[MAX_FILE_PATH];
-		UtilGetConfDirectoryPath(path, MAX_FILE_PATH);
-		return std::string(path) + odrPath.string();
+		// Look for the file relative the scenario file (ie root openx dir)
+		auto odrCatalog = std::filesystem::path(me->oscFilePath).parent_path();
+		std::filesystem::path joinedPath = odrCatalog / odrFilePath;
+		if (!std::filesystem::exists(joinedPath)) {
+			throw std::runtime_error("ODR file " + joinedPath.string() + " does not exist");
+		}
+		else {
+			RCLCPP_INFO(me->get_logger(), "Found ODR file at %s", joinedPath.string().c_str());
+		}
+		return joinedPath;
 	}
 
 }
