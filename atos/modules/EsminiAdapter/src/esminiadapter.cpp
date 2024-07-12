@@ -38,7 +38,6 @@ std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAd
 std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>> EsminiAdapter::objectTrajectoryService = std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>>();
 std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>> EsminiAdapter::startOnTriggerService = std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>>();
 std::shared_ptr<rclcpp::Service<TestOriginSrv>> EsminiAdapter::testOriginService = std::shared_ptr<rclcpp::Service<TestOriginSrv>>();
-std::vector<uint32_t> EsminiAdapter::delayedStartIds = std::vector<uint32_t>();
 geographic_msgs::msg::GeoPose EsminiAdapter::testOrigin = geographic_msgs::msg::GeoPose();
 
 EsminiAdapter::EsminiAdapter() : Module(moduleName),
@@ -190,31 +189,6 @@ void EsminiAdapter::handleStartCommand()
 }
 
 /*!
- * \brief Split action into ID and action name.
- * \param actionName Action name in the form ActorObjectId,Action
- * \return pair of actor object ID and action name
-*/
-std::pair<uint32_t, std::string> EsminiAdapter::parseAction(const std::string& actionName)
-{
-	std::vector<std::string> res;
-	split(actionName, ',', res);
-	if (res.size() < 2){
-		throw std::runtime_error("Action name " + actionName + "  is not of the form ActorObjectId,Action");
-	}
-	return {std::stoul(res[0]), res[1]};
-}
-
-/*!
- * \brief Check if action is a start action.
- * \param action Action name
- * \return true if action is a start action, false otherwise
-*/
-bool EsminiAdapter::isStartAction(const std::string& action)
-{
-	return std::regex_search(action, std::regex("^(begin|start)", std::regex_constants::icase));
-}
-
-/*!
  * \brief Check if action is a DENM action.
  * \param action Action name
  * \return true if action is a DENM action, false otherwise
@@ -222,32 +196,6 @@ bool EsminiAdapter::isStartAction(const std::string& action)
 bool EsminiAdapter::isSendDenmAction(const std::string& action)
 {
 	return std::regex_search(action, std::regex("denm", std::regex_constants::icase));
-}
-
-/*!
- * \brief Add delayed start to object state if start action occurred.
- * \param name Name of the StoryBoardElement whose state has changed.
- * \param type Possible values: STORY_BOARD = 1, STORY=2, ACT = 3, MANEUVER_GROUP = 4, MANEUVER = 5, EVENT = 6, ACTION = 7, UNDEFINED_ELEMENT_TYPE = 0.
- * \param state new state, possible values: STANDBY = 1, RUNNING = 2, COMPLETE = 3, UNDEFINED_ELEMENT_STATE = 0.
- */
-void EsminiAdapter::collectStartAction(
-	const char* name,
-	int type,
-	int state,
-	const char *full_path)
-{
-	RCLCPP_INFO(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d, Full path: %s", name, type, state, full_path);
-	if (type != 7 || state != 2) { return; } // Only handle actions that are started
-	try {
-		auto [objectId, action] = parseAction(name);
-		if (isStartAction(action)) {
-			delayedStartIds.push_back(objectId);
-		}
-	}
-	catch (std::exception& e) {
-		RCLCPP_WARN(me->get_logger(), e.what());
-		return;
-	}
 }
 
 /*!
@@ -272,40 +220,6 @@ void EsminiAdapter::handleStoryBoardElementChange(
 	msg.full_path = full_path;
 
 	me->storyBoardElementStateChangePub.publish(msg);
-}
-
-void EsminiAdapter::handleActionElementStateChange(
-		const char *name,
-		int state)
-{
-	try
-	{
-		auto [objectId, action] = parseAction(name);
-		if (isStartAction(action) && state == 2) {
-			RCLCPP_INFO(me->get_logger(), "Running start action for object %d", objectId);
-			ROSChannels::StartObject::message_type startObjectMsg;
-			startObjectMsg.id = objectId;
-			startObjectMsg.stamp = me->get_clock()->now(); // TODO + std::chrono::milliseconds(100);
-			me->startObjectPub.publish(startObjectMsg);
-		}
-		else if (isSendDenmAction(action) && state == 2) {
-			// Get the latest Monitor message
-			RCLCPP_INFO(me->get_logger(), "Running send DENM action triggered by object %d", objectId);
-			ROSChannels::Monitor::message_type monr;
-			rclcpp::wait_for_message(monr, me, std::string(me->get_namespace()) + "/object_" + std::to_string(objectId) + "/object_monitor", 10ms);
-			double llh[3] = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
-			double offset[3] = {monr.pose.pose.position.x, monr.pose.pose.position.y, monr.pose.pose.position.z};
-			CRSTransformation::llhOffsetMeters(llh, offset);
-			me->v2xPub.publish(denmFromTestOrigin(llh));
-		}
-		else {
-			RCLCPP_DEBUG(me->get_logger(), "Action %s is not supported", action.c_str());
-		}
-	}
-	catch (std::exception &e) {
-		RCLCPP_WARN(me->get_logger(), e.what());
-		return;
-	}
 }
 
 ROSChannels::V2X::message_type EsminiAdapter::denmFromTestOrigin(double *llh) {
@@ -598,7 +512,6 @@ std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(
  */
 void EsminiAdapter::InitializeEsmini()
 {
-	me->delayedStartIds.clear();
 	me->idToTraj.clear();
 	me->ATOStoEsminiObjectId.clear();
 	me->pathPublishers.clear();
@@ -646,29 +559,20 @@ void EsminiAdapter::InitializeEsmini()
 		RCLCPP_WARN(me->get_logger(), "Failed to get OpenDRIVE geo reference from RoadManager");
 	}
 	RM_Close();
-	
-	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
-		//SE_SetAlignModeZ(SE_GetId(j), 0); // Disable Z-alignment not implemented in esmini yet
-	}
-	// Register callbacks to figure out what actions need to be taken
-	SE_RegisterStoryBoardElementStateChangeCallback(&collectStartAction);
 
 	RCLCPP_INFO(me->get_logger(), "Starting extracting trajs");
 	double timeStep = me->get_parameter("timestep").as_double();
 	me->extractTrajectories(timeStep, me->idToTraj);
 	RCLCPP_INFO(me->get_logger(), "Done extracting trajs");
 
-
 	RCLCPP_INFO(me->get_logger(), "Extracted %ld trajectories", me->idToTraj.size());
-	RCLCPP_INFO(me->get_logger(), "Number of objects with triggered start: %ld", me->delayedStartIds.size());
-
 
 	// Populate the map tracking Object ID -> esmini index
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
 		me->ATOStoEsminiObjectId[std::stoi(SE_GetObjectName(SE_GetId(j)))] = SE_GetId(j);
 	}
 	SE_Close(); // Stop ScenarioEngine
-
+// 
 	RCLCPP_DEBUG(me->get_logger(), "Extracted trajectories");
 
 	for (auto& it : me->idToTraj) {
@@ -682,9 +586,9 @@ void EsminiAdapter::InitializeEsmini()
 		me->pathPublishers.at(id).publish(traj.toPath());		
 
 		// below is for dumping the trajectory points to the console
-		// for (auto& tp : traj.points){
-		// 	RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
-		// }
+		for (auto& tp : traj.points){
+			RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
+		}
 		
 	}
 }
@@ -717,19 +621,6 @@ void EsminiAdapter::onRequestTestOrigin(
 	res->origin.position.altitude = me->testOrigin.position.altitude;
 }
 
-
-void EsminiAdapter::onRequestObjectStartOnTrigger(
-	const std::shared_ptr<ObjectTriggerSrv::Request> req,
-	std::shared_ptr<ObjectTriggerSrv::Response> res)
-{
-	res->id = req->id;
-	res->success = true;
-	res->trigger_start = std::count(me->delayedStartIds.begin(), me->delayedStartIds.end(), req->id) > 0;
-	if (!res->trigger_start){
-		RCLCPP_INFO(me->get_logger(), "No triggers found for object %d", req->id);
-	}
-}
-
 /*!
  * \brief initializeModule Initializes this module by creating log,
  *			connecting to the message queue bus, setting up signal handers etc.
@@ -739,9 +630,6 @@ void EsminiAdapter::onRequestObjectStartOnTrigger(
 int EsminiAdapter::initializeModule() {
 	int retval = 0;
 
-	// Providing services
-	me->startOnTriggerService = me->create_service<ObjectTriggerSrv>(ServiceNames::getObjectTriggerStart,
-		std::bind(&EsminiAdapter::onRequestObjectStartOnTrigger, _1, _2));
 	me->objectTrajectoryService = me->create_service<ObjectTrajectorySrv>(ServiceNames::getObjectTrajectory,
 		std::bind(&EsminiAdapter::onRequestObjectTrajectory, _1, _2));
 	me->testOriginService = me->create_service<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin,

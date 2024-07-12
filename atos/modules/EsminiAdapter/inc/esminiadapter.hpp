@@ -70,25 +70,18 @@ private:
 	static void executeActionIfStarted(const char* name, int type, int state);
 	static std::filesystem::path getOpenDriveFile();
 	static void handleStoryBoardElementChange(const char* name, int type, int state, const char* full_path);
-	static void handleActionElementStateChange(const char* name, int state);
 	static void InitializeEsmini();
 	static void getObjectStates(double timeStep, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
 	static ATOS::Trajectory getTrajectoryFromObjectState(uint32_t,std::vector<SE_ScenarioObjectState>& states);
 	static std::string projStrFromGeoReference(RM_GeoReference& geoRef);
 	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(double timeStep, std::map<uint32_t,ATOS::Trajectory>& idToTraj);
-	static std::pair<uint32_t, std::string> parseAction(const std::string& action);
-	static bool isStartAction(const std::string& action);
 	static bool isSendDenmAction(const std::string& action);
-	static void collectStartAction(const char* name, int type, int state, const char* full_path);
 	static ROSChannels::V2X::message_type denmFromTestOrigin(double *llh);
 
 	static void onRequestObjectTrajectory(
 		const std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Request> req,
 		std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Response> res);
 	
-	static void onRequestObjectStartOnTrigger(
-		const std::shared_ptr<atos_interfaces::srv::GetObjectTriggerStart::Request> req,
-		std::shared_ptr<atos_interfaces::srv::GetObjectTriggerStart::Response> res);
 
 	static void onRequestTestOrigin(const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,
 							std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response>);
@@ -97,8 +90,6 @@ private:
 	static std::shared_ptr<EsminiAdapter> me;
 	static std::unordered_map<int, int> ATOStoEsminiObjectId;
 	static std::map<uint32_t,ATOS::Trajectory> idToTraj;
-	static std::map<uint32_t,std::string> idToIp;
-	static std::vector<uint32_t> delayedStartIds;
 
 	std::shared_ptr<CRSTransformation> crsTransformation;
 	bool applyTrajTransform;

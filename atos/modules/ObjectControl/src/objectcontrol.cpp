@@ -57,7 +57,6 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	originClient = create_client<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin);
 	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory);
 	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp);
-	triggerClient = create_client<atos_interfaces::srv::GetObjectTriggerStart>(ServiceNames::getObjectTriggerStart);
 	returnTrajectoryClient = create_client<atos_interfaces::srv::GetObjectReturnTrajectory>(ServiceNames::getObjectReturnTrajectory);
 	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(ServiceNames::getObjectControlState,
 		std::bind(&ObjectControl::onRequestState, this, _1, _2));
@@ -341,19 +340,6 @@ void ObjectControl::loadScenario() {
 			ipRequest->id = id;
 			ipClient->async_send_request(ipRequest, ipCallback);
 
-			// Get delayed start
-			auto triggerCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTriggerStart>::SharedFuture future) {
-				auto triggerResponse = future.get();
-				if (!triggerResponse->success) {
-					RCLCPP_ERROR(get_logger(), "Get trigger start service call failed for object %u", id);
-					return;
-				}
-				objects.at(id)->setTriggerStart(triggerResponse->trigger_start);
-				RCLCPP_INFO(get_logger(), "Got trigger start for object %u: %u", id, triggerResponse->trigger_start);
-			};
-			auto triggerRequest = std::make_shared<atos_interfaces::srv::GetObjectTriggerStart::Request>();
-			triggerRequest->id = id;
-			triggerClient->async_send_request(triggerRequest, triggerCallback);
 
 			// Get test origin
 			auto originCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
@@ -751,14 +737,6 @@ void ObjectControl::disarmObjects() {
 		catch (std::runtime_error& e) {
 			RCLCPP_ERROR(get_logger(), "Unable to disarm object %u: %s", id, e.what());
 			objects.at(id)->disconnect();
-		}
-	}
-}
-
-void ObjectControl::startScenario() {
-	for (auto& id : getVehicleIDs()) {
-		if (!objects.at(id)->isStartingOnTrigger()) {
-			startObject(id);
 		}
 	}
 }
