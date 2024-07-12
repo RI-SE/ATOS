@@ -34,7 +34,9 @@ def scenario_module():
 
 
 def test_get_six_objects_in_scenario(get_file_path, scenario_module):
-    scenario_path = get_file_path("../../conf/osc/GaragePlanScenario.xosc")
+    scenario_path = os.path.join(
+        os.path.dirname(__file__), "resources", "osc", "GaragePlanScenario.xosc"
+    )
     objects = scenario_module.get_all_objects_in_scenario(scenario_path)
     assert len(objects) == 6
 
