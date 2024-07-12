@@ -9,6 +9,7 @@ from rcl_interfaces.msg import SetParametersResult
 from rclpy.node import Node
 from std_msgs.msg import Empty
 from scenariogeneration import xosc
+from storyboard_handler import StoryBoardHandler
 from typing import List
 
 
@@ -33,6 +34,7 @@ class ScenarioModule(Node):
         # Class variables
         self.active_objects = {}
         self.vehicle_catalog = None
+        self.follow_traj_to_obj_name = {}
 
         # ROS parameters
         self.declare_parameter(ROOT_FOLDER_PATH_PARAMETER, DEFAULT_FOLDER_PATH)
@@ -42,11 +44,21 @@ class ScenarioModule(Node):
         )
         self.add_on_set_parameters_callback(self.parameter_callback)
 
-        # ROS subscriptions
+        # ROS subscriptions/publishers
         self.init_ = self.create_subscription(Empty, "init", self.init_callback, 10)
 
+        self.story_board_element_sub_ = self.create_subscription(
+            atos_interfaces.msg.StoryBoardElementStateChange,
+            "story_board_element_state_change",
+            self.story_board_element_state_change_callback,
+            10,
+        )
+        self.start_object_pub_ = self.create_publisher(
+            atos_interfaces.msg.ObjectTriggerStart, "start_object", 10
+        )
+
         # ROS services
-        self.get_object_ids_ = self.create_service(
+        self.object_ids_pub_ = self.create_service(
             atos_interfaces.srv.GetObjectIds,
             "get_object_ids",
             self.srv_get_object_id_array,
@@ -62,6 +74,33 @@ class ScenarioModule(Node):
             "get_open_scenario_file_path",
             self.srv_get_open_scenario_file_path,
         )
+
+    def init_callback(self, msg):
+        self.update_scenario(self.get_parameter(SCENARIO_FILE_PARAMETER).value)
+        self.update_active_scenario_objects(
+            self.get_parameter(ACTIVE_OBJECT_NAME_PARAMETER).value
+        )
+
+    def story_board_element_state_change_callback(self, story_board_element):
+        if (
+            story_board_element.name in self.follow_traj_to_obj_name.keys()
+            and story_board_element.state == 2
+        ):  # 2 is a running state
+
+            # Iterate through active objects to send the start command for the target objects
+            for object_id, object in self.active_objects.items():
+                target_object_name = self.follow_traj_to_obj_name[
+                    story_board_element.name
+                ]
+                if object.name in target_object_name:
+
+                    self.get_logger().info(
+                        f"Starting object {object.name} with id {object_id}"
+                    )
+                    start_object_msg = atos_interfaces.msg.ObjectTriggerStart()
+                    start_object_msg.id = id
+                    self.start_object_pub_.publish(start_object_msg)
+                    break
 
     def parameter_callback(self, params):
         for param in params:
@@ -81,6 +120,9 @@ class ScenarioModule(Node):
                 f"Scenario file {self.scenario_file} does not exist"
             )
         self.get_logger().info("Loading scenario file: {}".format(self.scenario_file))
+        self.follow_traj_to_obj_name = StoryBoardHandler(
+            self.scenario_file
+        ).get_follow_trajectory_actions_to_actors_map()
 
     def update_active_scenario_objects(self, active_objects_name: List[str]):
         if len(active_objects_name) != len(set(active_objects_name)):
