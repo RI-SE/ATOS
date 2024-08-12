@@ -98,7 +98,7 @@ class ScenarioModule(Node):
                         f"Starting object {object.name} with id {object_id}"
                     )
                     start_object_msg = atos_interfaces.msg.ObjectTriggerStart()
-                    start_object_msg.id = id
+                    start_object_msg.id = object_id
                     self.start_object_pub_.publish(start_object_msg)
                     break
 
