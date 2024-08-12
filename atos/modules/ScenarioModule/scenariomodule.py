@@ -29,10 +29,24 @@ class ScenarioModule(Node):
 
     def __init__(self):
         super().__init__("scenario_module")
-        self.init_subscription_ = self.create_subscription(
-            Empty, "init", self.init_callback, 10
+
+        # Class variables
+        self.active_objects = {}
+        self.vehicle_catalog = None
+
+        # ROS parameters
+        self.declare_parameter(ROOT_FOLDER_PATH_PARAMETER, DEFAULT_FOLDER_PATH)
+        self.declare_parameter(SCENARIO_FILE_PARAMETER, "")
+        self.declare_parameter(
+            ACTIVE_OBJECT_NAME_PARAMETER, rclpy.Parameter.Type.STRING_ARRAY
         )
-        self.object_ids_pub_ = self.create_service(
+        self.add_on_set_parameters_callback(self.parameter_callback)
+
+        # ROS subscriptions
+        self.init_ = self.create_subscription(Empty, "init", self.init_callback, 10)
+
+        # ROS services
+        self.get_object_ids_ = self.create_service(
             atos_interfaces.srv.GetObjectIds,
             "get_object_ids",
             self.srv_get_object_id_array,
@@ -40,27 +54,13 @@ class ScenarioModule(Node):
         self.get_object_ip_ = self.create_service(
             atos_interfaces.srv.GetObjectIp, "get_object_ip", self.srv_get_object_ip
         )
-        self.get_object_ip_ = self.create_service(
+        self.set_object_ip_ = self.create_service(
             atos_interfaces.srv.SetObjectIp, "set_object_ip", self.srv_set_object_ip
         )
         self.get_open_scenario_file_path_ = self.create_service(
             atos_interfaces.srv.GetOpenScenarioFilePath,
             "get_open_scenario_file_path",
             self.srv_get_open_scenario_file_path,
-        )
-        self.declare_parameter(ROOT_FOLDER_PATH_PARAMETER, DEFAULT_FOLDER_PATH)
-        self.declare_parameter(SCENARIO_FILE_PARAMETER, "")
-        self.declare_parameter(
-            ACTIVE_OBJECT_NAME_PARAMETER, rclpy.Parameter.Type.STRING_ARRAY
-        )
-        self.add_on_set_parameters_callback(self.parameter_callback)
-        self.active_objects = {}
-        self.vehicle_catalog = None
-
-    def init_callback(self, msg):
-        self.update_scenario(self.get_parameter(SCENARIO_FILE_PARAMETER).value)
-        self.update_active_scenario_objects(
-            self.get_parameter(ACTIVE_OBJECT_NAME_PARAMETER).value
         )
 
     def parameter_callback(self, params):
@@ -87,18 +87,24 @@ class ScenarioModule(Node):
             raise ValueError("Names must be unique")
         scenario_objects = self.get_all_objects_in_scenario(self.scenario_file)
 
-        # Remove any object that have (now) inactive
+        # Remove any object that are (now) inactive
         for id, obj in self.active_objects.items():
             if obj.name not in active_objects_name:
                 self.active_objects.pop(id)
 
-        # Add any object that have become active
+        # Add objects that are active
         for id, obj in scenario_objects.items():
             if obj.name in active_objects_name and id not in self.active_objects:
                 self.active_objects[id] = obj
                 # Update the ip property of the object unless it is already set
                 if obj.ip is None:
                     obj.ip = self.get_ip_property_for_object(obj)
+
+    def init_callback(self, msg):
+        self.update_scenario(self.get_parameter(SCENARIO_FILE_PARAMETER).value)
+        self.update_active_scenario_objects(
+            self.get_parameter(ACTIVE_OBJECT_NAME_PARAMETER).value
+        )
 
     def get_all_objects_in_scenario(self, scenario_file) -> List[ScenarioObject]:
         scenario = xosc.ParseOpenScenario(scenario_file)
