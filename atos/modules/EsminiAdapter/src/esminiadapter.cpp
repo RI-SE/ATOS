@@ -256,7 +256,7 @@ bool EsminiAdapter::isSendDenmAction(const std::string& action)
 /*!
  * \brief Add delayed start to object state if start action occurred.
  * \param name Name of the StoryBoardElement whose state has changed.
- * \param type Possible values: STORY_BOARD = 1, STORY=2, ACT = 3, MANEUVER_GROUP = 4, MANEUVER = 5, EVENT = 6, ACTION = 7, UNDEFINED_ELEMENT_TYPE = 0.
+ * \param type Possible values: STORY_BOARD = 1, STORY = 2, ACT = 3, MANEUVER_GROUP = 4, MANEUVER = 5, EVENT = 6, ACTION = 7, UNDEFINED_ELEMENT_TYPE = 0.
  * \param state new state, possible values: STANDBY = 1, RUNNING = 2, COMPLETE = 3, UNDEFINED_ELEMENT_STATE = 0.
  */
 void EsminiAdapter::collectStartAction(
