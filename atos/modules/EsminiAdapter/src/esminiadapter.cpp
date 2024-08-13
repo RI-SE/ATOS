@@ -256,15 +256,17 @@ bool EsminiAdapter::isSendDenmAction(const std::string& action)
 /*!
  * \brief Add delayed start to object state if start action occurred.
  * \param name Name of the StoryBoardElement whose state has changed.
- * \param type Possible values: STORY = 1, ACT = 2, MANEUVER_GROUP = 3, MANEUVER = 4, EVENT = 5, ACTION = 6, UNDEFINED_ELEMENT_TYPE = 0.
+ * \param type Possible values: STORY_BOARD = 1, STORY = 2, ACT = 3, MANEUVER_GROUP = 4, MANEUVER = 5, EVENT = 6, ACTION = 7, UNDEFINED_ELEMENT_TYPE = 0.
  * \param state new state, possible values: STANDBY = 1, RUNNING = 2, COMPLETE = 3, UNDEFINED_ELEMENT_STATE = 0.
  */
 void EsminiAdapter::collectStartAction(
 	const char* name,
 	int type,
-	int state)
+	int state,
+	const char *full_path)
 {
-	if (type != 6 || state != 2) { return; } // Only handle actions that are started
+	RCLCPP_DEBUG(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d, Full path: %s", name, type, state, full_path);
+	if (type != 7 || state != 2) { return; } // Only handle actions that are started
 	try {
 		auto [objectId, action] = parseAction(name);
 		if (isStartAction(action)) {
@@ -281,26 +283,28 @@ void EsminiAdapter::collectStartAction(
  * \brief Callback to be executed by esmini when story board state changes.
  * 		If story board element is an action, and the action is supported, the action is run.
  * \param name Name of the StoryBoardElement whose state has changed.
- * \param type Possible values: STORY = 1, ACT = 2, MANEUVER_GROUP = 3, MANEUVER = 4, EVENT = 5, ACTION = 6, UNDEFINED_ELEMENT_TYPE = 0.
+ * \param type Possible values: STORY_BOARD = 1, STORY=2, ACT = 3, MANEUVER_GROUP = 4, MANEUVER = 5, EVENT = 6, ACTION = 7, UNDEFINED_ELEMENT_TYPE = 0.
  * \param state new state, possible values: STANDBY = 1, RUNNING = 2, COMPLETE = 3, UNDEFINED_ELEMENT_STATE = 0.
  */
 void EsminiAdapter::handleStoryBoardElementChange(
 	const char *name,
 	int type,
-	int state)
+	int state,
+	const char *full_path)
 {
-	RCLCPP_DEBUG(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d", name, type, state);
+	RCLCPP_DEBUG(me->get_logger(), "Storyboard state changed! Name: %s, Type: %d, State: %d, Full path: %s", name, type, state, full_path);
 	// switch on type
 	switch (type)
 	{
-	case 6: // Action
+	case 7: // Action
 		me->handleActionElementStateChange(name, state);
 		break;
-	case 1: // Ignore story type
-	case 2: // Ignore act type
-	case 3: // Ignore maneuver group type
-	case 4: // Ignore maneuver type
-	case 5: // Ignore event type
+	case 1: // Ignore story board type
+	case 2: // Ignore story type
+	case 3: // Ignore act type
+	case 4: // Ignore maneuver group type
+	case 5: // Ignore maneuver type
+	case 6: // Ignore event type
 		break; 
 	default:
 		RCLCPP_INFO(me->get_logger(), "Type %d not recognised for element %s", type, name);
@@ -322,7 +326,7 @@ void EsminiAdapter::handleActionElementStateChange(
 			startObjectMsg.stamp = me->get_clock()->now(); // TODO + std::chrono::milliseconds(100);
 			me->startObjectPub.publish(startObjectMsg);
 		}
-		else if (isSendDenmAction(action) && state == 3) {
+		else if (isSendDenmAction(action) && state == 2) {
 			// Get the latest Monitor message
 			RCLCPP_INFO(me->get_logger(), "Running send DENM action triggered by object %d", objectId);
 			ROSChannels::Monitor::message_type monr;

@@ -31,24 +31,22 @@ esac
 if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
     echo "Usage: ./setup_atos.sh [single option]"
     echo "This script will install all necessary dependencies, setup the ROS workspace at ~/atos_ws and install ATOS. Please open and inspect this script for further details."
-    #Show options
     echo "Options:"
     echo "  -h, --help      Show this help message and exit"
-    echo "  -d              Only install dependencies"              
+    echo "  -r              Reinstall dependencies"              
     exit 0
+fi
 
 # Only install dependencies
-elif [ "$1" == "-d" ]; then
-    INSTALL_ATOS=false
-else
-    INSTALL_ATOS=true
+if [ "$1" == "-r" ]; then
+    REINSTALL_DEPS="-d"
 fi
 
 #######################################
 ###### Install ATOS dependencies ######
 #######################################
 echo "Installing ATOS dependencies..."
-${REPO_DIR}/scripts/installation/install_deps.sh ${REPO_DIR}
+${REPO_DIR}/scripts/installation/install_deps.sh ${REPO_DIR} ${REINSTALL_DEPS}
 
 if [ $? -ne 0 ]; then
     echo "Failed to install dependencies."
@@ -57,10 +55,11 @@ fi
 ########################################
 ###### Start installation of ATOS ######
 ########################################
-if [ "$INSTALL_ATOS" = false ]; then
+if ! [ -z "$REINSTALL_DEPS" ]; then
     echo "ATOS installation skipped."
     exit 0
 fi
+
 echo "Installing ATOS..."
 ${REPO_DIR}/scripts/installation/install_atos.sh ${REPO_DIR}
 
