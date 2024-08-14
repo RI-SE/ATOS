@@ -29,7 +29,7 @@
                         "type": "string"
                       },
                     "default": [1],
-                    "description": "String array of object names that should be used in the scenario."
+                    "description": "String array of object names from the vehicle catalog that should be used in the scenario."
                 },
                 "open_scenario_file": {
                     "type": "file",
