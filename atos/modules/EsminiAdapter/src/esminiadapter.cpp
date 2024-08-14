@@ -199,6 +199,7 @@ bool EsminiAdapter::isSendDenmAction(const std::string& action)
 	return std::regex_search(action, std::regex("denm", std::regex_constants::icase));
 }
 
+/*!
  * \brief Callback to be executed by esmini when story board state changes.
  * 		If story board element is an action, and the action is supported, the action is run.
  * \param name Name of the StoryBoardElement whose state has changed.
