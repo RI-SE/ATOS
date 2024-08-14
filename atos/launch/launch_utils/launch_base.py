@@ -62,7 +62,7 @@ def get_base_nodes():
             package="atos",
             namespace="atos",
             executable="openscenariogateway.py",
-            name="scenario_module",
+            name="open_scenario_gateway",
             parameters=[files["params"]],
         ),
         Node(
