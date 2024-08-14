@@ -63,7 +63,7 @@ set(WITH_MQTT_BRIDGE ON CACHE BOOL "Enable MQTTBridge module")
 set(WITH_POINTCLOUD_PUBLISHER ON CACHE BOOL "Enable PointcloudPublisher module")
 set(WITH_INTEGRATION_TESTING ON CACHE BOOL "Enable IntegrationTesting module")
 set(WITH_BACK_TO_START ON CACHE BOOL "Enable BackToStart module")
-set(WITH_SCENARIO_MODUEL ON CACHE BOOL "Enable Scenario module")
+set(WITH_SCENARIO_MODULE ON CACHE BOOL "Enable Scenario module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
