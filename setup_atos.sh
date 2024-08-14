@@ -39,7 +39,7 @@ fi
 
 # Only install dependencies
 if [ "$1" == "-r" ]; then
-    REINSTALL_DEPS="-d"
+    REINSTALL_DEPS="-r"
 fi
 
 #######################################
