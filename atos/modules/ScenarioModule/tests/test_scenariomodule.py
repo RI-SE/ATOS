@@ -15,17 +15,17 @@ def scenario_module():
     scenario_module.set_parameters(
         [
             rclpy.parameter.Parameter(
+                "root_folder_path",
+                rclpy.Parameter.Type.STRING,
+                os.path.join(os.path.dirname(__file__), "resources"),
+            ),
+            rclpy.parameter.Parameter(
                 "open_scenario_file",
                 rclpy.Parameter.Type.STRING,
                 "GaragePlanScenario.xosc",
             ),
             rclpy.parameter.Parameter(
                 "active_object_names", rclpy.Parameter.Type.STRING_ARRAY, active_objects
-            ),
-            rclpy.parameter.Parameter(
-                "root_folder_path",
-                rclpy.Parameter.Type.STRING,
-                os.path.join(os.path.dirname(__file__), "resources"),
             ),
         ]
     )
@@ -46,6 +46,7 @@ def test_get_object_ids(scenario_module):
     response = srv.GetObjectIds.Response()
     scenario_module.srv_get_object_id_array(request, response)
     assert list(response.ids) == [1, 2]
+    assert list(response.names) == ["1", "2"]
     assert response.success == True
 
 
