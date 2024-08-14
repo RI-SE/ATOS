@@ -63,7 +63,7 @@ set(WITH_MQTT_BRIDGE ON CACHE BOOL "Enable MQTTBridge module")
 set(WITH_POINTCLOUD_PUBLISHER ON CACHE BOOL "Enable PointcloudPublisher module")
 set(WITH_INTEGRATION_TESTING ON CACHE BOOL "Enable IntegrationTesting module")
 set(WITH_BACK_TO_START ON CACHE BOOL "Enable BackToStart module")
-set(WITH_SCENARIO_MODULE ON CACHE BOOL "Enable Scenario module")
+set(WITH_OPEN_SCENARIO_GATEWAY ON CACHE BOOL "Enable OpenScenario Gateway module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -122,7 +122,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
 #   ament_lint_auto_find_test_dependencies() # Comment this out for now to avoid linting errors
   set(_pytest_tests
-     modules/ScenarioModule/tests/test_scenariomodule.py
+     modules/OpenScenarioGateway/tests/test_openscenariogateway.py
   )
   foreach(_test_path ${_pytest_tests})
   get_filename_component(_test_name ${_test_path} NAME_WE)
@@ -134,7 +134,7 @@ if(BUILD_TESTING)
   endforeach()
 endif()
 
-install(PROGRAMS modules/ScenarioModule/scenariomodule.py DESTINATION lib/atos)
+install(PROGRAMS modules/OpenScenarioGateway/openscenariogateway.py DESTINATION lib/atos)
 
 ament_package()
 

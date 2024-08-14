@@ -5,7 +5,7 @@ atos:
   esmini_adapter:
     ros__parameters:
       timestep: 0.1
-  scenario_module:
+  open_scenario_gateway:
     ros__parameters:
       open_scenario_file: "GaragePlanScenario.xosc"
       active_object_names: ["1"]

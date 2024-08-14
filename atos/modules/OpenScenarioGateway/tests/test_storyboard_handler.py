@@ -1,6 +1,6 @@
 import os
 import pytest
-import modules.ScenarioModule.storyboard_handler as sh
+import modules.OpenScenarioGateway.storyboard_handler as sh
 
 
 def test_init_storyboard_handler(get_file_path):

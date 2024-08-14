@@ -9,7 +9,7 @@ from rcl_interfaces.msg import SetParametersResult
 from rclpy.node import Node
 from std_msgs.msg import Empty
 from scenariogeneration import xosc
-from modules.ScenarioModule.storyboard_handler import StoryBoardHandler
+from modules.OpenScenarioGateway.storyboard_handler import StoryBoardHandler
 from typing import List
 
 
@@ -26,10 +26,10 @@ class ScenarioObject:
         self.ip: str = None
 
 
-class ScenarioModule(Node):
+class OpenScenarioGateway(Node):
 
     def __init__(self):
-        super().__init__("scenario_module")
+        super().__init__("open_scenario_gateway")
 
         # Class variables
         self.active_objects = {}
@@ -74,8 +74,6 @@ class ScenarioModule(Node):
             "get_open_scenario_file_path",
             self.srv_get_open_scenario_file_path,
         )
-
-        self.init_callback(None)
 
     def init_callback(self, msg):
         self.update_scenario(self.get_parameter(SCENARIO_FILE_PARAMETER).value)
@@ -222,14 +220,14 @@ class ScenarioModule(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    scenario_module = ScenarioModule()
+    open_scenario_gw = OpenScenarioGateway()
 
-    rclpy.spin(scenario_module)
+    rclpy.spin(open_scenario_gw)
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    scenario_module.destroy_node()
+    open_scenario_gw.destroy_node()
     rclpy.shutdown()
 
 

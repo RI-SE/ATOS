@@ -24,7 +24,7 @@ nav:
       - "Usage/Modules/BackToStart.md"
       - "Usage/Modules/DirectControl.md"
       - "Usage/Modules/EsminiAdapter.md"
-      - "Usage/Modules/ScenarioModule.md"
+      - "Usage/Modules/OpenScenarioGateway.md"
       - "Usage/Modules/IntegrationTesting.md"
       - "Usage/Modules/JournalControl.md"
       - "Usage/Modules/MQTTBridge.md"

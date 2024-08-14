@@ -21,7 +21,7 @@
                 }
             }
         },
-        "scenario_module":{
+        "open_scenario_gateway":{
             "ros__parameters": {
                 "active_object_names": {
                     "type": "string_array",
