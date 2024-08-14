@@ -9,7 +9,7 @@ from rcl_interfaces.msg import SetParametersResult
 from rclpy.node import Node
 from std_msgs.msg import Empty
 from scenariogeneration import xosc
-from storyboard_handler import StoryBoardHandler
+from modules.ScenarioModule.storyboard_handler import StoryBoardHandler
 from typing import List
 
 
