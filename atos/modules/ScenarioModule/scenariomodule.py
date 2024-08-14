@@ -75,6 +75,8 @@ class ScenarioModule(Node):
             self.srv_get_open_scenario_file_path,
         )
 
+        self.init_callback(None)
+
     def init_callback(self, msg):
         self.update_scenario(self.get_parameter(SCENARIO_FILE_PARAMETER).value)
         self.update_active_scenario_objects(
@@ -183,8 +185,9 @@ class ScenarioModule(Node):
         return catalog_object.properties.properties
 
     def srv_get_object_id_array(self, request, response):
-        ids = [id for id, _ in self.active_objects.items()]
-        response.ids = ids
+        for id, object in self.active_objects.items():
+            response.ids.append(id)
+            response.names.append(object.name)
         response.success = True
         return response
 
