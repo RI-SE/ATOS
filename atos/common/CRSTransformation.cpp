@@ -57,7 +57,6 @@ void CRSTransformation::apply(
     if (isnan(in[i].xyz.x) || isnan(in[i].xyz.y) || isnan(in[i].xyz.z) ) {
       // Apply transformation to the point again. quick fix. 
       // TODO: Need to understand why some points are not transformed
-      // why some points are not transformed
       auto point = geometry_msgs::msg::Point();
       point.x = trajPoints[i].getXCoord();
       point.y = trajPoints[i].getYCoord();
