@@ -53,7 +53,6 @@ private:
 
 	static std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> objectTrajectoryService;
-	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTriggerStart>> startOnTriggerService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetTestOrigin>> testOriginService;
 	rclcpp::Client<atos_interfaces::srv::GetOpenScenarioFilePath>::SharedPtr oscFilePathClient_;	//!< Client to request the current open scenario file path
 	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr objectIdsClient_;	//!< Client to request the ATOS object id for each openx entity name

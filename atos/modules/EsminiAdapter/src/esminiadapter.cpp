@@ -37,7 +37,6 @@ std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::esminiObjectIdToTraj = std::m
 
 std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAdapter::monrSubscribers = std::unordered_map<uint32_t,std::shared_ptr<Monitor::Sub>>();
 std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>> EsminiAdapter::objectTrajectoryService = std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>>();
-std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>> EsminiAdapter::startOnTriggerService = std::shared_ptr<rclcpp::Service<ObjectTriggerSrv>>();
 std::shared_ptr<rclcpp::Service<TestOriginSrv>> EsminiAdapter::testOriginService = std::shared_ptr<rclcpp::Service<TestOriginSrv>>();
 geographic_msgs::msg::GeoPose EsminiAdapter::testOrigin = geographic_msgs::msg::GeoPose();
 
@@ -595,11 +594,10 @@ void EsminiAdapter::InitializeEsmini()
 			me->pathPublishers.emplace(id, ROSChannels::Path::Pub(*me, id));
 			me->pathPublishers.at(id).publish(traj.toPath());		
 
-			// below is for dumping the trajectory points to the console
-			for (auto& tp : traj.points){
-				RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
-			}
-			
+			// // below is for dumping the trajectory points to the console
+			// for (auto& tp : traj.points){
+			// 	RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
+			// }
 		}
 	};
 
