@@ -54,7 +54,7 @@ void CRSTransformation::apply(
 
   // Put transformed PJ_POINTS back into TrajPoints
   for (int i = 0; i < arraySize; i++) {
-    if (isnan(in[i].xyz.x)) {
+    if (isnan(in[i].xyz.x) || isnan(in[i].xyz.y) || isnan(in[i].xyz.z) ) {
       // Apply transformation to the point again. quick fix. Need to understand
       // why some points are not transformed
       auto point = geometry_msgs::msg::Point();
