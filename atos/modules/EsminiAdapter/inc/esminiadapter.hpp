@@ -24,6 +24,7 @@
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "atos_interfaces/srv/get_object_trigger_start.hpp"
 #include "atos_interfaces/srv/get_open_scenario_file_path.hpp"
+#include "atos_interfaces/srv/get_object_ids.hpp"
 
 /*!
  * \brief The EsminiAdapter class is a singleton class that 
@@ -55,6 +56,7 @@ private:
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTriggerStart>> startOnTriggerService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetTestOrigin>> testOriginService;
 	rclcpp::Client<atos_interfaces::srv::GetOpenScenarioFilePath>::SharedPtr oscFilePathClient_;	//!< Client to request the current open scenario file path
+	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr objectIdsClient_;	//!< Client to request the ATOS object id for each openx entity name
 
 
 	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
@@ -74,7 +76,7 @@ private:
 	static void getObjectStates(double timeStep, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
 	static ATOS::Trajectory getTrajectoryFromObjectState(uint32_t,std::vector<SE_ScenarioObjectState>& states);
 	static std::string projStrFromGeoReference(RM_GeoReference& geoRef);
-	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(double timeStep, std::map<uint32_t,ATOS::Trajectory>& idToTraj);
+	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(double timeStep, std::map<uint32_t,ATOS::Trajectory>& esminiObjectIdToTraj);
 	static bool isSendDenmAction(const std::string& action);
 	static ROSChannels::V2X::message_type denmFromTestOrigin(double *llh);
 
@@ -86,10 +88,10 @@ private:
 	static void onRequestTestOrigin(const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,
 							std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response>);
 
-	static std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetTestOrigin>> testOriginClient;
+	static std::unordered_map<int, std::string> atosIDToObjectName;
+	static std::unordered_map<std::string, int> objectNameToAtosId;
+	static std::map<uint32_t,ATOS::Trajectory> esminiObjectIdToTraj;
 	static std::shared_ptr<EsminiAdapter> me;
-	static std::unordered_map<int, int> ATOStoEsminiObjectId;
-	static std::map<uint32_t,ATOS::Trajectory> idToTraj;
 
 	std::shared_ptr<CRSTransformation> crsTransformation;
 	bool applyTrajTransform;

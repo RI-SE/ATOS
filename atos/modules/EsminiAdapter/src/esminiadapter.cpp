@@ -31,8 +31,9 @@ using namespace std::chrono_literals;
 
 
 std::shared_ptr<EsminiAdapter> EsminiAdapter::me = nullptr;
-std::unordered_map<int,int> EsminiAdapter::ATOStoEsminiObjectId = std::unordered_map<int, int>();
-std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::idToTraj = std::map<uint32_t,ATOS::Trajectory>();
+std::unordered_map<int, std::string> EsminiAdapter::atosIDToObjectName = std::unordered_map<int, std::string>();
+std::unordered_map<std::string, int> EsminiAdapter::objectNameToAtosId = std::unordered_map<std::string, int>();
+std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::esminiObjectIdToTraj = std::map<uint32_t,ATOS::Trajectory>();
 
 std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> EsminiAdapter::monrSubscribers = std::unordered_map<uint32_t,std::shared_ptr<Monitor::Sub>>();
 std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>> EsminiAdapter::objectTrajectoryService = std::shared_ptr<rclcpp::Service<ObjectTrajectorySrv>>();
@@ -51,6 +52,7 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	testOriginSet(false)
  {
 	oscFilePathClient_ = create_client<atos_interfaces::srv::GetOpenScenarioFilePath>(ServiceNames::getOpenScenarioFilePath);
+	objectIdsClient_ = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
 	declare_parameter("timestep", 0.1);
 
 }
@@ -160,7 +162,7 @@ void EsminiAdapter::handleInitCommand()
 		me->InitializeEsmini();
 
 		std::array<double,3> llh_0 = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
-		for (auto& it : me->idToTraj) {
+		for (auto& it : me->esminiObjectIdToTraj) {
 		me->gnssPathPublishers.emplace(it.first, ROSChannels::GNSSPath::Pub(*me, it.first));
 		me->gnssPathPublishers.at(it.first).publish(it.second.toGeoJSON(llh_0));
 		}
@@ -268,12 +270,12 @@ void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr 
  * \param id The object ID to which the monr belongs
 */
 void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr, uint32_t ATOSObjectId) {
-	if (me->ATOStoEsminiObjectId.find(ATOSObjectId) != me->ATOStoEsminiObjectId.end()){
-		auto esminiObjectId = me->ATOStoEsminiObjectId[ATOSObjectId];
-		reportObjectPosition(monr, esminiObjectId); // Report object position to esmini
+	auto objectName = me->atosIDToObjectName.find(ATOSObjectId)->second;
+	if (objectName != me->atosIDToObjectName.end()->second) {
+		reportObjectPosition(monr, SE_GetIdByName(objectName.c_str())); // Report object position to esmini
 		SE_Step(); // Advance the "simulation world"-time
-	}
-	else{
+	} 
+	else {
 		RCLCPP_WARN(me->get_logger(), "Received MONR message for object with ATOS Object ID %d, but no such object exists in the scenario", ATOSObjectId);
 	}
 }
@@ -436,14 +438,14 @@ void EsminiAdapter::getObjectStates(
 		SE_ScenarioObjectState s;
 		SE_GetObjectState(id, &s);
 		s.timestamp = accumTime;
-		st.at(std::stoi(SE_GetObjectName(id))).push_back(s);
+		st.at(id).push_back(s);
 	};
 
 	// Populate States map with vector for each object containing the initial state
 	SE_StepDT(timeStep);
 	accumTime += timeStep;
 	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
-		states[std::stoi(SE_GetObjectName(SE_GetId(j)))] = std::vector<SE_ScenarioObjectState>();
+		states[SE_GetId(j)] = std::vector<SE_ScenarioObjectState>();
 		pushCurrentState(states, j);
 	}
 	constexpr double MIN_SCENARIO_TIME = 10.0;
@@ -480,19 +482,19 @@ void EsminiAdapter::getObjectStates(
  * \brief Runs the esmini simulator with the xosc file and returns the trajectories for each object
  * \param timeStep Time step to use for generating the trajectories
  * \param endTime End time of the simulation TODO: not nessescary if xosc has a stop trigger at the end of the scenario
- * \param idToTraj The return map of ids mapping to the respective trajectories
+ * \param esminiObjectIdToTraj The return map of ids mapping to the respective trajectories
  * \return A map of ids mapping to the respective trajectories
  */
 std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(
 	double timeStep,
-	std::map<uint32_t,ATOS::Trajectory>& idToTraj)
+	std::map<uint32_t,ATOS::Trajectory>& esminiObjectIdToTraj)
 {
 	// Get object states
-	std::map<uint32_t,std::vector<SE_ScenarioObjectState>> idToStates;
-	getObjectStates(timeStep, idToStates);
+	std::map<uint32_t,std::vector<SE_ScenarioObjectState>> esminiIdToStates;
+	getObjectStates(timeStep, esminiIdToStates);
 
 	// Extract trajectories
-	for (auto& os : idToStates) {
+	for (auto& os : esminiIdToStates) {
 		auto id = os.first;
 		auto objectStates = os.second;
 		auto traj = getTrajectoryFromObjectState(id, objectStates);
@@ -501,9 +503,9 @@ std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(
 			RCLCPP_DEBUG(me->get_logger(), "Applying CRS transformation to trajectory for object %d", id);
 			me->crsTransformation->apply(traj.points);
 		}
-		idToTraj.insert(std::pair<uint32_t,ATOS::Trajectory>(id, traj));
+		esminiObjectIdToTraj.insert(std::pair<uint32_t,ATOS::Trajectory>(id, traj));
 	}
-	return idToTraj;
+	return esminiObjectIdToTraj;
 }
 
 /*!
@@ -512,8 +514,9 @@ std::map<uint32_t,ATOS::Trajectory> EsminiAdapter::extractTrajectories(
  */
 void EsminiAdapter::InitializeEsmini()
 {
-	me->idToTraj.clear();
-	me->ATOStoEsminiObjectId.clear();
+	me->esminiObjectIdToTraj.clear();
+	me->atosIDToObjectName.clear();
+	me->objectNameToAtosId.clear();
 	me->pathPublishers.clear();
 	me->gnssPathPublishers.clear();
 	auto logFilePath = std::string(getenv("HOME")) + std::string("/.astazero/ATOS/logs/esmini.log");
@@ -560,37 +563,47 @@ void EsminiAdapter::InitializeEsmini()
 	}
 	RM_Close();
 
-	RCLCPP_INFO(me->get_logger(), "Starting extracting trajs");
-	double timeStep = me->get_parameter("timestep").as_double();
-	me->extractTrajectories(timeStep, me->idToTraj);
-	RCLCPP_INFO(me->get_logger(), "Done extracting trajs");
+	auto response = std::make_shared<atos_interfaces::srv::GetObjectIds::Response>();
+	auto request = std::make_shared<atos_interfaces::srv::GetObjectIds::Request>();
 
-	RCLCPP_INFO(me->get_logger(), "Extracted %ld trajectories", me->idToTraj.size());
-
-	// Populate the map tracking Object ID -> esmini index
-	for (int j = 0; j < SE_GetNumberOfObjects(); j++){
-		me->ATOStoEsminiObjectId[std::stoi(SE_GetObjectName(SE_GetId(j)))] = SE_GetId(j);
-	}
-	SE_Close(); // Stop ScenarioEngine
-// 
-	RCLCPP_DEBUG(me->get_logger(), "Extracted trajectories");
-
-	for (auto& it : me->idToTraj) {
-		auto id = it.first;
-		auto traj = it.second;
-
-		RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %ld points", id, traj.points.size());
-
-		// Publish the trajectory as a path
-		me->pathPublishers.emplace(id, ROSChannels::Path::Pub(*me, id));
-		me->pathPublishers.at(id).publish(traj.toPath());		
-
-		// below is for dumping the trajectory points to the console
-		for (auto& tp : traj.points){
-			RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
+	auto objectNameAndAtosIDsCallback = [&](rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFutureWithRequest future) {
+		auto response = future.get();
+		for (int i = 0; i < response.second->ids.size(); i++) {
+			me->atosIDToObjectName[response.second->ids[i]] = response.second->names[i];
+			me->objectNameToAtosId[response.second->names[i]] = response.second->ids[i];
 		}
-		
-	}
+
+		// Below should probably not be done in this callback, but it needs the response from the object id service call to be done
+
+		RCLCPP_INFO(me->get_logger(), "Starting extracting trajs");
+		double timeStep = me->get_parameter("timestep").as_double();
+		me->extractTrajectories(timeStep, me->esminiObjectIdToTraj);
+		RCLCPP_INFO(me->get_logger(), "Done extracting trajs");
+
+		RCLCPP_INFO(me->get_logger(), "Extracted %ld trajectories", me->esminiObjectIdToTraj.size());
+
+		SE_Close(); // Stop ScenarioEngine
+		RCLCPP_DEBUG(me->get_logger(), "Extracted trajectories");
+
+		for (auto& it : me->esminiObjectIdToTraj) {
+			auto id = it.first;
+			auto traj = it.second;
+
+			RCLCPP_INFO(me->get_logger(), "Trajectory for object %d has %ld points", id, traj.points.size());
+
+			// Publish the trajectory as a path
+			me->pathPublishers.emplace(id, ROSChannels::Path::Pub(*me, id));
+			me->pathPublishers.at(id).publish(traj.toPath());		
+
+			// below is for dumping the trajectory points to the console
+			for (auto& tp : traj.points){
+				RCLCPP_INFO(me->get_logger(), "Trajectory point: %lf, %lf, %lf, %lf, %ld", tp.getXCoord(), tp.getYCoord(), tp.getZCoord(), tp.getHeading(), tp.getTime().count());
+			}
+			
+		}
+	};
+
+	auto future = me->objectIdsClient_->async_send_request(request, std::move(objectNameAndAtosIDsCallback));
 }
 
 void EsminiAdapter::onRequestObjectTrajectory(
@@ -599,7 +612,8 @@ void EsminiAdapter::onRequestObjectTrajectory(
 {
 	res->id = req->id;
 	try {
-		res->trajectory = me->idToTraj.at(req->id).toCartesianTrajectory();
+		auto esmini_id = SE_GetIdByName(me->atosIDToObjectName.at(req->id).c_str());
+		res->trajectory = me->esminiObjectIdToTraj.at(esmini_id).toCartesianTrajectory();
 		res->success = true;
 	}
 	catch (std::out_of_range& e){
