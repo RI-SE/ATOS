@@ -10,9 +10,11 @@ static std::shared_ptr<EsminiAdapter> esminiAdapter;
 
 int main(int argc, char** argv) {
 	rclcpp::init(argc,argv);
+	auto exec = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
 	esminiAdapter = EsminiAdapter::instance();
 	esminiAdapter->initializeModule();
-	rclcpp::spin(esminiAdapter);
+	exec->add_node(esminiAdapter);
+	exec->spin();
 	rclcpp::shutdown();
 	return 0;
 }

@@ -282,6 +282,12 @@ private:
 	ROSChannels::StateChange::Pub stateChangePub;			//!< Publisher to report state changes
 	std::unordered_map<uint32_t,ROSChannels::Path::Pub> pathPublishers;
 	std::unordered_map<uint32_t,ROSChannels::GNSSPath::Pub> gnssPathPublishers;
+
+	rclcpp::CallbackGroup::SharedPtr id_client_cb_group_;
+	rclcpp::CallbackGroup::SharedPtr traj_client_cb_group_;
+	rclcpp::CallbackGroup::SharedPtr ip_client_cb_group_;
+	rclcpp::CallbackGroup::SharedPtr origin_client_cb_group_;
+
 	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr idClient;	//!< Client to request object ids
 	rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedPtr originClient;	//!< Client to request object status
 	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr trajectoryClient;	//!< Client to request object trajectories

@@ -51,12 +51,16 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	connectedObjectIdsPub(*this),
 	stateChangePub(*this)
 {
+	id_client_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+	traj_client_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);;
+	ip_client_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+	origin_client_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 	this->declare_parameter("max_missing_heartbeats", 100);
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
-	idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
-	originClient = create_client<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin);
-	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory);
-	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp);
+	idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds, rmw_qos_profile_services_default, id_client_cb_group_);
+	originClient = create_client<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin, rmw_qos_profile_services_default, origin_client_cb_group_);
+	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory, rmw_qos_profile_services_default, traj_client_cb_group_);
+	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp, rmw_qos_profile_services_default, ip_client_cb_group_);
 	returnTrajectoryClient = create_client<atos_interfaces::srv::GetObjectReturnTrajectory>(ServiceNames::getObjectReturnTrajectory);
 	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(ServiceNames::getObjectControlState,
 		std::bind(&ObjectControl::onRequestState, this, _1, _2));
@@ -121,6 +125,7 @@ void ObjectControl::onInitMessage(const Init::message_type::SharedPtr){
 	this->tryHandleMessage(f_try,f_catch, Init::topicName, get_logger());
 	stateChangeMsg.current_state = this->state->asNumber();
 	// Don't publish until we are actually initialized
+	RCLCPP_INFO(get_logger(), "State change from %d to %d", stateChangeMsg.prev_state, stateChangeMsg.current_state);
 	stateChangePub.publish(stateChangeMsg);
 }
 
@@ -282,6 +287,7 @@ void ObjectControl::loadScenario() {
 	this->isResetting = false;
 	this->clearScenario();
 	RCLCPP_INFO(get_logger(), "Loading scenario");
+	std::atomic<bool> scenarioLoaded = false;
 	auto idsCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFuture future) {
 		auto idResponse = future.get();
 		RCLCPP_INFO(get_logger(), "Received %lu configured object ids", idResponse->ids.size());
@@ -292,20 +298,26 @@ void ObjectControl::loadScenario() {
 			objects.emplace(id, object);
 			objects.at(id)->setTransmitterID(id);
 
-			auto trajectoryCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
+			std::atomic<bool> trajLoaded = false;
+			auto trajectoryCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
 				auto trajResponse = future.get();
 				if (!trajResponse->success) {
 					RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
+					trajLoaded = true;
 					return;
 				}
 				ATOS::Trajectory traj(get_logger());
 				traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
 				objects.at(id)->setTrajectory(traj);
 				RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %lu points", id, traj.size());
+				trajLoaded = true;
 			};
 			auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
 			trajRequest->id = id;
 			trajectoryClient->async_send_request(trajRequest, trajectoryCallback);
+			while (!trajLoaded) {
+				std::this_thread::sleep_for(10ms);
+			}
 
 			auto ipCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedFuture future) {
 				auto ipResponse = future.get();
@@ -361,11 +373,16 @@ void ObjectControl::loadScenario() {
 			auto requestOrigin = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
 			auto promiseOrigin = originClient->async_send_request(requestOrigin, originCallback);
 		}
+		scenarioLoaded = true;
 	};
 
-	// TODO query scenario participants from scenario manager
 	auto request = std::make_shared<atos_interfaces::srv::GetObjectIds::Request>();
-	auto promise = idClient->async_send_request(request, idsCallback);
+	auto future = idClient->async_send_request(request, idsCallback);
+	// Wait for all objects to be loaded
+	while (!scenarioLoaded) {
+		std::this_thread::sleep_for(10ms);
+	}
+	RCLCPP_INFO(get_logger(), "Finished loading scenario");
 	return;
 }
 

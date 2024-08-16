@@ -54,13 +54,17 @@ private:
 	static std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> objectTrajectoryService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetTestOrigin>> testOriginService;
+
+	rclcpp::CallbackGroup::SharedPtr oscFilePathClient_cb_group_;
+	rclcpp::CallbackGroup::SharedPtr objectIdsClient_cb_group_;
+
 	rclcpp::Client<atos_interfaces::srv::GetOpenScenarioFilePath>::SharedPtr oscFilePathClient_;	//!< Client to request the current open scenario file path
 	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr objectIdsClient_;	//!< Client to request the ATOS object id for each openx entity name
 
 
 	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
 	// Below is a quickfix, fix properly later
-	static void handleInitCommand();
+	static void fetchOSCFilePath();
 	static void handleStartCommand();
 	static void handleAbortCommand();
 	static void onStaticExitMessage(const ROSChannels::Exit::message_type::SharedPtr);
@@ -71,11 +75,11 @@ private:
 	static void executeActionIfStarted(const char* name, int type, int state);
 	static std::filesystem::path getOpenDriveFile();
 	static void handleStoryBoardElementChange(const char* name, int type, int state, const char* full_path);
-	static void InitializeEsmini();
+	static void runEsminiSimulation();
 	static void getObjectStates(double timeStep, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
 	static ATOS::Trajectory getTrajectoryFromObjectState(uint32_t,std::vector<SE_ScenarioObjectState>& states);
 	static std::string projStrFromGeoReference(RM_GeoReference& geoRef);
-	static std::map<uint32_t,ATOS::Trajectory> extractTrajectories(double timeStep, std::map<uint32_t,ATOS::Trajectory>& esminiObjectIdToTraj);
+	static std::map<uint32_t, ATOS::Trajectory> extractTrajectories(double timeStep);
 	static bool isSendDenmAction(const std::string& action);
 	static ROSChannels::V2X::message_type denmFromTestOrigin(double *llh);
 
@@ -89,7 +93,8 @@ private:
 
 	static std::unordered_map<int, std::string> atosIDToObjectName;
 	static std::unordered_map<std::string, int> objectNameToAtosId;
-	static std::map<uint32_t,ATOS::Trajectory> esminiObjectIdToTraj;
+	static std::unordered_map<int, int> atosIdToEsminiId;
+	static std::map<uint32_t, ATOS::Trajectory> atosObjectIdToTraj;
 	static std::shared_ptr<EsminiAdapter> me;
 
 	std::shared_ptr<CRSTransformation> crsTransformation;
