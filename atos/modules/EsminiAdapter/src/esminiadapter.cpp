@@ -150,17 +150,22 @@ void EsminiAdapter::handleAbortCommand() {
 void EsminiAdapter::fetchOSCFilePath()
 {
 	// Get the file path of xosc file
-	std::atomic<bool> done = false;
+	std::promise<bool> done;
 	auto callback = [&](rclcpp::Client<atos_interfaces::srv::GetOpenScenarioFilePath>::SharedFuture future) {
 		auto response = future.get();
 		me->oscFilePath = response->path;
-		done = true;
+		if (response->md5hash != me->scenarioFileMd5hash) {
+			me->scenarioFileMd5hash = response->md5hash;
+			me->runSimulation = true;
+		}
+		me->scenarioFileMd5hash = response->md5hash;
+		done.set_value(true);
 	};
 
 	auto request = std::make_shared<atos_interfaces::srv::GetOpenScenarioFilePath::Request>();
 	auto future = me->oscFilePathClient_->async_send_request(request, std::move(callback));
-	while (!done) {
-		std::this_thread::sleep_for(10ms);
+	if (done.get_future().wait_for(250ms) == std::future_status::timeout) {
+		RCLCPP_ERROR(me->get_logger(), "Failed to fetch open scenario file path");
 	}
 	
 }
@@ -611,15 +616,10 @@ void EsminiAdapter::onRequestObjectTrajectory(
 	std::shared_ptr<ObjectTrajectorySrv::Response> res)
 {
 	res->id;
-
-	if (me->atosObjectIdToTraj.find(req->id) != me->atosObjectIdToTraj.end()) {
-		res->trajectory = me->atosObjectIdToTraj.at(req->id).toCartesianTrajectory();
-		res->success = true;
-		return;
-	}
-	else {
-		me->fetchOSCFilePath();
+	me->fetchOSCFilePath();
+	if (me->runSimulation || me->atosObjectIdToTraj.find(req->id) == me->atosObjectIdToTraj.end()) {
 		me->runEsminiSimulation();
+		me->runSimulation = false;
 	}
 
 	try {

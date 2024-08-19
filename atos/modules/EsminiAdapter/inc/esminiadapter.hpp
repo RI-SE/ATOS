@@ -97,6 +97,9 @@ private:
 	static std::map<uint32_t, ATOS::Trajectory> atosObjectIdToTraj;
 	static std::shared_ptr<EsminiAdapter> me;
 
+	std::string scenarioFileMd5hash;
+	bool runSimulation;
+
 	std::shared_ptr<CRSTransformation> crsTransformation;
 	bool applyTrajTransform;
 	bool testOriginSet;

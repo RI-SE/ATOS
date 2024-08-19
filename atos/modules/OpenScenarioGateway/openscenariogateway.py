@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import hashlib
 import atos_interfaces.srv
 from os import path
 import rclpy
@@ -35,6 +36,8 @@ class OpenScenarioGateway(Node):
         self.active_objects = {}
         self.vehicle_catalog = None
         self.follow_traj_to_obj_name = {}
+
+        self.scenario_file_md5hash = None
 
         # ROS parameters
         self.declare_parameter(ROOT_FOLDER_PATH_PARAMETER, DEFAULT_FOLDER_PATH)
@@ -105,28 +108,26 @@ class OpenScenarioGateway(Node):
     def parameter_callback(self, params):
         for param in params:
             if param.name == SCENARIO_FILE_PARAMETER and param.value:
-                self.update_scenario(file_name=param.value)
+                self.update_scenario()
             elif param.name == ACTIVE_OBJECT_NAME_PARAMETER:
                 self.update_active_scenario_objects(active_objects_name=param.value)
         return SetParametersResult(successful=True)
 
-    def update_scenario(self, file_name: str):
-        self.scenario_file = self.getAbsoluteOSCPath(file_name)
+    def update_scenario(self):
+        scenario_file = self.getScenarioFilePath()
         # Check if the file exists, else throw an error
-        if not path.exists(self.scenario_file):
-            self.get_logger().error(
-                "File does not exist: {}".format(self.scenario_file)
-            )
+        if not path.exists(scenario_file):
+            self.get_logger().error("File does not exist: {}".format(scenario_file))
             return
-        self.get_logger().info("Loading scenario file: {}".format(self.scenario_file))
+        self.get_logger().info("Loading scenario file: {}".format(scenario_file))
         self.follow_traj_to_obj_name = StoryBoardHandler(
-            self.scenario_file
+            scenario_file
         ).get_follow_trajectory_actions_to_actors_map()
 
     def update_active_scenario_objects(self, active_objects_name: List[str]):
         if len(active_objects_name) != len(set(active_objects_name)):
-            raise ValueError("Names must be unique")
-        scenario_objects = self.get_all_objects_in_scenario(self.scenario_file)
+            self.get_logger().error("Active object names contain duplicates")
+        scenario_objects = self.get_all_objects_in_scenario(self.getScenarioFilePath())
 
         # Remove any object that are (now) inactive
         for id, obj in self.active_objects.items():
@@ -146,8 +147,8 @@ class OpenScenarioGateway(Node):
                     )
                 )
 
-    def init_callback(self, msg):
-        self.update_scenario(self.get_parameter(SCENARIO_FILE_PARAMETER).value)
+    def init_callback(self, _):
+        self.update_scenario()
         self.update_active_scenario_objects(
             self.get_parameter(ACTIVE_OBJECT_NAME_PARAMETER).value
         )
@@ -173,9 +174,9 @@ class OpenScenarioGateway(Node):
         return dict(properties)["ip"]
 
     def get_properties_for_object(self, obj: ScenarioObject):
-        catalog_path = xosc.ParseOpenScenario(self.scenario_file).catalog.catalogs.get(
-            obj.catalog_ref.catalogname
-        )
+        catalog_path = xosc.ParseOpenScenario(
+            self.getScenarioFilePath()
+        ).catalog.catalogs.get(obj.catalog_ref.catalogname)
         catalog_object = xosc.xosc_reader.CatalogReader(
             obj.catalog_ref,
             self.getAbsoluteOSCPath(catalog_path),
@@ -208,16 +209,32 @@ class OpenScenarioGateway(Node):
         return response
 
     def srv_get_open_scenario_file_path(self, request, response):
-        response.path = self.getAbsoluteOSCPath(
-            self.get_parameter(SCENARIO_FILE_PARAMETER).value
-        )
+        response.path = self.getScenarioFilePath()
+        response.md5hash = self.calcMD5HashForFile(self.getScenarioFilePath())
         response.success = True
         return response
+
+    def getScenarioFilePath(self) -> str:
+        return self.getAbsoluteOSCPath(
+            self.get_parameter(SCENARIO_FILE_PARAMETER).value
+        )
 
     def getAbsoluteOSCPath(self, file_name: str) -> str:
         return path.join(
             self.get_parameter(ROOT_FOLDER_PATH_PARAMETER).value, "osc", file_name
         )
+
+    def calcMD5HashForFile(self, file_path):
+        hash_md5 = hashlib.md5()
+        try:
+            with open(file_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+            return hash_md5.hexdigest()
+        except FileNotFoundError:
+            return "File not found"
+        except Exception as e:
+            return str(e)
 
 
 def main(args=None):
