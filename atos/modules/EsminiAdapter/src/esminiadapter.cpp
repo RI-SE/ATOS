@@ -559,19 +559,20 @@ void EsminiAdapter::runEsminiSimulation()
 	auto response = std::make_shared<atos_interfaces::srv::GetObjectIds::Response>();
 	auto request = std::make_shared<atos_interfaces::srv::GetObjectIds::Request>();
 
-	std::atomic<bool> done = false;
+	std::promise<void> idsFetched;
 	auto objectNameAndAtosIDsCallback = [&](rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFutureWithRequest future) {
 		auto response = future.get();
 		for (int i = 0; i < response.second->ids.size(); i++) {
 			me->atosIDToObjectName[response.second->ids[i]] = response.second->names[i];
 			me->objectNameToAtosId[response.second->names[i]] = response.second->ids[i];
 		}
-		done = true;
+		idsFetched.set_value();
 	};
 
 	auto future = me->objectIdsClient_->async_send_request(request, std::move(objectNameAndAtosIDsCallback));
-	while (!done) {
-		std::this_thread::sleep_for(10ms);
+	if (idsFetched.get_future().wait_for(250ms) == std::future_status::timeout) {
+		RCLCPP_ERROR(me->get_logger(), "Failed to fetch object names and ids");
+		return;
 	}
 
 	RCLCPP_INFO(me->get_logger(), "Starting extracting trajectories");
