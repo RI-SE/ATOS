@@ -302,7 +302,7 @@ bool ObjectControl::loadScenario() {
 			std::promise<bool> trajLoaded;
 			auto trajectoryCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
 				if (!future.get()->success) {
-					RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
+					RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object ID %u", id);
 					trajLoaded.set_value(false);
 					return;
 				}
@@ -310,7 +310,7 @@ bool ObjectControl::loadScenario() {
 				traj.initializeFromCartesianTrajectory(future.get()->trajectory);
 				objects.at(id)->setTrajectory(traj);
 				trajLoaded.set_value(true);
-				RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %lu points", id, traj.size());
+				RCLCPP_INFO(get_logger(), "Loaded trajectory for object ID %u with %lu points", id, traj.size());
 			};
 			auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
 			trajRequest->id = id;
@@ -319,7 +319,7 @@ bool ObjectControl::loadScenario() {
 			std::promise<bool> ipLoaded;
 			auto ipCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedFuture future) {
 				if (!future.get()->success) {
-					RCLCPP_ERROR(get_logger(), "Get IP service call failed for object %u", id);
+					RCLCPP_ERROR(get_logger(), "Get IP service call failed for object ID %u", id);
 					ipLoaded.set_value(false);
 					return;
 				}
@@ -331,7 +331,7 @@ bool ObjectControl::loadScenario() {
 
 				int status = getaddrinfo(future.get()->ip.c_str(), nullptr, &hints, &result);
 				if (status != 0) {
-					RCLCPP_ERROR(get_logger(), "Failed to resolve address for object %u: %s", id, gai_strerror(status));
+					RCLCPP_ERROR(get_logger(), "Failed to resolve address for object ID %u: %s", id, gai_strerror(status));
 					ipLoaded.set_value(false);
 					return;
 				}
@@ -343,7 +343,7 @@ bool ObjectControl::loadScenario() {
 				char ip_str[INET_ADDRSTRLEN];
 				inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN);
 
-				RCLCPP_INFO(get_logger(), "Got ip %s for object %u", ip_str, id);
+				RCLCPP_INFO(get_logger(), "Got ip %s for object ID %u", ip_str, id);
 				objects.at(id)->setObjectIP(ip);
 				ipLoaded.set_value(true);
 			};
@@ -357,7 +357,7 @@ bool ObjectControl::loadScenario() {
 			std::promise<bool> originLoaded;
 			auto originCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
 				if (!future.get()->success) {
-					RCLCPP_ERROR(get_logger(), "Get origin service call failed for object %u", id);
+					RCLCPP_ERROR(get_logger(), "Get origin service call failed for object ID %u", id);
 					originLoaded.set_value(false);
 					return;
 				}
@@ -367,7 +367,7 @@ bool ObjectControl::loadScenario() {
 					origin->origin.position.longitude,
 					origin->origin.position.altitude,
 					true,true,true});
-				RCLCPP_INFO(get_logger(), "Got origin for object %u: (%.6f, %.6f, %.3f)", id,
+				RCLCPP_INFO(get_logger(), "Got origin for object ID %u: (%.6f, %.6f, %.3f)", id,
 					origin->origin.position.latitude,
 					origin->origin.position.longitude,
 					origin->origin.position.altitude);
@@ -381,15 +381,15 @@ bool ObjectControl::loadScenario() {
 			std::future<bool> ipLoadedFuture = ipLoaded.get_future();
 			std::future<bool> originLoadedFuture = originLoaded.get_future();
 			if (auto status = trajLoadedFuture.wait_for(5s); status != std::future_status::ready || !trajLoadedFuture.get()) {
-				RCLCPP_ERROR(get_logger(), "Trajectory loading failed for object %u", id);
+				RCLCPP_ERROR(get_logger(), "Trajectory loading failed for object ID %u", id);
 				successful = false;
 			}
 			if (auto status = ipLoadedFuture.wait_for(250ms); status != std::future_status::ready || !ipLoadedFuture.get()) {
-				RCLCPP_ERROR(get_logger(), "IP loading failed for object %u", id);
+				RCLCPP_ERROR(get_logger(), "IP loading failed for object ID %u", id);
 				successful = false;
 			}
 			if (auto status = originLoadedFuture.wait_for(250ms); status != std::future_status::ready || !originLoadedFuture.get()) {
-				RCLCPP_ERROR(get_logger(), "Origin loading failed for object %u", id);
+				RCLCPP_ERROR(get_logger(), "Origin loading failed for object ID %u", id);
 				successful = false;
 			}
 			// Clean up if any of the services failed
