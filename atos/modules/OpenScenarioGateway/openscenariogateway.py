@@ -111,14 +111,13 @@ class OpenScenarioGateway(Node):
         return SetParametersResult(successful=True)
 
     def update_scenario(self, file_name: str):
-        self.scenario_file = path.join(
-            self.get_parameter(ROOT_FOLDER_PATH_PARAMETER).value, "osc", file_name
-        )
+        self.scenario_file = self.getAbsoluteOSCPath(file_name)
         # Check if the file exists, else throw an error
         if not path.exists(self.scenario_file):
-            raise FileNotFoundError(
-                f"Scenario file {self.scenario_file} does not exist"
+            self.get_logger().error(
+                "File does not exist: {}".format(self.scenario_file)
             )
+            return
         self.get_logger().info("Loading scenario file: {}".format(self.scenario_file))
         self.follow_traj_to_obj_name = StoryBoardHandler(
             self.scenario_file
@@ -141,6 +140,11 @@ class OpenScenarioGateway(Node):
                 # Update the ip property of the object unless it is already set
                 if obj.ip is None:
                     obj.ip = self.get_ip_property_for_object(obj)
+                self.get_logger().info(
+                    "Scenario object {} is assigned transmitter id: {}".format(
+                        obj.name, id
+                    )
+                )
 
     def init_callback(self, msg):
         self.update_scenario(self.get_parameter(SCENARIO_FILE_PARAMETER).value)
@@ -174,11 +178,7 @@ class OpenScenarioGateway(Node):
         )
         catalog_object = xosc.xosc_reader.CatalogReader(
             obj.catalog_ref,
-            path.join(
-                self.get_parameter(ROOT_FOLDER_PATH_PARAMETER).value,
-                "osc",
-                catalog_path,
-            ),
+            self.getAbsoluteOSCPath(catalog_path),
         )
         return catalog_object.properties.properties
 
@@ -208,13 +208,16 @@ class OpenScenarioGateway(Node):
         return response
 
     def srv_get_open_scenario_file_path(self, request, response):
-        response.path = path.join(
-            self.get_parameter(ROOT_FOLDER_PATH_PARAMETER).value,
-            "osc",
-            self.get_parameter(SCENARIO_FILE_PARAMETER).value,
+        response.path = self.getAbsoluteOSCPath(
+            self.get_parameter(SCENARIO_FILE_PARAMETER).value
         )
         response.success = True
         return response
+
+    def getAbsoluteOSCPath(self, file_name: str) -> str:
+        return path.join(
+            self.get_parameter(ROOT_FOLDER_PATH_PARAMETER).value, "osc", file_name
+        )
 
 
 def main(args=None):
