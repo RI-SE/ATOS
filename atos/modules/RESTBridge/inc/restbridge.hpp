@@ -31,8 +31,8 @@ private:
   ROSChannels::CustomCommandAction::Sub
       customCommandActionMsgSub; //!< Subscriber to icdc messages requests
 
-  json parseICDCCommand(std::string &msg);
-  void sendRESTMessages(const std::string &endpoint, const json &data);
+  json parseJsonData(std::string &msg);
+  void POST(const std::string &endpoint, const json &data);
 
   CURL *curl_handle;
 };

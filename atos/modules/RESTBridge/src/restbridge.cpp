@@ -19,15 +19,15 @@ RESTBridge::~RESTBridge() {
 
 void RESTBridge::onCustomCommandAction(
     const atos_interfaces::msg::CustomCommandAction::SharedPtr msg) {
-  if (msg->type == "icdc") {
-    RCLCPP_INFO(get_logger(), "Received ICDC command: %s",
+  if (msg->type == "POST_JSON") {
+    RCLCPP_INFO(get_logger(), "Received POST_JSON command: %s",
                 msg->content.c_str());
-    json icdc = parseICDCCommand(msg->content);
-    sendRESTMessages(icdc["endpoint"].get<std::string>(), icdc["data"]);
+    json jsonData = parseJsonData(msg->content);
+    POST(jsonData["endpoint"].get<std::string>(), jsonData["data"]);
   }
 }
 
-json RESTBridge::parseICDCCommand(std::string &msg) {
+json RESTBridge::parseJsonData(std::string &msg) {
   // Parse the message and return the REST API message
   std::replace(msg.begin(), msg.end(), '\'',
                '\"'); // Replace single quotes with double quotes to be able to
@@ -36,18 +36,21 @@ json RESTBridge::parseICDCCommand(std::string &msg) {
   return j;
 }
 
-void RESTBridge::sendRESTMessages(const std::string &endpoint,
-                                  const json &data) {
-  // Send the message to the REST API
+void RESTBridge::POST(const std::string &endpoint, const json &data) {
+  // Send A POST request to the specified endpoint with the specified data, Use
+  // hardcoded headers for now
   CURLcode res;
 
   if (curl_handle) {
+    std::string json_str = data.dump();       // Store the JSON string
+    const char *json_data = json_str.c_str(); // Get the C-string pointer
     curl_easy_setopt(curl_handle, CURLOPT_URL, endpoint.c_str());
-    curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, data.dump().c_str());
+    curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, json_data);
 
     struct curl_slist *headers = NULL;
-    headers = curl_slist_append(headers, "accept: application/json");
+    headers = curl_slist_append(headers, "Accept: application/json");
     headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, "charset: utf-8");
     curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
 
     // Perform the request, res will get the return code
