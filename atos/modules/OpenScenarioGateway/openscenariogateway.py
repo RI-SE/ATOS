@@ -36,6 +36,7 @@ class OpenScenarioGateway(Node):
         self.active_objects = {}
         self.vehicle_catalog = None
         self.follow_traj_to_obj_name = {}
+        self.custom_command_map = {}
 
         self.scenario_file_md5hash = None
 
@@ -87,23 +88,36 @@ class OpenScenarioGateway(Node):
     def story_board_element_state_change_callback(self, story_board_element):
         if (
             story_board_element.name in self.follow_traj_to_obj_name.keys()
-            and story_board_element.state == 2
-        ):  # 2 is a running state
+            and story_board_element.state == 2  # 2 is a running state
+        ):
+            self.handle_follow_trajectory_action(story_board_element)
+        elif (
+            story_board_element.name in self.custom_command_map
+            and story_board_element.state == 2  # 2 is a running state
+        ):
+            self.handle_custom_command_action(story_board_element)
 
-            # Iterate through active objects to send the start command for the target objects
-            for object_id, object in self.active_objects.items():
-                target_object_name = self.follow_traj_to_obj_name[
-                    story_board_element.name
-                ]
-                if object.name in target_object_name:
+    def handle_follow_trajectory_action(self, story_board_element):
+        # Iterate through active objects to send the start command for the target objects
+        for object_id, object in self.active_objects.items():
+            target_object_name = self.follow_traj_to_obj_name[story_board_element.name]
+            if object.name in target_object_name:
 
-                    self.get_logger().info(
-                        f"Starting object {object.name} with id {object_id}"
-                    )
-                    start_object_msg = atos_interfaces.msg.ObjectTriggerStart()
-                    start_object_msg.id = object_id
-                    self.start_object_pub_.publish(start_object_msg)
-                    break
+                self.get_logger().info(
+                    f"Starting object {object.name} with id {object_id}"
+                )
+                start_object_msg = atos_interfaces.msg.ObjectTriggerStart()
+                start_object_msg.id = object_id
+                self.start_object_pub_.publish(start_object_msg)
+                break
+
+    def handle_custom_command_action(self, story_board_element):
+        self.get_logger().info("Custom command action received")
+        custom_command = self.custom_command_map[story_board_element.name]
+        if custom_command.type == "V2X":
+            self.get_logger().info("Sending V2X message")
+            # Send V2X message
+            self.get_logger().info(custom_command.content)
 
     def parameter_callback(self, params):
         for param in params:
@@ -123,6 +137,9 @@ class OpenScenarioGateway(Node):
         self.follow_traj_to_obj_name = StoryBoardHandler(
             scenario_file
         ).get_follow_trajectory_actions_to_actors_map()
+        self.custom_command_map = StoryBoardHandler(
+            self.scenario_file
+        ).get_custom_command_actions_map()
 
     def update_active_scenario_objects(self, active_objects_name: List[str]):
         if len(active_objects_name) != len(set(active_objects_name)):
