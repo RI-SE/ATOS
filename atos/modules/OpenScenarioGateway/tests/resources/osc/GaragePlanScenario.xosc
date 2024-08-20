@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <OpenSCENARIO xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="OpenScenario.xsd">
-    <FileHeader description="GaragePlanScenario" author="AstaZero 1.0" revMajor="1" revMinor="1" date="2023-02-27T13:53:18.006905"/>
-    <ParameterDeclarations/>
+    <FileHeader description="GaragePlanScenario" author="AstaZero 1.0" revMajor="1" revMinor="2" date="2024-08-12T13:06:03.459622"/>
     <CatalogLocations>
         <VehicleCatalog>
             <Directory path="../Catalogs/Vehicles"/>
@@ -65,7 +64,7 @@
                     <PrivateAction>
                         <LongitudinalAction>
                             <SpeedAction>
-                                <SpeedActionDynamics dynamicsShape="linear" value="0.51" dynamicsDimension="rate"/>
+                                <SpeedActionDynamics dynamicsShape="cubic" value="1.0" dynamicsDimension="rate"/>
                                 <SpeedActionTarget>
                                     <AbsoluteTargetSpeed value="4.166666666666667"/>
                                 </SpeedActionTarget>
@@ -95,9 +94,7 @@
                     <PrivateAction>
                         <TeleportAction>
                             <Position>
-                                <LanePosition roadId="0" laneId="1" s="5.0" offset="0.0">
-                                    <Orientation h="0.0" p="0.0" r="0.0" type="absolute"/>
-                                </LanePosition>
+                                <LanePosition roadId="0" laneId="1" s="5.0" offset="0.0"/>
                             </Position>
                         </TeleportAction>
                     </PrivateAction>
@@ -106,7 +103,7 @@
                     <PrivateAction>
                         <TeleportAction>
                             <Position>
-                                <LanePosition roadId="1" laneId="-1" s="7.5" offset="0.0"/>
+                                <LanePosition roadId="3" laneId="-1" s="16.0" offset="0.0"/>
                             </Position>
                         </TeleportAction>
                     </PrivateAction>
@@ -115,9 +112,7 @@
                     <PrivateAction>
                         <TeleportAction>
                             <Position>
-                                <LanePosition roadId="0" laneId="1" s="5.0" offset="0.0">
-                                    <Orientation h="0.0" p="0.0" r="0.0" type="absolute"/>
-                                </LanePosition>
+                                <LanePosition roadId="0" laneId="1" s="5.0" offset="0.0"/>
                             </Position>
                         </TeleportAction>
                     </PrivateAction>
@@ -125,7 +120,6 @@
             </Actions>
         </Init>
         <Story name="story_start">
-            <ParameterDeclarations/>
             <Act name="start">
                 <ManeuverGroup name="1,maneuver_group" maximumExecutionCount="1">
                     <Actors selectTriggeringEntities="false">
@@ -139,7 +133,6 @@
                                         <FollowTrajectoryAction>
                                             <TrajectoryRef>
                                                 <Trajectory name="1,init_follow_trajectory" closed="false">
-                                                    <ParameterDeclarations/>
                                                     <Shape>
                                                         <Polyline>
                                                             <Vertex>
@@ -229,7 +222,7 @@
                                 <PrivateAction>
                                     <LongitudinalAction>
                                         <SpeedAction>
-                                            <SpeedActionDynamics dynamicsShape="linear" value="-2.17" dynamicsDimension="rate"/>
+                                            <SpeedActionDynamics dynamicsShape="cubic" value="-2.17" dynamicsDimension="rate"/>
                                             <SpeedActionTarget>
                                                 <AbsoluteTargetSpeed value="2.7777777777777777"/>
                                             </SpeedActionTarget>
@@ -261,7 +254,7 @@
                                 <PrivateAction>
                                     <LongitudinalAction>
                                         <SpeedAction>
-                                            <SpeedActionDynamics dynamicsShape="linear" value="0.51" dynamicsDimension="rate"/>
+                                            <SpeedActionDynamics dynamicsShape="cubic" value="1.0" dynamicsDimension="rate"/>
                                             <SpeedActionTarget>
                                                 <AbsoluteTargetSpeed value="4.166666666666667"/>
                                             </SpeedActionTarget>
@@ -322,9 +315,9 @@
                         </Event>
                         <Event name="1,high_speed_event" priority="parallel" maximumExecutionCount="1">
                             <Action name="1,send_denm">
-                                <PrivateAction>
-                                    <VisibilityAction graphics="true" traffic="true" sensors="true"/>
-                                </PrivateAction>
+                                <UserDefinedAction>
+                                    <CustomCommandAction type="V2X">{"message_type": "DENM", "event_id": "ATOSEvent1", "cause_code": 12, "latitude": 0.0, "longitude": 0.0, "altitude": 0.0, "detection_time": 0}</CustomCommandAction>
+                                </UserDefinedAction>
                             </Action>
                             <StartTrigger>
                                 <ConditionGroup>
@@ -353,7 +346,7 @@
                                 <PrivateAction>
                                     <LongitudinalAction>
                                         <SpeedAction>
-                                            <SpeedActionDynamics dynamicsShape="linear" value="-1.96" dynamicsDimension="rate"/>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="-6.0" dynamicsDimension="rate"/>
                                             <SpeedActionTarget>
                                                 <AbsoluteTargetSpeed value="0.0"/>
                                             </SpeedActionTarget>
@@ -371,7 +364,7 @@
                                             <EntityCondition>
                                                 <ReachPositionCondition tolerance="1.0">
                                                     <Position>
-                                                        <LanePosition roadId="0" laneId="-1" s="10.0" offset="0.0"/>
+                                                        <LanePosition roadId="0" laneId="-1" s="25.0" offset="0.0"/>
                                                     </Position>
                                                 </ReachPositionCondition>
                                             </EntityCondition>
@@ -387,17 +380,81 @@
                                         <FollowTrajectoryAction>
                                             <TrajectoryRef>
                                                 <Trajectory name="5,start_follow_trajectory" closed="false">
-                                                    <ParameterDeclarations/>
                                                     <Shape>
                                                         <Polyline>
                                                             <Vertex>
                                                                 <Position>
-                                                                    <LanePosition roadId="1" laneId="-1" s="7.5" offset="0.0"/>
+                                                                    <LanePosition roadId="3" laneId="-1" s="16.0" offset="0.0"/>
                                                                 </Position>
                                                             </Vertex>
                                                             <Vertex>
                                                                 <Position>
-                                                                    <LanePosition roadId="0" laneId="-1" s="10.0" offset="0.0"/>
+                                                                    <LanePosition roadId="3" laneId="-1" s="0.0" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="8" laneId="-1" s="9.5" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="8" laneId="-1" s="8.75" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="8" laneId="-1" s="7.75" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="8" laneId="-1" s="6.75" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="8" laneId="-1" s="5.75" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="8" laneId="-1" s="4.75" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="8" laneId="-1" s="3.75" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="8" laneId="-1" s="2.75" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="8" laneId="-1" s="1.75" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="8" laneId="-1" s="0.75" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="8" laneId="-1" s="0.0" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="0" laneId="-1" s="30.0" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="0" laneId="-1" s="25.0" offset="0.0"/>
                                                                 </Position>
                                                             </Vertex>
                                                         </Polyline>
@@ -416,9 +473,9 @@
                                 <PrivateAction>
                                     <LongitudinalAction>
                                         <SpeedAction>
-                                            <SpeedActionDynamics dynamicsShape="linear" value="1.38" dynamicsDimension="rate"/>
+                                            <SpeedActionDynamics dynamicsShape="linear" value="6.0" dynamicsDimension="rate"/>
                                             <SpeedActionTarget>
-                                                <AbsoluteTargetSpeed value="2.7777777777777777"/>
+                                                <AbsoluteTargetSpeed value="6.944444444444445"/>
                                             </SpeedActionTarget>
                                         </SpeedAction>
                                     </LongitudinalAction>
@@ -434,7 +491,7 @@
                                             <EntityCondition>
                                                 <ReachPositionCondition tolerance="2.0">
                                                     <Position>
-                                                        <LanePosition roadId="3" laneId="1" s="0.0" offset="0.0"/>
+                                                        <LanePosition roadId="3" laneId="1" s="9.0" offset="0.0"/>
                                                     </Position>
                                                 </ReachPositionCondition>
                                             </EntityCondition>
@@ -473,7 +530,7 @@
                                             <EntityCondition>
                                                 <ReachPositionCondition tolerance="1.0">
                                                     <Position>
-                                                        <LanePosition roadId="0" laneId="1" s="25.0" offset="0.0"/>
+                                                        <LanePosition roadId="13" laneId="1" s="6.0" offset="0.0"/>
                                                     </Position>
                                                 </ReachPositionCondition>
                                             </EntityCondition>
@@ -489,7 +546,6 @@
                                         <FollowTrajectoryAction>
                                             <TrajectoryRef>
                                                 <Trajectory name="2,start_follow_trajectory" closed="false">
-                                                    <ParameterDeclarations/>
                                                     <Shape>
                                                         <Polyline>
                                                             <Vertex>
@@ -499,7 +555,12 @@
                                                             </Vertex>
                                                             <Vertex>
                                                                 <Position>
-                                                                    <LanePosition roadId="0" laneId="1" s="25.0" offset="0.0"/>
+                                                                    <LanePosition roadId="13" laneId="1" s="6.0" offset="0.0"/>
+                                                                </Position>
+                                                            </Vertex>
+                                                            <Vertex>
+                                                                <Position>
+                                                                    <LanePosition roadId="0" laneId="1" s="20.0" offset="0.0"/>
                                                                 </Position>
                                                             </Vertex>
                                                         </Polyline>
@@ -591,14 +652,11 @@
                                         <FollowTrajectoryAction>
                                             <TrajectoryRef>
                                                 <Trajectory name="6,start_follow_trajectory" closed="false">
-                                                    <ParameterDeclarations/>
                                                     <Shape>
                                                         <Polyline>
                                                             <Vertex>
                                                                 <Position>
-                                                                    <LanePosition roadId="0" laneId="1" s="5.0" offset="0.0">
-                                                                        <Orientation h="0.0" p="0.0" r="0.0" type="absolute"/>
-                                                                    </LanePosition>
+                                                                    <LanePosition roadId="0" laneId="1" s="5.0" offset="0.0"/>
                                                                 </Position>
                                                             </Vertex>
                                                             <Vertex>
@@ -640,7 +698,7 @@
                                             <EntityCondition>
                                                 <ReachPositionCondition tolerance="1.0">
                                                     <Position>
-                                                        <LanePosition roadId="3" laneId="1" s="5.0" offset="0.0"/>
+                                                        <LanePosition roadId="3" laneId="1" s="0.0" offset="0.0"/>
                                                     </Position>
                                                 </ReachPositionCondition>
                                             </EntityCondition>
@@ -695,7 +753,6 @@
                                         <FollowTrajectoryAction>
                                             <TrajectoryRef>
                                                 <Trajectory name="3,start_follow_trajectory" closed="false">
-                                                    <ParameterDeclarations/>
                                                     <Shape>
                                                         <Polyline>
                                                             <Vertex>
@@ -797,14 +854,11 @@
                                         <FollowTrajectoryAction>
                                             <TrajectoryRef>
                                                 <Trajectory name="6,start_follow_trajectory" closed="false">
-                                                    <ParameterDeclarations/>
                                                     <Shape>
                                                         <Polyline>
                                                             <Vertex>
                                                                 <Position>
-                                                                    <LanePosition roadId="0" laneId="1" s="5.0" offset="0.0">
-                                                                        <Orientation h="0.0" p="0.0" r="0.0" type="absolute"/>
-                                                                    </LanePosition>
+                                                                    <LanePosition roadId="0" laneId="1" s="5.0" offset="0.0"/>
                                                                 </Position>
                                                             </Vertex>
                                                             <Vertex>
@@ -846,7 +900,7 @@
                                             <EntityCondition>
                                                 <ReachPositionCondition tolerance="1.0">
                                                     <Position>
-                                                        <LanePosition roadId="3" laneId="1" s="5.0" offset="0.0"/>
+                                                        <LanePosition roadId="3" laneId="1" s="0.0" offset="0.0"/>
                                                     </Position>
                                                 </ReachPositionCondition>
                                             </EntityCondition>
