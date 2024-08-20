@@ -190,16 +190,6 @@ void EsminiAdapter::handleStartCommand()
 }
 
 /*!
- * \brief Check if action is a DENM action.
- * \param action Action name
- * \return true if action is a DENM action, false otherwise
-*/
-bool EsminiAdapter::isSendDenmAction(const std::string& action)
-{
-	return std::regex_search(action, std::regex("denm", std::regex_constants::icase));
-}
-
-/*!
  * \brief Callback to be executed by esmini when story board state changes.
  * 		If story board element is an action, and the action is supported, the action is run.
  * \param name Name of the StoryBoardElement whose state has changed.
@@ -221,20 +211,6 @@ void EsminiAdapter::handleStoryBoardElementChange(
 	msg.full_path = full_path;
 
 	me->storyBoardElementStateChangePub.publish(msg);
-}
-
-ROSChannels::V2X::message_type EsminiAdapter::denmFromTestOrigin(double *llh) {
-	ROSChannels::V2X::message_type denm;
-	denm.message_type = "DENM";
-	denm.event_id = "ATOSEvent1";
-	denm.cause_code = 12;
-	denm.latitude = static_cast<int32_t>(llh[0]*10000000); // Microdegrees
-	denm.longitude = static_cast<int32_t>(llh[1]*10000000);
-	denm.altitude = static_cast<int32_t>(llh[2]*100);		// Centimeters
-	denm.detection_time = std::chrono::duration_cast<std::chrono::seconds>( // Time since epoch in seconds
-		std::chrono::system_clock::now().time_since_epoch()
-	).count();
-	return denm;
 }
 
 /*!

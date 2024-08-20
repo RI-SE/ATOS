@@ -80,8 +80,6 @@ private:
 	static ATOS::Trajectory getTrajectoryFromObjectState(uint32_t,std::vector<SE_ScenarioObjectState>& states);
 	static std::string projStrFromGeoReference(RM_GeoReference& geoRef);
 	static std::map<uint32_t, ATOS::Trajectory> extractTrajectories(double timeStep);
-	static bool isSendDenmAction(const std::string& action);
-	static ROSChannels::V2X::message_type denmFromTestOrigin(double *llh);
 
 	static void onRequestObjectTrajectory(
 		const std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Request> req,

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import hashlib
+import json
+import time
 import atos_interfaces.srv
 from os import path
 import rclpy
@@ -60,6 +62,9 @@ class OpenScenarioGateway(Node):
         self.start_object_pub_ = self.create_publisher(
             atos_interfaces.msg.ObjectTriggerStart, "start_object", 10
         )
+        self.v2x_message_pub_ = self.create_publisher(
+            atos_interfaces.msg.V2x, "v2x_message", 10
+        )
 
         # ROS services
         self.object_ids_pub_ = self.create_service(
@@ -114,10 +119,24 @@ class OpenScenarioGateway(Node):
     def handle_custom_command_action(self, story_board_element):
         self.get_logger().info("Custom command action received")
         custom_command = self.custom_command_map[story_board_element.name]
+
+        if isinstance(custom_command.content, str):
+            custom_command.content = json.loads(custom_command.content)
+
         if custom_command.type == "V2X":
             self.get_logger().info("Sending V2X message")
             # Send V2X message
-            self.get_logger().info(custom_command.content)
+            v2x_msgs = atos_interfaces.msg.V2x()
+            v2x_msgs.message_type = custom_command.content["message_type"]
+            v2x_msgs.event_id = custom_command.content["event_id"]
+            v2x_msgs.cause_code = custom_command.content["cause_code"]
+            v2x_msgs.detection_time = int(
+                time.time()
+            )  # Use current system time on the time stamp, maybe a user defined offset can be added in the future
+            v2x_msgs.altitude = int(custom_command.content["altitude"])
+            v2x_msgs.latitude = int(custom_command.content["latitude"])
+            v2x_msgs.longitude = int(custom_command.content["longitude"])
+            self.v2x_message_pub_.publish(msg=v2x_msgs)
 
     def parameter_callback(self, params):
         for param in params:
