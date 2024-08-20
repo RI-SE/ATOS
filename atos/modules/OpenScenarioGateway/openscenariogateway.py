@@ -145,7 +145,7 @@ class OpenScenarioGateway(Node):
             scenario_file
         ).get_follow_trajectory_actions_to_actors_map()
         self.custom_command_map = StoryBoardHandler(
-            self.scenario_file
+            self.getScenarioFilePath()
         ).get_custom_command_actions_map()
 
     def update_active_scenario_objects(self, active_objects_name: List[str]):

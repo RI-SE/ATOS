@@ -579,6 +579,46 @@ denm_osc_event.add_trigger(mondeo_high_speed_detected)
 denm_osc_event.add_action(MONDEO_ID + ",send_denm", mondeo_denm_action)
 mondeo_maneuver.add_event(denm_osc_event)
 
+# Mondeo object triggers ICDC action
+
+### ICDC Action ###
+mondeo_reached_icdc_trigger_position = xosc.EntityTrigger(
+    name=MONDEO_ID + ",reached_camera_icdc_trigger_position",
+    delay=0,
+    conditionedge=xosc.ConditionEdge.none,
+    entitycondition=xosc.ReachPositionCondition(
+        mondeo_trigger_positions[CAMERA_DRONE_ID], 2  # Borrow the camera drone position
+    ),
+    triggerentity=MONDEO_ID,
+)
+
+icdc_command = json.dumps(
+    {
+        "endpoint": "http://localhost:8080",
+        "data": {
+            "bandwidth": {"rate": {"unit": "mbit", "value": 1}},
+            "delay": {
+                "correlation": {"unit": "%", "value": 10},
+                "delay": {"unit": "ms", "value": 100},
+                "jitter": {"unit": "ms", "value": 10},
+            },
+            "interface": {"name": "eth0"},
+        },
+    }
+)
+mondeo_icdc_action = xosc.UserDefinedAction(
+    custom_command_action=xosc.CustomCommandAction(type="icdc", content=icdc_command)
+)
+
+icdc_osc_event = xosc.Event(
+    MONDEO_ID + ",high_speed_event",
+    xosc.Priority.parallel,
+)
+
+icdc_osc_event.add_trigger(mondeo_reached_icdc_trigger_position)
+icdc_osc_event.add_action(MONDEO_ID + ",send_icdc_command", mondeo_icdc_action)
+mondeo_maneuver.add_event(icdc_osc_event)
+
 
 # Mondeo triggers UFO
 mondeo_reached_ufo_trigger_position = xosc.EntityTrigger(

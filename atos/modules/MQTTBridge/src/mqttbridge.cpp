@@ -423,13 +423,14 @@ void MqttBridge::onMessage(T msg, std::string mqtt_topic,
   }
 }
 
-json MqttBridge::v2xToJson(const std::string msg_content) {
-  std::string modified_content = msg_content;
-  std::replace(modified_content.begin(), modified_content.end(), '\'', '"');
+json MqttBridge::v2xToJson(std::string msg_content) {
+  std::replace(msg_content.begin(), msg_content.end(), '\'',
+               '"'); // Replace ROS single quotes string with double quotes to
+                     // make it a valid JSON string
   json j;
   // Parse the string to a json object
   try {
-    j = json::parse(modified_content);
+    j = json::parse(msg_content);
   } catch (json::parse_error &e) {
     std::cerr << "Failed to parse JSON object: " << e.what() << std::endl;
   }
