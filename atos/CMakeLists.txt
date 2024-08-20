@@ -127,6 +127,7 @@ if(BUILD_TESTING)
 #   ament_lint_auto_find_test_dependencies() # Comment this out for now to avoid linting errors
   set(_pytest_tests
      modules/OpenScenarioGateway/tests/test_openscenariogateway.py
+     modules/OpenScenarioGateway/tests/test_storyboard_handler.py
   )
   foreach(_test_path ${_pytest_tests})
   get_filename_component(_test_name ${_test_path} NAME_WE)
