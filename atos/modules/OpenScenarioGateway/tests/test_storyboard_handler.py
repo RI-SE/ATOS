@@ -30,3 +30,22 @@ def test_get_follow_trajectory_actions_to_actors_map(get_file_path):
         "6,start_follow_trajectory": ["6"],
     }
     assert result == expected_result
+
+
+def test_denm_custom_command_action(get_file_path):
+    scenario_path = os.path.join(
+        os.path.dirname(__file__), "resources", "osc", "GaragePlanScenario.xosc"
+    )
+    storyboard_handler = sh.StoryBoardHandler(scenario_path)
+
+    # Call the method under test
+    result = storyboard_handler.get_custom_command_actions_map()
+
+    # Assert the expected result
+    expected_result = {
+        "1,send_denm": {
+            "type": "V2X",
+            "content": '{"message_type": "DENM", "event_id": "ATOSEvent1", "cause_code": 12, "latitude": 0.0, "longitude": 0.0, "altitude": 0.0, "detection_time": 0}',
+        }
+    }
+    assert result == expected_result
