@@ -108,13 +108,13 @@ class OpenScenarioGateway(Node):
     def parameter_callback(self, params):
         for param in params:
             if param.name == SCENARIO_FILE_PARAMETER and param.value:
-                self.update_scenario()
+                self.update_scenario(file_name=param.value)
             elif param.name == ACTIVE_OBJECT_NAME_PARAMETER:
                 self.update_active_scenario_objects(active_objects_name=param.value)
         return SetParametersResult(successful=True)
 
-    def update_scenario(self):
-        scenario_file = self.getScenarioFilePath()
+    def update_scenario(self, file_name):
+        scenario_file = self.getAbsoluteOSCPath(file_name)
         # Check if the file exists, else throw an error
         if not path.exists(scenario_file):
             self.get_logger().error("File does not exist: {}".format(scenario_file))
@@ -146,12 +146,6 @@ class OpenScenarioGateway(Node):
                         obj.name, id
                     )
                 )
-
-    def init_callback(self, _):
-        self.update_scenario()
-        self.update_active_scenario_objects(
-            self.get_parameter(ACTIVE_OBJECT_NAME_PARAMETER).value
-        )
 
     def get_all_objects_in_scenario(self, scenario_file) -> List[ScenarioObject]:
         scenario = xosc.ParseOpenScenario(scenario_file)
