@@ -42,8 +42,6 @@ std::shared_ptr<rclcpp::Service<TestOriginSrv>> EsminiAdapter::testOriginService
 geographic_msgs::msg::GeoPose EsminiAdapter::testOrigin = geographic_msgs::msg::GeoPose();
 
 EsminiAdapter::EsminiAdapter() : Module(moduleName),
-	startObjectPub(*this),
-	v2xPub(*this),
 	storyBoardElementStateChangePub(*this),
 	connectedObjectIdsSub(*this, &EsminiAdapter::onConnectedObjectIdsMessage),
 	exitSub(*this, &EsminiAdapter::onStaticExitMessage),
@@ -103,8 +101,6 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 		me->connectedObjectIdsSub = ROSChannels::ConnectedObjectIds::Sub(*me,&EsminiAdapter::onConnectedObjectIdsMessage);
 		me->exitSub = ROSChannels::Exit::Sub(*me,&EsminiAdapter::onStaticExitMessage);
 		me->stateChangeSub = ROSChannels::StateChange::Sub(*me,&EsminiAdapter::onStaticStateChangeMessage);
-		// Start V2X publisher
-		me->v2xPub = ROSChannels::V2X::Pub(*me);
 		
 	}
 	return me;

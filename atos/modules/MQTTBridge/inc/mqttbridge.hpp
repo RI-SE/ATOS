@@ -10,8 +10,8 @@
 #include "atos_interfaces/srv/new_mqtt2_ros_bridge.hpp"
 #include "atos_interfaces/srv/new_ros2_mqtt_bridge.hpp"
 #include "module.hpp"
+#include "roschannels/customcommandaction.hpp"
 #include "roschannels/statechange.hpp"
-#include "roschannels/v2xchannel.hpp"
 #include <chrono>
 #include <fmt/format.h>
 #include <mqtt/async_client.h>
@@ -152,14 +152,16 @@ private:
   std::string password;
   std::string topic_prefix;
 
-  ROSChannels::V2X::Sub v2xMsgSub; //!< Subscriber to v2x messages requests
+  ROSChannels::CustomCommandAction::Sub
+      customCommandActionMsgSub; //!< Subscriber to v2x messages requests
   ROSChannels::StateChange::Sub
       obcStateChangeSub; //!< Subscriber to object state change requests
 
   void setupClient();
   void setupMqtt2RosBridge();
   void setupRos2MqttBridge();
-  void onV2xMsg(const ROSChannels::V2X::message_type::SharedPtr);
+  void onCustomCommandActionMsg(
+      const ROSChannels::CustomCommandAction::message_type::SharedPtr);
   void
   onObcStateChangeMsg(const ROSChannels::StateChange::message_type::SharedPtr);
 
@@ -167,8 +169,7 @@ private:
   void onMessage(T msg, std::string mqtt_topic,
                  std::function<json(T)> convertFunc);
 
-  static json
-  v2xToJson(const ROSChannels::V2X::message_type::SharedPtr v2x_msg);
+  static json v2xToJson(const std::string v2x_msg);
   static json obcStateChangeToJson(
       const ROSChannels::StateChange::message_type::SharedPtr obc_msg);
 };
