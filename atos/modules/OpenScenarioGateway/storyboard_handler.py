@@ -20,7 +20,6 @@ class StoryBoardHandler:
         follow_trajectory_actions = {}
         custom_command_actions = {}
         for story in self.xosc.storyboard.stories:
-            # Check if the element is a maneuver
             for act in story.acts:
                 for manuever_group in act.maneuvergroup:
                     actors = [actor.entity for actor in manuever_group.actors.actors]
