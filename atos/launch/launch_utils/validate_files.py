@@ -50,7 +50,7 @@ def validate_certs(directory_path):
 
 def validate_atos_dir():
     atos_dir = os.path.join(os.path.expanduser('~'), '.astazero', 'ATOS')
-    dirs_to_validate = ["conf", "pointclouds", "logs", "odr", "osc", "Catalogs", "objects"]
+    dirs_to_validate = ["conf", "pointclouds", "logs", "odr", "osc", "Catalogs"]
     for dir_to_validate in dirs_to_validate:
         validate_directory(get_package_prefix('atos') / Path("etc") / Path(dir_to_validate), atos_dir / Path(dir_to_validate))
 
