@@ -21,6 +21,8 @@ ACTIVE_OBJECT_NAME_PARAMETER = "active_object_names"
 SCENARIO_FILE_PARAMETER = "open_scenario_file"
 DEFAULT_FOLDER_PATH = path.expanduser("~/.astazero/ATOS/")
 
+RUNNING = 2
+
 
 class ScenarioObject:
     def __init__(self, name: str, catalog_ref: xosc.CatalogReference):
@@ -93,12 +95,12 @@ class OpenScenarioGateway(Node):
     def story_board_element_state_change_callback(self, story_board_element):
         if (
             story_board_element.name in self.follow_traj_to_obj_name.keys()
-            and story_board_element.state == 2  # 2 is a running state
+            and story_board_element.state == RUNNING
         ):
             self.handle_follow_trajectory_action(story_board_element)
         elif (
             story_board_element.name in self.custom_command_map
-            and story_board_element.state == 2  # 2 is a running state
+            and story_board_element.state == RUNNING
         ):
             self.handle_custom_command_action(story_board_element)
 

@@ -19,7 +19,7 @@ RESTBridge::~RESTBridge() {
 
 void RESTBridge::onCustomCommandAction(
     const atos_interfaces::msg::CustomCommandAction::SharedPtr msg) {
-  if (msg->type == "POST_JSON") {
+  if (msg->type == atos_interfaces::msg::CustomCommandAction::POST_JSON) {
     RCLCPP_INFO(get_logger(), "Received POST_JSON command: %s",
                 msg->content.c_str());
     json jsonData = parseJsonData(msg->content);
