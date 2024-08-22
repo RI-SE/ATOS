@@ -10,7 +10,6 @@ services:
     volumes: 
       - ./conf/Catalogs/:/root/.astazero/ATOS/Catalogs
       - ./conf/conf/:/root/.astazero/ATOS/conf
-      - ./conf/objects/:/root/.astazero/ATOS/objects
       - ./conf/odr/:/root/.astazero/ATOS/odr
       - ./conf/osc/:/root/.astazero/ATOS/osc
     command: bash -c "source /root/atos_ws/install/setup.sh ; python3 -m pytest /root/atos_ws/src/atos/scripts/integration_testing/run_scenario_test.py"

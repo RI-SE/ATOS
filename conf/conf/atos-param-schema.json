@@ -14,15 +14,27 @@
         },
         "esmini_adapter":{
             "ros__parameters": {
-                "open_scenario_file": {
-                    "type": "file",
-                    "default": "GaragePlanScenario.xosc",
-                    "description": "Name of the OpenSCENARIO-file. The file must end in .xosc and be located in the osc-directory."
-                },
                 "timestep": {
                     "type": "double",
                     "default": 0.1,
                     "description": "The time step (in seconds) used in the scenario simulation."
+                }
+            }
+        },
+        "open_scenario_gateway":{
+            "ros__parameters": {
+                "active_object_names": {
+                    "type": "string_array",
+                    "items": {
+                        "type": "string"
+                      },
+                    "default": [1],
+                    "description": "String array of object names from the vehicle catalog that should be used in the scenario."
+                },
+                "open_scenario_file": {
+                    "type": "file",
+                    "default": "GaragePlanScenario.xosc",
+                    "description": "Name of the OpenSCENARIO-file. The file must end in .xosc and be located in the osc-directory."
                 }
             }
         },

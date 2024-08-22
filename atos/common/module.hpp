@@ -20,6 +20,7 @@ const std::string getObjectTrajectory = "get_object_trajectory";
 const std::string getObjectTriggerStart = "get_object_trigger_start";
 const std::string getObjectControlState = "get_object_control_state";
 const std::string getObjectReturnTrajectory = "get_object_return_trajectory";
+const std::string getOpenScenarioFilePath = "get_open_scenario_file_path";
 }
 
 // TODO move somewhere else? also make generic to allow more args (variadic template)?

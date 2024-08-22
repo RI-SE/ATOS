@@ -282,11 +282,16 @@ private:
 	ROSChannels::StateChange::Pub stateChangePub;			//!< Publisher to report state changes
 	std::unordered_map<uint32_t,ROSChannels::Path::Pub> pathPublishers;
 	std::unordered_map<uint32_t,ROSChannels::GNSSPath::Pub> gnssPathPublishers;
+
+	rclcpp::CallbackGroup::SharedPtr id_client_cb_group_;
+	rclcpp::CallbackGroup::SharedPtr traj_client_cb_group_;
+	rclcpp::CallbackGroup::SharedPtr ip_client_cb_group_;
+	rclcpp::CallbackGroup::SharedPtr origin_client_cb_group_;
+
 	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr idClient;	//!< Client to request object ids
 	rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedPtr originClient;	//!< Client to request object status
 	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr trajectoryClient;	//!< Client to request object trajectories
 	rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedPtr ipClient;	//!< Client to request object IPs
-	rclcpp::Client<atos_interfaces::srv::GetObjectTriggerStart>::SharedPtr triggerClient;	//!< Client to request object trigger start
 	rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedPtr returnTrajectoryClient;	//!< Client to request object return trajectory
 	rclcpp::Service<atos_interfaces::srv::GetObjectControlState>::SharedPtr stateService;	//!< Service to request object control state
 	//! Connection methods
@@ -315,7 +320,7 @@ private:
 	//! Configuration methods
 	//! \brief Read the configured object and trajectory files and load related data
 	//!			into the ScenarioHandler.
-	void loadScenario();
+	bool loadScenario();
 	//! \brief Read all object files and fill the list of TestObjects.
 	void loadObjectFiles();
 	//! \brief Transform the scenario trajectories relative to the trajectory of the

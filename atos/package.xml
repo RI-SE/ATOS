@@ -19,7 +19,9 @@
   <author email="samuel.thoren@astazero.com">Samuel Thorén</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
   <depend>rclcpp</depend>
+  <depend>rclpy</depend>
   <depend>std_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>std_srvs</depend>
@@ -35,6 +37,7 @@
   <doc_depend>doxygen</doc_depend>
 
   <test_depend>ament_cmake_ros</test_depend>
+  <test_depend>ament_cmake_pytest</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 

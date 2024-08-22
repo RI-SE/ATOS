@@ -6,3 +6,7 @@ repos:
       - id: clang-format
         args: [--style=LLVM, -i]
       - id: cppcheck
+  - repo: https://github.com/ambv/black
+    rev: 24.4.2
+    hooks:
+      - id: black

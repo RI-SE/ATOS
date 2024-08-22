@@ -51,13 +51,16 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	connectedObjectIdsPub(*this),
 	stateChangePub(*this)
 {
+	id_client_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+	traj_client_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);;
+	ip_client_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+	origin_client_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 	this->declare_parameter("max_missing_heartbeats", 100);
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
-	idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds);
-	originClient = create_client<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin);
-	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory);
-	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp);
-	triggerClient = create_client<atos_interfaces::srv::GetObjectTriggerStart>(ServiceNames::getObjectTriggerStart);
+	idClient = create_client<atos_interfaces::srv::GetObjectIds>(ServiceNames::getObjectIds, rmw_qos_profile_services_default, id_client_cb_group_);
+	originClient = create_client<atos_interfaces::srv::GetTestOrigin>(ServiceNames::getTestOrigin, rmw_qos_profile_services_default, origin_client_cb_group_);
+	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(ServiceNames::getObjectTrajectory, rmw_qos_profile_services_default, traj_client_cb_group_);
+	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(ServiceNames::getObjectIp, rmw_qos_profile_services_default, ip_client_cb_group_);
 	returnTrajectoryClient = create_client<atos_interfaces::srv::GetObjectReturnTrajectory>(ServiceNames::getObjectReturnTrajectory);
 	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(ServiceNames::getObjectControlState,
 		std::bind(&ObjectControl::onRequestState, this, _1, _2));
@@ -122,6 +125,7 @@ void ObjectControl::onInitMessage(const Init::message_type::SharedPtr){
 	this->tryHandleMessage(f_try,f_catch, Init::topicName, get_logger());
 	stateChangeMsg.current_state = this->state->asNumber();
 	// Don't publish until we are actually initialized
+	RCLCPP_INFO(get_logger(), "State change from %d to %d", stateChangeMsg.prev_state, stateChangeMsg.current_state);
 	stateChangePub.publish(stateChangeMsg);
 }
 
@@ -279,12 +283,14 @@ void ObjectControl::onPathMessage(const Path::message_type::SharedPtr trajlet,ui
 	objects.at(id)->setLastReceivedPath(trajlet);
 }
 
-void ObjectControl::loadScenario() {
+bool ObjectControl::loadScenario() {
 	this->isResetting = false;
 	this->clearScenario();
 	RCLCPP_INFO(get_logger(), "Loading scenario");
+	std::promise<bool> scenarioLoaded;
 	auto idsCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFuture future) {
 		auto idResponse = future.get();
+		bool successful = true;
 		RCLCPP_INFO(get_logger(), "Received %lu configured object ids", idResponse->ids.size());
 
 		for (const auto id : idResponse->ids) {
@@ -293,25 +299,28 @@ void ObjectControl::loadScenario() {
 			objects.emplace(id, object);
 			objects.at(id)->setTransmitterID(id);
 
-			auto trajectoryCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
-				auto trajResponse = future.get();
-				if (!trajResponse->success) {
-					RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
+			std::promise<bool> trajLoaded;
+			auto trajectoryCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
+				if (!future.get()->success) {
+					RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object ID %u", id);
+					trajLoaded.set_value(false);
 					return;
 				}
 				ATOS::Trajectory traj(get_logger());
-				traj.initializeFromCartesianTrajectory(trajResponse->trajectory);
+				traj.initializeFromCartesianTrajectory(future.get()->trajectory);
 				objects.at(id)->setTrajectory(traj);
-				RCLCPP_INFO(get_logger(), "Loaded trajectory for object %u with %lu points", id, traj.size());
+				trajLoaded.set_value(true);
+				RCLCPP_INFO(get_logger(), "Loaded trajectory for object ID %u with %lu points", id, traj.size());
 			};
 			auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
 			trajRequest->id = id;
 			trajectoryClient->async_send_request(trajRequest, trajectoryCallback);
 
-			auto ipCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedFuture future) {
-				auto ipResponse = future.get();
-				if (!ipResponse->success) {
-					RCLCPP_ERROR(get_logger(), "Get IP service call failed for object %u", id);
+			std::promise<bool> ipLoaded;
+			auto ipCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedFuture future) {
+				if (!future.get()->success) {
+					RCLCPP_ERROR(get_logger(), "Get IP service call failed for object ID %u", id);
+					ipLoaded.set_value(false);
 					return;
 				}
 				// Resolve the hostname or numerical IP address to an in_addr_t value
@@ -320,9 +329,10 @@ void ObjectControl::loadScenario() {
 				hints.ai_family = AF_INET; // Use AF_INET6 for IPv6
 				hints.ai_socktype = SOCK_STREAM;
 
-				int status = getaddrinfo(ipResponse->ip.c_str(), nullptr, &hints, &result);
+				int status = getaddrinfo(future.get()->ip.c_str(), nullptr, &hints, &result);
 				if (status != 0) {
-					RCLCPP_ERROR(get_logger(), "Failed to resolve address for object %u: %s", id, gai_strerror(status));
+					RCLCPP_ERROR(get_logger(), "Failed to resolve address for object ID %u: %s", id, gai_strerror(status));
+					ipLoaded.set_value(false);
 					return;
 				}
 
@@ -333,54 +343,85 @@ void ObjectControl::loadScenario() {
 				char ip_str[INET_ADDRSTRLEN];
 				inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN);
 
-				RCLCPP_INFO(get_logger(), "Got ip %s for object %u", ip_str, id);
+				RCLCPP_INFO(get_logger(), "Got ip %s for object ID %u", ip_str, id);
 				objects.at(id)->setObjectIP(ip);
+				ipLoaded.set_value(true);
 			};
 
 			auto ipRequest = std::make_shared<atos_interfaces::srv::GetObjectIp::Request>();
 			ipRequest->id = id;
 			ipClient->async_send_request(ipRequest, ipCallback);
 
-			// Get delayed start
-			auto triggerCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetObjectTriggerStart>::SharedFuture future) {
-				auto triggerResponse = future.get();
-				if (!triggerResponse->success) {
-					RCLCPP_ERROR(get_logger(), "Get trigger start service call failed for object %u", id);
-					return;
-				}
-				objects.at(id)->setTriggerStart(triggerResponse->trigger_start);
-				RCLCPP_INFO(get_logger(), "Got trigger start for object %u: %u", id, triggerResponse->trigger_start);
-			};
-			auto triggerRequest = std::make_shared<atos_interfaces::srv::GetObjectTriggerStart::Request>();
-			triggerRequest->id = id;
-			triggerClient->async_send_request(triggerRequest, triggerCallback);
 
 			// Get test origin
-			auto originCallback = [id, this](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
-				auto origin = future.get();
-				if (!origin->success) {
-					RCLCPP_ERROR(get_logger(), "Get origin service call failed for object %u", id);
+			std::promise<bool> originLoaded;
+			auto originCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture future) {
+				if (!future.get()->success) {
+					RCLCPP_ERROR(get_logger(), "Get origin service call failed for object ID %u", id);
+					originLoaded.set_value(false);
 					return;
 				}
+				auto origin = future.get();
 				objects.at(id)->setOrigin({
 					origin->origin.position.latitude,
 					origin->origin.position.longitude,
 					origin->origin.position.altitude,
 					true,true,true});
-				RCLCPP_INFO(get_logger(), "Got origin for object %u: (%.6f, %.6f, %.3f)", id,
+				RCLCPP_INFO(get_logger(), "Got origin for object ID %u: (%.6f, %.6f, %.3f)", id,
 					origin->origin.position.latitude,
 					origin->origin.position.longitude,
 					origin->origin.position.altitude);
+					originLoaded.set_value(true);
 			};
 			auto requestOrigin = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
-			auto promiseOrigin = originClient->async_send_request(requestOrigin, originCallback);
+			originClient->async_send_request(requestOrigin, originCallback);
+
+			// Wait for all services to finish
+			std::future<bool> trajLoadedFuture = trajLoaded.get_future();
+			std::future<bool> ipLoadedFuture = ipLoaded.get_future();
+			std::future<bool> originLoadedFuture = originLoaded.get_future();
+			if (auto status = trajLoadedFuture.wait_for(5s); status != std::future_status::ready || !trajLoadedFuture.get()) {
+				RCLCPP_ERROR(get_logger(), "Trajectory loading failed for object ID %u", id);
+				successful = false;
+			}
+			if (auto status = ipLoadedFuture.wait_for(250ms); status != std::future_status::ready || !ipLoadedFuture.get()) {
+				RCLCPP_ERROR(get_logger(), "IP loading failed for object ID %u", id);
+				successful = false;
+			}
+			if (auto status = originLoadedFuture.wait_for(250ms); status != std::future_status::ready || !originLoadedFuture.get()) {
+				RCLCPP_ERROR(get_logger(), "Origin loading failed for object ID %u", id);
+				successful = false;
+			}
+			// Clean up if any of the services failed
+			if (!successful) {
+				trajectoryClient->prune_pending_requests();
+				ipClient->prune_pending_requests();
+				originClient->prune_pending_requests();
+				return;
+			}
+
 		}
+
+		scenarioLoaded.set_value(successful);
 	};
 
-	// TODO query scenario participants from scenario manager
 	auto request = std::make_shared<atos_interfaces::srv::GetObjectIds::Request>();
-	auto promise = idClient->async_send_request(request, idsCallback);
-	return;
+	auto future = idClient->async_send_request(request, idsCallback);
+	// Wait for all objects to load
+	std::future scenarioLoadedFuture = scenarioLoaded.get_future();
+	if (auto status = scenarioLoadedFuture.wait_for(10s); status == std::future_status::ready) {
+		return scenarioLoadedFuture.get();	// Get the status value
+	} else if (status == std::future_status::timeout) {
+		RCLCPP_ERROR(get_logger(), "Scenario loading timed out");
+		idClient->prune_pending_requests();
+		return false;
+	} else if (status == std::future_status::deferred) {
+		RCLCPP_ERROR(get_logger(), "Scenario loading is deferred");
+		idClient->prune_pending_requests();
+		return false;
+	}
+	// This should never happen
+	return false;
 }
 
 void ObjectControl::loadObjectFiles() {
@@ -751,14 +792,6 @@ void ObjectControl::disarmObjects() {
 		catch (std::runtime_error& e) {
 			RCLCPP_ERROR(get_logger(), "Unable to disarm object %u: %s", id, e.what());
 			objects.at(id)->disconnect();
-		}
-	}
-}
-
-void ObjectControl::startScenario() {
-	for (auto& id : getVehicleIDs()) {
-		if (!objects.at(id)->isStartingOnTrigger()) {
-			startObject(id);
 		}
 	}
 }
