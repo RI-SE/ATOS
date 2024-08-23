@@ -129,6 +129,10 @@ class OpenScenarioGateway(Node):
             self.get_logger().error("Active object names contain duplicates")
         scenario_objects = self.get_all_objects_in_scenario(self.getScenarioFilePath())
 
+        # If the active_objects_name is "empty", enable all objects
+        if active_objects_name == [""]:
+            active_objects_name = [obj.name for obj in scenario_objects.values()]
+
         # Remove any object that are (now) inactive
         for id, obj in self.active_objects.items():
             if obj.name not in active_objects_name:
