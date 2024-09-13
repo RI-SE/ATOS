@@ -43,10 +43,14 @@ def test_denm_custom_command_action(get_file_path):
 
     # Assert the expected result
     expected_result = {
-        "1,send_denm": sh.CustomCommandAction(
+        "story_start::start::1,maneuver_group::1,maneuver::1,high_speed_event::1,send_denm": sh.CustomCommandAction(
             type="V2X",
             content='{"message_type": "DENM", "event_id": "ATOSEvent1", "cause_code": 12, "latitude": 0.0, "longitude": 0.0, "altitude": 0.0, "detection_time": 0}',
-        )
+        ),
+        "story_start::start::1,maneuver_group::1,maneuver::1,high_speed_event_2::1,send_denm_2": sh.CustomCommandAction(
+            type="V2X",
+            content='{"message_type": "DENM", "event_id": "ATOSEvent2", "cause_code": 12, "latitude": 0.0, "longitude": 0.0, "altitude": 0.0, "detection_time": 0}',
+        ),
     }
 
     assert result == expected_result

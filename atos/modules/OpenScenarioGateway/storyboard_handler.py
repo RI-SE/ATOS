@@ -1,3 +1,4 @@
+import sys
 from scenariogeneration import xosc
 
 
@@ -40,7 +41,21 @@ class StoryBoardHandler:
                                     and action.action.custom_command_action is not None
                                 ):
                                     cc_action = action.action.custom_command_action
-                                    custom_command_actions[action.name] = (
+                                    full_path = (
+                                        story.name
+                                        + "::"
+                                        + act.name
+                                        + "::"
+                                        + manuever_group.name
+                                        + "::"
+                                        + manuever.name
+                                        + "::"
+                                        + event.name
+                                        + "::"
+                                        + action.name
+                                    )
+                                    print(full_path, file=sys.stderr)
+                                    custom_command_actions[full_path] = (
                                         CustomCommandAction(
                                             type=cc_action.type,
                                             content=cc_action.content,

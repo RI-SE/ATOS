@@ -99,7 +99,7 @@ class OpenScenarioGateway(Node):
         ):
             self.handle_follow_trajectory_action(story_board_element)
         elif (
-            story_board_element.name in self.custom_command_map
+            story_board_element.full_path in self.custom_command_map
             and story_board_element.state == RUNNING
         ):
             self.handle_custom_command_action(story_board_element)
@@ -119,8 +119,12 @@ class OpenScenarioGateway(Node):
                 break
 
     def handle_custom_command_action(self, story_board_element):
-        self.get_logger().info("Custom command action received")
-        custom_command = self.custom_command_map[story_board_element.name]
+        self.get_logger().info(
+            "Custom command action received with full_path {}".format(
+                story_board_element.full_path
+            )
+        )
+        custom_command = self.custom_command_map[story_board_element.full_path]
 
         custom_command_msg = atos_interfaces.msg.CustomCommandAction()
         custom_command_msg.type = custom_command.type
