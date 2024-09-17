@@ -1,14 +1,6 @@
 import sys
 from scenariogeneration import xosc
-
-
-class CustomCommandAction:
-    def __init__(self, type: str, content: str):
-        self.type = type
-        self.content = content
-
-    def __eq__(self, other):
-        return self.type == other.type and self.content == other.content
+from modules.OpenScenarioGateway.custom_command_action import CustomCommandAction
 
 
 class StoryBoardHandler:
