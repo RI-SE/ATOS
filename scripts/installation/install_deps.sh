@@ -23,7 +23,7 @@ source "${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 apt_deps=$(cat ${ATOS_REPO_PATH}/scripts/installation/dependencies.txt | tr '\n' ' ')
 echo "Installing dependencies... $apt_deps"
 sudo apt update && sudo apt install -y ${apt_deps}
-pip install -r ${ATOS_REPO_PATH}/scripts/installation/requirements.txt
+python3 -m pip install -r ${ATOS_REPO_PATH}/scripts/installation/requirements.txt
 
 # Check if apt failed to install dependencies
 check_command_failed $? "Failed to install dependencies."
@@ -67,7 +67,7 @@ check_command_failed $? "Failed to install ROS2 dependencies."
 ######## Install ATOS GUI dependencies ########
 ###############################################
 
-pip install -r ${ATOS_REPO_PATH}/atos_gui/requirements.txt 
+python3 -m pip install -r ${ATOS_REPO_PATH}/atos_gui/requirements.txt 
 
 ###########################################
 ###### Install some deps from source ######
