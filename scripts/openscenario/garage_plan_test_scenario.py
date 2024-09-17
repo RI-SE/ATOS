@@ -86,9 +86,6 @@ marker_drone_O6_point = virtual_O4_point
 marker_drone_brake_position = virtual_brake_position
 
 
-denm_trigger_speed = 10 / 3.6  # m/s
-
-
 # Preamble
 init = xosc.Init()
 osc_params = xosc.ParameterDeclarations()
@@ -542,42 +539,6 @@ camera_drone_move_event.add_action(
     CAMERA_DRONE_ID + ",set_speed", camera_drone_set_speed
 )
 camera_drone_maneuver.add_event(camera_drone_move_event)
-
-
-# Mondeo object triggers DENM warning
-
-### DENM Action ###
-mondeo_high_speed_detected = xosc.EntityTrigger(
-    name=MONDEO_ID + ",high_speed_detected",
-    delay=0,
-    conditionedge=xosc.ConditionEdge.none,
-    entitycondition=xosc.SpeedCondition(denm_trigger_speed, xosc.Rule.greaterThan),
-    triggerentity=MONDEO_ID,
-)
-
-v2x_command = json.dumps(
-    {
-        "message_type": "DENM",
-        "event_id": "ATOSEvent1",
-        "cause_code": 12,
-        "latitude": 0.0,
-        "longitude": 0.0,
-        "altitude": 0.0,
-        "detection_time": 0,
-    }
-)
-mondeo_denm_action = xosc.UserDefinedAction(
-    custom_command_action=xosc.CustomCommandAction(type="V2X", content=v2x_command)
-)
-
-denm_osc_event = xosc.Event(
-    MONDEO_ID + ",high_speed_event",
-    xosc.Priority.parallel,
-)
-
-denm_osc_event.add_trigger(mondeo_high_speed_detected)
-denm_osc_event.add_action(MONDEO_ID + ",send_denm", mondeo_denm_action)
-mondeo_maneuver.add_event(denm_osc_event)
 
 
 # Mondeo triggers UFO

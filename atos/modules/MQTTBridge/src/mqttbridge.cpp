@@ -12,7 +12,8 @@ using std::placeholders::_1;
 
 MqttBridge::MqttBridge()
     : Module(MqttBridge::moduleName),
-      v2xMsgSub(*this, std::bind(&MqttBridge::onV2xMsg, this, _1)),
+      customCommandActionMsgSub(
+          *this, std::bind(&MqttBridge::onCustomCommandActionMsg, this, _1)),
       obcStateChangeSub(*this,
                         std::bind(&MqttBridge::onObcStateChangeMsg, this, _1)) {
   this->loadParameters();
@@ -380,8 +381,15 @@ void MqttBridge::newRos2MqttBridge(
   response->success = true;
 }
 
-void MqttBridge::onV2xMsg(const V2X::message_type::SharedPtr v2x_msg) {
-  this->onMessage<V2X::message_type::SharedPtr>(v2x_msg, "v2x", v2xToJson);
+void MqttBridge::onCustomCommandActionMsg(
+    const CustomCommandAction::message_type::SharedPtr
+        custom_command_action_msg) {
+  if (custom_command_action_msg->type == "v2x") {
+    RCLCPP_INFO(this->get_logger(), "Received V2X message on %s topic",
+                CustomCommandAction::topicName.c_str());
+    this->onMessage<std::string>(custom_command_action_msg->content, "v2x",
+                                 v2xToJson);
+  }
 }
 
 void MqttBridge::onObcStateChangeMsg(
@@ -415,15 +423,26 @@ void MqttBridge::onMessage(T msg, std::string mqtt_topic,
   }
 }
 
-json MqttBridge::v2xToJson(const V2X::message_type::SharedPtr v2x_msg) {
+json MqttBridge::v2xToJson(std::string msg_content) {
+  std::replace(msg_content.begin(), msg_content.end(), '\'',
+               '"'); // Replace ROS single quotes string with double quotes to
+                     // make it a valid JSON string
   json j;
-  j["message_type"] = v2x_msg->message_type;
-  j["event_id"] = v2x_msg->event_id;
-  j["cause_code"] = v2x_msg->cause_code;
-  j["detection_time"] = v2x_msg->detection_time;
-  j["altitude"] = v2x_msg->altitude;
-  j["latitude"] = v2x_msg->latitude;
-  j["longitude"] = v2x_msg->longitude;
+  // Parse the string to a json object
+  try {
+    j = json::parse(msg_content);
+  } catch (json::parse_error &e) {
+    std::cerr << "Failed to parse JSON object: " << e.what() << std::endl;
+  }
+
+  if (j.find("message_type") == j.end()) {
+    std::cerr << "No message_type field in JSON object" << std::endl;
+    return j;
+  }
+  if (j["message_type"] == "DENM") {
+    j["detection_time"] =
+        std::chrono::system_clock::now().time_since_epoch().count();
+  }
   return j;
 }
 

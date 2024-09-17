@@ -30,7 +30,7 @@ def get_experimental_nodes():
             name="mqtt_bridge",
             # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
             parameters=[files["params"]],
-            arguments=["--ros-args", "--log-level", "debug"],  # To get RCL_DEBUG prints
+            # arguments=["--ros-args", "--log-level", "debug"],  # To get RCL_DEBUG prints
         ),
         Node(
             package="atos",
@@ -44,6 +44,13 @@ def get_experimental_nodes():
             namespace="atos",
             executable="back_to_start",
             name="back_to_start",
+            parameters=[files["params"]],
+        ),
+        Node(
+            package="atos",
+            namespace="atos",
+            executable="rest_bridge",
+            name="rest_bridge",
             parameters=[files["params"]],
         ),
     ]

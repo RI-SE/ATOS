@@ -64,6 +64,7 @@ set(WITH_POINTCLOUD_PUBLISHER ON CACHE BOOL "Enable PointcloudPublisher module")
 set(WITH_INTEGRATION_TESTING ON CACHE BOOL "Enable IntegrationTesting module")
 set(WITH_BACK_TO_START ON CACHE BOOL "Enable BackToStart module")
 set(WITH_OPEN_SCENARIO_GATEWAY ON CACHE BOOL "Enable OpenScenario Gateway module")
+set(WITH_REST_BRIDGE ON CACHE BOOL "Enable RESTBridge module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -98,6 +99,9 @@ endif()
 if(WITH_BACK_TO_START)
         list(APPEND ENABLED_MODULES BackToStart)
 endif()
+if(WITH_REST_BRIDGE)
+        list(APPEND ENABLED_MODULES RESTBridge)
+endif()
 
 
 # Add corresponding subprojects
@@ -123,6 +127,7 @@ if(BUILD_TESTING)
 #   ament_lint_auto_find_test_dependencies() # Comment this out for now to avoid linting errors
   set(_pytest_tests
      modules/OpenScenarioGateway/tests/test_openscenariogateway.py
+     modules/OpenScenarioGateway/tests/test_storyboard_handler.py
   )
   foreach(_test_path ${_pytest_tests})
   get_filename_component(_test_name ${_test_path} NAME_WE)

@@ -5,29 +5,28 @@
  */
 #pragma once
 
-#include "module.hpp"
-#include "roschannels/v2xchannel.hpp"
-#include "roschannels/commandchannels.hpp"
-#include "roschannels/pathchannel.hpp"
-#include "roschannels/monitorchannel.hpp"
-#include "roschannels/gnsspathchannel.hpp"
-#include "roschannels/statechange.hpp"
-#include "roschannels/scenariochannel.hpp"
-#include <unordered_map>
-#include <filesystem>
+#include "CRSTransformation.hpp"
 #include "esmini/esminiLib.hpp"
 #include "esmini/esminiRMLib.hpp"
-#include "CRSTransformation.hpp"
+#include "module.hpp"
+#include "roschannels/commandchannels.hpp"
+#include "roschannels/gnsspathchannel.hpp"
+#include "roschannels/monitorchannel.hpp"
+#include "roschannels/pathchannel.hpp"
+#include "roschannels/scenariochannel.hpp"
+#include "roschannels/statechange.hpp"
+#include <filesystem>
+#include <unordered_map>
 
-#include "trajectory.hpp"
-#include "atos_interfaces/srv/get_test_origin.hpp"
+#include "atos_interfaces/srv/get_object_ids.hpp"
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "atos_interfaces/srv/get_object_trigger_start.hpp"
 #include "atos_interfaces/srv/get_open_scenario_file_path.hpp"
-#include "atos_interfaces/srv/get_object_ids.hpp"
+#include "atos_interfaces/srv/get_test_origin.hpp"
+#include "trajectory.hpp"
 
 /*!
- * \brief The EsminiAdapter class is a singleton class that 
+ * \brief The EsminiAdapter class is a singleton class that
  * 	handles the communication between the esmini simulator and ATOS
  */
 class EsminiAdapter : public Module {
@@ -35,21 +34,20 @@ public:
 	static inline std::string const moduleName = "esmini_adapter";
 	static inline std::filesystem::path oscFilePath;
 	static int initializeModule();
-	EsminiAdapter(EsminiAdapter const&) = delete;
-    EsminiAdapter& operator=(EsminiAdapter const&) = delete;
+	EsminiAdapter(EsminiAdapter const &) = delete;
+	EsminiAdapter &operator=(EsminiAdapter const &) = delete;
 	static std::shared_ptr<EsminiAdapter> instance();
 
 private:
 	EsminiAdapter();
 
-	ROSChannels::StartObject::Pub startObjectPub;
-	ROSChannels::V2X::Pub v2xPub;
-	ROSChannels::StoryBoardElementStateChange::Pub storyBoardElementStateChangePub;
+	ROSChannels::StoryBoardElementStateChange::Pub
+		storyBoardElementStateChangePub;
 	ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;
 	ROSChannels::Exit::Sub exitSub;
 	ROSChannels::StateChange::Sub stateChangeSub;
-	std::unordered_map<uint32_t,ROSChannels::Path::Pub> pathPublishers;
-	std::unordered_map<uint32_t,ROSChannels::GNSSPath::Pub> gnssPathPublishers;
+	std::unordered_map<uint32_t, ROSChannels::Path::Pub> pathPublishers;
+	std::unordered_map<uint32_t, ROSChannels::GNSSPath::Pub> gnssPathPublishers;
 
 	static std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> objectTrajectoryService;
@@ -60,7 +58,6 @@ private:
 
 	rclcpp::Client<atos_interfaces::srv::GetOpenScenarioFilePath>::SharedPtr oscFilePathClient_;	//!< Client to request the current open scenario file path
 	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr objectIdsClient_;	//!< Client to request the ATOS object id for each openx entity name
-
 
 	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
 	// Below is a quickfix, fix properly later
@@ -80,16 +77,15 @@ private:
 	static ATOS::Trajectory getTrajectoryFromObjectState(uint32_t,std::vector<SE_ScenarioObjectState>& states);
 	static std::string projStrFromGeoReference(RM_GeoReference& geoRef);
 	static std::map<uint32_t, ATOS::Trajectory> extractTrajectories(double timeStep);
-	static bool isSendDenmAction(const std::string& action);
-	static ROSChannels::V2X::message_type denmFromTestOrigin(double *llh);
 
 	static void onRequestObjectTrajectory(
-		const std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Request> req,
+		const std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Request>
+			req,
 		std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Response> res);
-	
 
-	static void onRequestTestOrigin(const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,
-							std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response>);
+	static void onRequestTestOrigin(
+		const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,
+		std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response>);
 
 	static std::unordered_map<int, std::string> atosIDToObjectName;
 	static std::unordered_map<std::string, int> objectNameToAtosId;
