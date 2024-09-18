@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2016-2020 Kris Jusiak (kris at jusiak dot net)
+// Copyright (c) 2016-2024 Kris Jusiak (kris at jusiak dot net)
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -9,12 +9,15 @@
 #if (__cplusplus < 201305L && _MSC_VER < 1900)
 #error "[Boost::ext].SML requires C++14 support (Clang-3.4+, GCC-5.1+, MSVC-2015+)"
 #else
-#define BOOST_SML_VERSION 1'1'6
+#if defined(__ICCARM__) && __IAR_SYSTEMS_ICC__ < 8
+#error "[Boost::ext].SML requires C++14 support (IAR C/C++ ARM 8.1+)"
+#endif
+#define BOOST_SML_VERSION 1'1'11
 #define BOOST_SML_NAMESPACE_BEGIN \
   namespace boost {               \
   inline namespace ext {          \
   namespace sml {                 \
-  inline namespace v1_1_6 {
+  inline namespace v1_1_11 {
 #define BOOST_SML_NAMESPACE_END \
   }                             \
   }                             \
@@ -69,6 +72,18 @@
 #endif
 #pragma warning(disable : 4503)
 #pragma warning(disable : 4200)
+#elif defined(__ICCARM__)
+#if !defined(__has_builtin)
+#define __BOOST_SML_DEFINED_HAS_BUILTIN
+#define __has_builtin(...) 0
+#endif
+/* Needs IAR language extensions */
+#define __BOOST_SML_UNUSED __attribute__((unused))
+#define __BOOST_SML_VT_INIT \
+  {}
+#define __BOOST_SML_ZERO_SIZE_ARRAY(...)
+#define __BOOST_SML_ZERO_SIZE_ARRAY_CREATE(...) __VA_ARGS__ ? __VA_ARGS__ : 1
+#define __BOOST_SML_TEMPLATE_KEYWORD template
 #endif
 BOOST_SML_NAMESPACE_BEGIN
 #define __BOOST_SML_REQUIRES(...) typename aux::enable_if<__VA_ARGS__, int>::type = 0
@@ -230,6 +245,16 @@ struct remove_reference<T &&> {
 };
 template <class T>
 using remove_reference_t = typename remove_reference<T>::type;
+template <class T>
+struct remove_pointer {
+  using type = T;
+};
+template <class T>
+struct remove_pointer<T *> {
+  using type = T;
+};
+template <class T>
+using remove_pointer_t = typename remove_pointer<T>::type;
 }  // namespace aux
 namespace aux {
 using swallow = int[];
@@ -323,14 +348,14 @@ template <template <class...> class T, class D>
 using apply_t = typename apply<T, D>::type;
 template <int, class T>
 struct tuple_type {
-  explicit tuple_type(const T &object) : value(object) {}
+  constexpr explicit tuple_type(const T &object) : value(object) {}
   T value;
 };
 template <class, class...>
 struct tuple_impl;
 template <int... Ns, class... Ts>
 struct tuple_impl<index_sequence<Ns...>, Ts...> : tuple_type<Ns, Ts>... {
-  explicit tuple_impl(Ts... ts) : tuple_type<Ns, Ts>(ts)... {}
+  constexpr explicit tuple_impl(Ts... ts) : tuple_type<Ns, Ts>(ts)... {}
 };
 template <>
 struct tuple_impl<index_sequence<0>> {
@@ -339,7 +364,7 @@ struct tuple_impl<index_sequence<0>> {
 template <class... Ts>
 using tuple = tuple_impl<make_index_sequence<sizeof...(Ts)>, Ts...>;
 template <int N, class T>
-T &get_by_id(tuple_type<N, T> *object) {
+constexpr T &get_by_id(tuple_type<N, T> *object) {
   return static_cast<tuple_type<N, T> &>(*object).value;
 }
 struct init {};
@@ -353,8 +378,9 @@ struct pool_type_impl : pool_type_base {
   constexpr pool_type_impl(init i, TObject object) : value{i, object} {}
   T value{};
 };
+#if defined(BOOST_SML_CREATE_DEFAULT_CONSTRUCTIBLE_DEPS)
 template <class T>
-struct pool_type_impl<T &, aux::enable_if_t<aux::is_constructible<T>::value && aux::is_constructible<T, T>::value>>
+struct pool_type_impl<T &, aux::enable_if_t<aux::is_constructible<T>::value && aux::is_constructible<T, const T &>::value>>
     : pool_type_base {
   constexpr explicit pool_type_impl(T &value) : value{value} {}
   template <class TObject>
@@ -364,6 +390,7 @@ struct pool_type_impl<T &, aux::enable_if_t<aux::is_constructible<T>::value && a
   T value_{};
   T &value;
 };
+#endif
 template <class T>
 struct pool_type : pool_type_impl<T> {
   using pool_type_impl<T>::pool_type_impl;
@@ -401,6 +428,18 @@ template <class T>
 constexpr T &try_get(const pool_type<T &> *object) {
   return object->value;
 }
+template <class T>
+constexpr const T *try_get(const pool_type<const T *> *object) {
+  return object->value;
+}
+template <class T>
+constexpr T *try_get(const pool_type<T *> *object) {
+  return object->value;
+}
+template <class T, class TPool>
+constexpr bool would_instantiate_missing_ctor_parameter() {
+  return is_same<missing_ctor_parameter<T>, decltype(try_get<T>(aux::declval<TPool>()))>::value;
+}
 template <class T, class TPool>
 constexpr T &get(TPool &p) {
   return static_cast<pool_type<T> &>(p).value;
@@ -409,20 +448,29 @@ template <class T, class TPool>
 constexpr const T &cget(const TPool &p) {
   return static_cast<const pool_type<T> &>(p).value;
 }
+template <class T, class TPool>
+T *get(TPool *p) {
+  return static_cast<pool_type<T> &>(p).value;
+}
+template <class T, class TPool>
+const T *cget(const TPool *p) {
+  return static_cast<const pool_type<T> &>(p).value;
+}
 template <class... Ts>
 struct pool : pool_type<Ts>... {
   using boost_di_inject__ = type_list<Ts...>;
   constexpr pool() = default;
   constexpr explicit pool(Ts... ts) : pool_type<Ts>(ts)... {}
   template <class... TArgs>
-  constexpr pool(init, const pool<TArgs...> &p) : pool_type<Ts>(try_get<aux::remove_const_t<aux::remove_reference_t<Ts>>>(&p))... {}
+  constexpr pool(init, const pool<TArgs...> &p)
+      : pool_type<Ts>(try_get<aux::remove_const_t<aux::remove_reference_t<aux::remove_pointer_t<Ts>>>>(&p))... {}
   template <class... TArgs>
   constexpr pool(const pool<TArgs...> &p) : pool_type<Ts>(init{}, p)... {}
 };
 template <>
 struct pool<> {
   using boost_di_inject__ = type_list<>;
-  constexpr pool() = default;
+  pool() = default;
   template <class... Ts>
   constexpr explicit pool(Ts &&...) {}
   __BOOST_SML_ZERO_SIZE_ARRAY(byte);
@@ -463,52 +511,64 @@ struct zero_wrapper : TExpr {
 };
 template <class R, class TBase, class... TArgs, class T>
 struct zero_wrapper<R (TBase::*)(TArgs...), T> {
-  constexpr explicit zero_wrapper(R (TBase::*ptr)(TArgs...)) : ptr{ptr} {}
+  using type = R (TBase::*)(TArgs...);
+  constexpr explicit zero_wrapper(type ptr) : ptr{ptr} {}
   constexpr auto operator()(TBase &self, TArgs... args) { return (self.*ptr)(args...); }
+  constexpr type get() const { return ptr; }
 
  private:
-  R (TBase::*ptr)(TArgs...){};
+  type ptr{};
 };
 template <class R, class TBase, class... TArgs, class T>
 struct zero_wrapper<R (TBase::*)(TArgs...) const, T> {
-  constexpr explicit zero_wrapper(R (TBase::*ptr)(TArgs...) const) : ptr{ptr} {}
+  using type = R (TBase::*)(TArgs...) const;
+  constexpr explicit zero_wrapper(type ptr) : ptr{ptr} {}
   constexpr auto operator()(TBase &self, TArgs... args) { return (self.*ptr)(args...); }
+  constexpr type get() const { return ptr; }
 
  private:
-  R (TBase::*ptr)(TArgs...) const {};
+  type ptr{};
 };
 template <class R, class... TArgs, class T>
 struct zero_wrapper<R (*)(TArgs...), T> {
-  explicit zero_wrapper(R (*ptr)(TArgs...)) : ptr{ptr} {}
+  using type = R (*)(TArgs...);
+  explicit zero_wrapper(type ptr) : ptr{ptr} {}
   constexpr auto operator()(TArgs... args) { return (*ptr)(args...); }
+  constexpr type get() const { return ptr; }
 
  private:
-  R (*ptr)(TArgs...){};
+  type ptr{};
 };
 #if defined(__cpp_noexcept_function_type)
 template <class R, class TBase, class... TArgs, class T>
 struct zero_wrapper<R (TBase::*)(TArgs...) noexcept, T> {
-  constexpr explicit zero_wrapper(R (TBase::*ptr)(TArgs...) noexcept) : ptr{ptr} {}
+  using type = R (TBase::*)(TArgs...) noexcept;
+  constexpr explicit zero_wrapper(type ptr) : ptr{ptr} {}
   constexpr auto operator()(TBase &self, TArgs... args) { return (self.*ptr)(args...); }
+  constexpr type get() const { return ptr; }
 
  private:
-  R (TBase::*ptr)(TArgs...) noexcept {};
+  type ptr {};
 };
 template <class R, class TBase, class... TArgs, class T>
 struct zero_wrapper<R (TBase::*)(TArgs...) const noexcept, T> {
-  constexpr explicit zero_wrapper(R (TBase::*ptr)(TArgs...) const noexcept) : ptr{ptr} {}
+  using type = R (TBase::*)(TArgs...) const noexcept;
+  constexpr explicit zero_wrapper(type ptr) : ptr{ptr} {}
   constexpr auto operator()(TBase &self, TArgs... args) { return (self.*ptr)(args...); }
+  constexpr type get() const { return ptr; }
 
  private:
-  R (TBase::*ptr)(TArgs...) const noexcept {};
+  type ptr {};
 };
 template <class R, class... TArgs, class T>
 struct zero_wrapper<R (*)(TArgs...) noexcept, T> {
-  explicit zero_wrapper(R (*ptr)(TArgs...) noexcept) : ptr{ptr} {}
+  using type = R (*)(TArgs...) noexcept;
+  explicit zero_wrapper(type ptr) : ptr{ptr} {}
   constexpr auto operator()(TArgs... args) { return (*ptr)(args...); }
+  constexpr type get() const { return ptr; }
 
  private:
-  R (*ptr)(TArgs...) noexcept {};
+  type ptr {};
 };
 #endif
 template <class, class>
@@ -536,13 +596,15 @@ auto get_type_name(const char *ptr, index_sequence<Ns...>) {
 template <class T>
 const char *get_type_name() {
 #if defined(_MSC_VER) && !defined(__clang__)
-  return detail::get_type_name<T, 39>(__FUNCSIG__, make_index_sequence<sizeof(__FUNCSIG__) - 39 - 8>{});
+  return detail::get_type_name<T, 65>(__FUNCSIG__, make_index_sequence<sizeof(__FUNCSIG__) - 65 - 8>{});
 #elif defined(__clang__) && (__clang_major__ >= 12)
   return detail::get_type_name<T, 50>(__PRETTY_FUNCTION__, make_index_sequence<sizeof(__PRETTY_FUNCTION__) - 50 - 2>{});
 #elif defined(__clang__)
   return detail::get_type_name<T, 63>(__PRETTY_FUNCTION__, make_index_sequence<sizeof(__PRETTY_FUNCTION__) - 63 - 2>{});
 #elif defined(__GNUC__)
-  return detail::get_type_name<T, 68>(__PRETTY_FUNCTION__, make_index_sequence<sizeof(__PRETTY_FUNCTION__) - 68 - 2>{});
+  return detail::get_type_name<T, 69>(__PRETTY_FUNCTION__, make_index_sequence<sizeof(__PRETTY_FUNCTION__) - 69 - 2>{});
+#elif defined(__ICCARM__)
+  return detail::get_type_name<T, 72>(__PRETTY_FUNCTION__, make_index_sequence<sizeof(__PRETTY_FUNCTION__) - 72 -2>{});
 #endif
 }
 #if defined(__cpp_nontype_template_parameter_class) || \
@@ -613,11 +675,14 @@ class queue_event {
   }
 
  public:
+  constexpr queue_event() : dtor(nullptr) {}
   constexpr queue_event(queue_event &&other) : id(other.id), dtor(other.dtor), move(other.move) {
     move(data, static_cast<queue_event &&>(other));
   }
   constexpr queue_event &operator=(queue_event &&other) {
-    dtor(data);
+    if (dtor != nullptr) {
+      dtor(data);
+    }
     id = other.id;
     dtor = other.dtor;
     move = other.move;
@@ -633,7 +698,11 @@ class queue_event {
     move = &move_impl<T>;
     new (&data) T(static_cast<T &&>(object));
   }
-  ~queue_event() { dtor(data); }
+  ~queue_event() {
+    if (dtor) {
+      dtor(data);
+    }
+  }
   alignas(alignment) aux::byte data[size];
   int id = -1;
 
@@ -933,45 +1002,45 @@ struct transitions<aux::false_type> {
     return false;
   }
 };
-template <class TSM, class T, class... Ts>
-struct transitions_sub<sm<TSM>, T, Ts...> {
+template <class Tsm, class T, class... Ts>
+struct transitions_sub<sm<Tsm>, T, Ts...> {
   template <class TEvent, class SM, class TDeps, class TSubs>
   constexpr static bool execute(const TEvent &event, SM &sm, TDeps &deps, TSubs &subs, typename SM::state_t &current_state) {
     return execute_impl(event, sm, deps, subs, current_state);
   }
   template <class, class SM, class TDeps, class TSubs>
   constexpr static bool execute(const anonymous &event, SM &sm, TDeps &deps, TSubs &subs, typename SM::state_t &current_state) {
-    if (sub_sm<sm_impl<TSM>>::cget(&subs).is_terminated()) {
-      const auto handled = sub_sm<sm_impl<TSM>>::get(&subs).process_event(event, deps, subs);
+    if (sub_sm<sm_impl<Tsm>>::cget(&subs).is_terminated()) {
+      const auto handled = sub_sm<sm_impl<Tsm>>::get(&subs).process_event(event, deps, subs);
       return handled ? handled : transitions<T, Ts...>::execute(event, sm, deps, subs, current_state);
     }
     return false;
   }
   template <class TEvent, class SM, class TDeps, class TSubs>
   constexpr static bool execute_impl(const TEvent &event, SM &sm, TDeps &deps, TSubs &subs, typename SM::state_t &current_state) {
-    const auto handled = sub_sm<sm_impl<TSM>>::get(&subs).process_event(event, deps, subs);
+    const auto handled = sub_sm<sm_impl<Tsm>>::get(&subs).process_event(event, deps, subs);
     return handled ? handled : transitions<T, Ts...>::execute(event, sm, deps, subs, current_state);
   }
   template <class _, class TEvent, class SM, class TDeps, class TSubs>
   constexpr static bool execute_impl(const back::on_entry<_, TEvent> &event, SM &sm, TDeps &deps, TSubs &subs,
                            typename SM::state_t &current_state) {
     transitions<T, Ts...>::execute(event, sm, deps, subs, current_state);
-    sub_sm<sm_impl<TSM>>::get(&subs).process_event(event, deps, subs);
+    sub_sm<sm_impl<Tsm>>::get(&subs).process_event(event, deps, subs);
     return true;
   }
   template <class _, class TEvent, class SM, class TDeps, class TSubs>
   constexpr static bool execute_impl(const back::on_exit<_, TEvent> &event, SM &sm, TDeps &deps, TSubs &subs,
                            typename SM::state_t &current_state) {
-    sub_sm<sm_impl<TSM>>::get(&subs).process_event(event, deps, subs);
+    sub_sm<sm_impl<Tsm>>::get(&subs).process_event(event, deps, subs);
     transitions<T, Ts...>::execute(event, sm, deps, subs, current_state);
     return true;
   }
 };
-template <class TSM>
-struct transitions_sub<sm<TSM>> {
+template <class Tsm>
+struct transitions_sub<sm<Tsm>> {
   template <class TEvent, class SM, class TDeps, class TSubs>
   constexpr static bool execute(const TEvent &event, SM &, TDeps &deps, TSubs &subs, typename SM::state_t &) {
-    return sub_sm<sm_impl<TSM>>::get(&subs).process_event(event, deps, subs);
+    return sub_sm<sm_impl<Tsm>>::get(&subs).process_event(event, deps, subs);
   }
   template <class, class SM, class TDeps, class TSubs>
   constexpr static bool execute(const anonymous &, SM &, TDeps &, TSubs &, typename SM::state_t &) {
@@ -1058,7 +1127,9 @@ template <class T, class, class... Ts>
 transitions<Ts...> get_state_mapping_impl(state_mappings<T, aux::type_list<Ts...>> *);
 template <class T, class TMappings, class TUnexpected>
 struct get_state_mapping {
-  using type = decltype(get_state_mapping_impl<T, TUnexpected>((TMappings *)0));
+  using type = aux::conditional_t<aux::is_same<decltype(get_state_mapping_impl<T, TUnexpected>((TMappings *)0)), transitions<TUnexpected>>::value,
+      decltype(get_state_mapping_impl<_, TUnexpected>((TMappings *)0)),
+      decltype(get_state_mapping_impl<T, TUnexpected>((TMappings *)0))>;
 };
 template <class S>
 transitions_sub<S> get_sub_state_mapping_impl(...);
@@ -1253,6 +1324,25 @@ struct process_queue : aux::pair<back::policies::process_queue_policy__, process
 }  // namespace back
 namespace back {
 namespace policies {
+struct dont_instantiate_statemachine_class_policy__ {};
+struct dont_instantiate_statemachine_class
+    : aux::pair<dont_instantiate_statemachine_class_policy__, dont_instantiate_statemachine_class> {};
+}  // namespace policies
+}  // namespace back
+
+namespace aux {
+template <class Tsm>
+struct should_not_instantiate_statemachine_class
+    : integral_constant<bool, is_same<typename Tsm::dont_instantiate_statemachine_class_policy,
+                                                back::policies::dont_instantiate_statemachine_class>::value> {};
+
+template <class Tsm>
+struct should_not_subclass_statemachine_class
+    : integral_constant<bool, is_empty<typename Tsm::sm>::value || should_not_instantiate_statemachine_class<Tsm>::value> {};
+} // namespace aux
+
+namespace back {
+namespace policies {
 struct testing_policy__ {};
 struct testing : aux::pair<testing_policy__, testing> {};
 }  // namespace policies
@@ -1304,7 +1394,8 @@ struct sm_policy {
       decltype(get_policy<no_policy, policies::process_queue_policy__>((aux::inherit<TPolicies...> *)0));
   using logger_policy = decltype(get_policy<no_policy, policies::logger_policy__>((aux::inherit<TPolicies...> *)0));
   using testing_policy = decltype(get_policy<no_policy, policies::testing_policy__>((aux::inherit<TPolicies...> *)0));
-  using default_dispatch_policy = policies::jump_table;
+  using dont_instantiate_statemachine_class_policy = decltype(get_policy<no_policy, policies::dont_instantiate_statemachine_class_policy__>((aux::inherit<TPolicies...> *)0));
+  using default_dispatch_policy = policies::switch_stm;
   using dispatch_policy =
       decltype(get_policy<default_dispatch_policy, policies::dispatch_policy__>((aux::inherit<TPolicies...> *)0));
   template <class T>
@@ -1349,17 +1440,17 @@ struct composable : aux::is<aux::pool, decltype(composable_impl<T>(0))> {};
 #endif
 #endif
 namespace back {
-template <class TSM>
-struct sm_impl : aux::conditional_t<aux::is_empty<typename TSM::sm>::value, aux::none_type, typename TSM::sm> {
-  using sm_t = typename TSM::sm;
-  using thread_safety_t = typename TSM::thread_safety_policy::type;
+template <class Tsm>
+struct sm_impl : aux::conditional_t<aux::should_not_subclass_statemachine_class<Tsm>::value, aux::none_type, typename Tsm::sm> {
+  using sm_t = typename Tsm::sm;
+  using thread_safety_t = typename Tsm::thread_safety_policy::type;
   template <class T>
-  using defer_queue_t = typename TSM::defer_queue_policy::template rebind<T>;
-  using defer_flag_t = typename TSM::defer_queue_policy::flag;
+  using defer_queue_t = typename Tsm::defer_queue_policy::template rebind<T>;
+  using defer_flag_t = typename Tsm::defer_queue_policy::flag;
   template <class T>
-  using process_queue_t = typename TSM::process_queue_policy::template rebind<T>;
-  using logger_t = typename TSM::logger_policy::type;
-  using dispatch_t = typename TSM::dispatch_policy;
+  using process_queue_t = typename Tsm::process_queue_policy::template rebind<T>;
+  using logger_t = typename Tsm::logger_policy::type;
+  using dispatch_t = typename Tsm::dispatch_policy;
   using transitions_t = decltype(aux::declval<sm_t>().operator()());
   using states_t = aux::apply_t<aux::unique_t, aux::apply_t<get_states, transitions_t>>;
   using states_ids_t = aux::apply_t<aux::type_id, states_t>;
@@ -1373,6 +1464,7 @@ struct sm_impl : aux::conditional_t<aux::is_empty<typename TSM::sm>::value, aux:
   using events_ids_t = aux::apply_t<aux::inherit, events_t>;
   using has_unexpected_events = typename aux::is_base_of<unexpected, aux::apply_t<aux::inherit, events_t>>::type;
   using has_entry_exits = typename aux::is_base_of<entry_exit, aux::apply_t<aux::inherit, events_t>>::type;
+  using should_not_instantiate_statemachine_class_t = aux::should_not_instantiate_statemachine_class<Tsm>;
   using defer_t = defer_queue_t<aux::apply_t<queue_event, events_t>>;
   using process_t = process_queue_t<aux::apply_t<queue_event, events_t>>;
   using deps = aux::apply_t<merge_deps, transitions_t>;
@@ -1385,27 +1477,48 @@ struct sm_impl : aux::conditional_t<aux::is_empty<typename TSM::sm>::value, aux:
 #endif
   struct mappings : mappings_t<transitions_t> {};
   template <class TPool>
-  constexpr sm_impl(aux::init, const TPool &p) : sm_impl{p, aux::is_empty<sm_t>{}} {}
+  constexpr sm_impl(aux::init, const TPool &p) : sm_impl{p, aux::should_not_subclass_statemachine_class<Tsm>{}} {}
   template <class TPool>
   constexpr sm_impl(const TPool &p, aux::false_type) : sm_t{aux::try_get<sm_t>(&p)}, transitions_{(*this)()} {
-    initialize(typename sm_impl<TSM>::initial_states_t{});
+    initialize(typename sm_impl<Tsm>::initial_states_t{});
   }
+
+  template <class T, class TPool>
+  constexpr decltype(auto) try_get_without_instantiating(const TPool &p) const {
+    static_assert(!(should_not_instantiate_statemachine_class_t::value &&
+              aux::would_instantiate_missing_ctor_parameter<sm_t, decltype(&p)>()),
+            "When policy sml::dont_instantiate_statemachine_class is used, you have to provide a reference to an "
+            "instance of the transition table type (boost::sml::sm< your_transition_table_type >) "
+            "as well as a reference to instances of all sub-statemachine types as constructor parameters like this: \n"
+            "boost::sml::sm< your_transition_table_type , sml::dont_instantiate_statemachine_class >{\n"
+            "    your_transition_table_instance\n"
+            "}"
+  );
+
+    return aux::try_get<T>(&p)();
+  }
+
   template <class TPool>
-  constexpr sm_impl(const TPool &p, aux::true_type) : transitions_{aux::try_get<sm_t>(&p)()} {
-    initialize(typename sm_impl<TSM>::initial_states_t{});
+  constexpr sm_impl(const TPool &p, aux::true_type) : transitions_{ try_get_without_instantiating<sm_t>(p) } {
+    initialize(typename sm_impl<Tsm>::initial_states_t{});
   }
   template <class TEvent, class TDeps, class TSubs>
   constexpr bool process_event(const TEvent &event, TDeps &deps, TSubs &subs) {
     const auto lock = thread_safety_.create_lock();
     (void)lock;
+    bool changed = false;
+    state_t old = current_state_[0];
     bool handled = process_internal_events(event, deps, subs);
+    bool queued_handled = true;
     do {
       do {
         while (process_internal_events(anonymous{}, deps, subs)) {
         }
-      } while (process_defer_events(deps, subs, handled, aux::type<defer_queue_t<TEvent>>{}, events_t{}));
-    } while (process_queued_events(deps, subs, aux::type<process_queue_t<TEvent>>{}, events_t{}));
-    return handled;
+        changed = (old != current_state_[0]);
+        old = current_state_[0];
+      } while (process_defer_events(deps, subs, changed, aux::type<defer_queue_t<TEvent>>{}, events_t{}));
+    } while (process_queued_events(deps, subs, queued_handled, aux::type<process_queue_t<TEvent>>{}, events_t{}));
+    return handled && queued_handled;
   }
   constexpr void initialize(const aux::type_list<> &) {}
   template <class TState>
@@ -1583,10 +1696,8 @@ struct sm_impl : aux::conditional_t<aux::is_empty<typename TSM::sm>::value, aux:
     bool handled = process_internal_events(event, deps, subs);
     if (handled && defer_again_) {
       ++defer_it_;
-      return false;
     } else {
-      defer_.erase(defer_it_);
-      defer_it_ = defer_.begin();
+      defer_it_ = defer_.erase(defer_it_);
       defer_end_ = defer_.end();
     }
     return handled;
@@ -1603,16 +1714,21 @@ struct sm_impl : aux::conditional_t<aux::is_empty<typename TSM::sm>::value, aux:
       defer_again_ = false;
       defer_it_ = defer_.begin();
       defer_end_ = defer_.end();
+      state_t old = current_state_[0];
       while (defer_it_ != defer_end_) {
         processed_events |= (this->*dispatch_table[defer_it_->id])(deps, subs, defer_it_->data);
         defer_again_ = false;
+        if (old != current_state_[0]) {
+          defer_it_ = defer_.begin();
+          old = current_state_[0];
+        }
       }
       defer_processing_ = false;
     }
     return processed_events;
   }
   template <class TDeps, class TSubs, class... TEvents>
-  constexpr bool process_queued_events(TDeps &, TSubs &, const aux::type<no_policy> &, const aux::type_list<TEvents...> &) {
+  constexpr bool process_queued_events(TDeps &, TSubs &,  bool &, const aux::type<no_policy> &, const aux::type_list<TEvents...> &) {
     return false;
   }
   template <class TDeps, class TSubs, class TEvent>
@@ -1627,13 +1743,13 @@ struct sm_impl : aux::conditional_t<aux::is_empty<typename TSM::sm>::value, aux:
 #endif
   }
   template <class TDeps, class TSubs, class TDeferQueue, class... TEvents>
-  bool process_queued_events(TDeps &deps, TSubs &subs, const aux::type<TDeferQueue> &, const aux::type_list<TEvents...> &) {
+  bool process_queued_events(TDeps &deps, TSubs &subs, bool &queued_handled, const aux::type<TDeferQueue> &, const aux::type_list<TEvents...> &) {
     using dispatch_table_t = bool (sm_impl::*)(TDeps &, TSubs &, const void *);
     const static dispatch_table_t dispatch_table[__BOOST_SML_ZERO_SIZE_ARRAY_CREATE(sizeof...(TEvents))] = {
         &sm_impl::process_event_no_queue<TDeps, TSubs, TEvents>...};
     bool wasnt_empty = !process_.empty();
     while (!process_.empty()) {
-      (this->*dispatch_table[process_.front().id])(deps, subs, process_.front().data);
+      queued_handled &= (this->*dispatch_table[process_.front().id])(deps, subs, process_.front().data);
       process_.pop();
     }
     return wasnt_empty;
@@ -1684,10 +1800,10 @@ struct sm_impl : aux::conditional_t<aux::is_empty<typename TSM::sm>::value, aux:
   typename defer_t::const_iterator defer_it_{};
   typename defer_t::const_iterator defer_end_{};
 };
-template <class TSM>
+template <class Tsm>
 class sm {
-  using sm_t = typename TSM::sm;
-  using logger_t = typename TSM::logger_policy::type;
+  using sm_t = typename Tsm::sm;
+  using logger_t = typename Tsm::logger_policy::type;
   using logger_dep_t =
       aux::conditional_t<aux::is_same<no_policy, logger_t>::value, aux::type_list<>, aux::type_list<logger_t &>>;
   using transitions_t = decltype(aux::declval<sm_t>().operator()());
@@ -1700,10 +1816,16 @@ class sm {
   using transitions = aux::apply_t<aux::type_list, transitions_t>;
 
  private:
-  using sm_all_t = aux::apply_t<get_non_empty_t, aux::join_t<aux::type_list<sm_t>, aux::apply_t<get_sm_t, state_machines>>>;
+  using sm_all_t = aux::apply_t<get_non_empty_t, aux::join_t<
+      aux::conditional_t<
+            aux::is_same<no_policy, typename Tsm::dont_instantiate_statemachine_class_policy>::value,
+            aux::type_list<sm_t>,
+            aux::none_type>,
+      aux::apply_t<get_sm_t, state_machines>>>;
+
   using sub_sms_t =
       aux::apply_t<aux::pool,
-                   typename convert_to_sm<TSM, aux::apply_t<aux::unique_t, aux::apply_t<get_sub_sms, states>>>::type>;
+                   typename convert_to_sm<Tsm, aux::apply_t<aux::unique_t, aux::apply_t<get_sub_sms, states>>>::type>;
   using deps = aux::apply_t<merge_deps, transitions_t>;
   using deps_t =
       aux::apply_t<aux::pool,
@@ -1711,40 +1833,50 @@ class sm {
   struct events_ids : aux::apply_t<aux::inherit, events> {};
 
  public:
-  constexpr sm() : deps_{aux::init{}, aux::pool<>{}}, sub_sms_{aux::pool<>{}} { aux::get<sm_impl<TSM>>(sub_sms_).start(deps_, sub_sms_); }
+  constexpr sm() : deps_{aux::init{}, aux::pool<>{}}, sub_sms_{aux::pool<>{}} { aux::get<sm_impl<Tsm>>(sub_sms_).start(deps_, sub_sms_); }
   template <class TDeps, __BOOST_SML_REQUIRES(!aux::is_same<aux::remove_reference_t<TDeps>, sm>::value)>
   constexpr explicit sm(TDeps &&deps) : deps_{aux::init{}, aux::pool<TDeps>{deps}}, sub_sms_{aux::pool<TDeps>{deps}} {
-    aux::get<sm_impl<TSM>>(sub_sms_).start(deps_, sub_sms_);
+    aux::get<sm_impl<Tsm>>(sub_sms_).start(deps_, sub_sms_);
   }
   template <class... TDeps, __BOOST_SML_REQUIRES((sizeof...(TDeps) > 1) && aux::is_unique_t<TDeps...>::value)>
   constexpr explicit sm(TDeps &&... deps) : deps_{aux::init{}, aux::pool<TDeps...>{deps...}}, sub_sms_{aux::pool<TDeps...>{deps...}} {
-    aux::get<sm_impl<TSM>>(sub_sms_).start(deps_, sub_sms_);
+    aux::get<sm_impl<Tsm>>(sub_sms_).start(deps_, sub_sms_);
   }
-  constexpr sm(aux::init, deps_t &deps) : deps_{deps}, sub_sms_{deps} { aux::get<sm_impl<TSM>>(sub_sms_).start(deps_, sub_sms_); }
+  constexpr sm(aux::init, deps_t &deps) : deps_{deps}, sub_sms_{deps} { aux::get<sm_impl<Tsm>>(sub_sms_).start(deps_, sub_sms_); }
   constexpr sm(const sm &) = default;
   constexpr sm(sm &&) = default;
   constexpr sm &operator=(const sm &) = default;
   constexpr sm &operator=(sm &&) = default;
   template <class TEvent, __BOOST_SML_REQUIRES(aux::is_base_of<TEvent, events_ids>::value)>
   constexpr bool process_event(const TEvent &event) {
-    return aux::get<sm_impl<TSM>>(sub_sms_).process_event(event, deps_, sub_sms_);
+    return aux::get<sm_impl<Tsm>>(sub_sms_).process_event(event, deps_, sub_sms_);
   }
   template <class TEvent, __BOOST_SML_REQUIRES(!aux::is_base_of<TEvent, events_ids>::value)>
   constexpr bool process_event(const TEvent &event) {
-    return aux::get<sm_impl<TSM>>(sub_sms_).process_event(unexpected_event<_, TEvent>{event}, deps_, sub_sms_);
+    return aux::get<sm_impl<Tsm>>(sub_sms_).process_event(unexpected_event<_, TEvent>{event}, deps_, sub_sms_);
   }
   template <class T = aux::identity<sm_t>, class TVisitor, __BOOST_SML_REQUIRES(concepts::callable<void, TVisitor>::value)>
   constexpr void visit_current_states(const TVisitor &visitor) const {
     using type = typename T::type;
-    using sm_impl_t = sm_impl<typename TSM::template rebind<type>>;
+    using sm_impl_t = sm_impl<typename Tsm::template rebind<type>>;
     using states_t = typename sm_impl_t::states_t;
     constexpr auto regions = sm_impl_t::regions;
     aux::cget<sm_impl_t>(sub_sms_).visit_current_states(visitor, states_t{}, aux::make_index_sequence<regions>{});
   }
-  template <class T = aux::identity<sm_t>, class TState>
+  template <class T = aux::identity<sm_t>, class TState,
+            __BOOST_SML_REQUIRES(sm_impl<typename Tsm::template rebind<typename T::type>>::regions == 1)>
   constexpr bool is(const TState &) const {
     using type = typename T::type;
-    using sm_impl_t = sm_impl<typename TSM::template rebind<type>>;
+    using sm_impl_t = sm_impl<typename Tsm::template rebind<type>>;
+    using state_t = typename sm_impl_t::state_t;
+    using states_ids_t = typename sm_impl_t::states_ids_t;
+    return aux::get_id<state_t, typename TState::type>((states_ids_t *)0) == aux::cget<sm_impl_t>(sub_sms_).current_state_[0];
+  }
+  template <class T = aux::identity<sm_t>, class TState,
+            __BOOST_SML_REQUIRES(sm_impl<typename Tsm::template rebind<typename T::type>>::regions != 1)>
+  constexpr bool is(const TState &) const {
+    using type = typename T::type;
+    using sm_impl_t = sm_impl<typename Tsm::template rebind<type>>;
     using state_t = typename sm_impl_t::state_t;
     using states_ids_t = typename sm_impl_t::states_ids_t;
     auto result = false;
@@ -1758,7 +1890,7 @@ class sm {
   template <class T = aux::identity<sm_t>, template <class...> class TState>
   constexpr bool is(const TState<terminate_state> &) const {
     using type = typename T::type;
-    using sm_impl_t = sm_impl<typename TSM::template rebind<type>>;
+    using sm_impl_t = sm_impl<typename Tsm::template rebind<type>>;
     using state_t = typename sm_impl_t::state_t;
     using states_ids_t = typename sm_impl_t::states_ids_t;
     auto result = false;
@@ -1770,10 +1902,10 @@ class sm {
     return result;
   }
   template <class T = aux::identity<sm_t>, class... TStates,
-            __BOOST_SML_REQUIRES(sizeof...(TStates) == sm_impl<typename TSM::template rebind<typename T::type>>::regions)>
+            __BOOST_SML_REQUIRES(sizeof...(TStates) == sm_impl<typename Tsm::template rebind<typename T::type>>::regions)>
   constexpr bool is(const TStates &...) const {
     using type = typename T::type;
-    using sm_impl_t = sm_impl<typename TSM::template rebind<type>>;
+    using sm_impl_t = sm_impl<typename Tsm::template rebind<type>>;
     using states_ids_t = typename sm_impl_t::states_ids_t;
     using state_t = typename sm_impl_t::state_t;
     auto result = true;
@@ -1786,10 +1918,10 @@ class sm {
     return result;
   }
   template <class T = aux::identity<sm_t>, class... TStates,
-            __BOOST_SML_REQUIRES(!aux::is_same<no_policy, typename TSM::testing_policy>::value && aux::always<T>::value)>
+            __BOOST_SML_REQUIRES(!aux::is_same<no_policy, typename Tsm::testing_policy>::value && aux::always<T>::value)>
   constexpr void set_current_states(const TStates &...) {
     using type = typename T::type;
-    using sm_impl_t = sm_impl<typename TSM::template rebind<type>>;
+    using sm_impl_t = sm_impl<typename Tsm::template rebind<type>>;
     using states_ids_t = typename sm_impl_t::states_ids_t;
     using state_t = typename sm_impl_t::state_t;
     auto &sm = aux::get<sm_impl_t>(sub_sms_);
@@ -1803,11 +1935,11 @@ class sm {
   }
   template <class T>
   constexpr operator T &() {
-    return aux::get<sm_impl<typename TSM::template rebind<T>>>(sub_sms_);
+    return aux::get<sm_impl<typename Tsm::template rebind<T>>>(sub_sms_);
   }
   template <class T>
   constexpr operator const T &() {
-    return aux::cget<sm_impl<typename TSM::template rebind<T>>>(sub_sms_);
+    return aux::cget<sm_impl<typename Tsm::template rebind<T>>>(sub_sms_);
   }
 
  private:
@@ -1832,133 +1964,133 @@ template <class T, class E>
 auto args__(...) -> decltype(args1__<T, E>(0));
 template <class T, class E>
 using args_t = decltype(args__<T, E>(0));
-template <class T, class TEvent, class TSM, class TDeps>
-constexpr decltype(auto) get_arg(const aux::type<T> &, const TEvent &, TSM &, TDeps &deps) {
+template <class T, class TEvent, class Tsm, class TDeps>
+constexpr decltype(auto) get_arg(const aux::type<T> &, const TEvent &, Tsm &, TDeps &deps) {
   return aux::get<T>(deps);
 }
-template <class TEvent, class TSM, class TDeps>
-constexpr decltype(auto) get_arg(const aux::type<TEvent> &, const TEvent &event, TSM &, TDeps &) {
+template <class TEvent, class Tsm, class TDeps>
+constexpr decltype(auto) get_arg(const aux::type<TEvent> &, const TEvent &event, Tsm &, TDeps &) {
   return event;
 }
-template <class TEvent, class TSM, class TDeps>
-constexpr decltype(auto) get_arg(const aux::type<const TEvent &> &, const TEvent &event, TSM &, TDeps &) {
+template <class TEvent, class Tsm, class TDeps>
+constexpr decltype(auto) get_arg(const aux::type<const TEvent &> &, const TEvent &event, Tsm &, TDeps &) {
   return event;
 }
-template <class T, class TEvent, class TSM, class TDeps>
-constexpr decltype(auto) get_arg(const aux::type<const TEvent &> &, const back::unexpected_event<T, TEvent> &event, TSM &, TDeps &) {
+template <class T, class TEvent, class Tsm, class TDeps>
+constexpr decltype(auto) get_arg(const aux::type<const TEvent &> &, const back::unexpected_event<T, TEvent> &event, Tsm &, TDeps &) {
   return event.event_;
 }
-template <class T, class TEvent, class TSM, class TDeps>
-constexpr decltype(auto) get_arg(const aux::type<const TEvent &> &, const back::on_entry<T, TEvent> &event, TSM &, TDeps &) {
+template <class T, class TEvent, class Tsm, class TDeps>
+constexpr decltype(auto) get_arg(const aux::type<const TEvent &> &, const back::on_entry<T, TEvent> &event, Tsm &, TDeps &) {
   return event.event_;
 }
-template <class T, class TEvent, class TSM, class TDeps>
-constexpr decltype(auto) get_arg(const aux::type<const TEvent &> &, const back::on_exit<T, TEvent> &event, TSM &, TDeps &) {
+template <class T, class TEvent, class Tsm, class TDeps>
+constexpr decltype(auto) get_arg(const aux::type<const TEvent &> &, const back::on_exit<T, TEvent> &event, Tsm &, TDeps &) {
   return event.event_;
 }
-template <class T, class TEvent, class TSM, class TDeps>
-constexpr decltype(auto) get_arg(const aux::type<const TEvent &> &, const back::exception<T, TEvent> &event, TSM &, TDeps &) {
+template <class T, class TEvent, class Tsm, class TDeps>
+constexpr decltype(auto) get_arg(const aux::type<const TEvent &> &, const back::exception<T, TEvent> &event, Tsm &, TDeps &) {
   return event.exception_;
 }
-template <class... TEvents, class TEvent, class TSM, class TDeps>
-constexpr decltype(auto) get_arg(const aux::type<back::defer<TEvents...>> &, const TEvent, TSM &sm, TDeps &) {
+template <class... TEvents, class TEvent, class Tsm, class TDeps>
+constexpr decltype(auto) get_arg(const aux::type<back::defer<TEvents...>> &, const TEvent, Tsm &sm, TDeps &) {
   return back::defer<TEvents...>{sm.defer_};
 }
-template <class... TEvents, class TEvent, class TSM, class TDeps>
-constexpr decltype(auto) get_arg(const aux::type<back::process<TEvents...>> &, const TEvent, TSM &sm, TDeps &) {
+template <class... TEvents, class TEvent, class Tsm, class TDeps>
+constexpr decltype(auto) get_arg(const aux::type<back::process<TEvents...>> &, const TEvent, Tsm &sm, TDeps &) {
   return back::process<TEvents...>{sm.process_};
 }
 template <class, class, class>
 struct call;
 template <class TEvent>
 struct call<TEvent, aux::type_list<>, back::no_policy> {
-  template <class T, class TSM, class TDeps, class TSubs>
-  constexpr static auto execute(T object, const TEvent &, TSM &, TDeps &, TSubs &) {
+  template <class T, class Tsm, class TDeps, class TSubs>
+  constexpr static auto execute(T object, const TEvent &, Tsm &, TDeps &, TSubs &) {
     return object();
   }
 };
 template <class TEvent, class TLogger>
 struct call<TEvent, aux::type_list<>, TLogger> {
-  template <class T, class TSM, class TDeps, class TSubs>
-  constexpr static auto execute(T object, const TEvent &event, TSM &, TDeps &deps, TSubs &) {
+  template <class T, class Tsm, class TDeps, class TSubs>
+  constexpr static auto execute(T object, const TEvent &event, Tsm &, TDeps &deps, TSubs &) {
     using result_type = decltype(object());
-    return execute_impl<typename TSM::sm_t>(aux::type<result_type>{}, object, event, deps);
+    return execute_impl<typename Tsm::sm_t>(aux::type<result_type>{}, object, event, deps);
   }
-  template <class TSM, class T, class TDeps>
+  template <class Tsm, class T, class TDeps>
   constexpr static auto execute_impl(const aux::type<bool> &, T object, const TEvent &event, TDeps &deps) {
     const auto result = object();
-    back::policies::log_guard<TSM>(aux::type<TLogger>{}, deps, object, event, result);
+    back::policies::log_guard<Tsm>(aux::type<TLogger>{}, deps, object, event, result);
     return result;
   }
-  template <class TSM, class T, class TDeps>
+  template <class Tsm, class T, class TDeps>
   constexpr static auto execute_impl(const aux::type<void> &, T object, const TEvent &event, TDeps &deps) {
-    back::policies::log_action<TSM>(aux::type<TLogger>{}, deps, object, event);
+    back::policies::log_action<Tsm>(aux::type<TLogger>{}, deps, object, event);
     object();
   }
 };
 template <class TEvent>
 struct call<TEvent, aux::type_list<TEvent>, back::no_policy> {
-  template <class T, class TSM, class TDeps, class TSubs>
-  constexpr static auto execute(T object, const TEvent &event, TSM &, TDeps &, TSubs &) {
+  template <class T, class Tsm, class TDeps, class TSubs>
+  constexpr static auto execute(T object, const TEvent &event, Tsm &, TDeps &, TSubs &) {
     return object(event);
   }
 };
 template <class TEvent, class TLogger>
 struct call<TEvent, aux::type_list<TEvent>, TLogger> {
-  template <class T, class TSM, class TDeps, class TSubs>
-  constexpr static auto execute(T object, const TEvent &event, TSM &, TDeps &deps, TSubs &) {
+  template <class T, class Tsm, class TDeps, class TSubs>
+  constexpr static auto execute(T object, const TEvent &event, Tsm &, TDeps &deps, TSubs &) {
     using result_type = decltype(object(event));
-    return execute_impl<typename TSM::sm_t>(aux::type<result_type>{}, object, event, deps);
+    return execute_impl<typename Tsm::sm_t>(aux::type<result_type>{}, object, event, deps);
   }
-  template <class TSM, class T, class TDeps>
+  template <class Tsm, class T, class TDeps>
   constexpr static auto execute_impl(const aux::type<bool> &, T object, const TEvent &event, TDeps &deps) {
     const auto result = object(event);
-    back::policies::log_guard<TSM>(aux::type<TLogger>{}, deps, object, event, result);
+    back::policies::log_guard<Tsm>(aux::type<TLogger>{}, deps, object, event, result);
     return result;
   }
-  template <class TSM, class T, class TDeps>
+  template <class Tsm, class T, class TDeps>
   constexpr static auto execute_impl(const aux::type<void> &, T object, const TEvent &event, TDeps &deps) {
-    back::policies::log_action<TSM>(aux::type<TLogger>{}, deps, object, event);
+    back::policies::log_action<Tsm>(aux::type<TLogger>{}, deps, object, event);
     object(event);
   }
 };
 template <class TEvent>
 struct call<TEvent, aux::type_list<action_base>, back::no_policy> {
-  template <class T, class TSM, class TDeps, class TSubs>
-  static auto execute(T object, const TEvent &event, TSM &sm, TDeps &deps, TSubs &subs) {
+  template <class T, class Tsm, class TDeps, class TSubs>
+  static auto execute(T object, const TEvent &event, Tsm &sm, TDeps &deps, TSubs &subs) {
     return object(event, sm, deps, subs);
   }
 };
 template <class TEvent, class TLogger>
 struct call<TEvent, aux::type_list<action_base>, TLogger> {
-  template <class T, class TSM, class TDeps, class TSubs>
-  constexpr static auto execute(T object, const TEvent &event, TSM &sm, TDeps &deps, TSubs &subs) {
+  template <class T, class Tsm, class TDeps, class TSubs>
+  constexpr static auto execute(T object, const TEvent &event, Tsm &sm, TDeps &deps, TSubs &subs) {
     return object(event, sm, deps, subs);
   }
 };
 template <class TEvent, class... Ts>
 struct call<TEvent, aux::type_list<Ts...>, back::no_policy> {
-  template <class T, class TSM, class TDeps, class TSubs>
-  constexpr static auto execute(T object, const TEvent &event, TSM &sm, TDeps &deps, TSubs &) {
+  template <class T, class Tsm, class TDeps, class TSubs>
+  constexpr static auto execute(T object, const TEvent &event, Tsm &sm, TDeps &deps, TSubs &) {
     return object(get_arg(aux::type<Ts>{}, event, sm, deps)...);
   }
 };
 template <class TEvent, class... Ts, class TLogger>
 struct call<TEvent, aux::type_list<Ts...>, TLogger> {
-  template <class T, class TSM, class TDeps, class TSubs>
-  constexpr static auto execute(T object, const TEvent &event, TSM &sm, TDeps &deps, TSubs &) {
+  template <class T, class Tsm, class TDeps, class TSubs>
+  constexpr static auto execute(T object, const TEvent &event, Tsm &sm, TDeps &deps, TSubs &) {
     using result_type = decltype(object(get_arg(aux::type<Ts>{}, event, sm, deps)...));
-    return execute_impl<typename TSM::sm_t>(aux::type<result_type>{}, object, event, sm, deps);
+    return execute_impl<typename Tsm::sm_t>(aux::type<result_type>{}, object, event, sm, deps);
   }
-  template <class TSM, class T, class SM, class TDeps>
+  template <class Tsm, class T, class SM, class TDeps>
   constexpr static auto execute_impl(const aux::type<bool> &, T object, const TEvent &event, SM &sm, TDeps &deps) {
     const auto result = object(get_arg(aux::type<Ts>{}, event, sm, deps)...);
-    back::policies::log_guard<TSM>(aux::type<TLogger>{}, deps, object, event, result);
+    back::policies::log_guard<Tsm>(aux::type<TLogger>{}, deps, object, event, result);
     return result;
   }
-  template <class TSM, class T, class SM, class TDeps>
+  template <class Tsm, class T, class SM, class TDeps>
   constexpr static auto execute_impl(const aux::type<void> &, T object, const TEvent &event, SM &sm, TDeps &deps) {
-    back::policies::log_action<TSM>(aux::type<TLogger>{}, deps, object, event);
+    back::policies::log_action<Tsm>(aux::type<TLogger>{}, deps, object, event);
     object(get_arg(aux::type<Ts>{}, event, sm, deps)...);
   }
 };
@@ -1966,19 +2098,19 @@ template <class... Ts>
 class seq_ : operator_base {
  public:
   constexpr explicit seq_(Ts... ts) : a(ts...) {}
-  template <class TEvent, class TSM, class TDeps, class TSubs>
-  constexpr void operator()(const TEvent &event, TSM &sm, TDeps &deps, TSubs &subs) {
+  template <class TEvent, class Tsm, class TDeps, class TSubs>
+  constexpr void operator()(const TEvent &event, Tsm &sm, TDeps &deps, TSubs &subs) {
     for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, sm, deps, subs);
   }
 
  private:
-  template <int... Ns, class TEvent, class TSM, class TDeps, class TSubs>
-  constexpr void for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TSM &sm, TDeps &deps, TSubs &subs) {
+  template <int... Ns, class TEvent, class Tsm, class TDeps, class TSubs>
+  constexpr void for_all(const aux::index_sequence<Ns...> &, const TEvent &event, Tsm &sm, TDeps &deps, TSubs &subs) {
 #if defined(__cpp_fold_expressions)
-    (call<TEvent, args_t<Ts, TEvent>, typename TSM::logger_t>::execute(aux::get_by_id<Ns>(&a), event, sm, deps, subs), ...);
+    (call<TEvent, args_t<Ts, TEvent>, typename Tsm::logger_t>::execute(aux::get_by_id<Ns>(&a), event, sm, deps, subs), ...);
 #else
     (void)aux::swallow{
-        0, (call<TEvent, args_t<Ts, TEvent>, typename TSM::logger_t>::execute(aux::get_by_id<Ns>(&a), event, sm, deps, subs),
+        0, (call<TEvent, args_t<Ts, TEvent>, typename Tsm::logger_t>::execute(aux::get_by_id<Ns>(&a), event, sm, deps, subs),
             0)...};
 #endif
   }
@@ -1988,20 +2120,20 @@ template <class... Ts>
 class and_ : operator_base {
  public:
   constexpr explicit and_(Ts... ts) : g(ts...) {}
-  template <class TEvent, class TSM, class TDeps, class TSubs>
-  constexpr auto operator()(const TEvent &event, TSM &sm, TDeps &deps, TSubs &subs) {
+  template <class TEvent, class Tsm, class TDeps, class TSubs>
+  constexpr auto operator()(const TEvent &event, Tsm &sm, TDeps &deps, TSubs &subs) {
     return for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, sm, deps, subs);
   }
 
  private:
-  template <int... Ns, class TEvent, class TSM, class TDeps, class TSubs>
-  constexpr auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TSM &sm, TDeps &deps, TSubs &subs) {
+  template <int... Ns, class TEvent, class Tsm, class TDeps, class TSubs>
+  constexpr auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, Tsm &sm, TDeps &deps, TSubs &subs) {
 #if defined(__cpp_fold_expressions)
-    return (call<TEvent, args_t<Ts, TEvent>, typename TSM::logger_t>::execute(aux::get_by_id<Ns>(&g), event, sm, deps, subs) &&
+    return (call<TEvent, args_t<Ts, TEvent>, typename Tsm::logger_t>::execute(aux::get_by_id<Ns>(&g), event, sm, deps, subs) &&
             ...);
 #else
     auto result = true;
-    (void)aux::swallow{0, (result = result && call<TEvent, args_t<Ts, TEvent>, typename TSM::logger_t>::execute(
+    (void)aux::swallow{0, (result = result && call<TEvent, args_t<Ts, TEvent>, typename Tsm::logger_t>::execute(
                                                   aux::get_by_id<Ns>(&g), event, sm, deps, subs),
                            0)...};
     return result;
@@ -2013,20 +2145,20 @@ template <class... Ts>
 class or_ : operator_base {
  public:
   constexpr explicit or_(Ts... ts) : g(ts...) {}
-  template <class TEvent, class TSM, class TDeps, class TSubs>
-  constexpr auto operator()(const TEvent &event, TSM &sm, TDeps &deps, TSubs &subs) {
+  template <class TEvent, class Tsm, class TDeps, class TSubs>
+  constexpr auto operator()(const TEvent &event, Tsm &sm, TDeps &deps, TSubs &subs) {
     return for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, sm, deps, subs);
   }
 
  private:
-  template <int... Ns, class TEvent, class TSM, class TDeps, class TSubs>
-  constexpr auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TSM &sm, TDeps &deps, TSubs &subs) {
+  template <int... Ns, class TEvent, class Tsm, class TDeps, class TSubs>
+  constexpr auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, Tsm &sm, TDeps &deps, TSubs &subs) {
 #if defined(__cpp_fold_expressions)
-    return (call<TEvent, args_t<Ts, TEvent>, typename TSM::logger_t>::execute(aux::get_by_id<Ns>(&g), event, sm, deps, subs) ||
+    return (call<TEvent, args_t<Ts, TEvent>, typename Tsm::logger_t>::execute(aux::get_by_id<Ns>(&g), event, sm, deps, subs) ||
             ...);
 #else
     auto result = false;
-    (void)aux::swallow{0, (result = result || call<TEvent, args_t<Ts, TEvent>, typename TSM::logger_t>::execute(
+    (void)aux::swallow{0, (result = result || call<TEvent, args_t<Ts, TEvent>, typename Tsm::logger_t>::execute(
                                                   aux::get_by_id<Ns>(&g), event, sm, deps, subs),
                            0)...};
     return result;
@@ -2038,9 +2170,9 @@ template <class T>
 class not_ : operator_base {
  public:
   constexpr explicit not_(T t) : g(t) {}
-  template <class TEvent, class TSM, class TDeps, class TSubs>
-  constexpr auto operator()(const TEvent &event, TSM &sm, TDeps &deps, TSubs &subs) {
-    return !call<TEvent, args_t<T, TEvent>, typename TSM::logger_t>::execute(g, event, sm, deps, subs);
+  template <class TEvent, class Tsm, class TDeps, class TSubs>
+  constexpr auto operator()(const TEvent &event, Tsm &sm, TDeps &deps, TSubs &subs) {
+    return !call<TEvent, args_t<T, TEvent>, typename Tsm::logger_t>::execute(g, event, sm, deps, subs);
   }
 
  private:
@@ -2066,8 +2198,8 @@ constexpr auto operator,(const T1 &t1, const T2 &t2) {
 namespace front {
 namespace actions {
 struct defer : action_base {
-  template <class TEvent, class TSM, class TDeps, class TSubs>
-  constexpr void operator()(const TEvent &event, TSM &sm, TDeps &, TSubs &) {
+  template <class TEvent, class Tsm, class TDeps, class TSubs>
+  constexpr void operator()(const TEvent &event, Tsm &sm, TDeps &, TSubs &) {
     if (sm.defer_processing_) {
       sm.defer_again_ = true;
     } else {
@@ -2088,6 +2220,7 @@ template <template <class...> class T>
 using defer_queue = back::policies::defer_queue<T>;
 template <template <class...> class T>
 using process_queue = back::policies::process_queue<T>;
+using dont_instantiate_statemachine_class = back::policies::dont_instantiate_statemachine_class;
 #if defined(_MSC_VER) && !defined(__clang__)
 template <class T, class... TPolicies, class T__ = aux::remove_reference_t<decltype(aux::declval<T>())>>
 using sm = back::sm<back::sm_policy<T__, TPolicies...>>;
@@ -2119,8 +2252,8 @@ struct process {
   class process_impl : public action_base {
    public:
     constexpr explicit process_impl(const TEvent &event) : event(event) {}
-    template <class T, class TSM, class TDeps, class TSubs>
-    constexpr void operator()(const T &, TSM &, TDeps &, TSubs &subs) {
+    template <class T, class Tsm, class TDeps, class TSubs>
+    constexpr void operator()(const T &, Tsm &, TDeps &, TSubs &subs) {
       aux::get<get_root_sm_t<TSubs>>(subs).process_.push(event);
     }
 
@@ -2307,9 +2440,9 @@ struct transition<state<S2>, G, A> : transition<state<internal>, state<S2>, fron
     return transition<T, state<S2>, front::event<back::anonymous>, G, A>{g, a};
   }
   const auto &operator()() const { return *this; }
-  template <class TEvent, class TSM, class TDeps, class TSubs>
-  constexpr auto operator()(const TEvent &event, TSM &sm, TDeps &deps, TSubs &subs) -> void {
-    typename TSM::state_t s{};
+  template <class TEvent, class Tsm, class TDeps, class TSubs>
+  constexpr auto operator()(const TEvent &event, Tsm &sm, TDeps &deps, TSubs &subs) -> void {
+    typename Tsm::state_t s{};
     this->execute(event, sm, deps, subs, s);
   }
 };
@@ -2408,7 +2541,7 @@ struct transition<state<S2>, transition_eg<front::event<E>, G>>
   constexpr transition(const state<S2> &, const transition_eg<front::event<E>, G> &t)
       : transition<state<internal>, state<S2>, front::event<E>, G, none>{t.g, none{}} {}
   template <class T>
-  auto operator=(const T &) const {
+  constexpr auto operator=(const T &) const {
     return transition<T, state<S2>, front::event<E>, G, none>{g, none{}};
   }
 };
@@ -2425,7 +2558,7 @@ struct transition<state<S2>, transition_ea<front::event<E>, A>>
   constexpr transition(const state<S2> &, const transition_ea<front::event<E>, A> &t)
       : transition<state<internal>, state<S2>, front::event<E>, always, A>{always{}, t.a} {}
   template <class T>
-  auto operator=(const T &) const {
+  constexpr auto operator=(const T &) const {
     return transition<T, state<S2>, front::event<E>, always, A>{always{}, a};
   }
 };
@@ -2710,6 +2843,7 @@ constexpr typename front::state_sm<T>::type state{};
 template <class T>
 typename front::state_sm<T>::type state __BOOST_SML_VT_INIT;
 #endif
+#if !(defined(__ICCARM__))
 inline namespace literals {
 #if defined(__cpp_nontype_template_parameter_class) || \
     defined(__cpp_nontype_template_args) && __cpp_nontype_template_args >= 201911L
@@ -2734,6 +2868,7 @@ constexpr auto operator""_e() {
 }
 #endif
 }  // namespace literals
+#endif
 __BOOST_SML_UNUSED static front::state<back::terminate_state> X;
 __BOOST_SML_UNUSED static front::history_state H;
 __BOOST_SML_UNUSED static front::actions::defer defer;
