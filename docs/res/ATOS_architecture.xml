@@ -1,0 +1,291 @@
+<mxfile host="app.diagrams.net" modified="2023-10-03T10:26:26.617Z" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36" etag="8Gnqawl_ZRw8ZCYpNzsB" version="22.0.0" type="device">
+  <diagram name="Page-1" id="pXd3vce5NZkngnzd0AVI">
+    <mxGraphModel dx="2158" dy="1779" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-3" value="&lt;h1&gt;Legend:&lt;/h1&gt;&lt;div&gt;&lt;span style=&quot;background-color: rgb(255, 204, 204);&quot;&gt;&lt;b&gt;C&lt;/b&gt; - Core module, essential to operations&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: rgb(255, 204, 153);&quot;&gt;&lt;b&gt;S&lt;/b&gt; - Simulator&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: rgb(255, 255, 153);&quot;&gt;&lt;b&gt;T&lt;/b&gt;&lt;sub style=&quot;&quot;&gt;&lt;b&gt;c&lt;/b&gt; &lt;/sub&gt;-Trajectory consumer&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: rgb(204, 255, 153);&quot;&gt;&lt;b&gt;T&lt;/b&gt;&lt;sub style=&quot;border-color: var(--border-color);&quot;&gt;&lt;b&gt;p&lt;/b&gt;&amp;nbsp;&lt;/sub&gt;&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;-Trajectory provider&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;border-color: var(--border-color); background-color: rgb(153, 255, 204);&quot;&gt;&lt;b&gt;D&lt;/b&gt; - Produces dynamic input during the scenario&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;border-color: var(--border-color); background-color: rgb(153, 255, 255);&quot;&gt;&lt;b&gt;V&lt;/b&gt; - Outputs Visualization Data&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: rgb(153, 204, 255);&quot;&gt;&lt;b&gt;E&lt;/b&gt; - Provides data to external entities&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: rgb(153, 153, 255);&quot;&gt;&lt;b style=&quot;&quot;&gt;R&lt;/b&gt;&amp;nbsp;- Provides test reports&lt;/span&gt;&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;" parent="1" vertex="1">
+          <mxGeometry width="280" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-5" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;align=left;dashed=1;" parent="1" vertex="1">
+          <mxGeometry x="297" y="117" width="600" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-6" value="ATOS" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="320" y="110" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-9" value="" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;gradientColor=default;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="-70" y="222" width="240" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-8" value="Scenario Engine" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="-70" y="267" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-10" value="esmini" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="-80" y="222" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-11" value="Road Manager" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="50" y="267" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-51" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" parent="1" source="Nz_zJu77zt_nOGFol6SB-12" target="Nz_zJu77zt_nOGFol6SB-45" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-54" value="Initial trajectory,&lt;br&gt;ControlCenter status" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="Nz_zJu77zt_nOGFol6SB-51" vertex="1" connectable="0">
+          <mxGeometry x="-0.1635" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-12" value="" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;gradientColor=default;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="-65" y="430" width="240" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-14" value="isoObject (one per scenario actor)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="-65" y="430" width="195" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-110" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.838;entryY=1.001;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="Nz_zJu77zt_nOGFol6SB-19" target="Nz_zJu77zt_nOGFol6SB-5" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="800" y="500" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="442" y="460" />
+              <mxPoint x="800" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-19" value="&lt;b&gt;ObjectControl&lt;/b&gt;&lt;br&gt;Maintains test state, sends control signals to each TestObject" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="382" y="370" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-20" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="Nz_zJu77zt_nOGFol6SB-12" target="Nz_zJu77zt_nOGFol6SB-19" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="470" as="sourcePoint" />
+            <mxPoint x="450" y="420" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="220" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-21" value="&lt;b&gt;ISO22133&lt;/b&gt;&lt;br&gt;Positions&lt;br&gt;Object/CC state&lt;br&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="Nz_zJu77zt_nOGFol6SB-20" vertex="1" connectable="0">
+          <mxGeometry x="0.5812" relative="1" as="geometry">
+            <mxPoint x="-84" y="65" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-41" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="Nz_zJu77zt_nOGFol6SB-22" target="Nz_zJu77zt_nOGFol6SB-19" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-44" value="1) Provide initial static trajectories&lt;br&gt;2) Trigger actions" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="Nz_zJu77zt_nOGFol6SB-41" vertex="1" connectable="0">
+          <mxGeometry x="-0.2335" y="-3" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-22" value="&lt;b&gt;EsminiAdapter&lt;/b&gt;&lt;br&gt;Communicates with the esmini simulator&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="380" y="265" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-23" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="Nz_zJu77zt_nOGFol6SB-9" target="Nz_zJu77zt_nOGFol6SB-22" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="190" y="305" as="sourcePoint" />
+            <mxPoint x="240" y="255" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-43" value="1) Generate initial static trajectories&lt;br&gt;2) Update simulation dynamically" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="Nz_zJu77zt_nOGFol6SB-23" vertex="1" connectable="0">
+          <mxGeometry x="0.2366" y="3" relative="1" as="geometry">
+            <mxPoint x="-20" y="3" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-24" value="&lt;span style=&quot;background-color: rgb(255, 204, 204);&quot;&gt;&lt;b&gt;C&lt;/b&gt;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="382" y="352" width="5" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-25" value="&lt;span style=&quot;background-color: rgb(255, 255, 204);&quot;&gt;&lt;b&gt;T&lt;span style=&quot;font-size: 10px;&quot;&gt;c&lt;/span&gt;&lt;/b&gt;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="394" y="352" width="5" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-26" value="&lt;span style=&quot;background-color: rgb(204, 255, 153);&quot;&gt;&lt;b&gt;T&lt;span style=&quot;font-size: 10px;&quot;&gt;p&lt;/span&gt;&lt;/b&gt;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="379" y="245" width="15" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-35" value="&lt;span style=&quot;background-color: rgb(255, 204, 153);&quot;&gt;&lt;b&gt;S&lt;/b&gt;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="-68" y="203" width="5" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-42" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="Nz_zJu77zt_nOGFol6SB-36" target="Nz_zJu77zt_nOGFol6SB-19" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-36" value="&lt;b&gt;BackToStart&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;Generates trajectories to bring test actors to their starting position&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="560" y="370" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-40" value="&lt;span style=&quot;background-color: rgb(204, 255, 153);&quot;&gt;&lt;b&gt;T&lt;span style=&quot;font-size: 10px;&quot;&gt;p&lt;/span&gt;&lt;/b&gt;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="555" y="351" width="30" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-52" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=1;entryDx=0;entryDy=0;" parent="1" source="Nz_zJu77zt_nOGFol6SB-45" target="Nz_zJu77zt_nOGFol6SB-12" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-5" y="630" />
+              <mxPoint x="-5" y="630" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-53" value="Positions,&lt;br&gt;ObjectStatus" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="Nz_zJu77zt_nOGFol6SB-52" vertex="1" connectable="0">
+          <mxGeometry x="0.1635" y="2" relative="1" as="geometry">
+            <mxPoint x="2" y="5" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-45" value="" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;gradientColor=default;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="-65" y="640" width="240" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-46" value="Positioning solution" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="-65" y="700" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-47" value="Physical test object implementation" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="-50" y="650" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-48" value="Steering/Control algorithm" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="55" y="700" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-57" value="" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;gradientColor=default;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="660" y="590" width="290" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-58" value="bash" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="685" y="670" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-59" value="Test control and supervision User interface" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="675" y="600" width="115" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-60" value="Control Panel" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="805" y="670" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-61" value="studio.foxglove.dev" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="745" y="730" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-63" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.841;entryY=1.001;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="Nz_zJu77zt_nOGFol6SB-57" target="Nz_zJu77zt_nOGFol6SB-5" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="350" y="540" as="sourcePoint" />
+            <mxPoint x="400" y="490" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-64" value="&lt;b&gt;ROS2&lt;/b&gt;&lt;br&gt;Test state change requests,&lt;br&gt;Test visualization" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="Nz_zJu77zt_nOGFol6SB-63" vertex="1" connectable="0">
+          <mxGeometry x="0.0937" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-65" value="&lt;b&gt;DirectControl&lt;/b&gt;&lt;br&gt;Provides a way to input steering signals to test objects" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="560" y="265" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-108" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="Nz_zJu77zt_nOGFol6SB-66" target="Nz_zJu77zt_nOGFol6SB-100" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="888" y="297" />
+              <mxPoint x="888" y="297" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-66" value="&lt;b&gt;JournalControl&lt;/b&gt;&lt;br&gt;Generates a report of actor time/position and test state" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="730" y="265" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-106" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="Nz_zJu77zt_nOGFol6SB-67" target="Nz_zJu77zt_nOGFol6SB-100" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-67" value="&lt;b&gt;MQTTBridge&lt;/b&gt;&lt;br&gt;Communicates real-time data using the MQTT protocol" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="730" y="370" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-105" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="Nz_zJu77zt_nOGFol6SB-68" target="Nz_zJu77zt_nOGFol6SB-100" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-68" value="&lt;b&gt;OSIAdapter&lt;/b&gt;&lt;br&gt;Outputs OSI messages in real-time" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="730" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-112" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="Nz_zJu77zt_nOGFol6SB-69" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="800" y="500" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="620" y="240" />
+              <mxPoint x="530" y="240" />
+              <mxPoint x="530" y="460" />
+              <mxPoint x="800" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-69" value="&lt;b&gt;TrajectoryletStreamer&lt;/b&gt;&lt;br&gt;creates trajectory chunks in real-time as input for OBC" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="560" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-111" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="Nz_zJu77zt_nOGFol6SB-70" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="800" y="500" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="440" y="240" />
+              <mxPoint x="530" y="240" />
+              <mxPoint x="530" y="460" />
+              <mxPoint x="800" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-70" value="&lt;b&gt;PointcloudPublisher&lt;/b&gt;&lt;br&gt;Provides pointcloud visualization of the test-environment" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="380" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-71" value="&lt;span style=&quot;background-color: rgb(153, 255, 204);&quot;&gt;&lt;b&gt;D&lt;/b&gt;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="552" y="147" width="25" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-72" value="&lt;span style=&quot;background-color: rgb(153, 255, 255);&quot;&gt;&lt;b&gt;V&lt;/b&gt;&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="371.5" y="137" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-73" value="&lt;span style=&quot;background-color: rgb(153, 255, 204);&quot;&gt;&lt;b&gt;D&lt;/b&gt;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="553" y="252" width="25" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-76" value="&lt;span style=&quot;background-color: rgb(153, 204, 255);&quot;&gt;&lt;b&gt;E&lt;/b&gt;&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="391" y="347" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-79" value="&lt;span style=&quot;background-color: rgb(153, 204, 255);&quot;&gt;&lt;b&gt;E&lt;/b&gt;&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="717" y="137" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-80" value="&lt;span style=&quot;background-color: rgb(153, 255, 255);&quot;&gt;&lt;b&gt;V&lt;/b&gt;&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="726" y="137" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-81" value="&lt;span style=&quot;background-color: rgb(153, 255, 255);&quot;&gt;&lt;b&gt;V&lt;/b&gt;&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="560" y="137" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-82" value="&lt;span style=&quot;background-color: rgb(153, 255, 204);&quot;&gt;&lt;b&gt;E&lt;/b&gt;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="725" y="358" width="25" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-83" value="&lt;span style=&quot;background-color: rgb(153, 153, 255);&quot;&gt;&lt;b&gt;R&lt;/b&gt;&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="721" y="242" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-84" value="&lt;span style=&quot;background-color: rgb(153, 255, 204);&quot;&gt;&lt;b&gt;D&lt;/b&gt;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="391" y="251" width="25" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-88" value="&lt;i&gt;Modules communicate via ROS2 Topics and services&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="555" y="117" width="340" height="23" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-93" value="&lt;span style=&quot;background-color: rgb(153, 255, 255);&quot;&gt;&lt;b&gt;V&lt;/b&gt;&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="399" y="348" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-94" value="" style="endArrow=classic;html=1;rounded=0;entryX=1;entryY=0;entryDx=0;entryDy=0;" parent="1" target="Nz_zJu77zt_nOGFol6SB-19" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="560" y="325" as="sourcePoint" />
+            <mxPoint x="520" y="365" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-99" value="&lt;span style=&quot;background-color: rgb(255, 204, 153);&quot;&gt;&lt;b&gt;S&lt;/b&gt;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="1000" y="167" width="5" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-100" value="" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;gradientColor=default;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="1000" y="187" width="290" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-101" value="Carla" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="1025" y="267" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-102" value="Various simulators/external systems" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="1015" y="197" width="115" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-103" value="V2X Hardware" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="1145" y="267" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-104" value="etc.." style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="1085" y="327" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Nz_zJu77zt_nOGFol6SB-109" value="" style="endArrow=classic;html=1;rounded=0;entryX=1;entryY=0;entryDx=0;entryDy=0;exitX=0;exitY=1;exitDx=0;exitDy=0;" parent="1" source="Nz_zJu77zt_nOGFol6SB-69" target="Nz_zJu77zt_nOGFol6SB-19" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="570" y="335" as="sourcePoint" />
+            <mxPoint x="512" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="o_R5QOcpIMhwTrzb6G0D-2" value="Message handling" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-65" y="475" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="o_R5QOcpIMhwTrzb6G0D-3" value="State machine" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="55" y="475" width="120" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

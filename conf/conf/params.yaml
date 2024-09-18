@@ -1,0 +1,64 @@
+atos:
+  journal_control:
+    ros__parameters:
+      scenario_name: ""
+  esmini_adapter:
+    ros__parameters:
+      timestep: 0.1
+  open_scenario_gateway:
+    ros__parameters:
+      open_scenario_file: "GaragePlanScenario.xosc"
+      active_object_names: ["1"]
+  object_control:
+    ros__parameters:
+      max_missing_heartbeats: 100
+      transmitter_id: 15
+  osi_adapter:
+    ros__parameters:
+      address: "0.0.0.0"
+      port: 55555
+      protocol: "tcp"
+      frequency: 100
+  mqtt_bridge:
+    ros__parameters:
+      broker:
+        host: 127.0.0.1
+        port: 1883
+      client:
+        id: "ATOS"
+        username: ""
+        password: ""
+      mqtt2ros:             # Object specifying which MQTT topics to map to which ROS topics
+        mqtt_topics:        # Array specifying which ROS topics to bridge
+          - placeholder1     # The MQTT topic that should be bridged, corresponds to the sub-object in the YAML
+        placeholder1:
+          ros_topic: placeholder1 # ROS topic on which corresponding MQTT messages are published
+          advanced:         # Optional settings for each topic
+            mqtt:
+              qos: 1               # [0] MQTT QoS value
+            ros:
+              queue_size: 1        # [1] ROS publisher queue size
+      ros2mqtt:           # Object specifying which ROS topics to map to which MQTT topics
+        ros_topics:
+          - placeholder2
+        placeholder2:
+          mqtt_topic: placeholder2
+          advanced:
+            mqtt:
+              qos: 1
+            ros:
+              queue_size: 1
+  trajectorylet_streamer:
+    ros__parameters:
+      chunk_duration: 2.0
+  pointcloud_publisher:
+    ros__parameters:
+      pointcloud_files: [""]
+  integration_testing_handler:
+    ros__parameters:
+      scenario_execution: true
+  back_to_start:
+    ros__parameters:
+      turn_radius: 5.0
+      min_speed: 4.0
+      max_speed: 12.0

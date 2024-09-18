@@ -3,8 +3,5 @@
 build
 docs
 install
-scripts
 plugins
-gui/controlpanel/node_modules
-gui/controlpanel/package-lock.json
 Dockerfile

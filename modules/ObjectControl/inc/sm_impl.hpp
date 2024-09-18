@@ -21,7 +21,7 @@ public:
         using namespace boost::sml;
         return make_transition_table(
                  *state<AbstractKinematics::Idle> + event<initializeRequest> [ guard ] / clearScenarioAction = state<AbstractKinematics::Initialized>
-                , "Driving"_s    + event<ev_stop>     / ac_stop     =    "Idle"_s
+                , "Driving"_s    + event<ev_stop>     / ac_stop     =    "Idle"_ss
         );
     }
 };

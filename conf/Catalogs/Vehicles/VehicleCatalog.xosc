@@ -18,11 +18,16 @@
             </BoundingBox>
             <Performance maxSpeed="${190/3.6}" maxDeceleration="10" maxAcceleration="5"/>
             <Properties>
-                <Property name="ip" value="192.168.218.37"/>
+                <Property name="ip" value="isoObject"/> <!-- used by integration test -->
+                <!-- <Property name="ip" value="127.0.0.1"/> -->
                 <Property name="model_id" value="$EgoModelId"/>
                 <!-- Scale modes: None, BBToModel, ModelToBB -->
                 <Property name="scaleMode" value="BBToModel"/>
             </Properties>
+            <Axles>
+                <FrontAxle maxSteering="0.523598775598" wheelDiameter="0.8" trackWidth="1.68" positionX="2.98" positionZ="0.4"/>
+                <RearAxle maxSteering="0.523598775598" wheelDiameter="0.8" trackWidth="1.68" positionX="0" positionZ="0.4"/>
+            </Axles>
         </Vehicle>
 	    <Vehicle name="humanetics" vehicleCategory="car" model3d="../models/car_white.osgb">
             <ParameterDeclarations>
@@ -39,6 +44,10 @@
                 <!-- Scale modes: None, BBToModel, ModelToBB -->
                 <Property name="scaleMode" value="BBToModel"/>
             </Properties>
+            <Axles>
+                <FrontAxle maxSteering="0.523598775598" wheelDiameter="0.8" trackWidth="1.68" positionX="2.98" positionZ="0.4"/>
+                <RearAxle maxSteering="0.523598775598" wheelDiameter="0.8" trackWidth="1.68" positionX="0" positionZ="0.4"/>
+            </Axles>
         </Vehicle>
 	    <Vehicle name="flexible_target_carrier" vehicleCategory="car" model3d="../models/cyclist.osgb">
             <ParameterDeclarations>
@@ -55,6 +64,10 @@
                 <!-- Scale modes: None, BBToModel, ModelToBB -->
                 <Property name="scaleMode" value="BBToModel"/>
             </Properties>
+            <Axles>
+                <FrontAxle maxSteering="0.523598775598" wheelDiameter="0.8" trackWidth="1.68" positionX="2.98" positionZ="0.4"/>
+                <RearAxle maxSteering="0.523598775598" wheelDiameter="0.8" trackWidth="1.68" positionX="0" positionZ="0.4"/>
+            </Axles>
         </Vehicle>
 	    <Vehicle name="virtual_object" vehicleCategory="car" model3d="../models/car_red.osgb">
             <!-- model bounding box xyz: 1.46, 0.00, 0.77 lwh: 5.04, 2.04, 1.49 -->
@@ -72,6 +85,10 @@
                 <!-- Scale modes: None, BBToModel, ModelToBB -->
                 <Property name="scaleMode" value="BBToModel"/>
             </Properties>
+            <Axles>
+                <FrontAxle maxSteering="0.523598775598" wheelDiameter="0.8" trackWidth="1.68" positionX="2.98" positionZ="0.4"/>
+                <RearAxle maxSteering="0.523598775598" wheelDiameter="0.8" trackWidth="1.68" positionX="0" positionZ="0.4"/>
+            </Axles>
         </Vehicle>
 	    <Vehicle name="camera_drone" vehicleCategory="car" model3d="../models/walkman.osgb">
             <ParameterDeclarations>
@@ -88,6 +105,10 @@
                 <!-- Scale modes: None, BBToModel, ModelToBB -->
                 <Property name="scaleMode" value="BBToModel"/>
             </Properties>
+            <Axles>
+                <FrontAxle maxSteering="0.523598775598" wheelDiameter="0.8" trackWidth="1.68" positionX="2.98" positionZ="0.4"/>
+                <RearAxle maxSteering="0.523598775598" wheelDiameter="0.8" trackWidth="1.68" positionX="0" positionZ="0.4"/>
+            </Axles>
         </Vehicle>
 	    <Vehicle name="marker_drone" vehicleCategory="car" model3d="../models/walkman.osgb">
             <ParameterDeclarations>
@@ -104,6 +125,10 @@
                 <!-- Scale modes: None, BBToModel, ModelToBB -->
                 <Property name="scaleMode" value="BBToModel"/>
             </Properties>
+            <Axles>
+                <FrontAxle maxSteering="0.523598775598" wheelDiameter="0.8" trackWidth="1.68" positionX="2.98" positionZ="0.4"/>
+                <RearAxle maxSteering="0.523598775598" wheelDiameter="0.8" trackWidth="1.68" positionX="0" positionZ="0.4"/>
+            </Axles>
         </Vehicle>
 
 

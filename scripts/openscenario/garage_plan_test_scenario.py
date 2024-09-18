@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import json
 from scenariogeneration import xosc
 import copy
 
@@ -31,61 +32,58 @@ SCENARIO_FILE_NAME = SCENARIO_NAME + ".xosc"
 
 # Dynamic parameters
 # mondeo
-mondeo_speed = 15 / 3.6 # m/s
-mondeo_slow_speed = 10 / 3.6 # m/s
-mondeo_acceleration = 1.0 # m/s^2
-mondeo_retardation = 2.17 # m/s^2
+mondeo_speed = 15 / 3.6  # m/s
+mondeo_slow_speed = 10 / 3.6  # m/s
+mondeo_acceleration = 1.0  # m/s^2
+mondeo_retardation = 2.17  # m/s^2
 mondeo_O1_point = xosc.LanePosition(16, 0, 1, 3)
 mondeo_trigger_positions = {
-	UFO_ID: xosc.LanePosition(0, 0, 1, 3),
-	VIRTUAL_ID: xosc.LanePosition(0, 0, 1, 3),
+    UFO_ID: xosc.LanePosition(0, 0, 1, 3),
+    VIRTUAL_ID: xosc.LanePosition(0, 0, 1, 3),
     CARRIER_ID: xosc.LanePosition(5, 0, 1, 3),
-	CAMERA_DRONE_ID: xosc.LanePosition(9, 0, 1, 3),
-    MARKER_DRONE_ID: xosc.LanePosition(0, 0, 1, 3)
+    CAMERA_DRONE_ID: xosc.LanePosition(9, 0, 1, 3),
+    MARKER_DRONE_ID: xosc.LanePosition(0, 0, 1, 3),
 }
 mondeo_slow_down_position = xosc.LanePosition(2, 0, 1, 3)
 mondeo_accelerate_position = xosc.LanePosition(30, 0, 1, 0)
 mondeo_brake_position = xosc.LanePosition(20, 0, 1, 0)
 
 # ufo
-ufo_speed = 10 / 3.6 # m/s
-ufo_acceleration = 1.38 # m/s^2
-ufo_retardation = 1.83 # m/s^2
+ufo_speed = 10 / 3.6  # m/s
+ufo_acceleration = 1.38  # m/s^2
+ufo_retardation = 1.83  # m/s^2
 ufo_O2_point = xosc.LanePosition(7.5, 0, 1, 1)
 ufo_brake_position = xosc.LanePosition(6, 0, 1, 13)
 ufo_end_point = xosc.LanePosition(20, 0, 1, 0)
 
 # virtual object
-virtual_speed = 50 / 3.6 # m/s
-virtual_acceleration = 3.53 # m/s^2
-virtual_retardation = 10.32 # m/s^2
+virtual_speed = 50 / 3.6  # m/s
+virtual_acceleration = 3.53  # m/s^2
+virtual_retardation = 10.32  # m/s^2
 virtual_O4_point = xosc.LanePosition(5, 0, 1, 0)
 virtual_brake_position = xosc.LanePosition(18, 0, 1, 0)
 virtual_trigger_delay = 0
 
 # flexible target carrier
-carrier_speed = 15 / 3.6 # m/s
-carrier_acceleration = 1.12 # m/s^2
-carrier_retardation = 1.03 # m/s^2
+carrier_speed = 15 / 3.6  # m/s
+carrier_acceleration = 1.12  # m/s^2
+carrier_retardation = 1.03  # m/s^2
 carrier_O3_point = xosc.LanePosition(20, 0, -1, 0)
 carrier_brake_position = xosc.LanePosition(6.957085132598877, 0, -1, 1)
 
 # camera drone
 camera_drone_speed = 25 / 3.6
-camera_drone_acceleration = 6 # m/s^2 
-camera_drone_retardation = 6 # m/s^2
+camera_drone_acceleration = 6  # m/s^2
+camera_drone_retardation = 6  # m/s^2
 camera_drone_O5_point = xosc.LanePosition(16, 0, -1, 3)
 camera_drone_brake_position = xosc.LanePosition(25, 0, -1, 0)
 
 # marker drone
-marker_drone_speed = virtual_speed # m/s
-marker_drone_acceleration = virtual_acceleration # m/s^2
-marker_drone_retardation = virtual_retardation # m/s^2
+marker_drone_speed = virtual_speed  # m/s
+marker_drone_acceleration = virtual_acceleration  # m/s^2
+marker_drone_retardation = virtual_retardation  # m/s^2
 marker_drone_O6_point = virtual_O4_point
 marker_drone_brake_position = virtual_brake_position
-
-
-denm_trigger_speed = 10 / 3.6 # m/s
 
 
 # Preamble
@@ -126,24 +124,36 @@ marker_drone_maneuver_group.add_actor(MARKER_DRONE_ID)
 
 # Starting position
 # Starting positions
-osc_entities.add_scenario_object(MONDEO_ID,
-	xosc.CatalogReference(CATALOG_NAME, MONDEO_CATALOG_NAME),
-	xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"))
-osc_entities.add_scenario_object(UFO_ID,
-	xosc.CatalogReference(CATALOG_NAME, UFO_CATALOG_NAME),
-	xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"))
-osc_entities.add_scenario_object(VIRTUAL_ID,
-	xosc.CatalogReference(CATALOG_NAME, VIRTUAL_CATALOG_NAME),
-	xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"))
-osc_entities.add_scenario_object(CARRIER_ID,
-	xosc.CatalogReference(CATALOG_NAME, CARRIER_CATALOG_NAME),
-	xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"))
-osc_entities.add_scenario_object(MARKER_DRONE_ID,
-	xosc.CatalogReference(CATALOG_NAME, MARKER_DRONE_CATALOG_NAME),
-	xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"))
-osc_entities.add_scenario_object(CAMERA_DRONE_ID,
-	xosc.CatalogReference(CATALOG_NAME, CAMERA_DRONE_CATALOG_NAME),
-	xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"))
+osc_entities.add_scenario_object(
+    MONDEO_ID,
+    xosc.CatalogReference(CATALOG_NAME, MONDEO_CATALOG_NAME),
+    xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"),
+)
+osc_entities.add_scenario_object(
+    UFO_ID,
+    xosc.CatalogReference(CATALOG_NAME, UFO_CATALOG_NAME),
+    xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"),
+)
+osc_entities.add_scenario_object(
+    VIRTUAL_ID,
+    xosc.CatalogReference(CATALOG_NAME, VIRTUAL_CATALOG_NAME),
+    xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"),
+)
+osc_entities.add_scenario_object(
+    CARRIER_ID,
+    xosc.CatalogReference(CATALOG_NAME, CARRIER_CATALOG_NAME),
+    xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"),
+)
+osc_entities.add_scenario_object(
+    MARKER_DRONE_ID,
+    xosc.CatalogReference(CATALOG_NAME, MARKER_DRONE_CATALOG_NAME),
+    xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"),
+)
+osc_entities.add_scenario_object(
+    CAMERA_DRONE_ID,
+    xosc.CatalogReference(CATALOG_NAME, CAMERA_DRONE_CATALOG_NAME),
+    xosc.CatalogReference(CONTROLLER_CATALOG_NAME, "externalController"),
+)
 
 mondeo_start_teleport = xosc.TeleportAction(mondeo_O1_point)
 ufo_start_teleport = xosc.TeleportAction(ufo_O2_point)
@@ -153,12 +163,10 @@ camera_drone_start_teleport = xosc.TeleportAction(camera_drone_O5_point)
 marker_drone_start_teleport = xosc.TeleportAction(marker_drone_O6_point)
 
 mondeo_set_speed = xosc.AbsoluteSpeedAction(
-	mondeo_speed,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.cubic,
-		xosc.DynamicsDimension.rate,
-		mondeo_acceleration
-	),
+    mondeo_speed,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.cubic, xosc.DynamicsDimension.rate, mondeo_acceleration
+    ),
 )
 
 init.add_init_action(MONDEO_ID, mondeo_start_teleport)
@@ -175,49 +183,34 @@ init.add_init_action(MARKER_DRONE_ID, marker_drone_start_teleport)
 # follow a trajectory,
 # then decelerate to a stop
 times = []
-positions = [
-	ufo_O2_point,
-	ufo_brake_position,
-	ufo_end_point
-]
+positions = [ufo_O2_point, ufo_brake_position, ufo_end_point]
 polyline = xosc.Polyline(times, positions)
 trajectory = xosc.Trajectory(UFO_ID + ",start_follow_trajectory", closed=False)
 trajectory.add_shape(polyline)
 ufo_follow_trajectory = xosc.FollowTrajectoryAction(
-	trajectory,
-	xosc.FollowingMode.position,
-	xosc.ReferenceContext.relative,
-	1,
-	0
+    trajectory, xosc.FollowingMode.position, xosc.ReferenceContext.relative, 1, 0
 )
 ufo_set_speed = xosc.AbsoluteSpeedAction(
-	ufo_speed,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		ufo_acceleration
-	),
+    ufo_speed,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.linear, xosc.DynamicsDimension.rate, ufo_acceleration
+    ),
 )
 
 ufo_brake = xosc.AbsoluteSpeedAction(
-	0,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		-ufo_retardation
-	),
+    0,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.linear, xosc.DynamicsDimension.rate, -ufo_retardation
+    ),
 )
 ufo_reach_stop_position = xosc.EntityTrigger(
-	name=UFO_ID + ",reach_stop_position",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(ufo_brake_position, 1),
-	triggerentity=UFO_ID
+    name=UFO_ID + ",reach_stop_position",
+    delay=0,
+    conditionedge=xosc.ConditionEdge.none,
+    entitycondition=xosc.ReachPositionCondition(ufo_brake_position, 1),
+    triggerentity=UFO_ID,
 )
-ufo_brake_event = xosc.Event(
-	UFO_ID + ",brake_event",
-	xosc.Priority.parallel
-)
+ufo_brake_event = xosc.Event(UFO_ID + ",brake_event", xosc.Priority.parallel)
 ufo_brake_event.add_trigger(ufo_reach_stop_position)
 ufo_brake_event.add_action(UFO_ID + ",brake_to_stop", ufo_brake)
 ufo_maneuver.add_event(ufo_brake_event)
@@ -228,51 +221,36 @@ ufo_maneuver.add_event(ufo_brake_event)
 # follow a trajectory,
 # then decelerate to a stop
 times = []
-positions = [
-	carrier_O3_point,
-    carrier_brake_position
-]
+positions = [carrier_O3_point, carrier_brake_position]
 polyline = xosc.Polyline(times, positions)
 trajectory = xosc.Trajectory(CARRIER_ID + ",start_follow_trajectory", closed=False)
 trajectory.add_shape(polyline)
 carrier_follow_trajectory = xosc.FollowTrajectoryAction(
-	trajectory,
-	xosc.FollowingMode.position,
-	xosc.ReferenceContext.relative,
-	1,
-	0
+    trajectory, xosc.FollowingMode.position, xosc.ReferenceContext.relative, 1, 0
 )
 carrier_set_speed = xosc.AbsoluteSpeedAction(
-	carrier_speed,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		carrier_acceleration
-	),
+    carrier_speed,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.linear, xosc.DynamicsDimension.rate, carrier_acceleration
+    ),
 )
 carrier_brake = xosc.AbsoluteSpeedAction(
-	0,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		-carrier_retardation
-	),
+    0,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.linear, xosc.DynamicsDimension.rate, -carrier_retardation
+    ),
 )
 carrier_reach_stop_position = xosc.EntityTrigger(
-	name=CARRIER_ID + ",reach_stop_position",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(carrier_brake_position, 1),
-	triggerentity=CARRIER_ID
+    name=CARRIER_ID + ",reach_stop_position",
+    delay=0,
+    conditionedge=xosc.ConditionEdge.none,
+    entitycondition=xosc.ReachPositionCondition(carrier_brake_position, 1),
+    triggerentity=CARRIER_ID,
 )
-carrier_brake_event = xosc.Event(
-	CARRIER_ID + ",brake_event",
-	xosc.Priority.parallel
-)
+carrier_brake_event = xosc.Event(CARRIER_ID + ",brake_event", xosc.Priority.parallel)
 carrier_brake_event.add_trigger(carrier_reach_stop_position)
 carrier_brake_event.add_action(CARRIER_ID + ",brake_to_stop", carrier_brake)
 carrier_maneuver.add_event(carrier_brake_event)
-
 
 
 # Virtual movement profile:
@@ -280,51 +258,42 @@ carrier_maneuver.add_event(carrier_brake_event)
 # follow a trajectory,
 # then decelerate to a stop
 times = []
-positions = [
-	virtual_O4_point,
-	virtual_brake_position
-]
+positions = [virtual_O4_point, virtual_brake_position]
 polyline = xosc.Polyline(times, positions)
-virtual_trajectory = xosc.Trajectory(VIRTUAL_ID + ",start_follow_trajectory", closed=False)
+virtual_trajectory = xosc.Trajectory(
+    VIRTUAL_ID + ",start_follow_trajectory", closed=False
+)
 virtual_trajectory.add_shape(polyline)
 virtual_follow_trajectory = xosc.FollowTrajectoryAction(
-	virtual_trajectory,
-	xosc.FollowingMode.position,
-	xosc.ReferenceContext.relative,
-	1,
-	0
+    virtual_trajectory,
+    xosc.FollowingMode.position,
+    xosc.ReferenceContext.relative,
+    1,
+    0,
 )
 virtual_set_speed = xosc.AbsoluteSpeedAction(
-	virtual_speed,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		virtual_acceleration
-	),
+    virtual_speed,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.linear, xosc.DynamicsDimension.rate, virtual_acceleration
+    ),
 )
 virtual_brake = xosc.AbsoluteSpeedAction(
-	0,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		-virtual_retardation
-	),
+    0,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.linear, xosc.DynamicsDimension.rate, -virtual_retardation
+    ),
 )
 virtual_reach_stop_position = xosc.EntityTrigger(
-	name=VIRTUAL_ID + ",reach_stop_position",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(virtual_brake_position, 1),
-	triggerentity=VIRTUAL_ID
+    name=VIRTUAL_ID + ",reach_stop_position",
+    delay=0,
+    conditionedge=xosc.ConditionEdge.none,
+    entitycondition=xosc.ReachPositionCondition(virtual_brake_position, 1),
+    triggerentity=VIRTUAL_ID,
 )
-virtual_brake_event = xosc.Event(
-	VIRTUAL_ID + ",brake_event",
-	xosc.Priority.parallel
-)
+virtual_brake_event = xosc.Event(VIRTUAL_ID + ",brake_event", xosc.Priority.parallel)
 virtual_brake_event.add_trigger(virtual_reach_stop_position)
 virtual_brake_event.add_action(VIRTUAL_ID + ",brake_to_stop", virtual_brake)
 virtual_maneuver.add_event(virtual_brake_event)
-
 
 
 # Camera drone movement profile:
@@ -333,7 +302,7 @@ virtual_maneuver.add_event(virtual_brake_event)
 # then decelerate to a stop
 times = []
 positions = [
-	camera_drone_O5_point,
+    camera_drone_O5_point,
     xosc.LanePosition(0, 0, -1, 3),
     xosc.LanePosition(9.5, 0, -1, 8),
     xosc.LanePosition(8.75, 0, -1, 8),
@@ -347,52 +316,57 @@ positions = [
     xosc.LanePosition(0.75, 0, -1, 8),
     xosc.LanePosition(0.0, 0, -1, 8),
     xosc.LanePosition(30, 0, -1, 0),
-	camera_drone_brake_position,
+    camera_drone_brake_position,
 ]
 polyline = xosc.Polyline(times, positions)
-camera_drone_trajectory = xosc.Trajectory(CAMERA_DRONE_ID + ",start_follow_trajectory", closed=False)
+camera_drone_trajectory = xosc.Trajectory(
+    CAMERA_DRONE_ID + ",start_follow_trajectory", closed=False
+)
 camera_drone_trajectory.add_shape(polyline)
 camera_drone_follow_trajectory = xosc.FollowTrajectoryAction(
-	camera_drone_trajectory,
-	xosc.FollowingMode.position,
-	xosc.ReferenceContext.relative,
-	1,
-	0
+    camera_drone_trajectory,
+    xosc.FollowingMode.position,
+    xosc.ReferenceContext.relative,
+    1,
+    0,
 )
 camera_drone_set_speed = xosc.AbsoluteSpeedAction(
-	camera_drone_speed,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		camera_drone_acceleration
-	),
+    camera_drone_speed,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.linear,
+        xosc.DynamicsDimension.rate,
+        camera_drone_acceleration,
+    ),
 )
 # Stop
 camera_drone_brake = xosc.AbsoluteSpeedAction(
-	0,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		-camera_drone_retardation
-	),
+    0,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.linear,
+        xosc.DynamicsDimension.rate,
+        -camera_drone_retardation,
+    ),
 )
 
 camera_drone_reach_brake_position = xosc.EntityTrigger(
     name=CAMERA_DRONE_ID + ",reach_brake_position",
     delay=0,
     conditionedge=xosc.ConditionEdge.rising,
-    entitycondition=xosc.ReachPositionCondition(camera_drone_brake_position, 1.0), # tolerance
-    triggerentity=CAMERA_DRONE_ID
+    entitycondition=xosc.ReachPositionCondition(
+        camera_drone_brake_position, 1.0
+    ),  # tolerance
+    triggerentity=CAMERA_DRONE_ID,
 )
 camera_drone_brake_event = xosc.Event(
-	CAMERA_DRONE_ID + ",stop_event",
+    CAMERA_DRONE_ID + ",stop_event",
     xosc.Priority.overwrite,
 )
 
 camera_drone_brake_event.add_trigger(camera_drone_reach_brake_position)
-camera_drone_brake_event.add_action(CAMERA_DRONE_ID + ",brake_to_stop", camera_drone_brake)
+camera_drone_brake_event.add_action(
+    CAMERA_DRONE_ID + ",brake_to_stop", camera_drone_brake
+)
 camera_drone_maneuver.add_event(camera_drone_brake_event)
-
 
 
 # Marker drone movement profile:
@@ -400,36 +374,39 @@ camera_drone_maneuver.add_event(camera_drone_brake_event)
 # follow a trajectory,
 # then decelerate to a stop
 marker_drone_follow_trajectory = virtual_follow_trajectory
-marker_drone_follow_trajectory.trajectory.name = MARKER_DRONE_ID + ",start_follow_trajectory"
+marker_drone_follow_trajectory.trajectory.name = (
+    MARKER_DRONE_ID + ",start_follow_trajectory"
+)
 marker_drone_set_speed = xosc.AbsoluteSpeedAction(
-	marker_drone_speed,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		marker_drone_acceleration
-	),
+    marker_drone_speed,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.linear,
+        xosc.DynamicsDimension.rate,
+        marker_drone_acceleration,
+    ),
 )
 marker_drone_brake = xosc.AbsoluteSpeedAction(
-	0,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.linear,
-		xosc.DynamicsDimension.rate,
-		-marker_drone_retardation
-	),
+    0,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.linear,
+        xosc.DynamicsDimension.rate,
+        -marker_drone_retardation,
+    ),
 )
 marker_drone_reach_stop_position = xosc.EntityTrigger(
-	name=MARKER_DRONE_ID + ",reach_stop_position",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(marker_drone_brake_position, 1),
-	triggerentity=MARKER_DRONE_ID
+    name=MARKER_DRONE_ID + ",reach_stop_position",
+    delay=0,
+    conditionedge=xosc.ConditionEdge.none,
+    entitycondition=xosc.ReachPositionCondition(marker_drone_brake_position, 1),
+    triggerentity=MARKER_DRONE_ID,
 )
 marker_drone_brake_event = xosc.Event(
-	MARKER_DRONE_ID + ",brake_event",
-	xosc.Priority.parallel
+    MARKER_DRONE_ID + ",brake_event", xosc.Priority.parallel
 )
 marker_drone_brake_event.add_trigger(marker_drone_reach_stop_position)
-marker_drone_brake_event.add_action(MARKER_DRONE_ID + ",brake_to_stop", marker_drone_brake)
+marker_drone_brake_event.add_action(
+    MARKER_DRONE_ID + ",brake_to_stop", marker_drone_brake
+)
 marker_drone_maneuver.add_event(marker_drone_brake_event)
 
 
@@ -453,53 +430,45 @@ positions = [
     xosc.LanePosition(2.0940648317337036, 0, 1, 7),
     xosc.LanePosition(1.0940648317337036, 0, 1, 7),
     xosc.LanePosition(30, 0, 1, 0),
-    mondeo_brake_position
+    mondeo_brake_position,
 ]
 polyline = xosc.Polyline(times, positions)
-trajectory = xosc.Trajectory(
-    MONDEO_ID + ",init_follow_trajectory", closed=False)
+trajectory = xosc.Trajectory(MONDEO_ID + ",init_follow_trajectory", closed=False)
 trajectory.add_shape(polyline)
 mondeo_follow_trajectory = xosc.FollowTrajectoryAction(
-    trajectory,
-    xosc.FollowingMode.position,
-    xosc.ReferenceContext.relative,
-    1,
-    0
+    trajectory, xosc.FollowingMode.position, xosc.ReferenceContext.relative, 1, 0
 )
 mondeo_scenario_started = xosc.ValueTrigger(
     MONDEO_ID + ",scenario_started",
     0,
     xosc.ConditionEdge.none,
-    xosc.SimulationTimeCondition(0, xosc.Rule.greaterThan)
+    xosc.SimulationTimeCondition(0, xosc.Rule.greaterThan),
 )
 mondeo_follow_trajectory_event = xosc.Event(
-    MONDEO_ID + ",mondeo_follow_trajectory_event",
-    xosc.Priority.parallel
+    MONDEO_ID + ",mondeo_follow_trajectory_event", xosc.Priority.parallel
 )
 mondeo_follow_trajectory_event.add_trigger(mondeo_scenario_started)
 mondeo_follow_trajectory_event.add_action(
-    MONDEO_ID + ",init_follow_trajectory", mondeo_follow_trajectory)
+    MONDEO_ID + ",init_follow_trajectory", mondeo_follow_trajectory
+)
 mondeo_maneuver.add_event(mondeo_follow_trajectory_event)
 
 # Slow down
 mondeo_slow_down = xosc.AbsoluteSpeedAction(
-	mondeo_slow_speed,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.cubic,
-		xosc.DynamicsDimension.rate,
-		-mondeo_retardation
-	),
+    mondeo_slow_speed,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.cubic, xosc.DynamicsDimension.rate, -mondeo_retardation
+    ),
 )
 mondeo_reach_slow_down_position = xosc.EntityTrigger(
-	MONDEO_ID + ",reach_slow_down_position",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(mondeo_slow_down_position, 1),
-	triggerentity=MONDEO_ID
+    MONDEO_ID + ",reach_slow_down_position",
+    delay=0,
+    conditionedge=xosc.ConditionEdge.none,
+    entitycondition=xosc.ReachPositionCondition(mondeo_slow_down_position, 1),
+    triggerentity=MONDEO_ID,
 )
 mondeo_slow_down_event = xosc.Event(
-	MONDEO_ID + ",mondeo_slow_down_event",
-	xosc.Priority.parallel
+    MONDEO_ID + ",mondeo_slow_down_event", xosc.Priority.parallel
 )
 mondeo_slow_down_event.add_trigger(mondeo_reach_slow_down_position)
 mondeo_slow_down_event.add_action(MONDEO_ID + ",slow_down", mondeo_slow_down)
@@ -507,23 +476,20 @@ mondeo_maneuver.add_event(mondeo_slow_down_event)
 
 # Accelerate
 mondeo_accelerate = xosc.AbsoluteSpeedAction(
-	mondeo_speed,
-	xosc.TransitionDynamics(
-		xosc.DynamicsShapes.cubic,
-		xosc.DynamicsDimension.rate,
-		mondeo_acceleration
-	),
+    mondeo_speed,
+    xosc.TransitionDynamics(
+        xosc.DynamicsShapes.cubic, xosc.DynamicsDimension.rate, mondeo_acceleration
+    ),
 )
 mondeo_reach_accelerate_position = xosc.EntityTrigger(
-	MONDEO_ID + ",reach_accelerate_position",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(mondeo_accelerate_position, 1),
-	triggerentity=MONDEO_ID
+    MONDEO_ID + ",reach_accelerate_position",
+    delay=0,
+    conditionedge=xosc.ConditionEdge.none,
+    entitycondition=xosc.ReachPositionCondition(mondeo_accelerate_position, 1),
+    triggerentity=MONDEO_ID,
 )
 mondeo_accelerate_event = xosc.Event(
-	MONDEO_ID + ",mondeo_accelerate_event",
-	xosc.Priority.parallel
+    MONDEO_ID + ",mondeo_accelerate_event", xosc.Priority.parallel
 )
 mondeo_accelerate_event.add_trigger(mondeo_reach_accelerate_position)
 mondeo_accelerate_event.add_action(MONDEO_ID + ",mondeo_accelerate", mondeo_accelerate)
@@ -533,9 +499,7 @@ mondeo_maneuver.add_event(mondeo_accelerate_event)
 mondeo_brake = xosc.AbsoluteSpeedAction(
     0,
     xosc.TransitionDynamics(
-        xosc.DynamicsShapes.linear,
-        xosc.DynamicsDimension.rate,
-        -mondeo_retardation
+        xosc.DynamicsShapes.linear, xosc.DynamicsDimension.rate, -mondeo_retardation
     ),
 )
 mondeo_reach_brake_position = xosc.EntityTrigger(
@@ -543,11 +507,10 @@ mondeo_reach_brake_position = xosc.EntityTrigger(
     delay=0,
     conditionedge=xosc.ConditionEdge.none,
     entitycondition=xosc.ReachPositionCondition(mondeo_brake_position, 1),
-    triggerentity=MONDEO_ID
+    triggerentity=MONDEO_ID,
 )
 mondeo_brake_event = xosc.Event(
-    MONDEO_ID + ",mondeo_brake_event",
-    xosc.Priority.parallel
+    MONDEO_ID + ",mondeo_brake_event", xosc.Priority.parallel
 )
 mondeo_brake_event.add_trigger(mondeo_reach_brake_position)
 mondeo_brake_event.add_action(MONDEO_ID + ",brake_to_stop", mondeo_brake)
@@ -556,59 +519,38 @@ mondeo_maneuver.add_event(mondeo_brake_event)
 
 # Mondeo triggers camera drone
 mondeo_reached_camera_drone_trigger_position = xosc.EntityTrigger(
-	name=MONDEO_ID + ",reached_camera_drone_trigger_position",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(mondeo_trigger_positions[CAMERA_DRONE_ID], 2),
-	triggerentity=MONDEO_ID
+    name=MONDEO_ID + ",reached_camera_drone_trigger_position",
+    delay=0,
+    conditionedge=xosc.ConditionEdge.none,
+    entitycondition=xosc.ReachPositionCondition(
+        mondeo_trigger_positions[CAMERA_DRONE_ID], 2
+    ),
+    triggerentity=MONDEO_ID,
 )
 
 camera_drone_move_event = xosc.Event(
-	CAMERA_DRONE_ID + ",start_move_event",
-	xosc.Priority.parallel
+    CAMERA_DRONE_ID + ",start_move_event", xosc.Priority.parallel
 )
 camera_drone_move_event.add_trigger(mondeo_reached_camera_drone_trigger_position)
-camera_drone_move_event.add_action(CAMERA_DRONE_ID + ",start_follow_trajectory", camera_drone_follow_trajectory)
-camera_drone_move_event.add_action(CAMERA_DRONE_ID + ",set_speed", camera_drone_set_speed)
-camera_drone_maneuver.add_event(camera_drone_move_event)
-
-
-# Mondeo object triggers DENM warning
-
-### DENM Action ###
-mondeo_high_speed_detected = xosc.EntityTrigger(
-	name=MONDEO_ID + ",high_speed_detected",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.SpeedCondition(denm_trigger_speed, xosc.Rule.greaterThan),
-	triggerentity=MONDEO_ID)
-
-mondeo_denm_action = xosc.VisibilityAction(graphics=True, traffic=True, sensors=True)
-
-denm_osc_event = xosc.Event(
-	MONDEO_ID + ",high_speed_event",
-	xosc.Priority.parallel,
+camera_drone_move_event.add_action(
+    CAMERA_DRONE_ID + ",start_follow_trajectory", camera_drone_follow_trajectory
 )
-
-denm_osc_event.add_trigger(mondeo_high_speed_detected)
-denm_osc_event.add_action(MONDEO_ID + ",send_denm",
-							mondeo_denm_action)
-mondeo_maneuver.add_event(denm_osc_event)
+camera_drone_move_event.add_action(
+    CAMERA_DRONE_ID + ",set_speed", camera_drone_set_speed
+)
+camera_drone_maneuver.add_event(camera_drone_move_event)
 
 
 # Mondeo triggers UFO
 mondeo_reached_ufo_trigger_position = xosc.EntityTrigger(
-	name=MONDEO_ID + ",reached_ufo_trigger_position",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(mondeo_trigger_positions[UFO_ID], 1),
-	triggerentity=MONDEO_ID
+    name=MONDEO_ID + ",reached_ufo_trigger_position",
+    delay=0,
+    conditionedge=xosc.ConditionEdge.none,
+    entitycondition=xosc.ReachPositionCondition(mondeo_trigger_positions[UFO_ID], 1),
+    triggerentity=MONDEO_ID,
 )
 
-ufo_move_event = xosc.Event(
-	UFO_ID + ",start_move_event",
-	xosc.Priority.parallel
-)
+ufo_move_event = xosc.Event(UFO_ID + ",start_move_event", xosc.Priority.parallel)
 ufo_move_event.add_trigger(mondeo_reached_ufo_trigger_position)
 ufo_move_event.add_action(UFO_ID + ",start_follow_trajectory", ufo_follow_trajectory)
 ufo_move_event.add_action(UFO_ID + ",set_speed", ufo_set_speed)
@@ -617,58 +559,69 @@ ufo_maneuver.add_event(ufo_move_event)
 
 # Mondeo triggers virtual
 mondeo_reached_virtual_trigger_position = xosc.EntityTrigger(
-	name=MONDEO_ID + ",reached_virtual_trigger_position",
-	delay=virtual_trigger_delay,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(mondeo_trigger_positions[VIRTUAL_ID], 1),
-	triggerentity=MONDEO_ID
+    name=MONDEO_ID + ",reached_virtual_trigger_position",
+    delay=virtual_trigger_delay,
+    conditionedge=xosc.ConditionEdge.none,
+    entitycondition=xosc.ReachPositionCondition(
+        mondeo_trigger_positions[VIRTUAL_ID], 1
+    ),
+    triggerentity=MONDEO_ID,
 )
 
 virtual_move_event = xosc.Event(
-	VIRTUAL_ID + ",start_move_event",
-	xosc.Priority.parallel
+    VIRTUAL_ID + ",start_move_event", xosc.Priority.parallel
 )
 virtual_move_event.add_trigger(mondeo_reached_virtual_trigger_position)
-virtual_move_event.add_action(VIRTUAL_ID + ",start_follow_trajectory", virtual_follow_trajectory)
+virtual_move_event.add_action(
+    VIRTUAL_ID + ",start_follow_trajectory", virtual_follow_trajectory
+)
 virtual_move_event.add_action(VIRTUAL_ID + ",set_speed", virtual_set_speed)
 virtual_maneuver.add_event(virtual_move_event)
 
 
 # Mondeo triggers carrier
 mondeo_reached_carrier_trigger_position = xosc.EntityTrigger(
-	name=MONDEO_ID + ",reached_carrier_trigger_position",
-	delay=0,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(mondeo_trigger_positions[CARRIER_ID], 1),
-	triggerentity=MONDEO_ID
+    name=MONDEO_ID + ",reached_carrier_trigger_position",
+    delay=0,
+    conditionedge=xosc.ConditionEdge.none,
+    entitycondition=xosc.ReachPositionCondition(
+        mondeo_trigger_positions[CARRIER_ID], 1
+    ),
+    triggerentity=MONDEO_ID,
 )
 
 carrier_move_event = xosc.Event(
-	CARRIER_ID + ",start_move_event",
-	xosc.Priority.parallel
+    CARRIER_ID + ",start_move_event", xosc.Priority.parallel
 )
 carrier_move_event.add_trigger(mondeo_reached_carrier_trigger_position)
-carrier_move_event.add_action(CARRIER_ID + ",start_follow_trajectory", carrier_follow_trajectory)
+carrier_move_event.add_action(
+    CARRIER_ID + ",start_follow_trajectory", carrier_follow_trajectory
+)
 carrier_move_event.add_action(CARRIER_ID + ",set_speed", carrier_set_speed)
 carrier_maneuver.add_event(carrier_move_event)
 
 
 # Mondeo triggers marker drone
 mondeo_reached_marker_drone_trigger_position = xosc.EntityTrigger(
-	name=MONDEO_ID + ",reached_marker_drone_trigger_position",
-	delay=virtual_trigger_delay,
-	conditionedge=xosc.ConditionEdge.none,
-	entitycondition=xosc.ReachPositionCondition(mondeo_trigger_positions[MARKER_DRONE_ID], 1),
-	triggerentity=MONDEO_ID
+    name=MONDEO_ID + ",reached_marker_drone_trigger_position",
+    delay=virtual_trigger_delay,
+    conditionedge=xosc.ConditionEdge.none,
+    entitycondition=xosc.ReachPositionCondition(
+        mondeo_trigger_positions[MARKER_DRONE_ID], 1
+    ),
+    triggerentity=MONDEO_ID,
 )
 
 marker_drone_move_event = xosc.Event(
-	MARKER_DRONE_ID + ",start_move_event",
-	xosc.Priority.parallel
+    MARKER_DRONE_ID + ",start_move_event", xosc.Priority.parallel
 )
 marker_drone_move_event.add_trigger(mondeo_reached_marker_drone_trigger_position)
-marker_drone_move_event.add_action(MARKER_DRONE_ID + ",start_follow_trajectory", marker_drone_follow_trajectory)
-marker_drone_move_event.add_action(MARKER_DRONE_ID + ",set_speed", marker_drone_set_speed)
+marker_drone_move_event.add_action(
+    MARKER_DRONE_ID + ",start_follow_trajectory", marker_drone_follow_trajectory
+)
+marker_drone_move_event.add_action(
+    MARKER_DRONE_ID + ",set_speed", marker_drone_set_speed
+)
 marker_drone_maneuver.add_event(marker_drone_move_event)
 
 
@@ -689,14 +642,13 @@ osc_act.add_maneuver_group(marker_drone_maneuver_group)
 
 osc_storyboard.add_act(osc_act)
 osc_file = xosc.Scenario(
-		name=SCENARIO_NAME,
-		author="AstaZero 1.0",
-		parameters=osc_params,
-		entities=osc_entities,
-		storyboard=osc_storyboard,
-		roadnetwork=osc_road_network,
-		catalog=osc_catalogs
-	)
+    name=SCENARIO_NAME,
+    author="AstaZero 1.0",
+    parameters=osc_params,
+    entities=osc_entities,
+    storyboard=osc_storyboard,
+    roadnetwork=osc_road_network,
+    catalog=osc_catalogs,
+)
 
 osc_file.write_xml(SCENARIO_FILE_NAME)
-

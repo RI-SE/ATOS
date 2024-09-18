@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>atos</name>
+  <version>1.0.0</version>
+  <description>The ATOS package</description>
+  <license>MPL 2.0</license>
+  <maintainer email="lukas.wikander@astazero.com">lukas</maintainer> 
+
+  <author email="lukas.wikander@astazero.com">Lukas Wikander</author>
+  <author email="sebastian.lindholm@astazero.com">Sebastian Loh Lindholm</author>
+  <author email="viktor.johansson@astazero.com">Viktor Johansson</author>
+  <author email="adam.eriksson@astazero.com">Adam Eriksson</author>
+  <author email="alfred.aronsson@astazero.com">Alfred Aronsson</author>
+  <author email="jesper.blidkvist@astazero.com">Jesper Blidkvist</author>
+  <author email="oscar.johansson@astazero.com">Oscar Johansson</author>
+  <author email="frida.reichenberg@astazero.com">Frida Reichenberg</author>
+  <author email="victor.jarlow@astazero.com">Victor Jarlow</author>
+  <author email="samuel.thoren@astazero.com">Samuel Thorén</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>atos_interfaces</depend>
+  <depend>atos_gui</depend>
+  <depend>rosbridge_suite</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>foxglove_msgs</depend>
+  <depend>foxglove_bridge</depend>
+  <depend>pcl_conversions</depend>
+  <depend>fmt</depend>
+  <doc_depend>doxygen</doc_depend>
+
+  <test_depend>ament_cmake_ros</test_depend>
+  <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+       <build_type>ament_cmake</build_type>
+  </export>
+</package>

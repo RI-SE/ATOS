@@ -1,0 +1,128 @@
+{
+    "type": "object",
+    "title": "ATOS",
+    "description": "Test control system",
+    "modules": {
+        "journal_control": {
+            "ros__parameters": {
+                "scenario_name": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Optional, name of the journal_file"
+                }
+            }
+        },
+        "esmini_adapter":{
+            "ros__parameters": {
+                "timestep": {
+                    "type": "double",
+                    "default": 0.1,
+                    "description": "The time step (in seconds) used in the scenario simulation."
+                }
+            }
+        },
+        "open_scenario_gateway":{
+            "ros__parameters": {
+                "active_object_names": {
+                    "type": "string_array",
+                    "items": {
+                        "type": "string"
+                      },
+                    "default": [""],
+                    "description": "String array of object names from the vehicle catalog that should be used in the scenario. A single empty string will enable all"
+                },
+                "open_scenario_file": {
+                    "type": "file",
+                    "default": "GaragePlanScenario.xosc",
+                    "description": "Name of the OpenSCENARIO-file. The file must end in .xosc and be located in the osc-directory."
+                }
+            }
+        },
+        "object_control": {
+            "ros__parameters": {
+                "max_missing_heartbeats": {
+                    "type": "int",
+                    "default": 100,
+                    "description": "The number of position update (MONR) message periods that are allowed to pass since the last received message before an abort signal is sent to all objects."
+                },
+                "transmitter_id": {
+                    "type": "int",
+                    "default": 15,
+                    "description": "The ISO 22133 transmitted id to be used for ATOS."
+                }
+            }
+        },
+        "osi_adapter": {
+            "ros__parameters": {
+                "address": {
+                    "type": "string",
+                    "default": "0.0.0.0",
+                    "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}$",
+                    "description": "IP address for client to connect to."
+                },
+                "port": {
+                    "type": "int",
+                    "default": 55555,
+                    "description": "Port for client to connect to."
+                },
+                "protocol": {
+                    "type": "string",
+                    "enum": [
+                        "tcp",
+                        "udp"
+                    ],
+                    "default": "tcp",
+                    "description": "Which protocol to use, use 'tcp' or 'udp'."
+                },
+                "frequency": {
+                    "type": "int",
+                    "default": 100,
+                    "description": "Frequency for sending data, measured in Hz."
+                }
+            }
+        },
+        "trajectorylet_streamer": {
+            "ros__parameters": {
+                "chunk_duration": {
+                    "type": "int",
+                    "default": 2,
+                    "description": "Length of the chunks to be transmitted, in seconds. The current time is used to find a chunk start point in the trajectory and the chunk length marks the end of that chunk."
+                }
+            }
+        },
+        "pointcloud_publisher": {
+            "ros__parameters": {
+                "pointcloud_files": {
+                    "type": "file_array",
+                    "description": "List of one or more pointcloud files to publish.",
+                    "items": {
+                        "type": "object",
+                        "title": "Pointcloud file",
+                        "file_array": {
+                            "type": "string",
+                            "default": ""
+                        }
+                    }
+                }
+            }
+        },
+        "back_to_start": {
+            "ros__parameters": {
+                "turn_radius": {
+                    "type": "double",
+                    "default": 2.5,
+                    "description": "Radius of the turn to be performed, in meters."
+                }
+            }
+        },
+        "integration_testing_handler": {
+            "ros__parameters": {
+                "scenario_execution": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Set to true or false depending if you want to run this integration test"
+                }
+            }
+        }
+    }
+}

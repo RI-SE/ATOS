@@ -4,7 +4,7 @@
 `PointcloudPublisher` is used to publish site scans. This module supports pointclouds that have the file type `.pcd`. If you have a very large pointcloud, it is recommended to downsample it before inputting it into the module.
 
 ## ROS parameters
-The follwing ROS parameters can be set for `PointcloudPublisher`:
+The following ROS parameters can be set for `PointcloudPublisher`:
 
 ```yaml
 atos:

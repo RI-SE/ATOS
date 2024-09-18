@@ -1,0 +1,48 @@
+name: cppcheck
+
+on: workflow_call
+
+jobs:
+  cppcheck:
+    runs-on: ubuntu-latest
+    container: ros:humble
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install cppcheck
+        run: |
+          sudo apt-get -yqq update
+          sudo apt-get -yqq install cppcheck
+        shell: bash
+  
+      - name: Run cppcheck.
+        id: cppcheck
+        run: |
+          mkdir /tmp/cppcheck-result
+          cppcheck --output-file=/tmp/cppcheck-result/cppcheck-result.txt .
+
+      - name: Check if the cppcheck-result.txt file is empty
+        id: check-cppcheck-result-empty
+        run: |
+          if [ -s /tmp/cppcheck-result/cppcheck-result.txt ]; then
+            echo "empty=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "empty=true" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+      - name: Upload cppcheck result
+        if: ${{ steps.check-cppcheck-result-empty.outputs.empty == 'false' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cppcheck-result
+          path: /tmp/cppcheck-result/
+
+      - name: Mark the workflow as failed if the cppcheck-results.txt file contains errors
+        if: ${{ steps.check-cppcheck-result-empty.outputs.empty == 'false' }}
+        run: |
+          exit 1
+        shell: bash
