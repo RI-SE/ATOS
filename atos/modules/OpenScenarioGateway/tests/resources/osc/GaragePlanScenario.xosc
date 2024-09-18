@@ -334,6 +334,27 @@
                                 </ConditionGroup>
                             </StartTrigger>
                         </Event>
+                        <Event name="1,high_speed_event_2" priority="parallel" maximumExecutionCount="1">
+                            <Action name="1,send_denm_2">
+                                <UserDefinedAction>
+                                    <CustomCommandAction type="V2X">{"message_type": "DENM", "event_id": "ATOSEvent2", "cause_code": 12, "latitude": 0.0, "longitude": 0.0, "altitude": 0.0, "detection_time": 0}</CustomCommandAction>
+                                </UserDefinedAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="1,high_speed_detected" delay="0.0" conditionEdge="none">
+                                        <ByEntityCondition>
+                                            <TriggeringEntities triggeringEntitiesRule="any">
+                                                <EntityRef entityRef="1"/>
+                                            </TriggeringEntities>
+                                            <EntityCondition>
+                                                <SpeedCondition value="2.7777777777777777" rule="greaterThan"/>
+                                            </EntityCondition>
+                                        </ByEntityCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
                     </Maneuver>
                 </ManeuverGroup>
                 <ManeuverGroup name="5,maneuver_group" maximumExecutionCount="1">
