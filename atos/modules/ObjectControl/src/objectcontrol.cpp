@@ -74,7 +74,7 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(ServiceNames::getObjectControlState,
 		std::bind(&ObjectControl::onRequestState, this, _1, _2));
 	//RCLCPP_ERROR(get_logger(), "State is initialized: %s", sm->is("Initialized"));
-	sm->process_event(SmImpl::initializeRequest());
+	sm->process_event(SmImpl::InitializeRequest());
 	RCLCPP_ERROR(get_logger(), "State is initialized: %u", sm->is(sml::state<AbstractKinematics::Idle>));
 	RCLCPP_ERROR(get_logger(), "State is initialized: %u", sm->is(sml::state<AbstractKinematics::Initialized>));
 
