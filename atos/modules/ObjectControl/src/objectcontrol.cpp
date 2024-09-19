@@ -73,6 +73,10 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	returnTrajectoryClient = create_client<atos_interfaces::srv::GetObjectReturnTrajectory>(ServiceNames::getObjectReturnTrajectory);
 	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(ServiceNames::getObjectControlState,
 		std::bind(&ObjectControl::onRequestState, this, _1, _2));
+	//RCLCPP_ERROR(get_logger(), "State is initialized: %s", sm->is("Initialized"));
+	sm->process_event(SmImpl::initializeRequest());
+	RCLCPP_ERROR(get_logger(), "State is initialized: %u", sm->is(sml::state<AbstractKinematics::Idle>));
+	RCLCPP_ERROR(get_logger(), "State is initialized: %u", sm->is(sml::state<AbstractKinematics::Initialized>));
 
 	// Set the initial state
 	this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
