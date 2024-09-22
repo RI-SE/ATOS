@@ -18,6 +18,7 @@
 #include "state.hpp"
 #include "util.h"
 #include "journal.hpp"
+#include "sml_printing.hpp"
 
 #include "objectcontrol.hpp"
 
@@ -73,10 +74,18 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	returnTrajectoryClient = create_client<atos_interfaces::srv::GetObjectReturnTrajectory>(ServiceNames::getObjectReturnTrajectory);
 	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(ServiceNames::getObjectControlState,
 		std::bind(&ObjectControl::onRequestState, this, _1, _2));
-	//RCLCPP_ERROR(get_logger(), "State is initialized: %s", sm->is("Initialized"));
+	// Below is some testing stuff
 	sm->process_event(SmImpl::InitializeRequest());
-	RCLCPP_ERROR(get_logger(), "State is initialized: %u", sm->is(sml::state<AbstractKinematics::Idle>));
-	RCLCPP_ERROR(get_logger(), "State is initialized: %u", sm->is(sml::state<AbstractKinematics::Initialized>));
+	RCLCPP_ERROR(get_logger(), "State is initialized: %u", sm->is(sml::state<Idle>));
+	RCLCPP_ERROR(get_logger(), "State is initialized: %u", sm->is(sml::state<Initialized>));
+	std::ostringstream ss;
+	std::ofstream myfile;
+	myfile.open ("/home/victor/hello_plantuml.txt");
+	dump(*sm, ss);
+	myfile << ss.str();
+	myfile.close();
+	RCLCPP_INFO(get_logger(), "Dumped state machine to file");
+	// End of testing stuff!
 
 	// Set the initial state
 	this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
