@@ -115,6 +115,7 @@ class OpenScenarioGateway(Node):
                 )
                 start_object_msg = atos_interfaces.msg.ObjectTriggerStart()
                 start_object_msg.id = object_id
+                start_object_msg.stamp = self.get_clock().now().to_msg()
                 self.start_object_pub_.publish(start_object_msg)
                 break
 
