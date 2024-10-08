@@ -22,8 +22,17 @@ class StoryBoardHandler:
                     for manuever in manuever_group.maneuvers:
                         for event in manuever.events:
                             for action in event.action:
-                                if isinstance(
-                                    action.action, xosc.actions.FollowTrajectoryAction
+                                if (
+                                    isinstance(
+                                        action.action,
+                                        xosc.actions.FollowTrajectoryAction,
+                                    )
+                                    or isinstance(
+                                        action.action, xosc.actions.AbsoluteSpeedAction
+                                    )
+                                    or isinstance(
+                                        action.action, xosc.actions.RelativeSpeedAction
+                                    )
                                 ):
                                     follow_trajectory_actions[action.name] = actors
                                 elif (
