@@ -63,6 +63,9 @@ sudo rosdep init || true && \
     rosdep install --from-paths ${ATOS_REPO_PATH} --ignore-src --rosdistro $ROS_DISTRO -y
 check_command_failed $? "Failed to install ROS2 dependencies."
 
+# source 
+source /opt/ros/humble/setup.bash 
+
 ###############################################
 ######## Install ATOS GUI dependencies ########
 ###############################################
