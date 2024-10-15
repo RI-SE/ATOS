@@ -11,7 +11,7 @@ def test_init_storyboard_handler(get_file_path):
     assert storyboard_handler
 
 
-def test_get_follow_trajectory_actions_to_actors_map(get_file_path):
+def test_get_start_actions_to_actors_map(get_file_path):
     scenario_path = os.path.join(
         os.path.dirname(__file__), "resources", "osc", "GaragePlanScenario.xosc"
     )
@@ -23,11 +23,24 @@ def test_get_follow_trajectory_actions_to_actors_map(get_file_path):
     # Assert the expected result
     expected_result = {
         "1,init_follow_trajectory": ["1"],
-        "2,start_follow_trajectory": ["2"],
-        "3,start_follow_trajectory": ["3"],
-        "4,start_follow_trajectory": ["4"],
+        "1,slow_down": ["1"],
+        "1,mondeo_accelerate": ["1"],
+        "1,brake_to_stop": ["1"],
+        "5,brake_to_stop": ["5"],
         "5,start_follow_trajectory": ["5"],
+        "5,set_speed": ["5"],
+        "2,brake_to_stop": ["2"],
+        "2,start_follow_trajectory": ["2"],
+        "2,set_speed": ["2"],
+        "4,brake_to_stop": ["4"],
+        "4,start_follow_trajectory": ["4"],
+        "4,set_speed": ["4"],
+        "3,brake_to_stop": ["3"],
+        "3,start_follow_trajectory": ["3"],
+        "3,set_speed": ["3"],
+        "6,brake_to_stop": ["6"],
         "6,start_follow_trajectory": ["6"],
+        "6,set_speed": ["6"],
     }
     assert result == expected_result
 
