@@ -29,6 +29,7 @@ class ScenarioObject:
         self.name = name
         self.catalog_ref: xosc.CatalogReference = catalog_ref
         self.ip: str = None
+        self.started: bool = False
 
 
 class OpenScenarioGateway(Node):
@@ -39,7 +40,7 @@ class OpenScenarioGateway(Node):
         # Class variables
         self.active_objects = {}
         self.vehicle_catalog = None
-        self.follow_traj_to_obj_name = {}
+        self.start_actions_to_obj_name = {}
         self.custom_command_map = {}
 
         self.scenario_file_md5hash = None
@@ -94,22 +95,23 @@ class OpenScenarioGateway(Node):
 
     def story_board_element_state_change_callback(self, story_board_element):
         if (
-            story_board_element.name in self.follow_traj_to_obj_name.keys()
+            story_board_element.name in self.start_actions_to_obj_name.keys()
             and story_board_element.state == RUNNING
         ):
-            self.handle_follow_trajectory_action(story_board_element)
+            self.handle_start_actions(story_board_element)
         elif (
             story_board_element.full_path in self.custom_command_map
             and story_board_element.state == RUNNING
         ):
             self.handle_custom_command_action(story_board_element)
 
-    def handle_follow_trajectory_action(self, story_board_element):
+    def handle_start_actions(self, story_board_element):
         # Iterate through active objects to send the start command for the target objects
         for object_id, object in self.active_objects.items():
-            target_object_name = self.follow_traj_to_obj_name[story_board_element.name]
-            if object.name in target_object_name:
-
+            target_object_name = self.start_actions_to_obj_name[
+                story_board_element.name
+            ]
+            if object.name in target_object_name and not object.started:
                 self.get_logger().info(
                     f"Starting object {object.name} with id {object_id}"
                 )
@@ -117,6 +119,8 @@ class OpenScenarioGateway(Node):
                 start_object_msg.id = object_id
                 start_object_msg.stamp = self.get_clock().now().to_msg()
                 self.start_object_pub_.publish(start_object_msg)
+
+                object.started = True
                 break
 
     def handle_custom_command_action(self, story_board_element):
@@ -148,7 +152,7 @@ class OpenScenarioGateway(Node):
             self.get_logger().error("File does not exist: {}".format(scenario_file))
             return
         self.get_logger().info("Loading scenario file: {}".format(scenario_file))
-        self.follow_traj_to_obj_name = StoryBoardHandler(
+        self.start_actions_to_obj_name = StoryBoardHandler(
             scenario_file
         ).get_follow_trajectory_actions_to_actors_map()
         self.custom_command_map = StoryBoardHandler(
@@ -181,6 +185,8 @@ class OpenScenarioGateway(Node):
                         obj.name, id
                     )
                 )
+                # Reset the started flag
+                obj.started = False
 
     def get_all_objects_in_scenario(self, scenario_file) -> List[ScenarioObject]:
         scenario = xosc.ParseOpenScenario(scenario_file)
