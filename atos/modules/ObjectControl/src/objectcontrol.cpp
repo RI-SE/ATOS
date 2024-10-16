@@ -14,9 +14,11 @@
 #include <dirent.h>
 #include <exception>
 
+#include "sm_impl.hpp"
 #include "state.hpp"
 #include "util.h"
 #include "journal.hpp"
+#include "sml_printing.hpp"
 
 #include "objectcontrol.hpp"
 
@@ -25,9 +27,17 @@ using std::placeholders::_2;
 using namespace ROSChannels;
 using namespace std::chrono_literals;
 using namespace ATOS;
+namespace sml = boost::sml;
+
+class ObjectControl::Sm : public sml::sm<SmImpl,sml::thread_safe<std::mutex>> {
+	public: 
+		explicit Sm(ObjectControl* handler)
+        	: sml::sm<SmImpl,sml::thread_safe<std::mutex>>(static_cast<ObjectControl*>(handler)) {}
+};
 
 ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> exec)
 	: Module(ObjectControl::moduleName),
+	sm(std::make_unique<Sm>(this)),
 	exec(exec),
 	scnInitSub(*this, std::bind(&ObjectControl::onInitMessage, this, _1)),
 	scnStartSub(*this, std::bind(&ObjectControl::onStartMessage, this, _1)),
@@ -64,6 +74,18 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	returnTrajectoryClient = create_client<atos_interfaces::srv::GetObjectReturnTrajectory>(ServiceNames::getObjectReturnTrajectory);
 	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(ServiceNames::getObjectControlState,
 		std::bind(&ObjectControl::onRequestState, this, _1, _2));
+	// Below is some testing stuff
+	sm->process_event(SmImpl::InitializeRequest());
+	RCLCPP_ERROR(get_logger(), "State is initialized: %u", sm->is(sml::state<Idle>));
+	RCLCPP_ERROR(get_logger(), "State is initialized: %u", sm->is(sml::state<Initialized>));
+	std::ostringstream ss;
+	std::ofstream myfile;
+	myfile.open ("/home/victor/hello_plantuml.txt");
+	dump(*sm, ss);
+	myfile << ss.str();
+	myfile.close();
+	RCLCPP_INFO(get_logger(), "Dumped state machine to file");
+	// End of testing stuff!
 
 	// Set the initial state
 	this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
