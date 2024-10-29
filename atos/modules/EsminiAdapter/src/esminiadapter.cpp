@@ -242,7 +242,7 @@ void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr 
 */
 void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr, uint32_t ATOSObjectId) {
 	if (auto idMapping = atosIdToEsminiId.find(ATOSObjectId); idMapping != atosIdToEsminiId.end()) {
-		reportObjectPosition(monr, idMapping->first); // Report object position to esmini
+		reportObjectPosition(monr, idMapping->second); // Report object position to esmini
 		SE_Step(); // Advance the "simulation world"-time
 	} 
 	else {

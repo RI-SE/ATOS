@@ -55,6 +55,7 @@ class OpenScenarioGateway(Node):
 
         # ROS subscriptions/publishers
         self.init_ = self.create_subscription(Empty, "init", self.init_callback, 10)
+        self.arm_ = self.create_subscription(Empty, "arm", self.arm_callback, 10)
 
         self.story_board_element_sub_ = self.create_subscription(
             atos_interfaces.msg.StoryBoardElementStateChange,
@@ -92,6 +93,11 @@ class OpenScenarioGateway(Node):
         self.update_active_scenario_objects(
             self.get_parameter(ACTIVE_OBJECT_NAME_PARAMETER).value
         )
+
+    def arm_callback(self, msg):
+        # Reset the started flag
+        for id in self.active_objects:
+            self.active_objects[id].started = False
 
     def story_board_element_state_change_callback(self, story_board_element):
         if (
@@ -185,8 +191,6 @@ class OpenScenarioGateway(Node):
                         obj.name, id
                     )
                 )
-                # Reset the started flag
-                obj.started = False
 
     def get_all_objects_in_scenario(self, scenario_file) -> List[ScenarioObject]:
         scenario = xosc.ParseOpenScenario(scenario_file)
