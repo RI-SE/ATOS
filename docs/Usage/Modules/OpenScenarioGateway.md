@@ -24,6 +24,7 @@ atos:
     ros__parameters:
       open_scenario_file: "scenario_name.xosc"     # The name of the scenario to open. Located in the ~/.astazero/ATOS/osc directory.
       active_object_names: ["object1", "object2"]  # List of object names to be active in the scenario. An empty list means all objects are active.
+      start_delay_ms: 0                            # Delay in milliseconds to add to all start commands sent to the objects.
 ```
 
 ## Using CustomCommandActions

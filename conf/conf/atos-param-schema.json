@@ -35,6 +35,11 @@
                     "type": "file",
                     "default": "GaragePlanScenario.xosc",
                     "description": "Name of the OpenSCENARIO-file. The file must end in .xosc and be located in the osc-directory."
+                },
+                "start_delay_ms": {
+                    "type": "int",
+                    "default": 0,
+                    "description": "Delay in milliseconds to add to the start time for the objects."
                 }
             }
         },
