@@ -18,6 +18,7 @@ from typing import List
 
 ROOT_FOLDER_PATH_PARAMETER = "root_folder_path"
 ACTIVE_OBJECT_NAME_PARAMETER = "active_object_names"
+START_DELAY_PARAMETER = "start_delay_ms"
 SCENARIO_FILE_PARAMETER = "open_scenario_file"
 DEFAULT_FOLDER_PATH = path.expanduser("~/.astazero/ATOS/")
 
@@ -30,6 +31,7 @@ class ScenarioObject:
         self.catalog_ref: xosc.CatalogReference = catalog_ref
         self.ip: str = None
         self.started: bool = False
+        self.start_delay_ms = 0
 
 
 class OpenScenarioGateway(Node):
@@ -51,6 +53,7 @@ class OpenScenarioGateway(Node):
         self.declare_parameter(
             ACTIVE_OBJECT_NAME_PARAMETER, rclpy.Parameter.Type.STRING_ARRAY
         )
+        self.declare_parameter(START_DELAY_PARAMETER, 0)
         self.add_on_set_parameters_callback(self.parameter_callback)
 
         # ROS subscriptions/publishers
@@ -123,7 +126,11 @@ class OpenScenarioGateway(Node):
                 )
                 start_object_msg = atos_interfaces.msg.ObjectTriggerStart()
                 start_object_msg.id = object_id
-                start_object_msg.stamp = self.get_clock().now().to_msg()
+                start_delay_ms = self.get_parameter(START_DELAY_PARAMETER).value
+                start_object_msg.stamp.sec += int(time.time()) + start_delay_ms // 1000
+                start_object_msg.stamp.nanosec += (time.time_ns() % 1_000_000_000) + (
+                    start_delay_ms % 1000
+                ) * 1_000_000
                 self.start_object_pub_.publish(start_object_msg)
 
                 object.started = True
