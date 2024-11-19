@@ -31,7 +31,6 @@ class ScenarioObject:
         self.catalog_ref: xosc.CatalogReference = catalog_ref
         self.ip: str = None
         self.started: bool = False
-        self.start_delay_ms = 0
 
 
 class OpenScenarioGateway(Node):
