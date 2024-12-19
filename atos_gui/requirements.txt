@@ -1,1 +1,2 @@
-nicegui
+nicegui==1.4.8
+fastapi==0.108.0
