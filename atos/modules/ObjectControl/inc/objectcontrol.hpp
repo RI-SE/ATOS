@@ -78,6 +78,8 @@ namespace AbsoluteKinematics {
 	class RemoteControlled;
 }
 
+class SmImpl;
+
 /*!
  * \brief The ObjectControl class is intended as an overarching device
  *			used to control a scenario. No behaviour is implemented in it
@@ -86,6 +88,9 @@ namespace AbsoluteKinematics {
  */
 class ObjectControl : public Module
 {
+	// Forward declare state machine
+	class Sm;
+	friend class SmImpl;
 	friend class ObjectControlState;
 	friend class AbstractKinematics::Idle;
 	friend class AbstractKinematics::Initialized;
@@ -361,7 +366,7 @@ private:
 	void injectObjectData(const MonitorMessage& monr);
 	//! \brief TODO
 	OsiHandler::LocalObjectGroundTruth_t buildOSILocalGroundTruth(const MonitorMessage&) const;
-	
+	std::unique_ptr<Sm> sm;
 	void publishScenarioInfoToJournal();
 };
 
