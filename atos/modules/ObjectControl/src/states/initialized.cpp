@@ -4,60 +4,30 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "journal.hpp"
-#include "state.hpp"
+#include "objectcontrol.hpp"
 
-AbstractKinematics::Initialized::Initialized() {}
+namespace state_machine {
 
-void AbstractKinematics::Initialized::connectRequest(ObjectControl &handler) {
-  RCLCPP_INFO(handler.get_logger(), "Handling connect request");
-  JournalRecordData(JOURNAL_RECORD_EVENT, "CONNECT received");
+void init_to_connecting_action::operator()(ObjectControl* oc) const {
+    RCLCPP_INFO(oc->get_logger(), "Handling connect request");
+    JournalRecordData(JOURNAL_RECORD_EVENT, "CONNECT received");
 }
 
-void AbstractKinematics::Initialized::disconnectRequest(
-    ObjectControl &handler) {
-  handler.clearScenario();
+bool init_to_connecting_guard::operator()(ObjectControl* oc) const {
+    if (oc->getVehicleIDs().empty())
+    {
+      RCLCPP_WARN(oc->get_logger(),
+                  "No objects are configured! Canceling connect request...");
+      return false;
+    }
+    else
+    {
+        return true;
+    }
 }
 
-/*! ******************************************************
- * \section RelativeKinematics
- *  ******************************************************
- */
-void RelativeKinematics::Initialized::connectRequest(ObjectControl &handler) {
-
-  if (handler.getVehicleIDs().empty()) {
-    RCLCPP_WARN(handler.get_logger(),
-                "No objects are configured! Canceling connect request...");
-    RelativeKinematics::Initialized::disconnectRequest(handler);
-  } else {
-    AbstractKinematics::Initialized::connectRequest(handler);
-    setState(handler, new RelativeKinematics::Connecting);
-  }
+void init_to_idle_action::operator()(ObjectControl* oc) const {
+    oc->clearScenario();
 }
 
-void RelativeKinematics::Initialized::disconnectRequest(
-    ObjectControl &handler) {
-  AbstractKinematics::Initialized::disconnectRequest(handler);
-  setState(handler, new RelativeKinematics::Idle);
-}
-
-/*! ******************************************************
- * \section AbsoluteKinematics
- *  ******************************************************
- */
-void AbsoluteKinematics::Initialized::connectRequest(ObjectControl &handler) {
-
-  if (handler.getVehicleIDs().empty()) {
-    RCLCPP_WARN(handler.get_logger(),
-                "No objects are configured! Canceling connect request...");
-    AbsoluteKinematics::Initialized::disconnectRequest(handler);
-  } else {
-    AbstractKinematics::Initialized::connectRequest(handler);
-    setState(handler, new AbsoluteKinematics::Connecting);
-  }
-}
-
-void AbsoluteKinematics::Initialized::disconnectRequest(
-    ObjectControl &handler) {
-  AbstractKinematics::Initialized::disconnectRequest(handler);
-  setState(handler, new AbsoluteKinematics::Idle);
 }

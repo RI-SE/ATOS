@@ -5,9 +5,8 @@
  */
 #include "objectlistener.hpp"
 #include "objectcontrol.hpp"
-#include "state.hpp"
 
-ObjectListener::ObjectListener(ObjectControl* sh,	std::shared_ptr<TestObject> ob,	rclcpp::Logger log) : 
+ObjectListener::ObjectListener(ObjectControl* sh,	std::shared_ptr<TestObject> ob,	rclcpp::Logger log) :
 	Loggable(log),
 	obj(ob),
 	handler(sh) {
@@ -32,7 +31,7 @@ ObjectListener::~ObjectListener() {
 void ObjectListener::listen() {
 	try {
 		while (!this->quit) {
-			//handle incoming iso22133 messages 
+			//handle incoming iso22133 messages
 			obj->handleISOMessage(true);
 		}
 	} catch (std::invalid_argument& e) {
@@ -42,7 +41,7 @@ void ObjectListener::listen() {
 	} catch (std::runtime_error& e) {
 		RCLCPP_ERROR(get_logger(), e.what());
 		obj->disconnect();
-		handler->state->disconnectedFromObject(*handler, obj->getTransmitterID());
+		handler->sm.process_event(state_machine::events::DisconnectedFromObject{obj->getTransmitterID()});
 	}
 	RCLCPP_INFO(get_logger(), "Listener thread for object %u exiting", obj->getTransmitterID());
 }

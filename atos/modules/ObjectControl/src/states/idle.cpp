@@ -3,37 +3,38 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-#include "state.hpp"
+#include "objectcontrol.hpp"
 #include "journal.hpp"
 
-AbstractKinematics::Idle::Idle() {
 
-}
+namespace state_machine {
 
-void AbstractKinematics::Idle::onEnter(
-		ObjectControl& handler) {
-	handler.clearScenario();
-}
-
-void AbstractKinematics::Idle::initializeRequest(
-		ObjectControl& handler) {
-	RCLCPP_INFO(handler.get_logger(), "Handling initialization request");
+void idle_on_entry::operator()(ObjectControl* oc) const {
+	RCLCPP_INFO(oc->get_logger(), "Handling initialization request");
 	JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
-	bool successful = handler.loadScenario(); // Reload objects on each initialize request. 
+	oc->clearScenario();
+}
+
+bool idle_to_init_guard::operator()(ObjectControl* oc) const {
+	 // Reload objects on each initialize request.
+	bool const successful{oc->loadScenario()};
 	if (!successful) {
-		RCLCPP_ERROR(handler.get_logger(), "Failed to load scenario");
+		RCLCPP_ERROR(oc->get_logger(), "Failed to load scenario");
 		JournalRecordData(JOURNAL_RECORD_EVENT, "INIT failed");
-		return;
 	}
+	return successful;
+}
+
+void idle_to_init_action::operator()(ObjectControl* oc) const {
 	try {
-		auto anchorID = handler.getAnchorObjectID();
-		handler.transformScenarioRelativeTo(anchorID);
-		handler.controlMode = ControlMode::RelativeKinematics;
-		setState(handler, new RelativeKinematics::Initialized);
-		RCLCPP_INFO(handler.get_logger(), "Relative control mode enabled");
+		auto anchorID = oc->getAnchorObjectID();
+		oc->transformScenarioRelativeTo(anchorID);
+		oc->setControlMode(ControlMode::RelativeKinematics);
+		RCLCPP_INFO(oc->get_logger(), "Relative control mode enabled");
 	} catch (std::invalid_argument&) {
-		handler.controlMode = ControlMode::AbsoluteKinematics;
-		setState(handler, new AbsoluteKinematics::Initialized);
-		RCLCPP_INFO(handler.get_logger(), "Absolute control mode enabled");
+		oc->setControlMode(ControlMode::AbsoluteKinematics);
+		RCLCPP_INFO(oc->get_logger(), "Absolute control mode enabled");
 	}
 }
+
+} // namespace state_machine

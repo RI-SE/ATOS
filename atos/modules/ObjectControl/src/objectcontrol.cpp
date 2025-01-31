@@ -14,7 +14,6 @@
 #include <dirent.h>
 #include <exception>
 
-#include "state.hpp"
 #include "util.h"
 #include "journal.hpp"
 
@@ -65,26 +64,19 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(ServiceNames::getObjectControlState,
 		std::bind(&ObjectControl::onRequestState, this, _1, _2));
 
-	// Set the initial state
-	this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
 	// Create test journal
 	if (JournalInit(get_name(), get_logger()) == -1) {
 		RCLCPP_ERROR(get_logger(), "Unable to create test journal");
 	}
 };
 
-ObjectControl::~ObjectControl() {
-	delete state;
-}
+ObjectControl::~ObjectControl() {}
 
 void ObjectControl::onRequestState(
 		const std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Request>,
 		std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Response> res) {
 	try {
-		if (!this->state) {
-			throw std::runtime_error("No state set");
-		}
-		res->state = this->state->asNumber();
+		res->state = stateAsNumber();
 		res->success = true;
 	}
 	catch (std::exception& e) {
@@ -96,14 +88,12 @@ void ObjectControl::onRequestState(
 
 void ObjectControl::handleActionConfigurationCommand(
 		const TestScenarioCommandAction& /* action */) {
-	this->state->settingModificationRequested(*this);
 	// TODO: Implement
 }
 
 void ObjectControl::handleExecuteActionCommand(
 		const uint16_t &actionID,
 		const std::chrono::system_clock::time_point &when) {
-	this->state->actionExecutionRequested(*this);
 	auto delayedExecutor = [&](){
 		using namespace std::chrono;
 		RCLCPP_DEBUG(get_logger(), "Executing action %u in %ld ms", actionID,
@@ -117,95 +107,37 @@ void ObjectControl::handleExecuteActionCommand(
 }
 
 void ObjectControl::onInitMessage(const Init::message_type::SharedPtr){
-	COMMAND cmd = COMM_INIT;
-	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
-	stateChangeMsg.prev_state = this->state->asNumber();
-	auto f_try = [&]() { this->state->initializeRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, Init::topicName, get_logger());
-	stateChangeMsg.current_state = this->state->asNumber();
-	// Don't publish until we are actually initialized
-	RCLCPP_INFO(get_logger(), "State change from %d to %d", stateChangeMsg.prev_state, stateChangeMsg.current_state);
-	stateChangePub.publish(stateChangeMsg);
+	sm.process_event(state_machine::events::Initialize{});
 }
 
 void ObjectControl::onConnectMessage(const Connect::message_type::SharedPtr){
-	COMMAND cmd = COMM_CONNECT;
-	// TO DO: Fix publishing correct data to stateChangeMsg
-	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
-	stateChangeMsg.prev_state = this->state->asNumber();
-	auto f_try = [&]() { this->state->connectRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, Connect::topicName, get_logger());
-	stateChangeMsg.current_state = this->state->asNumber();
-	stateChangePub.publish(stateChangeMsg);
+	sm.process_event(state_machine::events::Connect{});
 }
 
 void ObjectControl::onArmMessage(const Arm::message_type::SharedPtr){
-	COMMAND cmd = COMM_ARM;
-	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
-	stateChangeMsg.prev_state = this->state->asNumber();
-	auto f_try = [&]() { this->state->armRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, Arm::topicName, get_logger());
-	stateChangeMsg.current_state = this->state->asNumber();
-	stateChangePub.publish(stateChangeMsg);
+	sm.process_event(state_machine::events::Arm{});
 }
 
 void ObjectControl::onDisarmMessage(const Disarm::message_type::SharedPtr){
-	COMMAND cmd = COMM_DISARM;
-	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
-	stateChangeMsg.prev_state = this->state->asNumber();
-	auto f_try = [&]() { this->state->disarmRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, Disarm::topicName, get_logger());
-	stateChangeMsg.current_state = this->state->asNumber();
-	stateChangePub.publish(stateChangeMsg);
+	sm.process_event(state_machine::events::Disarm{});
 }
 
 void ObjectControl::onStartMessage(const Start::message_type::SharedPtr){
-	COMMAND cmd = COMM_STRT;
-	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
-	stateChangeMsg.prev_state = this->state->asNumber();
-	auto f_try = [&]() { this->state->startRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, Start::topicName, get_logger());
-	stateChangeMsg.current_state = this->state->asNumber();
-	stateChangePub.publish(stateChangeMsg);
+	sm.process_event(state_machine::events::Start{});
 }
 
 void ObjectControl::onStartObjectMessage(const StartObject::message_type::SharedPtr strtObj){
-	using namespace std::chrono;
-	COMMAND cmd = COMM_START_OBJECT;
-	auto f_try = [&]() { this->state->startObjectRequest(*this, strtObj->id, system_clock::time_point{seconds{strtObj->stamp.sec} + nanoseconds{strtObj->stamp.nanosec}});};
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, StartObject::topicName, get_logger());
+	sm.process_event(state_machine::events::StartObject{
+		strtObj->id,
+		std::chrono::system_clock::time_point{
+				std::chrono::seconds{strtObj->stamp.sec} + std::chrono::nanoseconds{strtObj->stamp.nanosec}}});
 }
 
 void ObjectControl::onDisconnectMessage(const Disconnect::message_type::SharedPtr){
-	COMMAND cmd = COMM_DISCONNECT;
-	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
-	stateChangeMsg.prev_state = this->state->asNumber();
-	auto f_try = [&]() { this->state->disconnectRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, Disconnect::topicName, get_logger());
-	stateChangeMsg.current_state = this->state->asNumber();
-	stateChangePub.publish(stateChangeMsg);
+	sm.process_event(state_machine::events::Disconnect{});
 }
 
-void ObjectControl::onStopMessage(const Stop::message_type::SharedPtr){
-	COMMAND cmd = COMM_STOP;
-	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
-	stateChangeMsg.prev_state = this->state->asNumber();
-	auto f_try = [&]() { this->state->stopRequest(*this); };
-	auto f_catch = [&]() {
-			failurePub.publish(msgCtr1<Failure::message_type>(cmd));
-			scnAbortPub.publish(Abort::message_type());
-	};
-	this->tryHandleMessage(f_try,f_catch, Stop::topicName, get_logger());
-	stateChangeMsg.current_state = this->state->asNumber();
-	stateChangePub.publish(stateChangeMsg);
-}
+void ObjectControl::onStopMessage(const Stop::message_type::SharedPtr){}
 
 /**
  * @brief Resets the test objects to the scenario starting positions
@@ -213,10 +145,7 @@ void ObjectControl::onStopMessage(const Stop::message_type::SharedPtr){
  * @param msg Trigger message for resetting test objects (std_msgs/msg/Empty)
 */
 void ObjectControl::onResetTestObjectsMessage(const ResetTestObjects::message_type::SharedPtr) {
-	COMMAND cmd = COMM_BACKTOSTART_CALL;
-	auto f_try = [&]() { this->state->resetTestObjectsRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, ResetTestObjects::topicName, get_logger());
+	sm.process_event(state_machine::events::Reset{});
 }
 
 /**
@@ -225,49 +154,24 @@ void ObjectControl::onResetTestObjectsMessage(const ResetTestObjects::message_ty
  * @param msg Trigger message for reloading object settings (std_msgs/msg/Empty)
 */
 void ObjectControl::onReloadObjectSettingsMessage(const ReloadObjectSettings::message_type::SharedPtr) {
-	COMMAND cmd = COMM_OSEM;
-	auto f_try = [&]() { this->state->reloadObjectSettingsRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, ReloadObjectSettings::topicName, get_logger());
+	sm.process_event(state_machine::events::Reload{});
 }
 
 void ObjectControl::onAbortMessage(const Abort::message_type::SharedPtr){
-	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
-	stateChangeMsg.prev_state = this->state->asNumber();
-  publishScenarioInfoToJournal(); // TODO: This should be moved to a state that occurs right after a test is finished
-	// Any exceptions here should crash the program
-	this->state->abortRequest(*this);
-	stateChangeMsg.current_state = this->state->asNumber();
-	stateChangePub.publish(stateChangeMsg);
+	publishScenarioInfoToJournal(); // TODO: This should be moved to a state that occurs right after a test is finished
+	sm.process_event(state_machine::events::Abort{});
 }
 
 void ObjectControl::onAllClearMessage(const AllClear::message_type::SharedPtr){
-	COMMAND cmd = COMM_ABORT_DONE;
-	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
-	stateChangeMsg.prev_state = this->state->asNumber();
-	auto f_try = [&]() { this->state->allClearRequest(*this); };
-	auto f_catch = [&]() { failurePub.publish(msgCtr1<Failure::message_type>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch, AllClear::topicName, get_logger());
-	stateChangeMsg.current_state = this->state->asNumber();
-	stateChangePub.publish(stateChangeMsg);
+	sm.process_event(state_machine::events::Clear{});
 }
 
 void ObjectControl::onRemoteControlEnableMessage(const RemoteControlEnable::message_type::SharedPtr){
-	COMMAND cmd = COMM_REMOTECTRL_ENABLE;
-	auto f_try = [&]() { this->state->enableRemoteControlRequest(*this); };
-	auto f_catch = [&]() {
-			failurePub.publish(msgCtr1<Failure::message_type>(cmd));
-	};
-	this->tryHandleMessage(f_try,f_catch, RemoteControlEnable::topicName, get_logger());
+	sm.process_event(state_machine::events::RemoteControl{});
 }
 
 void ObjectControl::onRemoteControlDisableMessage(const RemoteControlDisable::message_type::SharedPtr){
-	COMMAND cmd = COMM_REMOTECTRL_DISABLE;
-	auto f_try = [&]() { this->state->disableRemoteControlRequest(*this); };
-	auto f_catch = [&]() {
-			failurePub.publish(msgCtr1<Failure::message_type>(cmd));
-	};
-	this->tryHandleMessage(f_try,f_catch, RemoteControlDisable::topicName, get_logger());
+	sm.process_event(state_machine::events::Ready{});
 }
 
 void ObjectControl::onControlSignalMessage(const ControlSignal::message_type::SharedPtr csp){
@@ -604,7 +508,7 @@ void ObjectControl::heartbeat() {
 					RCLCPP_WARN(get_logger(), "MONR timeout for object %u: %ld ms > %ld ms", id,
 							   diff.count(), objects.at(id)->getMaxAllowedMonitorPeriod().count());
 					objects.at(id)->disconnect();
-					this->state->disconnectedFromObject(*this, id);
+					sm.process_event(state_machine::events::DisconnectedFromObject{id});
 				}
 			}
 		}
@@ -613,13 +517,13 @@ void ObjectControl::heartbeat() {
 		for (const auto& id : getVehicleIDs()) {
 			try {
 				if (objects.at(id)->isConnected()) {
-					objects.at(id)->sendHeartbeat(this->state->asControlCenterStatus());
+					objects.at(id)->sendHeartbeat(controlCenterStatus());
 				}
 			}
 			catch (std::exception& e) {
 				RCLCPP_WARN(get_logger(), e.what());
 				objects.at(id)->disconnect();
-				this->state->disconnectedFromObject(*this, id);
+				sm.process_event(state_machine::events::DisconnectedFromObject{id});
 			}
 		}
 	}
@@ -709,7 +613,7 @@ void ObjectControl::connectToObject(
 					ObjectStateType objState = OBJECT_STATE_UNKNOWN;
 					auto nextSendTime = std::chrono::system_clock::now();
 					try {
-						obj->sendHeartbeat(this->state->asControlCenterStatus());
+						obj->sendHeartbeat(controlCenterStatus());
 						nextSendTime += heartbeatPeriod;
 						objState = obj->getState(true, heartbeatPeriod);
 					} catch (std::runtime_error& e) {
@@ -725,13 +629,15 @@ void ObjectControl::connectToObject(
 					case OBJECT_STATE_ARMED:
 					case OBJECT_STATE_REMOTE_CONTROL:
 						RCLCPP_INFO(get_logger(), "Connected to armed object ID %u", obj->getTransmitterID());
-						this->state->connectedToArmedObject(*this, obj->getTransmitterID());
+						sm.process_event(state_machine::events::Disarm{});
 						break;
 					case OBJECT_STATE_ABORTING:
 					case OBJECT_STATE_POSTRUN:
 					case OBJECT_STATE_RUNNING:
 						RCLCPP_INFO(get_logger(), "Connected to running object ID %u", obj->getTransmitterID());
-						this->state->connectedToLiveObject(*this, obj->getTransmitterID());
+						// Object became armed while clearing abort, disarm all objects
+						// RCLCPP_WARN(get_logger(), "Connected to live object %d while CC in clearing state!", id);
+						sm.process_event(state_machine::events::Abort{});
 						break;
 					case OBJECT_STATE_INIT:
 						if (initializingMonrs-- > 0) {
@@ -739,16 +645,26 @@ void ObjectControl::connectToObject(
 						}
 						else {
 							RCLCPP_INFO(get_logger(), "Connected object %u in initializing state after connection", obj->getTransmitterID());
-							this->state->connectedToLiveObject(*this, obj->getTransmitterID());
+							sm.process_event(state_machine::events::Abort{});
 						}
 						break;
 					case OBJECT_STATE_DISARMED:
 						RCLCPP_INFO(get_logger(), "Connected to disarmed object ID %u", obj->getTransmitterID());
-						this->state->connectedToObject(*this, obj->getTransmitterID());
+						if (areAllObjectsIn(OBJECT_STATE_DISARMED)){
+							startListeners();
+							notifyObjectsConnected();
+							sm.process_event(state_machine::events::Ready{});
+						}
+						else if (isAnyObjectIn(OBJECT_STATE_ARMED)) {
+							sm.process_event(state_machine::events::Disarm{});
+						}
+						else if (isAnyObjectIn(OBJECT_STATE_RUNNING)) {
+							sm.process_event(state_machine::events::Abort{});
+						}
 						break;
 					default:
 						RCLCPP_INFO(get_logger(), "Connected to object %u in unknown state", obj->getTransmitterID());
-						this->state->connectedToLiveObject(*this, obj->getTransmitterID());
+						sm.process_event(state_machine::events::Abort{});
 					}
 					break;
 				}
@@ -950,6 +866,17 @@ void ObjectControl::startObject(
 	}
 }
 
+
+auto readyOrDisconnected = [](std::shared_ptr<TestObject> obj) {
+	return obj->getState() == OBJECT_STATE_DISARMED ||
+		obj->getState() == OBJECT_STATE_ARMED ||
+		!obj->isConnected();
+};
+
+auto disarmedOrDisconnected = [](const std::shared_ptr<TestObject> obj) {
+	return obj->getState() == OBJECT_STATE_DISARMED || !obj->isConnected();
+};
+
 void ObjectControl::onObjectStateChangeMessage(const ObjectStateChange::message_type::SharedPtr stateChangeMsg) {
 	ObjectStateType prevState = static_cast<ObjectStateType>(stateChangeMsg->prev_state.state);
 	ObjectStateType state = static_cast<ObjectStateType>(stateChangeMsg->state.state);
@@ -957,17 +884,30 @@ void ObjectControl::onObjectStateChangeMessage(const ObjectStateChange::message_
 	switch (state) {
 	case OBJECT_STATE_DISARMED:
 		if (prevState == OBJECT_STATE_ABORTING) {
-			this->state->objectAbortDisarmed(*this, id);
+			if (areAllObjects(disarmedOrDisconnected)) {
+				sm.process_event(state_machine::events::Ready{});
+			}
+			else if (areAllObjects(readyOrDisconnected)) {
+				sm.process_event(state_machine::events::Connect{});
+			}
 		}
-		else {
-			this->state->objectDisarmed(*this, id);
+		else if (areAllObjectsIn(OBJECT_STATE_DISARMED)) {
+			sm.process_event(state_machine::events::Done{});
+			sm.process_event(state_machine::events::Ready{});
 		}
 		break;
 	case OBJECT_STATE_ARMED:
-		this->state->objectArmed(*this, id);
+		if (sm.is(state_machine::Clearing))
+		{
+			sm.process_event(state_machine::events::Disarm{});
+		}
+		else if (sm.is(state_machine::Aborting))
+		{
+			disconnectObject(id); // TODO just stop sending HEAB to keep tracking available
+		}
 		break;
 	case OBJECT_STATE_ABORTING:
-		this->state->objectAborting(*this, id);
+		sm.process_event(state_machine::events::Abort{});
 		break;
 	case OBJECT_STATE_INIT:
 	case OBJECT_STATE_RUNNING:
