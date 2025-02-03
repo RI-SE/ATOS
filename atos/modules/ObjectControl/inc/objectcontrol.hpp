@@ -78,6 +78,12 @@ namespace AbsoluteKinematics {
 	class RemoteControlled;
 }
 
+enum class ControlMode : int {
+	AbsoluteKinematics,
+	RelativeKinematics,
+};
+
+
 /*!
  * \brief The ObjectControl class is intended as an overarching device
  *			used to control a scenario. No behaviour is implemented in it
@@ -123,11 +129,6 @@ class ObjectControl : public Module
 
 public:
 	ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExecutor>);
-	typedef enum {
-		RELATIVE_KINEMATICS,	//!< Scenario executed relative to immobile VUT
-		ABSOLUTE_KINEMATICS		//!< Scenario executed relative to earth-fixed point
-	} ControlMode;
-
 
 	typedef struct {
 		unsigned int numberOfTargets;

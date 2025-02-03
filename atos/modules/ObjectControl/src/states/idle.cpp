@@ -28,11 +28,11 @@ void AbstractKinematics::Idle::initializeRequest(
 	try {
 		auto anchorID = handler.getAnchorObjectID();
 		handler.transformScenarioRelativeTo(anchorID);
-		handler.controlMode = ObjectControl::RELATIVE_KINEMATICS;
+		handler.controlMode = ControlMode::RelativeKinematics;
 		setState(handler, new RelativeKinematics::Initialized);
 		RCLCPP_INFO(handler.get_logger(), "Relative control mode enabled");
 	} catch (std::invalid_argument&) {
-		handler.controlMode = ObjectControl::ABSOLUTE_KINEMATICS;
+		handler.controlMode = ControlMode::AbsoluteKinematics;
 		setState(handler, new AbsoluteKinematics::Initialized);
 		RCLCPP_INFO(handler.get_logger(), "Absolute control mode enabled");
 	}
