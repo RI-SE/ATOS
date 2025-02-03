@@ -61,7 +61,7 @@ add_executable(${OBJECT_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.cpp
 )
 # Link project executable to util libraries
-target_link_libraries(${OBJECT_CONTROL_TARGET} 
+target_link_libraries(${OBJECT_CONTROL_TARGET}
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${FILESYSTEM_LIBRARY}
@@ -97,4 +97,3 @@ install(TARGETS ${OBJECT_CONTROL_TARGET}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
-
