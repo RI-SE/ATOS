@@ -41,7 +41,7 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	scnDisconnectSub(*this, std::bind(&ObjectControl::onDisconnectMessage, this, _1)),
 	scnRemoteControlEnableSub(*this, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1)),
 	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
-	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, _1)),	
+	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, _1)),
 	objectStateChangeSub(*this, std::bind(&ObjectControl::onObjectStateChangeMessage, this, _1)),
 	scnResetTestObjectsSub(*this, std::bind(&ObjectControl::onResetTestObjectsMessage, this, _1)),
 	scnReloadObjectSettingsSub(*this, std::bind(&ObjectControl::onReloadObjectSettingsMessage, this, _1)),
@@ -129,7 +129,7 @@ void ObjectControl::onInitMessage(const Init::message_type::SharedPtr){
 	stateChangePub.publish(stateChangeMsg);
 }
 
-void ObjectControl::onConnectMessage(const Connect::message_type::SharedPtr){	
+void ObjectControl::onConnectMessage(const Connect::message_type::SharedPtr){
 	COMMAND cmd = COMM_CONNECT;
 	// TO DO: Fix publishing correct data to stateChangeMsg
 	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
@@ -141,7 +141,7 @@ void ObjectControl::onConnectMessage(const Connect::message_type::SharedPtr){
 	stateChangePub.publish(stateChangeMsg);
 }
 
-void ObjectControl::onArmMessage(const Arm::message_type::SharedPtr){	
+void ObjectControl::onArmMessage(const Arm::message_type::SharedPtr){
 	COMMAND cmd = COMM_ARM;
 	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
 	stateChangeMsg.prev_state = this->state->asNumber();
@@ -152,7 +152,7 @@ void ObjectControl::onArmMessage(const Arm::message_type::SharedPtr){
 	stateChangePub.publish(stateChangeMsg);
 }
 
-void ObjectControl::onDisarmMessage(const Disarm::message_type::SharedPtr){	
+void ObjectControl::onDisarmMessage(const Disarm::message_type::SharedPtr){
 	COMMAND cmd = COMM_DISARM;
 	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
 	stateChangeMsg.prev_state = this->state->asNumber();
@@ -163,7 +163,7 @@ void ObjectControl::onDisarmMessage(const Disarm::message_type::SharedPtr){
 	stateChangePub.publish(stateChangeMsg);
 }
 
-void ObjectControl::onStartMessage(const Start::message_type::SharedPtr){	
+void ObjectControl::onStartMessage(const Start::message_type::SharedPtr){
 	COMMAND cmd = COMM_STRT;
 	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
 	stateChangeMsg.prev_state = this->state->asNumber();
@@ -182,7 +182,7 @@ void ObjectControl::onStartObjectMessage(const StartObject::message_type::Shared
 	this->tryHandleMessage(f_try,f_catch, StartObject::topicName, get_logger());
 }
 
-void ObjectControl::onDisconnectMessage(const Disconnect::message_type::SharedPtr){	
+void ObjectControl::onDisconnectMessage(const Disconnect::message_type::SharedPtr){
 	COMMAND cmd = COMM_DISCONNECT;
 	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
 	stateChangeMsg.prev_state = this->state->asNumber();
@@ -202,14 +202,14 @@ void ObjectControl::onStopMessage(const Stop::message_type::SharedPtr){
 			failurePub.publish(msgCtr1<Failure::message_type>(cmd));
 			scnAbortPub.publish(Abort::message_type());
 	};
-	this->tryHandleMessage(f_try,f_catch, Stop::topicName, get_logger());	
+	this->tryHandleMessage(f_try,f_catch, Stop::topicName, get_logger());
 	stateChangeMsg.current_state = this->state->asNumber();
 	stateChangePub.publish(stateChangeMsg);
 }
 
 /**
  * @brief Resets the test objects to the scenario starting positions
- * 
+ *
  * @param msg Trigger message for resetting test objects (std_msgs/msg/Empty)
 */
 void ObjectControl::onResetTestObjectsMessage(const ResetTestObjects::message_type::SharedPtr) {
@@ -221,7 +221,7 @@ void ObjectControl::onResetTestObjectsMessage(const ResetTestObjects::message_ty
 
 /**
  * @brief Reloads the object settings from the configuration file
- * 
+ *
  * @param msg Trigger message for reloading object settings (std_msgs/msg/Empty)
 */
 void ObjectControl::onReloadObjectSettingsMessage(const ReloadObjectSettings::message_type::SharedPtr) {
@@ -258,7 +258,7 @@ void ObjectControl::onRemoteControlEnableMessage(const RemoteControlEnable::mess
 	auto f_catch = [&]() {
 			failurePub.publish(msgCtr1<Failure::message_type>(cmd));
 	};
-	this->tryHandleMessage(f_try,f_catch, RemoteControlEnable::topicName, get_logger());	
+	this->tryHandleMessage(f_try,f_catch, RemoteControlEnable::topicName, get_logger());
 }
 
 void ObjectControl::onRemoteControlDisableMessage(const RemoteControlDisable::message_type::SharedPtr){
@@ -267,7 +267,7 @@ void ObjectControl::onRemoteControlDisableMessage(const RemoteControlDisable::me
 	auto f_catch = [&]() {
 			failurePub.publish(msgCtr1<Failure::message_type>(cmd));
 	};
-	this->tryHandleMessage(f_try,f_catch, RemoteControlDisable::topicName, get_logger());	
+	this->tryHandleMessage(f_try,f_catch, RemoteControlDisable::topicName, get_logger());
 }
 
 void ObjectControl::onControlSignalMessage(const ControlSignal::message_type::SharedPtr csp){
@@ -460,7 +460,7 @@ void ObjectControl::loadObjectFiles() {
 			catch (std::invalid_argument& e) {
 				RCLCPP_ERROR(get_logger(), e.what());
 				errors.push_back(e);
-			}			
+			}
 		}
 	}
 
@@ -473,7 +473,7 @@ void ObjectControl::loadObjectFiles() {
 			objects.at(sourceID)->setObjectConfig(conf);
 		}
 	}
-	
+
 	if (!errors.empty()) {
 		objects.clear();
 		std::ostringstream ostr;
@@ -648,7 +648,7 @@ OsiHandler::LocalObjectGroundTruth_t ObjectControl::buildOSILocalGroundTruth(
 	return gt;
 }
 
-// TODO (NOT WORKING ATM!): Replace this with a subscriber that listens for monr messages. 
+// TODO (NOT WORKING ATM!): Replace this with a subscriber that listens for monr messages.
 void ObjectControl::injectObjectData(const MonitorMessage &monr) {
 	if (!objects.at(monr.first)->getObjectConfig().getInjectionMap().targetIDs.empty()) {
 		std::chrono::system_clock::time_point ts;
@@ -798,7 +798,7 @@ void ObjectControl::disarmObjects() {
 
 /**
  * @brief Resets the scenario by offering return trajectories for all objects
- * 
+ *
  * @param isResetting state-flag to indicate if the reset procedure is currently running
 */
 void ObjectControl::resetTestObjects() {
@@ -817,7 +817,7 @@ void ObjectControl::resetTestObjects() {
 
 /**
  * @brief Reloads the scenario trajectories for all objects
- * 
+ *
  * @param isResetting state-flag to indicate if the reset procedure is currently running
  */
 void ObjectControl::reloadScenarioTrajectories() {
@@ -836,7 +836,7 @@ void ObjectControl::reloadScenarioTrajectories() {
 
 /**
  * @brief Republishes the trajectory paths for a given object
- * 
+ *
  * @param id the object id
 */
 void ObjectControl::republishTrajectoryPaths(uint32_t id){
@@ -854,7 +854,7 @@ void ObjectControl::republishTrajectoryPaths(uint32_t id){
 
 /**
  * @brief Callback function for the trajectory service call. Sets the new trajectory for the object in ATOS and sends it to the object
- * 
+ *
  * @param future the future object containing the response from the trajectory service call
 */
 void ObjectControl::trajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
@@ -878,7 +878,7 @@ void ObjectControl::trajectoryCallback(const rclcpp::Client<atos_interfaces::srv
 
 /**
  * @brief Callback function for the return trajectory service call. Sets the new trajectory for the object in ATOS and sends it to the object
- * 
+ *
  * @param future the future object containing the response from the return trajectory service call
 */
 void ObjectControl::returnTrajectoryCallback(const rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedFuture future) {
@@ -902,7 +902,7 @@ void ObjectControl::returnTrajectoryCallback(const rclcpp::Client<atos_interface
 
 /**
  * @brief Sets the trajectory for a given object by requesting it from the esminiAdapter or BackToStart module depending on the current state (resetting)
- * 
+ *
  * @param id the object id
 */
 void ObjectControl::setObjectTrajectory(uint32_t id){
@@ -1042,7 +1042,7 @@ void ObjectControl::sendAbortNotification(){
 
 /**
  * @brief Publishes scenario info to the journal
- * 
+ *
  */
 void ObjectControl::publishScenarioInfoToJournal() {
 	JournalRecordData(JOURNAL_RECORD_STRING, "--- Scenario Info ---");
@@ -1058,7 +1058,7 @@ void ObjectControl::publishScenarioInfoToJournal() {
 		inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN);
 
 		ss << "\n> Object " << index << ": \n"
-			 << "\t - ID: " << object.first << "\n" 
+			 << "\t - ID: " << object.first << "\n"
 			 << "\t - IP: " << ip_str << "\n"
 			 << "\t - Origin: (" << testObject->getOrigin().latitude_deg << ", " << testObject->getOrigin().longitude_deg << ", " << testObject->getOrigin().altitude_m << ")\n"
 			 << "\t - Trajectory size: " << testObject->getTrajectory().size() << "\n"
