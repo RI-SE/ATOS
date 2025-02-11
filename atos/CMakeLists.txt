@@ -12,6 +12,7 @@ set(CMAKE_COLOR_MAKEFILE   ON)
 set(COMPILER_WARNINGS "-Wall -Wextra")
 set(CMAKE_CXX_COMPILER "clang++")
 set(CMAKE_C_COMPILER "clang")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 #Set preprocessor macros depending on used ros version
 if ($ENV{ROS_DISTRO} STREQUAL "foxy")

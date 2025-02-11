@@ -1,0 +1,44 @@
+name: cpp-linter
+on:
+  pull_request:
+    branches: [main, dev]
+    paths: ['**.c', '**.h', '**.cpp', '**.hpp', '**CMakeLists.txt']
+
+jobs:
+  cpp-linter:
+    runs-on: ubuntu-24.04
+    container: ros:humble
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - run: git config --system --add safe.directory "$PWD"
+
+      - name: Install ATOS
+        run: |
+          ./setup_atos.sh
+        shell: bash
+
+      - name: Add to PATH
+        shell: bash
+        run: |
+          echo "/github/home/.local/bin/" >> $GITHUB_PATH
+
+      - uses: cpp-linter/cpp-linter-action@v2
+        id: linter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          style: 'file'
+          tidy-checks: ''
+          database: "build"
+          version: 18
+          # lines-changed-only: true
+          files-changed-only: false
+          tidy-review: true
+          passive-reviews: true

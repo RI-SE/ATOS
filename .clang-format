@@ -1,0 +1,12 @@
+BasedOnStyle: Mozilla
+InsertNewlineAtEOF: true
+UseTab: Always
+IndentWidth: 4
+TabWidth: 4
+ColumnLimit: 120
+BreakConstructorInitializers: AfterColon
+PackConstructorInitializers: Never
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: True
