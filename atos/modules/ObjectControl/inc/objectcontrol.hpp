@@ -20,6 +20,7 @@
 #include "atosTime.h"
 #include "testobject.hpp"
 #include "objectlistener.hpp"
+#include "statemachine.hpp"
 #include "roschannels/commandchannels.hpp"
 #include "roschannels/monitorchannel.hpp"
 #include "roschannels/remotecontrolchannels.hpp"
@@ -39,213 +40,6 @@
 // Forward declarations
 class ObjectControlState;
 class ObjectListener;
-class ObjectControl;
-
-namespace state_machine {
-
-namespace events {
-	struct ApplicationStarted{};
-	struct Initialize{};
-	struct Connect{};
-	struct Disconnect{};
-	struct DisconnectedFromObject{
-		uint32_t id{};
-	};
-	struct Ready{};
-	struct Reset{};
-	struct Reload{};
-	struct Arm{};
-	struct Disarm{};
-	struct TestLive{};
-	struct RemoteControl{};
-	struct Clear{};
-	struct Abort{};
-	struct Start{};
-	struct StartObject {
-		uint32_t id{};
-		std::chrono::system_clock::time_point startTime{};
-	};
-	struct Done{};
-}
-
-static constexpr auto Off			= boost::sml::state<struct Off>;
-static constexpr auto Idle			= boost::sml::state<struct Idle>;
-static constexpr auto Initialized	= boost::sml::state<struct Initialized>;
-static constexpr auto Connecting	= boost::sml::state<struct Connecting>;
-static constexpr auto Disconnecting = boost::sml::state<struct Disconnecting>;
-static constexpr auto Ready			= boost::sml::state<struct Ready>;
-static constexpr auto Armed			= boost::sml::state<struct Armed>;
-static constexpr auto Disarming		= boost::sml::state<struct Disarming>;
-static constexpr auto TestLive		= boost::sml::state<struct TestLive>;
-static constexpr auto Aborting		= boost::sml::state<struct Aborting>;
-static constexpr auto Clearing		= boost::sml::state<struct Clearing>;
-static constexpr auto Done			= boost::sml::state<struct Done>;
-static constexpr auto RemoteControl = boost::sml::state<struct RemoteControl>;
-
-struct idle_on_entry             { void operator()(ObjectControl* oc) const; };
-struct idle_to_init_guard        { bool operator()(ObjectControl* oc) const; };
-struct idle_to_init_action       { void operator()(ObjectControl* oc) const; };
-struct init_to_connecting_action { void operator()(ObjectControl* oc) const; };
-struct init_to_connecting_guard  { bool operator()(ObjectControl* oc) const; };
-struct init_to_idle_action       { void operator()(ObjectControl* oc) const; };
-struct connecting_on_entry       { void operator()(ObjectControl* oc) const; };
-struct connecting_to_idle_action { void operator()(ObjectControl* oc) const; };
-struct clearing_on_entry         { void operator()(ObjectControl* oc) const; };
-struct ready_on_entry            { void operator()(ObjectControl* oc) const; };
-struct ready_reset               { void operator()(ObjectControl* oc) const; };
-struct ready_reload              { void operator()(ObjectControl* oc) const; };
-struct remote_control_on_entry   { void operator()(ObjectControl* oc) const; };
-struct remote_control_on_exit    { void operator()(ObjectControl* oc) const; };
-struct disarming_on_entry        { void operator()(ObjectControl* oc) const; };
-struct done_on_entry             { void operator()(ObjectControl* oc) const; };
-struct armed_on_enter            { void operator()(ObjectControl* oc) const; };
-struct armed_to_testlive_guard   { bool operator()(ObjectControl* oc) const; };
-struct test_live_start_object    { void operator()(const events::StartObject& event, ObjectControl* oc) const; };
-struct disconnected_from_object  { void operator()(const events::DisconnectedFromObject& event, ObjectControl* oc) const; };
-
-template<class T>
-OBCState_t asNumber() {
-	if constexpr(std::is_same_v<typename T::type, decltype(Idle)::type>){
-		return OBC_STATE_IDLE;
-	}
-	else if constexpr(std::is_same_v<typename T::type, decltype(Initialized)::type>){
-		return OBC_STATE_INITIALIZED;
-	}
-	else if constexpr(std::is_same_v<typename T::type, decltype(Connecting)::type>){
-		return OBC_STATE_CONNECTED;
-	}
-	else if constexpr(std::is_same_v<typename T::type, decltype(Ready)::type>){
-		return OBC_STATE_CONNECTED;
-	}
-	else if constexpr(std::is_same_v<typename T::type, decltype(Armed)::type>){
-		return OBC_STATE_ARMED;
-	}
-	else if constexpr(std::is_same_v<typename T::type, decltype(Disarming)::type>){
-		return OBC_STATE_DISARMING;
-	}
-	else if constexpr(std::is_same_v<typename T::type, decltype(TestLive)::type>){
-		return OBC_STATE_RUNNING;
-	}
-	else if constexpr(std::is_same_v<typename T::type, decltype(RemoteControl)::type>){
-		return OBC_STATE_REMOTECTRL;
-	}
-	else if constexpr(std::is_same_v<typename T::type, decltype(Aborting)::type>){
-		return OBC_STATE_ABORTING;
-	}
-	else if constexpr(std::is_same_v<typename T::type, decltype(Clearing)::type>){
-		return OBC_STATE_CLEARING;
-	}
-	else {
-		return OBC_STATE_UNDEFINED;
-	}
-}
-
-class Logger {
-public:
-  Logger(rclcpp::Logger l, ROSChannels::StateChange::Pub p) : logger_{l}, stateChangePub_{p} {}
-
-  template <class SM, class TEvent>
-  void log_process_event(const TEvent&) {
-	RCLCPP_INFO(logger_, "[%s][process_event] %s",
-		boost::sml::aux::get_type_name<SM>(),
-		boost::sml::aux::get_type_name<TEvent>());
-  }
-
-  template <class SM, class TGuard, class TEvent>
-  void log_guard(const TGuard&, const TEvent&, bool result) {
-	RCLCPP_INFO(logger_, "[%s][guard] %s %s %s",
-		boost::sml::aux::get_type_name<SM>(),
-		boost::sml::aux::get_type_name<TGuard>(),
-		boost::sml::aux::get_type_name<TEvent>(),
-		(result ? "[OK]" : "[Reject]"));
-  }
-
-  template <class SM, class TAction, class TEvent>
-  void log_action(const TAction&, const TEvent&) {
-    RCLCPP_INFO(logger_, "[%s][action] %s %s",
-		boost::sml::aux::get_type_name<SM>(),
-		boost::sml::aux::get_type_name<TAction>(),
-		boost::sml::aux::get_type_name<TEvent>());
-  }
-
-  template <class SM, class TSrcState, class TDstState>
-  void log_state_change(const TSrcState& src, const TDstState& dst) {
-	RCLCPP_INFO(logger_, "[%s][transition] %s -> %s",
-		boost::sml::aux::get_type_name<SM>(),
-		src.c_str(),
-		dst.c_str());
-
-	atos_interfaces::msg::StateChange stateChangeMsg = atos_interfaces::msg::StateChange();
-	stateChangeMsg.prev_state = asNumber<TSrcState>();
-	stateChangeMsg.current_state = asNumber<TDstState>();
-	stateChangePub_.publish(stateChangeMsg);
-  }
-
-private:
-  rclcpp::Logger logger_;
-  ROSChannels::StateChange::Pub stateChangePub_;
-};
-
-class StateMachine
-{
-  public:
-	// Transition table
-	auto operator()() const noexcept
-	{
-		namespace sml = boost::sml;
-		return sml::make_transition_table(
-			// *Off + sml::event<events::ApplicationStarted> = Idle,
-
-			*Idle + sml::on_entry<sml::_> / idle_on_entry(),
-			Idle + sml::event<events::Initialize>[idle_to_init_guard()] / idle_to_init_action() = Initialized,
-
-			Initialized + sml::event<events::Disconnect> / init_to_idle_action()  = Idle,
-			Initialized + sml::event<events::Connect>[init_to_connecting_guard()] / init_to_connecting_action() = Connecting,
-
-			Connecting + sml::on_entry<sml::_> / connecting_on_entry(),
-			Connecting + sml::event<events::Abort> = Aborting,
-			Connecting + sml::event<events::Disarm> = Disarming,
-			Connecting + sml::event<events::Disconnect> / connecting_to_idle_action() = Idle,
-			Connecting + sml::event<events::Ready> = Ready,
-
-			Ready + sml::on_entry<sml::_> / ready_on_entry(),
-			Ready + sml::event<events::Abort>                  = Aborting,
-			Ready + sml::event<events::Arm>                    = Armed,
-			Ready + sml::event<events::Disconnect>             = Idle,
-			Ready + sml::event<events::DisconnectedFromObject> / disconnected_from_object() = Connecting,
-			Ready + sml::event<events::RemoteControl>          = RemoteControl,
-			Ready + sml::event<events::Reset> / ready_reset(),
-			Ready + sml::event<events::Reload> / ready_reload(),
-
-			Armed + sml::on_entry<sml::_> / armed_on_enter(),
-			Armed + sml::event<events::Start>[armed_to_testlive_guard()] = TestLive,
-			Armed + sml::event<events::Disarm>   = Disarming,
-
-			Disarming + sml::on_entry<sml::_> / disarming_on_entry(),
-			Disarming + sml::event<events::Abort>      = Aborting,
-			Disarming + sml::event<events::Connect>    = Connecting,
-			Disarming + sml::event<events::Disconnect> = Idle,
-			Disarming + sml::event<events::Ready>      = Ready,
-
-			TestLive + sml::event<events::Abort> = Aborting,
-			TestLive + sml::event<events::Done>  = Done,
-			TestLive + sml::event<events::StartObject> / test_live_start_object(),
-
-			Done + sml::on_entry<sml::_> / done_on_entry(),
-			Done + sml::event<events::Ready> = Ready,
-
-			Aborting + sml::event<events::Clear> = Clearing,
-
-			Clearing + sml::on_entry<sml::_> / clearing_on_entry(),
-			Clearing + sml::event<events::Ready> = Ready,
-
-			RemoteControl + sml::on_entry<sml::_> / remote_control_on_entry(),
-			RemoteControl + sml::on_exit<sml::_> / remote_control_on_exit(),
-			RemoteControl + sml::event<events::Ready> = Ready);
-	}
-};
-
-}
 
 enum class ControlMode : int {
 	AbsoluteKinematics,
@@ -435,6 +229,12 @@ private:
 	rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedPtr ipClient;	//!< Client to request object IPs
 	rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedPtr returnTrajectoryClient;	//!< Client to request object return trajectory
 	rclcpp::Service<atos_interfaces::srv::GetObjectControlState>::SharedPtr stateService;	//!< Service to request object control state
+
+	state_machine::Logger sm_logger{get_logger(), stateChangePub};
+	boost::sml::sm<state_machine::StateMachine,
+					boost::sml::logger<state_machine::Logger>,
+					boost::sml::thread_safe<std::recursive_mutex>> sm{this, sm_logger};
+
 public:
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
@@ -506,84 +306,6 @@ public:
 
 	void publishScenarioInfoToJournal();
 
-	state_machine::Logger sm_logger{get_logger(), stateChangePub};
-	boost::sml::sm<state_machine::StateMachine,
-					boost::sml::logger<state_machine::Logger>,
-					boost::sml::thread_safe<std::recursive_mutex>> sm{this, sm_logger};
-
-	OBCState_t stateAsNumber() {
-		if (sm.is(state_machine::Idle)) {
-			return OBC_STATE_IDLE;
-		}
-		else if (sm.is(state_machine::Initialized)) {
-			return OBC_STATE_INITIALIZED;
-		}
-		else if (sm.is(state_machine::Connecting)) {
-			return OBC_STATE_CONNECTED;
-		}
-		else if (sm.is(state_machine::Ready)) {
-			return OBC_STATE_CONNECTED;
-		}
-		else if (sm.is(state_machine::Armed)) {
-			return OBC_STATE_ARMED;
-		}
-		else if (sm.is(state_machine::Disarming)) {
-			return OBC_STATE_DISARMING;
-		}
-		else if (sm.is(state_machine::TestLive)) {
-			return OBC_STATE_RUNNING;
-		}
-		else if (sm.is(state_machine::RemoteControl)) {
-			return OBC_STATE_REMOTECTRL;
-		}
-		else if (sm.is(state_machine::Aborting)) {
-			return OBC_STATE_ABORTING;
-		}
-		else if (sm.is(state_machine::Clearing)) {
-			return OBC_STATE_CLEARING;
-		}
-		else {
-			return OBC_STATE_UNDEFINED;
-		}
-	}
-
-	ControlCenterStatusType controlCenterStatus() {
-		if (sm.is(state_machine::Idle)) {
-			return CONTROL_CENTER_STATUS_INIT;
-		}
-		else if (sm.is(state_machine::Initialized)) {
-			return CONTROL_CENTER_STATUS_INIT;
-		}
-		else if (sm.is(state_machine::Connecting)) {
-			return CONTROL_CENTER_STATUS_INIT;
-		}
-		else if (sm.is(state_machine::Ready)) {
-			return CONTROL_CENTER_STATUS_READY;
-		}
-		else if (sm.is(state_machine::Armed)) {
-			return CONTROL_CENTER_STATUS_RUNNING; // TODO
-		}
-		else if (sm.is(state_machine::Disarming)) {
-			return CONTROL_CENTER_STATUS_RUNNING; // TODO
-		}
-		else if (sm.is(state_machine::TestLive)) {
-			return CONTROL_CENTER_STATUS_RUNNING;
-		}
-		else if (sm.is(state_machine::RemoteControl)) {
-			return CONTROL_CENTER_STATUS_READY;
-		}
-		else if (sm.is(state_machine::Aborting)) {
-			return CONTROL_CENTER_STATUS_ABORT;
-		}
-		else if (sm.is(state_machine::Clearing)) {
-			return CONTROL_CENTER_STATUS_READY;
-		}
-		else if (sm.is(state_machine::Done)){
-			return CONTROL_CENTER_STATUS_TEST_DONE;
-		}
-		else {
-			return CONTROL_CENTER_STATUS_ABORT;
-		}
-	}
-
+	OBCState_t stateAsNumber();
+	ControlCenterStatusType controlCenterStatus();
 };

@@ -1021,6 +1021,81 @@ void ObjectControl::publishScenarioInfoToJournal() {
 	JournalRecordData(JOURNAL_RECORD_STRING, "--- End of Scenario Info ---");
 }
 
+OBCState_t ObjectControl::stateAsNumber() {
+	if (sm.is(state_machine::Idle)) {
+		return OBC_STATE_IDLE;
+	}
+	else if (sm.is(state_machine::Initialized)) {
+		return OBC_STATE_INITIALIZED;
+	}
+	else if (sm.is(state_machine::Connecting)) {
+		return OBC_STATE_CONNECTED;
+	}
+	else if (sm.is(state_machine::Ready)) {
+		return OBC_STATE_CONNECTED;
+	}
+	else if (sm.is(state_machine::Armed)) {
+		return OBC_STATE_ARMED;
+	}
+	else if (sm.is(state_machine::Disarming)) {
+		return OBC_STATE_DISARMING;
+	}
+	else if (sm.is(state_machine::TestLive)) {
+		return OBC_STATE_RUNNING;
+	}
+	else if (sm.is(state_machine::RemoteControl)) {
+		return OBC_STATE_REMOTECTRL;
+	}
+	else if (sm.is(state_machine::Aborting)) {
+		return OBC_STATE_ABORTING;
+	}
+	else if (sm.is(state_machine::Clearing)) {
+		return OBC_STATE_CLEARING;
+	}
+	else {
+		return OBC_STATE_UNDEFINED;
+	}
+}
+
+ControlCenterStatusType ObjectControl::controlCenterStatus() {
+	if (sm.is(state_machine::Idle)) {
+		return CONTROL_CENTER_STATUS_INIT;
+	}
+	else if (sm.is(state_machine::Initialized)) {
+		return CONTROL_CENTER_STATUS_INIT;
+	}
+	else if (sm.is(state_machine::Connecting)) {
+		return CONTROL_CENTER_STATUS_INIT;
+	}
+	else if (sm.is(state_machine::Ready)) {
+		return CONTROL_CENTER_STATUS_READY;
+	}
+	else if (sm.is(state_machine::Armed)) {
+		return CONTROL_CENTER_STATUS_RUNNING; // TODO
+	}
+	else if (sm.is(state_machine::Disarming)) {
+		return CONTROL_CENTER_STATUS_RUNNING; // TODO
+	}
+	else if (sm.is(state_machine::TestLive)) {
+		return CONTROL_CENTER_STATUS_RUNNING;
+	}
+	else if (sm.is(state_machine::RemoteControl)) {
+		return CONTROL_CENTER_STATUS_READY;
+	}
+	else if (sm.is(state_machine::Aborting)) {
+		return CONTROL_CENTER_STATUS_ABORT;
+	}
+	else if (sm.is(state_machine::Clearing)) {
+		return CONTROL_CENTER_STATUS_READY;
+	}
+	else if (sm.is(state_machine::Done)){
+		return CONTROL_CENTER_STATUS_TEST_DONE;
+	}
+	else {
+		return CONTROL_CENTER_STATUS_ABORT;
+	}
+}
+
 namespace state_machine {
 
 // Aborting
