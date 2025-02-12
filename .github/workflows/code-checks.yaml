@@ -8,7 +8,7 @@ jobs:
 
     file-changes:
       runs-on: ubuntu-latest
-      outputs: 
+      outputs:
         all: ${{ steps.changed-files.outputs.all }}
         cpp: ${{ steps.cpp-files.outputs.CPP }}
       steps:
@@ -37,12 +37,12 @@ jobs:
             done
             echo "Target files: $cpp_files"
 
-            { 
+            {
               echo 'CPP<<EOF'
               echo "$cpp_files"
               echo EOF
             } >> $GITHUB_OUTPUT
-          
+
         - name: Print all files
           run: |
             echo ${{ steps.cpp-files.outputs.CPP }}
@@ -50,12 +50,6 @@ jobs:
     clang-tidy:
         uses: ./.github/workflows/clang-tidy.yaml
         needs: [build, file-changes]
-        with:
-            target_files: ${{ needs.file-changes.outputs.cpp }}
-    
-    clang-format:
-        uses: ./.github/workflows/clang-format.yaml
-        needs: [file-changes]
         with:
             target_files: ${{ needs.file-changes.outputs.cpp }}
 

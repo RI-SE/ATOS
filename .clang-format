@@ -1,2 +1,19 @@
-DisableFormat: true
-SortIncludes: false
+BasedOnStyle: Mozilla
+InsertNewlineAtEOF: true
+UseTab: Always
+IndentWidth: 4
+TabWidth: 4
+ColumnLimit: 120
+AccessModifierOffset: -4
+AlignConsecutiveAssignments: Consecutive
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Empty
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+BraceWrapping:
+  SplitEmptyFunction: false
+BreakBeforeBraces: Custom
+BreakConstructorInitializers: AfterColon
+Cpp11BracedListStyle: true
+FixNamespaceComments: true
+PackConstructorInitializers: Never

@@ -1,0 +1,19 @@
+name: format
+
+on:
+  pull_request:
+    branches: [ "dev" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Fetch
+      run: git fetch origin dev
+
+    - name: CheckFormat
+      run: ./format.py --check
