@@ -339,6 +339,9 @@ void TestObject::sendStart(std::chrono::system_clock::time_point startTime) {
 	StartMessageType strt;
 	strt.startTime.tv_sec = std::chrono::duration_cast<std::chrono::seconds>(startTime.time_since_epoch()).count();
 	strt.startTime.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(startTime.time_since_epoch()).count() % 1000000;
+// Temporary fix, TODO: allow input from user
+	auto delay_us = 500000; // 0.5 s
+	strt.startTime.tv_usec += delay_us;
 	strt.isTimestampValid = true;
 	this->comms.cmd << strt;
 }
