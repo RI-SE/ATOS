@@ -230,7 +230,7 @@ private:
 	rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedPtr returnTrajectoryClient;	//!< Client to request object return trajectory
 	rclcpp::Service<atos_interfaces::srv::GetObjectControlState>::SharedPtr stateService;	//!< Service to request object control state
 
-	state_machine::Logger sm_logger{get_logger(), stateChangePub};
+	state_machine::Logger sm_logger{get_logger(), stateChangePub, failurePub};
 	boost::sml::sm<state_machine::StateMachine,
 					boost::sml::logger<state_machine::Logger>,
 					boost::sml::thread_safe<std::recursive_mutex>> sm{this, sm_logger};

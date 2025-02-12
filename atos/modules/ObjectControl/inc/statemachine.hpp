@@ -17,7 +17,6 @@ class ObjectControl;
 namespace state_machine {
 
 namespace events {
-	struct ApplicationStarted{};
 	struct Initialize{};
 	struct Connect{};
 	struct Disconnect{};
@@ -41,7 +40,6 @@ namespace events {
 	struct Done{};
 }
 
-static constexpr auto Off			= boost::sml::state<struct Off>;
 static constexpr auto Idle			= boost::sml::state<struct Idle>;
 static constexpr auto Initialized	= boost::sml::state<struct Initialized>;
 static constexpr auto Connecting	= boost::sml::state<struct Connecting>;
@@ -115,11 +113,17 @@ OBCState_t asNumber() {
 
 class Logger {
 public:
-	Logger(rclcpp::Logger l, ROSChannels::StateChange::Pub p) : logger_{l}, stateChangePub_{p} {}
+	Logger(rclcpp::Logger l,
+			ROSChannels::StateChange::Pub sc,
+			ROSChannels::Failure::Pub f) :
+				logger_{l},
+				stateChangePub_{sc},
+				failurePub_{f}
+	{}
 
 	template <class SM, class TEvent>
 	void log_process_event(const TEvent&) {
-		RCLCPP_INFO(logger_,
+		RCLCPP_DEBUG(logger_,
 					"[%s][process_event] %s",
 					boost::sml::aux::get_type_name<SM>(),
 					boost::sml::aux::get_type_name<TEvent>());
@@ -127,7 +131,7 @@ public:
 
 	template <class SM, class TGuard, class TEvent>
 	void log_guard(const TGuard&, const TEvent&, bool result) {
-		RCLCPP_INFO(logger_,
+		RCLCPP_DEBUG(logger_,
 					"[%s][guard] %s %s %s",
 					boost::sml::aux::get_type_name<SM>(),
 					boost::sml::aux::get_type_name<TGuard>(),
@@ -137,7 +141,7 @@ public:
 
 	template <class SM, class TAction, class TEvent>
 	void log_action(const TAction&, const TEvent&) {
-		RCLCPP_INFO(logger_,
+		RCLCPP_DEBUG(logger_,
 					"[%s][action] %s %s",
 					boost::sml::aux::get_type_name<SM>(),
 					boost::sml::aux::get_type_name<TAction>(),
@@ -146,7 +150,7 @@ public:
 
 	template <class SM, class TSrcState, class TDstState>
 	void log_state_change(const TSrcState& src, const TDstState& dst) {
-		RCLCPP_INFO(logger_,
+		RCLCPP_DEBUG(logger_,
 					"[%s][transition] %s -> %s",
 					boost::sml::aux::get_type_name<SM>(),
 					src.c_str(),
@@ -160,6 +164,7 @@ public:
   private:
 	rclcpp::Logger logger_;
 	ROSChannels::StateChange::Pub stateChangePub_;
+	ROSChannels::Failure::Pub failurePub_;
 };
 
 class StateMachine
