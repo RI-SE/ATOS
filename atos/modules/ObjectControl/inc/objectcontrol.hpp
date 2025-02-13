@@ -12,12 +12,15 @@
 #include <memory>
 #include <unordered_map>
 
+#include "sml.hpp"
+
 #include "geographic_msgs/msg/geo_point.hpp"
 
 #include "module.hpp"
 #include "atosTime.h"
 #include "testobject.hpp"
 #include "objectlistener.hpp"
+#include "statemachine.hpp"
 #include "roschannels/commandchannels.hpp"
 #include "roschannels/monitorchannel.hpp"
 #include "roschannels/remotecontrolchannels.hpp"
@@ -38,45 +41,11 @@
 class ObjectControlState;
 class ObjectListener;
 
-namespace AbstractKinematics {
-	class Idle;
-	class Initialized;
-	class Connecting;
-	class Ready;
-	class Aborting;
-	class Clearing;
-	class Armed;
-	class TestLive;
-	class Disarming;
-	class Done;
-	class RemoteControlled;
-}
+enum class ControlMode : int {
+	AbsoluteKinematics,
+	RelativeKinematics,
+};
 
-namespace RelativeKinematics {
-	class Initialized;
-	class Connecting;
-	class Ready;
-	class Aborting;
-	class Clearing;
-	class Armed;
-	class TestLive;
-	class Disarming;
-	class Done;
-	class RemoteControlled;
-}
-
-namespace AbsoluteKinematics {
-	class Initialized;
-	class Connecting;
-	class Ready;
-	class Aborting;
-	class Clearing;
-	class Armed;
-	class TestLive;
-	class Disarming;
-	class Done;
-	class RemoteControlled;
-}
 
 /*!
  * \brief The ObjectControl class is intended as an overarching device
@@ -87,47 +56,10 @@ namespace AbsoluteKinematics {
 class ObjectControl : public Module
 {
 	friend class ObjectControlState;
-	friend class AbstractKinematics::Idle;
-	friend class AbstractKinematics::Initialized;
-	friend class AbstractKinematics::Connecting;
-	friend class AbstractKinematics::Ready;
-	friend class AbstractKinematics::Aborting;
-	friend class AbstractKinematics::Clearing;
-	friend class AbstractKinematics::Armed;
-	friend class AbstractKinematics::TestLive;
-	friend class AbstractKinematics::Disarming;
-	friend class AbstractKinematics::Done;
-	friend class AbstractKinematics::RemoteControlled;
-	friend class RelativeKinematics::Initialized;
-	friend class RelativeKinematics::Connecting;
-	friend class RelativeKinematics::Ready;
-	friend class RelativeKinematics::Aborting;
-	friend class RelativeKinematics::Clearing;
-	friend class RelativeKinematics::Armed;
-	friend class RelativeKinematics::TestLive;
-	friend class RelativeKinematics::Disarming;
-	friend class RelativeKinematics::Done;
-	friend class RelativeKinematics::RemoteControlled;
-	friend class AbsoluteKinematics::Initialized;
-	friend class AbsoluteKinematics::Connecting;
-	friend class AbsoluteKinematics::Ready;
-	friend class AbsoluteKinematics::Aborting;
-	friend class AbsoluteKinematics::Clearing;
-	friend class AbsoluteKinematics::Armed;
-	friend class AbsoluteKinematics::TestLive;
-	friend class AbsoluteKinematics::Disarming;
-	friend class AbsoluteKinematics::Done;
-	friend class AbsoluteKinematics::RemoteControlled;
-
 	friend class ObjectListener;
 
 public:
 	ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExecutor>);
-	typedef enum {
-		RELATIVE_KINEMATICS,	//!< Scenario executed relative to immobile VUT
-		ABSOLUTE_KINEMATICS		//!< Scenario executed relative to earth-fixed point
-	} ControlMode;
-
 
 	typedef struct {
 		unsigned int numberOfTargets;
@@ -212,6 +144,8 @@ public:
 	void startControlSignalSubscriber();
 	void stopControlSignalSubscriber();
 
+	void setControlMode(ControlMode cm)	{ controlMode = cm; }
+
 private:
 	bool isResetting;
 	geographic_msgs::msg::GeoPoint origin_pos; //!< Test origin
@@ -240,8 +174,9 @@ private:
 
 	using clock = std::chrono::steady_clock;
 
-	ControlMode controlMode;
-	ObjectControlState* state;					//!< State of module
+	ControlMode controlMode{ControlMode::AbsoluteKinematics};
+
+
 	std::map<uint32_t,std::shared_ptr<TestObject>> objects;		//!< List of configured test participants
 	std::map<uint32_t,ObjectListener> objectListeners;
 	std::map<uint16_t,std::function<void()>> storedActions;
@@ -294,6 +229,13 @@ private:
 	rclcpp::Client<atos_interfaces::srv::GetObjectIp>::SharedPtr ipClient;	//!< Client to request object IPs
 	rclcpp::Client<atos_interfaces::srv::GetObjectReturnTrajectory>::SharedPtr returnTrajectoryClient;	//!< Client to request object return trajectory
 	rclcpp::Service<atos_interfaces::srv::GetObjectControlState>::SharedPtr stateService;	//!< Service to request object control state
+
+	state_machine::Logger sm_logger{get_logger(), stateChangePub, failurePub};
+	boost::sml::sm<state_machine::StateMachine,
+					boost::sml::logger<state_machine::Logger>,
+					boost::sml::thread_safe<std::recursive_mutex>> sm{this, sm_logger};
+
+public:
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
 	//!			and can be terminated by calling ::abortConnectionAttempt or setting ::connStopReqFuture.
@@ -361,7 +303,9 @@ private:
 	void injectObjectData(const MonitorMessage& monr);
 	//! \brief TODO
 	OsiHandler::LocalObjectGroundTruth_t buildOSILocalGroundTruth(const MonitorMessage&) const;
-	
-	void publishScenarioInfoToJournal();
-};
 
+	void publishScenarioInfoToJournal();
+
+	OBCState_t stateAsNumber();
+	ControlCenterStatusType controlCenterStatus();
+};

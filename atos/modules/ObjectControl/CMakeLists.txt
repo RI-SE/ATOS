@@ -46,22 +46,10 @@ add_executable(${OBJECT_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectlistener.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectconnection.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/channel.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/states/state.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/states/idle.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/states/initialized.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/states/connecting.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/states/ready.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/states/aborting.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/states/clearing.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/states/testlive.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/states/disarming.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/states/armed.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/states/done.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/states/remotecontrolled.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.cpp
 )
 # Link project executable to util libraries
-target_link_libraries(${OBJECT_CONTROL_TARGET} 
+target_link_libraries(${OBJECT_CONTROL_TARGET}
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${FILESYSTEM_LIBRARY}
@@ -97,4 +85,3 @@ install(TARGETS ${OBJECT_CONTROL_TARGET}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
-

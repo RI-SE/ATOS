@@ -65,7 +65,7 @@ std::filesystem::path EsminiAdapter::getOpenDriveFile()
 {
 	std::filesystem::path odrFilePath;
 	if (SE_GetODRFilename() != nullptr) {
-		odrFilePath = std::filesystem::path(SE_GetODRFilename()); 
+		odrFilePath = std::filesystem::path(SE_GetODRFilename());
 		RCLCPP_INFO(me->get_logger(), "Got ODR file %s from scenario", odrFilePath.string().c_str());
 	}
 	else {
@@ -101,7 +101,7 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 		me->connectedObjectIdsSub = ROSChannels::ConnectedObjectIds::Sub(*me,&EsminiAdapter::onConnectedObjectIdsMessage);
 		me->exitSub = ROSChannels::Exit::Sub(*me,&EsminiAdapter::onStaticExitMessage);
 		me->stateChangeSub = ROSChannels::StateChange::Sub(*me,&EsminiAdapter::onStaticStateChangeMessage);
-		
+
 	}
 	return me;
 }
@@ -113,7 +113,7 @@ std::shared_ptr<EsminiAdapter> EsminiAdapter::instance() {
 void EsminiAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::message_type::SharedPtr msg) {
 	for (uint32_t id : msg->ids) {
 		if (me->monrSubscribers.find(id) == me->monrSubscribers.end()){
-			me->monrSubscribers[id] = std::make_shared<Monitor::Sub>(*me, id, std::bind(&EsminiAdapter::onMonitorMessage, me, _1, id));	
+			me->monrSubscribers[id] = std::make_shared<Monitor::Sub>(*me, id, std::bind(&EsminiAdapter::onMonitorMessage, me, _1, id));
 		}
 	}
 }
@@ -122,7 +122,7 @@ void EsminiAdapter::onConnectedObjectIdsMessage(const ConnectedObjectIds::messag
  * @brief To ensure that EsminiAdapter follows the states, we execute actions only when going from IDLE to INITIALIZED,
  * from ARMED to RUNNING and from any state to ABORTING. We do this instead of subscribing to "/init", "/start", etc.,
  * because we only want to execute the actions once when changing to these states.
- * 
+ *
  * @param msg StateChange message
  */
 void EsminiAdapter::onStaticStateChangeMessage(const ROSChannels::StateChange::message_type::SharedPtr msg) {
@@ -163,7 +163,7 @@ void EsminiAdapter::fetchOSCFilePath()
 	if (done.get_future().wait_for(250ms) == std::future_status::timeout) {
 		RCLCPP_ERROR(me->get_logger(), "Failed to fetch open scenario file path");
 	}
-	
+
 }
 
 void EsminiAdapter::onStaticExitMessage(const ROSChannels::Exit::message_type::SharedPtr)
@@ -244,7 +244,7 @@ void EsminiAdapter::onMonitorMessage(const Monitor::message_type::SharedPtr monr
 	if (auto idMapping = atosIdToEsminiId.find(ATOSObjectId); idMapping != atosIdToEsminiId.end()) {
 		reportObjectPosition(monr, idMapping->second); // Report object position to esmini
 		SE_Step(); // Advance the "simulation world"-time
-	} 
+	}
 	else {
 		RCLCPP_WARN(me->get_logger(), "Received MONR message for object with ATOS Object ID %d, but no such object exists in the scenario", ATOSObjectId);
 	}
@@ -388,10 +388,10 @@ std::string EsminiAdapter::projStrFromGeoReference(RM_GeoReference& geoRef) {
 
 /*!
  * \brief Returns object states for each timestep by simulating the loaded scenario.
- *  The simulation is stopped if there is no vehicle movement and at least 
+ *  The simulation is stopped if there is no vehicle movement and at least
  * 	MIN_SCENARIO_TIME has passed or if more than MAX_SCENARIO_TIME has passed.
  *	Inspired by ScenarioGateway::WriteStatesToFile from esmini lib.
- *  
+ *
  * \param timeStep Time step to use for generating the trajectories
  * \param endTime End time of the simulation
  * \param states The return map of ids mapping to the respective object states at different timesteps
@@ -425,7 +425,7 @@ void EsminiAdapter::getObjectStates(
 		if (SE_GetQuitFlag() != 0) {
 			break;
 		}
-		
+
 		SE_StepDT(timeStep);
 		accumTime += timeStep;
 		for (int j = 0; j < SE_GetNumberOfObjects(); j++){
@@ -479,7 +479,7 @@ std::map<uint32_t, ATOS::Trajectory> EsminiAdapter::extractTrajectories(
 
 /*!
  * \brief Initialize the esmini simulator and perform subsequent setup tasks.
- * Can be called many times, each time the test is initialized. 
+ * Can be called many times, each time the test is initialized.
  */
 void EsminiAdapter::runEsminiSimulation()
 {
@@ -503,7 +503,7 @@ void EsminiAdapter::runEsminiSimulation()
 		throw std::runtime_error(std::string("Failed to initialize with odr file ").append(odrFile));
 	}
 
-	
+
 	// Call RM_GetOpenDriveGeoReference to get the RM_GeoReference struct
 	RM_GeoReference geoRef;
 	if (RM_GetOpenDriveGeoReference(&geoRef) == 0) {
@@ -517,13 +517,13 @@ void EsminiAdapter::runEsminiSimulation()
 			me->testOrigin.position.altitude = llh_0[2];
 			me->testOriginSet = true;
 
-			std::string projStringTo = "+proj=tmerc +lat_0=" + std::to_string(llh_0[0]) + 
-													" +lon_0=" + std::to_string(llh_0[1]) + 
+			std::string projStringTo = "+proj=tmerc +lat_0=" + std::to_string(llh_0[0]) +
+													" +lon_0=" + std::to_string(llh_0[1]) +
 													" +datum="+ toDatum + " +units=m +no_defs";
 
 			me->crsTransformation = std::make_shared<CRSTransformation>(projStringFrom, projStringTo);
 			me->applyTrajTransform = true;
-		} 
+		}
 		catch (std::exception& e) {
 			RCLCPP_ERROR(me->get_logger(), e.what());
 			return;
@@ -565,7 +565,7 @@ void EsminiAdapter::runEsminiSimulation()
 				me->atosObjectIdToTraj.emplace(atos_id, traj);
 				me->atosIdToEsminiId.emplace(atos_id, esminiId);
 				RCLCPP_INFO(me->get_logger(), "Extracted trajectory for object %s with size %d", objectName, traj.points.size());
-				
+
 				me->pathPublishers.emplace(atos_id, ROSChannels::Path::Pub(*me, atos_id));
 				me->pathPublishers.at(atos_id).publish(traj.toPath());
 				std::array<double,3> llh_0 = {me->testOrigin.position.latitude, me->testOrigin.position.longitude, me->testOrigin.position.altitude};
