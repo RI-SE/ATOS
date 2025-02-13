@@ -10,7 +10,9 @@
 #include <cstdint>
 #include <type_traits>
 #include "roschannels/objstatechangechannel.hpp"
+#include "roschannels/commandchannels.hpp"
 #include "roschannels/statechange.hpp"
+#include "util.h"
 
 class ObjectControl;
 
