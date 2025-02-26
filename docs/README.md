@@ -2,6 +2,7 @@
 
 ![image](res/ATOS_architecture.drawio.png)
 
+![image](res/ATOS-UML.png)
 
 ## Docs
 
