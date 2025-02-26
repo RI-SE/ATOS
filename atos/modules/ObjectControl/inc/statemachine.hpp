@@ -58,26 +58,26 @@ static constexpr auto Done			= boost::sml::state<struct Done>;
 static constexpr auto RemoteControl = boost::sml::state<struct RemoteControl>;
 
 // clang-format off
-struct idle_on_entry             { void operator()(ObjectControl* oc) const; };
-struct idle_to_init_guard        { bool operator()(ObjectControl* oc) const; };
-struct idle_to_init_action       { void operator()(ObjectControl* oc) const; };
-struct init_to_connecting_action { void operator()(ObjectControl* oc) const; };
-struct init_to_connecting_guard  { bool operator()(ObjectControl* oc) const; };
-struct init_to_idle_action       { void operator()(ObjectControl* oc) const; };
-struct connecting_on_entry       { void operator()(ObjectControl* oc) const; };
-struct connecting_to_idle_action { void operator()(ObjectControl* oc) const; };
-struct clearing_on_entry         { void operator()(ObjectControl* oc) const; };
-struct ready_on_entry            { void operator()(ObjectControl* oc) const; };
-struct ready_reset               { void operator()(ObjectControl* oc) const; };
-struct ready_reload              { void operator()(ObjectControl* oc) const; };
-struct remote_control_on_entry   { void operator()(ObjectControl* oc) const; };
-struct remote_control_on_exit    { void operator()(ObjectControl* oc) const; };
-struct disarming_on_entry        { void operator()(ObjectControl* oc) const; };
-struct done_on_entry             { void operator()(ObjectControl* oc) const; };
-struct armed_on_enter            { void operator()(ObjectControl* oc) const; };
-struct armed_to_testlive_guard   { bool operator()(ObjectControl* oc) const; };
-struct test_live_start_object    { void operator()(const events::StartObject& event, ObjectControl* oc) const; };
-struct disconnected_from_object  { void operator()(const events::DisconnectedFromObject& event, ObjectControl* oc) const; };
+struct idle_on_entry             { void operator()(ObjectControl& oc) const; };
+struct idle_to_init_guard        { bool operator()(ObjectControl& oc) const; };
+struct idle_to_init_action       { void operator()(ObjectControl& oc) const; };
+struct init_to_connecting_action { void operator()(ObjectControl& oc) const; };
+struct init_to_connecting_guard  { bool operator()(ObjectControl& oc) const; };
+struct init_to_idle_action       { void operator()(ObjectControl& oc) const; };
+struct connecting_on_entry       { void operator()(ObjectControl& oc) const; };
+struct connecting_to_idle_action { void operator()(ObjectControl& oc) const; };
+struct clearing_on_entry         { void operator()(ObjectControl& oc) const; };
+struct ready_on_entry            { void operator()(ObjectControl& oc) const; };
+struct ready_reset               { void operator()(ObjectControl& oc) const; };
+struct ready_reload              { void operator()(ObjectControl& oc) const; };
+struct remote_control_on_entry   { void operator()(ObjectControl& oc) const; };
+struct remote_control_on_exit    { void operator()(ObjectControl& oc) const; };
+struct disarming_on_entry        { void operator()(ObjectControl& oc) const; };
+struct done_on_entry             { void operator()(ObjectControl& oc) const; };
+struct armed_on_enter            { void operator()(ObjectControl& oc) const; };
+struct armed_to_testlive_guard   { bool operator()(ObjectControl& oc) const; };
+struct test_live_start_object    { void operator()(const events::StartObject& event, ObjectControl& oc) const; };
+struct disconnected_from_object  { void operator()(const events::DisconnectedFromObject& event, ObjectControl& oc) const; };
 // clang-format on
 
 template<class T>

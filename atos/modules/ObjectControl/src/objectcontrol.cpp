@@ -1068,121 +1068,121 @@ ControlCenterStatusType ObjectControl::controlCenterStatus() {
 namespace state_machine {
 
 // Aborting
-void disconnected_from_object::operator()(const events::DisconnectedFromObject& event, ObjectControl* oc) const {
-	RCLCPP_WARN(oc->get_logger(), "Object %d disconnected while CC in aborting state!", event.id);
+void disconnected_from_object::operator()(const events::DisconnectedFromObject& event, ObjectControl& oc) const {
+	RCLCPP_WARN(oc.get_logger(), "Object %d disconnected while CC in aborting state!", event.id);
 }
 
 // Armed
-void armed_on_enter::operator()(ObjectControl* oc) const {
-	oc->armObjects();
+void armed_on_enter::operator()(ObjectControl& oc) const {
+	oc.armObjects();
 }
 
-bool armed_to_testlive_guard::operator()(ObjectControl* oc) const {
-	return oc->areAllObjectsIn(OBJECT_STATE_ARMED);
+bool armed_to_testlive_guard::operator()(ObjectControl& oc) const {
+	return oc.areAllObjectsIn(OBJECT_STATE_ARMED);
 }
 
 // Clearing
-void clearing_on_entry::operator()(ObjectControl* oc) const {
-	oc->allClearObjects();
+void clearing_on_entry::operator()(ObjectControl& oc) const {
+	oc.allClearObjects();
 }
 
 // Connecting
-void connecting_on_entry::operator()(ObjectControl* oc) const {
-	oc->beginConnectionAttempt();
+void connecting_on_entry::operator()(ObjectControl& oc) const {
+	oc.beginConnectionAttempt();
 }
 
-void connecting_to_idle_action::operator()(ObjectControl* oc) const {
-	oc->abortConnectionAttempt();
-	oc->disconnectObjects();
+void connecting_to_idle_action::operator()(ObjectControl& oc) const {
+	oc.abortConnectionAttempt();
+	oc.disconnectObjects();
 }
 
 // Disarming
-void disarming_on_entry::operator()(ObjectControl* oc) const {
-	oc->disarmObjects();
+void disarming_on_entry::operator()(ObjectControl& oc) const {
+	oc.disarmObjects();
 }
 
 // Done
-void done_on_entry::operator()(ObjectControl* oc) const {
-	RCLCPP_WARN(oc->get_logger(), "Nothing to be done for postprocessing"); // TODO
-	oc->sendAbortNotification();											// TODO temporary to trigger logging etc.
+void done_on_entry::operator()(ObjectControl& oc) const {
+	RCLCPP_WARN(oc.get_logger(), "Nothing to be done for postprocessing"); // TODO
+	oc.sendAbortNotification();											   // TODO temporary to trigger logging etc.
 }
 
 // Idle
-void idle_on_entry::operator()(ObjectControl* oc) const {
-	RCLCPP_INFO(oc->get_logger(), "Handling initialization request");
+void idle_on_entry::operator()(ObjectControl& oc) const {
+	RCLCPP_INFO(oc.get_logger(), "Handling initialization request");
 	JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
-	oc->clearScenario();
+	oc.clearScenario();
 }
 
-bool idle_to_init_guard::operator()(ObjectControl* oc) const {
+bool idle_to_init_guard::operator()(ObjectControl& oc) const {
 	// Reload objects on each initialize request.
-	bool const successful{oc->loadScenario()};
+	bool const successful{oc.loadScenario()};
 	if (!successful) {
-		RCLCPP_ERROR(oc->get_logger(), "Failed to load scenario");
+		RCLCPP_ERROR(oc.get_logger(), "Failed to load scenario");
 		JournalRecordData(JOURNAL_RECORD_EVENT, "INIT failed");
 	}
 	return successful;
 }
 
-void idle_to_init_action::operator()(ObjectControl* oc) const {
+void idle_to_init_action::operator()(ObjectControl& oc) const {
 	try {
-		auto anchorID = oc->getAnchorObjectID();
-		oc->transformScenarioRelativeTo(anchorID);
-		oc->setControlMode(ControlMode::RelativeKinematics);
-		RCLCPP_INFO(oc->get_logger(), "Relative control mode enabled");
+		auto anchorID = oc.getAnchorObjectID();
+		oc.transformScenarioRelativeTo(anchorID);
+		oc.setControlMode(ControlMode::RelativeKinematics);
+		RCLCPP_INFO(oc.get_logger(), "Relative control mode enabled");
 	} catch (std::invalid_argument&) {
-		oc->setControlMode(ControlMode::AbsoluteKinematics);
-		RCLCPP_INFO(oc->get_logger(), "Absolute control mode enabled");
+		oc.setControlMode(ControlMode::AbsoluteKinematics);
+		RCLCPP_INFO(oc.get_logger(), "Absolute control mode enabled");
 	}
 }
 
 // Initialized
-void init_to_connecting_action::operator()(ObjectControl* oc) const {
-	RCLCPP_INFO(oc->get_logger(), "Handling connect request");
+void init_to_connecting_action::operator()(ObjectControl& oc) const {
+	RCLCPP_INFO(oc.get_logger(), "Handling connect request");
 	JournalRecordData(JOURNAL_RECORD_EVENT, "CONNECT received");
 }
 
-bool init_to_connecting_guard::operator()(ObjectControl* oc) const {
-	if (oc->getVehicleIDs().empty()) {
-		RCLCPP_WARN(oc->get_logger(), "No objects are configured! Canceling connect request...");
+bool init_to_connecting_guard::operator()(ObjectControl& oc) const {
+	if (oc.getVehicleIDs().empty()) {
+		RCLCPP_WARN(oc.get_logger(), "No objects are configured! Canceling connect request...");
 		return false;
 	} else {
 		return true;
 	}
 }
 
-void init_to_idle_action::operator()(ObjectControl* oc) const {
-	oc->clearScenario();
+void init_to_idle_action::operator()(ObjectControl& oc) const {
+	oc.clearScenario();
 }
 
 // Ready
-void ready_on_entry::operator()(ObjectControl* oc) const {
-	oc->startSafetyThread();
+void ready_on_entry::operator()(ObjectControl& oc) const {
+	oc.startSafetyThread();
 }
 
-void ready_reset::operator()(ObjectControl* oc) const {
-	oc->resetTestObjects();
+void ready_reset::operator()(ObjectControl& oc) const {
+	oc.resetTestObjects();
 }
 
-void ready_reload::operator()(ObjectControl* oc) const {
-	oc->reloadScenarioTrajectories();
-	oc->uploadAllConfigurations();
+void ready_reload::operator()(ObjectControl& oc) const {
+	oc.reloadScenarioTrajectories();
+	oc.uploadAllConfigurations();
 }
 
 // RemoteControl
-void remote_control_on_entry::operator()(ObjectControl* oc) const {
-	oc->remoteControlObjects(true);
-	oc->startControlSignalSubscriber();
+void remote_control_on_entry::operator()(ObjectControl& oc) const {
+	oc.remoteControlObjects(true);
+	oc.startControlSignalSubscriber();
 }
 
-void remote_control_on_exit::operator()(ObjectControl* oc) const {
-	oc->stopControlSignalSubscriber();
-	oc->remoteControlObjects(false);
+void remote_control_on_exit::operator()(ObjectControl& oc) const {
+	oc.stopControlSignalSubscriber();
+	oc.remoteControlObjects(false);
 }
 
 // TestLive
-void test_live_start_object::operator()(const events::StartObject& event, ObjectControl* oc) const {
-	oc->startObject(event.id, event.startTime);
+void test_live_start_object::operator()(const events::StartObject& event, ObjectControl& oc) const {
+	oc.startObject(event.id, event.startTime);
 }
 
 } // namespace state_machine

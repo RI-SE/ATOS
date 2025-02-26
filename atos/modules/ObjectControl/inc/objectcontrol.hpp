@@ -240,7 +240,7 @@ private:
 	boost::sml::sm<state_machine::StateMachine,
 				   boost::sml::logger<state_machine::Logger>,
 				   boost::sml::thread_safe<std::recursive_mutex>>
-	  sm{this, sm_logger};
+	  sm{*this, sm_logger};
 
 public:
 	//! Connection methods
