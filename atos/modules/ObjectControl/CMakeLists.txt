@@ -85,3 +85,13 @@ install(TARGETS ${OBJECT_CONTROL_TARGET}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
+
+add_executable(dump_state_machine
+	${CMAKE_CURRENT_SOURCE_DIR}/src/dump_state_machine.cpp
+)
+target_link_libraries(dump_state_machine
+	${ATOS_COMMON_LIBRARY}
+)
+target_include_directories(dump_state_machine PUBLIC SYSTEM
+	${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
