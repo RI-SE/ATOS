@@ -49,6 +49,10 @@ atos:
               qos: 1
             ros:
               queue_size: 1
+  monr_relay:
+    ros__parameters:
+      host: "127.0.0.1"
+      port: 51234
   trajectorylet_streamer:
     ros__parameters:
       chunk_duration: 2.0

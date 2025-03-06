@@ -163,6 +163,7 @@ protected:
 	Channel osiChannel;		//!< Channel for communication with object over the OSI protocol
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
 	std::shared_ptr<ROSChannels::Monitor::Pub> monrPub;
+	std::shared_ptr<ROSChannels::Monitor::PubAll> monrPubAll;
 	std::shared_ptr<ROSChannels::NavSatFix::Pub> navSatFixPub;
 	std::shared_ptr<ROSChannels::Path::Sub> pathSub;
 	std::shared_ptr<ROSChannels::ObjectStateChange::Pub> stateChangePub;

@@ -141,9 +141,12 @@ Channel& operator>>(Channel& chnl, MonitorMessage& monitor) {
 		TimeSetToCurrentSystemTime(&tv);
 		HeaderType header;
 		decodeISOHeader(chnl.receiveBuffer.data(), chnl.receiveBuffer.size(), &header, false);
-		monitor.first = header.transmitterID;
+		monitor.id = header.transmitterID;
 		auto nBytes =
-		  decodeMONRMessage(chnl.receiveBuffer.data(), chnl.receiveBuffer.size(), tv, &monitor.second, false);
+		  decodeMONRMessage(chnl.receiveBuffer.data(), chnl.receiveBuffer.size(), tv, &monitor.object_monitor, false);
+
+		std::copy(chnl.receiveBuffer.begin(), chnl.receiveBuffer.end(), std::back_inserter(monitor.raw_data));
+
 		if (nBytes < 0) {
 			throw std::invalid_argument("Failed to decode MONR message");
 		} else {

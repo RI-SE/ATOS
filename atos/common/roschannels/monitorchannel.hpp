@@ -29,6 +29,12 @@ public:
 	  objectId(id) {}
 };
 
+class PubAll : public BasePub<message_type> {
+public:
+	PubAll(rclcpp::Node& node, const rclcpp::QoS& qos = defaultQoS) :
+	  BasePub<message_type>(node, topicName, qos) {}
+};
+
 class AnchorPub : public BasePub<message_type> {
 public:
 	AnchorPub(rclcpp::Node& node, const rclcpp::QoS& qos = defaultQoS) :
@@ -46,6 +52,14 @@ public:
 	  objectId(id) {}
 };
 
+class SubAll : public BaseSub<message_type> {
+public:
+	SubAll(rclcpp::Node& node,
+		   std::function<void(const message_type::SharedPtr)> callback,
+		   const rclcpp::QoS& qos = defaultQoS) :
+	  BaseSub<message_type>(node, topicName, callback, qos) {}
+};
+
 class AnchorSub : public BaseSub<message_type> {
 public:
 	AnchorSub(rclcpp::Node& node,
@@ -54,7 +68,9 @@ public:
 	  BaseSub<message_type>(node, "object_anchor/" + topicName, callback, qos) {}
 };
 
-inline message_type fromISOMonr(const uint32_t id, const ObjectMonitorType& indata) {
+inline message_type fromISOMonr(const uint32_t id,
+								const ObjectMonitorType& indata,
+								const std::vector<unsigned char>& raw_data) {
 	atos_interfaces::msg::Monitor outdata;
 	auto txid  = id;
 	auto stamp = rclcpp::Time(indata.timestamp.tv_sec, indata.timestamp.tv_usec * 1000);
@@ -96,6 +112,9 @@ inline message_type fromISOMonr(const uint32_t id, const ObjectMonitorType& inda
 	outdata.acceleration.accel.angular.x = 0;
 	outdata.acceleration.accel.angular.y = 0;
 	outdata.acceleration.accel.angular.z = 0;
+
+	outdata.raw_data = raw_data;
+
 	return outdata;
 }
 

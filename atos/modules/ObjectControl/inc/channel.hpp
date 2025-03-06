@@ -14,7 +14,11 @@
 #include <netinet/in.h>
 #include <vector>
 
-struct MonitorMessage : std::pair<uint32_t, ObjectMonitorType> {};
+struct MonitorMessage {
+	uint32_t id;
+	ObjectMonitorType object_monitor;
+	std::vector<unsigned char> raw_data{};
+};
 
 class Channel : public Loggable {
 public:

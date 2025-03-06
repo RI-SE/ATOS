@@ -39,7 +39,7 @@ MonitorMessage RelativeTestObject::readMonitorMessage() {
 	lastMonitorTime = clock::now();
 	updateMonitor(retval);
 	// transform the monitor data relative to anchor
-	transformCoordinate(retval.second, lastAnchorMonr, true);
+	transformCoordinate(retval.object_monitor, lastAnchorMonr, true);
 	return retval;
 }
 

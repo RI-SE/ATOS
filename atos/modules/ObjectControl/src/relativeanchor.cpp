@@ -17,5 +17,6 @@ RelativeAnchor::RelativeAnchor(RelativeAnchor&& other) :
 
 RelativeAnchor::publishMonr(const ROSChannels::Monitor::message_type monr) {
 	monrPub.publish(monr);
+	monrPubAll.publish(monr);
 	anchorPub.publish(monr);
 }

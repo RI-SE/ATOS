@@ -19,6 +19,7 @@ TestObject::TestObject(uint32_t id) :
   conf(get_logger()) {
 	pathSub = std::make_shared<ROSChannels::Path::Sub>(*this, id, std::bind(&TestObject::onPathMessage, this, _1, id));
 	monrPub = std::make_shared<ROSChannels::Monitor::Pub>(*this, id);
+	monrPubAll	   = std::make_shared<ROSChannels::Monitor::PubAll>(*this);
 	navSatFixPub   = std::make_shared<ROSChannels::NavSatFix::Pub>(*this, id);
 	stateChangePub = std::make_shared<ROSChannels::ObjectStateChange::Pub>(*this);
 }
@@ -164,13 +165,12 @@ void TestObject::handleISOMessage(bool awaitNext) {
 }
 
 void TestObject::updateMonitor(const MonitorMessage& data) {
-	if (data.first != this->getTransmitterID()) {
+	if (data.id != this->getTransmitterID()) {
 		throw std::invalid_argument("Attempted to set monitor data with non-matching transmitter ID (" +
-									std::to_string(data.first) + " != " + std::to_string(this->getTransmitterID()) +
-									")");
+									std::to_string(data.id) + " != " + std::to_string(this->getTransmitterID()) + ")");
 	}
-	this->state		  = data.second.state;
-	this->lastMonitor = data.second;
+	this->state		  = data.object_monitor.state;
+	this->lastMonitor = data.object_monitor;
 }
 
 ObjectStateType TestObject::getState(const bool awaitUpdate) {
@@ -194,6 +194,7 @@ ObjectStateType TestObject::getState(const bool awaitUpdate, const std::chrono::
 
 void TestObject::publishMonr(const ROSChannels::Monitor::message_type monr) {
 	monrPub->publish(monr);
+	monrPubAll->publish(monr);
 }
 
 void TestObject::publishNavSatFix(const ROSChannels::NavSatFix::message_type navSatFix) {
@@ -330,11 +331,11 @@ void TestObject::sendControlSignal(const ControlSignalPercentage::SharedPtr csp)
 void TestObject::publishMonitor(MonitorMessage& monr) {
 	// Publish to journal
 	auto objData	 = this->getAsObjectData();
-	objData.MonrData = monr.second;
+	objData.MonrData = monr.object_monitor;
 	JournalRecordMonitorData(&objData);
 
 	// Publish to ROS topic
-	auto rosMonr = ROSChannels::Monitor::fromISOMonr(monr.first, monr.second);
+	auto rosMonr = ROSChannels::Monitor::fromISOMonr(monr.id, monr.object_monitor, monr.raw_data);
 	publishMonr(rosMonr);
 
 	// TODO: Make a translator node that listens on Monitor topic and does this..
