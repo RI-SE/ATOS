@@ -10,18 +10,19 @@
 #include "roschannels/customcommandaction.hpp"
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <string>
+#include <time.h>
 
 using json = nlohmann::json;
 
 // Helper struct for CURL write callback
 struct WriteCallback {
-  std::string data;
-  static size_t callback(void *contents, size_t size, size_t nmemb,
-                         void *userp) {
-    ((WriteCallback *)userp)->data.append((char *)contents, size * nmemb);
-    return size * nmemb;
-  }
+	std::string data;
+	static size_t callback(void* contents, size_t size, size_t nmemb, void* userp) {
+		((WriteCallback*)userp)->data.append((char*)contents, size * nmemb);
+		return size * nmemb;
+	}
 };
 
 /*!
@@ -30,31 +31,37 @@ struct WriteCallback {
  */
 class RESTBridge : public Module {
 public:
-  static inline std::string const moduleName = "rest_bridge";
-  RESTBridge();
-  ~RESTBridge();
+	static inline std::string const moduleName = "rest_bridge";
+	RESTBridge();
+	~RESTBridge();
 
 protected:
-  void onCustomCommandAction(
-      const atos_interfaces::msg::CustomCommandAction::SharedPtr msg);
+	void onCustomCommandAction(const atos_interfaces::msg::CustomCommandAction::SharedPtr msg);
 
 private:
-  ROSChannels::CustomCommandAction::Sub
-      customCommandActionMsgSub; //!< Subscriber to icdc messages requests
+	ROSChannels::CustomCommandAction::Sub customCommandActionMsgSub; //!< Subscriber to icdc messages requests
 
-  // Auth related members
-  bool auth_enabled_;
-  std::string auth_url_;
-  std::string client_id_;
-  std::string client_secret_;
-  std::string access_token_;
+	// Auth related members
+	bool auth_enabled_;
+	std::string auth_url_;
+	std::string client_id_;
+	std::string client_secret_;
+	std::string access_token_;
 
-  json parseJsonData(std::string &msg);
-  void POST(const std::string &endpoint, const json &data);
-  bool authenticate();
-  bool refreshToken();
-  void setupCurlHandle();
+	json parseJsonData(std::string& msg);
+	void POST(const std::string& endpoint, const json& data);
+	bool authenticate();
+	bool refreshToken();
+	void setupCurlHandle();
 
-  CURL *curl_handle;
-  struct curl_slist *default_headers_;
+	CURL* curl_handle;
+	struct curl_slist* default_headers_;
+
+	// Add these new members
+	time_t token_expiry_time_		  = 0;
+	const int refresh_buffer_seconds_ = 60; // Refresh token 60 seconds before expiry
+	rclcpp::TimerBase::SharedPtr token_refresh_timer_;
+
+	// Add this new method
+	void setupTokenRefreshTimer();
 };
