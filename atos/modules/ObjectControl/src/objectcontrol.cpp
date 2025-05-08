@@ -532,17 +532,20 @@ OsiHandler::LocalObjectGroundTruth_t ObjectControl::buildOSILocalGroundTruth(con
 
 	OsiHandler::LocalObjectGroundTruth_t gt;
 
-	gt.id			= monr.first;
-	gt.pos_m.x		= monr.second.position.xCoord_m;
-	gt.pos_m.y		= monr.second.position.yCoord_m;
-	gt.pos_m.z		= monr.second.position.zCoord_m;
-	gt.vel_m_s.lon	= monr.second.speed.isLongitudinalValid ? monr.second.speed.longitudinal_m_s : 0.0;
-	gt.vel_m_s.lat	= monr.second.speed.isLateralValid ? monr.second.speed.lateral_m_s : 0.0;
-	gt.vel_m_s.up	= 0.0;
-	gt.acc_m_s2.lon = monr.second.acceleration.isLongitudinalValid ? monr.second.acceleration.longitudinal_m_s2 : 0.0;
-	gt.acc_m_s2.lat = monr.second.acceleration.isLateralValid ? monr.second.acceleration.lateral_m_s2 : 0.0;
-	gt.acc_m_s2.up	= 0.0;
-	gt.orientation_rad.yaw	 = monr.second.position.isHeadingValid ? monr.second.position.heading_rad : 0.0;
+	gt.id		   = monr.id;
+	gt.pos_m.x	   = monr.object_monitor.position.xCoord_m;
+	gt.pos_m.y	   = monr.object_monitor.position.yCoord_m;
+	gt.pos_m.z	   = monr.object_monitor.position.zCoord_m;
+	gt.vel_m_s.lon = monr.object_monitor.speed.isLongitudinalValid ? monr.object_monitor.speed.longitudinal_m_s : 0.0;
+	gt.vel_m_s.lat = monr.object_monitor.speed.isLateralValid ? monr.object_monitor.speed.lateral_m_s : 0.0;
+	gt.vel_m_s.up  = 0.0;
+	gt.acc_m_s2.lon =
+	  monr.object_monitor.acceleration.isLongitudinalValid ? monr.object_monitor.acceleration.longitudinal_m_s2 : 0.0;
+	gt.acc_m_s2.lat =
+	  monr.object_monitor.acceleration.isLateralValid ? monr.object_monitor.acceleration.lateral_m_s2 : 0.0;
+	gt.acc_m_s2.up = 0.0;
+	gt.orientation_rad.yaw =
+	  monr.object_monitor.position.isHeadingValid ? monr.object_monitor.position.heading_rad : 0.0;
 	gt.orientation_rad.roll	 = 0.0;
 	gt.orientation_rad.pitch = 0.0;
 
@@ -551,13 +554,13 @@ OsiHandler::LocalObjectGroundTruth_t ObjectControl::buildOSILocalGroundTruth(con
 
 // TODO (NOT WORKING ATM!): Replace this with a subscriber that listens for monr messages.
 void ObjectControl::injectObjectData(const MonitorMessage& monr) {
-	if (!objects.at(monr.first)->getObjectConfig().getInjectionMap().targetIDs.empty()) {
+	if (!objects.at(monr.id)->getObjectConfig().getInjectionMap().targetIDs.empty()) {
 		std::chrono::system_clock::time_point ts;
-		auto secs  = std::chrono::seconds(monr.second.timestamp.tv_sec);
-		auto usecs = std::chrono::microseconds(monr.second.timestamp.tv_usec);
+		auto secs  = std::chrono::seconds(monr.object_monitor.timestamp.tv_sec);
+		auto usecs = std::chrono::microseconds(monr.object_monitor.timestamp.tv_usec);
 		ts += secs + usecs;
 		auto osiGtData = buildOSILocalGroundTruth(monr);
-		for (const auto& targetID : objects.at(monr.first)->getObjectConfig().getInjectionMap().targetIDs) {
+		for (const auto& targetID : objects.at(monr.id)->getObjectConfig().getInjectionMap().targetIDs) {
 			if (objects.at(targetID)->isOsiCompatible()) {
 				objects.at(targetID)->sendOsiData(osiGtData, objects.at(targetID)->getProjString(), ts);
 			}

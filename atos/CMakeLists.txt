@@ -65,6 +65,7 @@ set(WITH_INTEGRATION_TESTING ON CACHE BOOL "Enable IntegrationTesting module")
 set(WITH_BACK_TO_START ON CACHE BOOL "Enable BackToStart module")
 set(WITH_OPEN_SCENARIO_GATEWAY ON CACHE BOOL "Enable OpenScenario Gateway module")
 set(WITH_REST_BRIDGE ON CACHE BOOL "Enable RESTBridge module")
+set(WITH_MONR_RELAY ON CACHE BOOL "Enable MonrRelay module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -101,6 +102,9 @@ if(WITH_BACK_TO_START)
 endif()
 if(WITH_REST_BRIDGE)
         list(APPEND ENABLED_MODULES RESTBridge)
+endif()
+if(WITH_MONR_RELAY)
+        list(APPEND ENABLED_MODULES MonrRelay)
 endif()
 
 

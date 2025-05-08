@@ -7,19 +7,16 @@
 #include "testobject.hpp"
 #include <cstdint>
 
-RelativeAnchor::RelativeAnchor(uint32_t id) : 
-    TestObject(id),
-	anchorPub(*this)
-{
-}
+RelativeAnchor::RelativeAnchor(uint32_t id) :
+  TestObject(id),
+  anchorPub(*this) {}
 
-RelativeAnchor::RelativeAnchor(RelativeAnchor&& other) : 
-	TestObject(std::move(other)),
-	anchorPub(std::move(other.anchorPub))
-{
-}
+RelativeAnchor::RelativeAnchor(RelativeAnchor&& other) :
+  TestObject(std::move(other)),
+  anchorPub(std::move(other.anchorPub)) {}
 
 RelativeAnchor::publishMonr(const ROSChannels::Monitor::message_type monr) {
 	monrPub.publish(monr);
+	monrPubAll.publish(monr);
 	anchorPub.publish(monr);
 }

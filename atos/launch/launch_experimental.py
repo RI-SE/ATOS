@@ -1,5 +1,6 @@
-import sys
 import os
+import sys
+
 from ament_index_python.packages import get_package_prefix
 
 sys.path.insert(
@@ -8,9 +9,10 @@ sys.path.insert(
         get_package_prefix("atos"), "share", "atos", "launch"
     ),
 )
-from launch_ros.actions import Node
-from launch import LaunchDescription
+
 import launch_utils.launch_base as launch_base
+from launch import LaunchDescription
+from launch_ros.actions import Node
 
 
 def get_experimental_nodes():
@@ -51,6 +53,13 @@ def get_experimental_nodes():
             namespace="atos",
             executable="rest_bridge",
             name="rest_bridge",
+            parameters=[files["params"]],
+        ),
+        Node(
+            package="atos",
+            namespace="atos",
+            executable="monr_relay",
+            name="monr_relay",
             parameters=[files["params"]],
         ),
     ]

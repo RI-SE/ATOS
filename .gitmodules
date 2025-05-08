@@ -1,6 +1,6 @@
 [submodule "atos/iso22133"]
 	path = atos/iso22133
-	url = https://github.com/RI-SE/iso22133.git
+	url = git@github.com:RI-SE/iso22133.git
 [submodule "atos_interfaces"]
 	path = atos_interfaces
-	url = https://github.com/RI-SE/atos_interfaces.git
+	url = git@github.com:RI-SE/atos_interfaces.git
