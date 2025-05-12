@@ -164,7 +164,8 @@ bool RESTBridge::authenticate() {
 
 void RESTBridge::onCustomCommandAction(const atos_interfaces::msg::CustomCommandAction::SharedPtr msg) {
 	if (msg->type == atos_interfaces::msg::CustomCommandAction::POST_JSON) {
-		RCLCPP_INFO(get_logger(), "Received POST_JSON command: %s", msg->content.c_str());
+		RCLCPP_INFO(get_logger(), "Received POST_JSON custom command action");
+		RCLCPP_INFO(get_logger(), "Content: %s", msg->content.c_str());
 		json jsonData = parseJsonData(msg->content);
 		POST(jsonData["endpoint"].get<std::string>(), jsonData["data"]);
 	}
@@ -193,12 +194,18 @@ void RESTBridge::POST(const std::string& endpoint, const json& data) {
 		}
 	}
 
+	WriteCallback writeCallback;  // Add this to capture the response
+
 	std::string json_str  = data.dump();
 	const char* json_data = json_str.c_str();
 
 	curl_easy_setopt(curl_handle, CURLOPT_URL, endpoint.c_str());
 	curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, json_data);
 	curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, default_headers_);
+	
+	// Add these lines to capture the response
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteCallback::callback);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &writeCallback);
 
 	CURLcode res = curl_easy_perform(curl_handle);
 
@@ -221,4 +228,6 @@ void RESTBridge::POST(const std::string& endpoint, const json& data) {
 			}
 		}
 	}
+	// Print the response
+	RCLCPP_DEBUG(get_logger(), "Response: %s", writeCallback.data.c_str());
 }
