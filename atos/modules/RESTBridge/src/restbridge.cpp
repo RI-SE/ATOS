@@ -7,14 +7,103 @@ using namespace std::placeholders;
 RESTBridge::RESTBridge()
     : Module(moduleName),
       customCommandActionMsgSub(
-          *this, std::bind(&RESTBridge::onCustomCommandAction, this, _1)) {
+          *this, std::bind(&RESTBridge::onCustomCommandAction, this, _1)),
+      default_headers_(nullptr) {
+
+  // Initialize CURL
   curl_global_init(CURL_GLOBAL_ALL);
   curl_handle = curl_easy_init();
+
+  // Get authentication parameters from ROS
+  auth_enabled_ = declare_parameter("auth.enabled", false);
+  auth_url_ = declare_parameter("auth.url", "");
+  client_id_ = declare_parameter("auth.client_id", "");
+  client_secret_ = declare_parameter("auth.client_secret", "");
+
+  if (auth_enabled_) {
+    RCLCPP_INFO(get_logger(),
+                "Authentication enabled, attempting to authenticate...");
+    if (!authenticate()) {
+      RCLCPP_ERROR(get_logger(), "Initial authentication failed!");
+    }
+  }
+
+  setupCurlHandle();
 }
 
 RESTBridge::~RESTBridge() {
+  if (default_headers_) {
+    curl_slist_free_all(default_headers_);
+  }
   curl_easy_cleanup(curl_handle);
   curl_global_cleanup();
+}
+
+void RESTBridge::setupCurlHandle() {
+  if (!curl_handle)
+    return;
+
+  // Setup default headers
+  default_headers_ = curl_slist_append(nullptr, "Accept: application/json");
+  default_headers_ =
+      curl_slist_append(default_headers_, "Content-Type: application/json");
+  default_headers_ = curl_slist_append(default_headers_, "charset: utf-8");
+
+  if (auth_enabled_ && !access_token_.empty()) {
+    std::string auth_header = "Authorization: Bearer " + access_token_;
+    default_headers_ = curl_slist_append(default_headers_, auth_header.c_str());
+  }
+}
+
+bool RESTBridge::authenticate() {
+  if (!curl_handle)
+    return false;
+
+  WriteCallback writeCallback;
+
+  // Prepare authentication data
+  json auth_data = {{"grant_type", "client_credentials"},
+                    {"client_id", client_id_},
+                    {"client_secret", client_secret_}};
+  std::string auth_str = auth_data.dump();
+
+  curl_easy_setopt(curl_handle, CURLOPT_URL, auth_url_.c_str());
+  curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, auth_str.c_str());
+  curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteCallback::callback);
+  curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &writeCallback);
+
+  // Set basic headers for auth request
+  struct curl_slist *auth_headers = nullptr;
+  auth_headers =
+      curl_slist_append(auth_headers, "Content-Type: application/json");
+  curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, auth_headers);
+
+  CURLcode res = curl_easy_perform(curl_handle);
+
+  curl_slist_free_all(auth_headers);
+
+  if (res != CURLE_OK) {
+    RCLCPP_ERROR(get_logger(), "Authentication request failed: %s",
+                 curl_easy_strerror(res));
+    return false;
+  }
+
+  try {
+    json response = json::parse(writeCallback.data);
+    access_token_ = response["access_token"].get<std::string>();
+
+    // Update headers with new token
+    if (default_headers_) {
+      curl_slist_free_all(default_headers_);
+    }
+    setupCurlHandle();
+
+    return true;
+  } catch (const std::exception &e) {
+    RCLCPP_ERROR(get_logger(), "Failed to parse authentication response: %s",
+                 e.what());
+    return false;
+  }
 }
 
 void RESTBridge::onCustomCommandAction(
@@ -37,29 +126,46 @@ json RESTBridge::parseJsonData(std::string &msg) {
 }
 
 void RESTBridge::POST(const std::string &endpoint, const json &data) {
-  // Send A POST request to the specified endpoint with the specified data, Use
-  // hardcoded headers for now
-  CURLcode res;
+  if (!curl_handle)
+    return;
 
-  if (curl_handle) {
-    std::string json_str = data.dump();       // Store the JSON string
-    const char *json_data = json_str.c_str(); // Get the C-string pointer
-    curl_easy_setopt(curl_handle, CURLOPT_URL, endpoint.c_str());
-    curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, json_data);
+  // If authentication is enabled and we don't have a token, try to authenticate
+  if (auth_enabled_ && access_token_.empty()) {
+    if (!authenticate()) {
+      RCLCPP_ERROR(get_logger(), "Failed to authenticate before POST request");
+      return;
+    }
+  }
 
-    struct curl_slist *headers = NULL;
-    headers = curl_slist_append(headers, "Accept: application/json");
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    headers = curl_slist_append(headers, "charset: utf-8");
-    curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
+  std::string json_str = data.dump();
+  const char *json_data = json_str.c_str();
 
-    // Perform the request, res will get the return code
-    res = curl_easy_perform(curl_handle);
+  curl_easy_setopt(curl_handle, CURLOPT_URL, endpoint.c_str());
+  curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, json_data);
+  curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, default_headers_);
 
-    // Check for errors
-    if (res != CURLE_OK) {
-      RCLCPP_ERROR(get_logger(), "curl_easy_perform() failed: %s\n",
-                   curl_easy_strerror(res));
+  CURLcode res = curl_easy_perform(curl_handle);
+
+  if (res != CURLE_OK) {
+    RCLCPP_ERROR(get_logger(), "POST request failed: %s",
+                 curl_easy_strerror(res));
+
+    // If we get an unauthorized error, try to refresh the token and retry
+    long http_code;
+    curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &http_code);
+
+    if (http_code == 401 && auth_enabled_) {
+      RCLCPP_INFO(get_logger(),
+                  "Unauthorized error, attempting to refresh token...");
+      if (authenticate()) {
+        // Retry the request with new token
+        curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, default_headers_);
+        res = curl_easy_perform(curl_handle);
+        if (res != CURLE_OK) {
+          RCLCPP_ERROR(get_logger(), "Retry POST request failed: %s",
+                       curl_easy_strerror(res));
+        }
+      }
     }
   }
 }
