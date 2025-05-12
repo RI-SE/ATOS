@@ -9,7 +9,6 @@ sys.path.insert(
         get_package_prefix("atos"), "share", "atos", "launch"
     ),
 )
-
 import launch_utils.launch_base as launch_base
 from launch import LaunchDescription
 from launch_ros.actions import Node
@@ -54,6 +53,7 @@ def get_experimental_nodes():
             executable="rest_bridge",
             name="rest_bridge",
             parameters=[files["params"]],
+            arguments=["--ros-args", "--log-level", "debug"],  # To get RCL_DEBUG prints
         ),
         Node(
             package="atos",

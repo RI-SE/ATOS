@@ -6,27 +6,18 @@
 
 #pragma once
 
+#include "auth_helper.hpp"
 #include "module.hpp"
 #include "roschannels/customcommandaction.hpp"
 #include <curl/curl.h>
+#include <memory>
 #include <nlohmann/json.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <string>
-#include <time.h>
 
-using json = nlohmann::json;
+using json			 = nlohmann::json;
 using session_handle = std::string;
-using session_id = std::string;
-
-// Helper struct for CURL write callback
-struct WriteCallback {
-	std::string data;
-	static size_t callback(void* contents, size_t size, size_t nmemb, void* userp) {
-		((WriteCallback*)userp)->data.append((char*)contents, size * nmemb);
-		return size * nmemb;
-	}
-};
-
+using session_id	 = std::string;
 
 class RESTBridge : public Module {
 public:
@@ -45,22 +36,15 @@ private:
 	std::string auth_url_;
 	std::string client_id_;
 	std::string client_secret_;
-	std::string access_token_;
+	std::unique_ptr<AuthHelper> auth_helper_;
 	std::map<session_handle, session_id> session_ids = {};
 
 	json parseJsonData(std::string& msg);
 	void POST(const std::string& endpoint, const json& data, const session_handle& session_handle);
 	void DELETE(const std::string& endpoint, const session_handle& session_handle);
-	bool authenticate();
-	bool refreshToken();
 	void setupCurlHandle();
+	void updateAuthHeader();
 
 	CURL* curl_handle;
 	struct curl_slist* default_headers_;
-
-	time_t token_expiry_time_		  = 0;
-	const int refresh_buffer_seconds_ = 60; // Refresh token 60 seconds before expiry
-	rclcpp::TimerBase::SharedPtr token_refresh_timer_;
-
-	void setupTokenRefreshTimer();
 };

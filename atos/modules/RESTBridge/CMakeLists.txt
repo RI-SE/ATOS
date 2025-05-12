@@ -25,6 +25,7 @@ include(GNUInstallDirs)
 add_executable(${REST_BRIDGE_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/restbridge.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/auth_helper.cpp
 )
 # Link project executable to common libraries
 set(TARGET_LIBRARIES

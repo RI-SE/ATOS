@@ -23,7 +23,16 @@ RESTBridge::RESTBridge() :
 	client_secret_ = declare_parameter("auth.client_secret", "");
 
 	if (auth_enabled_) {
-		if (!authenticate()) {
+		// Initialize the auth helper
+		auth_helper_ = std::make_unique<AuthHelper>(this, curl_handle, auth_url_, client_id_, client_secret_);
+
+		// Set up a callback for when the token is refreshed
+		auth_helper_->setTokenRefreshCallback([this]() {
+			// Update the auth header in default_headers_
+			updateAuthHeader();
+		});
+
+		if (!auth_helper_->authenticate()) {
 			RCLCPP_ERROR(get_logger(), "Initial authentication failed!");
 		}
 	}
@@ -48,130 +57,36 @@ void RESTBridge::setupCurlHandle() {
 	default_headers_ = curl_slist_append(default_headers_, "Content-Type: application/json");
 	default_headers_ = curl_slist_append(default_headers_, "charset: utf-8");
 
-	if (auth_enabled_ && !access_token_.empty()) {
-		std::string auth_header = "Authorization: Bearer " + access_token_;
+	if (auth_enabled_ && auth_helper_ && !auth_helper_->getAccessToken().empty()) {
+		std::string auth_header = "Authorization: Bearer " + auth_helper_->getAccessToken();
 		default_headers_		= curl_slist_append(default_headers_, auth_header.c_str());
 	}
 }
 
-// Helper function for base64 encoding
-std::string base64_encode(const std::string& input) {
-	BIO *bio, *b64;
-	BUF_MEM* bufferPtr;
+void RESTBridge::updateAuthHeader() {
+	if (!auth_enabled_ || !auth_helper_)
+		return;
 
-	b64 = BIO_new(BIO_f_base64());
-	bio = BIO_new(BIO_s_mem());
-	bio = BIO_push(b64, bio);
-
-	BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-	BIO_write(bio, input.c_str(), input.length());
-	BIO_flush(bio);
-	BIO_get_mem_ptr(bio, &bufferPtr);
-
-	std::string result(bufferPtr->data, bufferPtr->length);
-	BIO_free_all(bio);
-
-	return result;
-}
-
-// Add a timer to periodically check and refresh the token
-void RESTBridge::setupTokenRefreshTimer() {
-	// Calculate when to refresh the token (expires_in - buffer)
-	int refresh_interval_ms =
-	  std::max(1000, static_cast<int>((token_expiry_time_ - std::time(nullptr) - refresh_buffer_seconds_) * 1000));
-
-	RCLCPP_INFO(get_logger(), "Setting up token refresh timer for %d ms from now", refresh_interval_ms);
-
-	// Create a one-shot timer that will refresh the token
-	token_refresh_timer_ = create_wall_timer(std::chrono::milliseconds(refresh_interval_ms), [this]() {
-		RCLCPP_INFO(get_logger(), "Token refresh timer triggered");
-		if (!authenticate()) {
-			RCLCPP_ERROR(get_logger(), "Failed to refresh token");
-		} else {
-			RCLCPP_INFO(get_logger(), "Token refreshed successfully");
-			// Set up the next refresh
-			setupTokenRefreshTimer();
-		}
-	});
-}
-
-bool RESTBridge::authenticate() {
-	if (!curl_handle)
-		return false;
-
-	WriteCallback writeCallback;
-
-	// Create base64 encoded credentials for Basic auth
-	std::string credentials		   = client_id_ + ":" + client_secret_;
-	std::string base64_credentials = base64_encode(credentials);
-	std::string auth_header		   = "Authorization: Basic " + base64_credentials;
-
-	// Use form-urlencoded data instead of JSON
-	std::string post_data = "grant_type=client_credentials";
-
-	curl_easy_setopt(curl_handle, CURLOPT_URL, auth_url_.c_str());
-	curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, post_data.c_str());
-	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteCallback::callback);
-	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &writeCallback);
-
-	// Set the auth headers
-	struct curl_slist* auth_headers = nullptr;
-	auth_headers = curl_slist_append(auth_headers, "Content-Type: application/x-www-form-urlencoded");
-	auth_headers = curl_slist_append(auth_headers, auth_header.c_str());
-	curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, auth_headers);
-
-	// Perform the authentication request
-	CURLcode res = curl_easy_perform(curl_handle);
-
-	curl_slist_free_all(auth_headers);
-
-	if (res != CURLE_OK) {
-		RCLCPP_ERROR(get_logger(), "Authentication request failed: %s", curl_easy_strerror(res));
-		return false;
+	// Free the old headers
+	if (default_headers_) {
+		curl_slist_free_all(default_headers_);
+		default_headers_ = nullptr;
 	}
 
-	RCLCPP_DEBUG(get_logger(), "Authentication response: %s", writeCallback.data.c_str());
-
-	// Parse the JSON response
-	try {
-		nlohmann::json auth_response = nlohmann::json::parse(writeCallback.data);
-
-		if (auth_response.contains("access_token")) {
-			access_token_ = auth_response["access_token"];
-
-			// Calculate token expiry time
-			if (auth_response.contains("expires_in")) {
-				int expires_in = std::stoi(auth_response["expires_in"].get<std::string>());
-				// Set expiry time to current time + expires_in seconds
-				token_expiry_time_ = std::time(nullptr) + expires_in;
-				RCLCPP_DEBUG(get_logger(), "Token will expire in %d seconds", expires_in);
-
-				// Set up the refresh timer
-				setupTokenRefreshTimer();
-			}
-
-			return true;
-		} else if (auth_response.contains("error")) {
-			RCLCPP_ERROR(
-			  get_logger(), "Authentication error: %s - %s", auth_response["error"].get<std::string>().c_str());
-		}
-	} catch (const std::exception& e) {
-		RCLCPP_ERROR(get_logger(), "Failed to parse authentication response: %s", e.what());
-	}
-
-	return false;
+	// Recreate headers with the new token
+	setupCurlHandle();
 }
 
 void RESTBridge::onCustomCommandAction(const atos_interfaces::msg::CustomCommandAction::SharedPtr msg) {
 	// POST
-  if (msg->type == atos_interfaces::msg::CustomCommandAction::POST) {
+	if (msg->type == atos_interfaces::msg::CustomCommandAction::POST) {
 		RCLCPP_INFO(get_logger(), "Received POST custom command action");
 		RCLCPP_INFO(get_logger(), "Content: %s", msg->content.c_str());
 		json jsonData = parseJsonData(msg->content);
 		POST(jsonData["endpoint"].get<std::string>(), jsonData["data"], jsonData["session_handle"].get<std::string>());
 	}
-  // DELETE
-  if (msg->type == atos_interfaces::msg::CustomCommandAction::DELETE) {
+	// DELETE
+	if (msg->type == atos_interfaces::msg::CustomCommandAction::DELETE) {
 		RCLCPP_INFO(get_logger(), "Received DELETE custom command action");
 		RCLCPP_INFO(get_logger(), "Content: %s", msg->content.c_str());
 		json jsonData = parseJsonData(msg->content);
@@ -194,15 +109,14 @@ void RESTBridge::POST(const std::string& endpoint, const json& data, const sessi
 	if (!curl_handle)
 		return;
 
-	// If authentication is enabled and we don't have a token, try to authenticate
-	if (auth_enabled_ && access_token_.empty()) {
-		if (!authenticate()) {
+	// If authentication is enabled and we don't have a valid token, try to authenticate
+	if (auth_enabled_ && auth_helper_ && !auth_helper_->hasValidToken()) {
+		if (!auth_helper_->authenticate()) {
 			RCLCPP_ERROR(get_logger(), "Failed to authenticate before POST request");
 			return;
 		}
+		updateAuthHeader();
 	}
-
-	WriteCallback writeCallback;
 
 	std::string json_str  = data.dump();
 	const char* json_data = json_str.c_str();
@@ -210,16 +124,18 @@ void RESTBridge::POST(const std::string& endpoint, const json& data, const sessi
 	curl_easy_setopt(curl_handle, CURLOPT_URL, endpoint.c_str());
 	curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, json_data);
 	curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, default_headers_);
-	
+
 	// Make sure we're using POST method (not a leftover DELETE or other custom request)
 	curl_easy_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, nullptr);
 	curl_easy_setopt(curl_handle, CURLOPT_POST, 1L);
-	
-	// Add these lines to capture the response
+
+	// Callback function to handle the response
+	WriteCallback writeCallback;
+
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteCallback::callback);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &writeCallback);
 
-	CURLcode res = curl_easy_perform(curl_handle);
+	CURLcode res   = curl_easy_perform(curl_handle);
 	long http_code = 0;
 	curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &http_code);
 
@@ -227,9 +143,12 @@ void RESTBridge::POST(const std::string& endpoint, const json& data, const sessi
 		RCLCPP_ERROR(get_logger(), "POST request failed: %s", curl_easy_strerror(res));
 
 		// If we get an unauthorized error, try to refresh the token and retry
-		if (http_code == 401 && auth_enabled_) {
+		if (http_code == 401 && auth_enabled_ && auth_helper_) {
 			RCLCPP_INFO(get_logger(), "Unauthorized error, attempting to refresh token...");
-			if (authenticate()) {
+			if (auth_helper_->authenticate()) {
+				// Update headers with new token
+				updateAuthHeader();
+
 				// Retry the request with new token
 				curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, default_headers_);
 				res = curl_easy_perform(curl_handle);
@@ -240,10 +159,10 @@ void RESTBridge::POST(const std::string& endpoint, const json& data, const sessi
 			}
 		}
 	}
-	
+
 	// Print the response
 	RCLCPP_DEBUG(get_logger(), "Response: %s", writeCallback.data.c_str());
-	
+
 	// Only try to parse the response if we got a successful status code
 	if ((http_code >= 200 && http_code < 300) && !writeCallback.data.empty()) {
 		try {
@@ -257,64 +176,68 @@ void RESTBridge::POST(const std::string& endpoint, const json& data, const sessi
 			RCLCPP_ERROR(get_logger(), "Failed to parse response JSON: %s", e.what());
 		}
 	}
-	
+
 	// Reset POST flag for subsequent requests
 	curl_easy_setopt(curl_handle, CURLOPT_POST, 0L);
 }
 
 void RESTBridge::DELETE(const std::string& endpoint, const session_handle& session_handle) {
-  if (session_ids.find(session_handle) == session_ids.end()) {
-    RCLCPP_ERROR(get_logger(), "Session handle not found in map");
-    return;
-  }
-  std::string session_id = session_ids[session_handle];
-  std::string endpoint_with_session_id = endpoint + "/" + session_id;
+	if (session_ids.find(session_handle) == session_ids.end()) {
+		RCLCPP_ERROR(get_logger(), "Session handle not found in map");
+		return;
+	}
+	std::string session_id				 = session_ids[session_handle];
+	std::string endpoint_with_session_id = endpoint + "/" + session_id;
 
-  // If authentication is enabled and we don't have a token, try to authenticate
-  if (auth_enabled_ && access_token_.empty()) {
-    if (!authenticate()) {
-      RCLCPP_ERROR(get_logger(), "Failed to authenticate before DELETE request");
-      return;
-    }
-  }
+	// If authentication is enabled and we don't have a valid token, try to authenticate
+	if (auth_enabled_ && auth_helper_ && !auth_helper_->hasValidToken()) {
+		if (!auth_helper_->authenticate()) {
+			RCLCPP_ERROR(get_logger(), "Failed to authenticate before DELETE request");
+			return;
+		}
+		updateAuthHeader();
+	}
 
-  WriteCallback writeCallback;
-  
-  curl_easy_setopt(curl_handle, CURLOPT_URL, endpoint_with_session_id.c_str());
-  curl_easy_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, "DELETE");
-  curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, default_headers_);
+	WriteCallback writeCallback;
 
-  curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteCallback::callback);
-  curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &writeCallback);
+	curl_easy_setopt(curl_handle, CURLOPT_URL, endpoint_with_session_id.c_str());
+	curl_easy_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, "DELETE");
+	curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, default_headers_);
 
-  CURLcode res = curl_easy_perform(curl_handle);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteCallback::callback);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &writeCallback);
 
-  if (res != CURLE_OK) {
-    RCLCPP_ERROR(get_logger(), "DELETE request failed: %s", curl_easy_strerror(res));
-    
-    // If we get an unauthorized error, try to refresh the token and retry
-    long http_code;
-    curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &http_code);
+	CURLcode res   = curl_easy_perform(curl_handle);
+	long http_code = 0;
+	curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &http_code);
 
-    if (http_code == 401 && auth_enabled_) {
-      RCLCPP_INFO(get_logger(), "Unauthorized error, attempting to refresh token...");
-      if (authenticate()) {
-        // Retry the request with new token
-        curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, default_headers_);
-        res = curl_easy_perform(curl_handle);
-        if (res != CURLE_OK) {
-          RCLCPP_ERROR(get_logger(), "Retry DELETE request failed: %s", curl_easy_strerror(res));
-        }
-      }
-    }
-  } else {
-    // Remove the session ID from the map on successful deletion
-    session_ids.erase(session_handle);
-    RCLCPP_INFO(get_logger(), "Successfully deleted session %s", session_id.c_str());
-  }
+	if (res != CURLE_OK) {
+		RCLCPP_ERROR(get_logger(), "DELETE request failed: %s", curl_easy_strerror(res));
 
-  // Reset the custom request method
-  curl_easy_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, nullptr);
+		// If we get an unauthorized error, try to refresh the token and retry
+		if (http_code == 401 && auth_enabled_ && auth_helper_) {
+			RCLCPP_INFO(get_logger(), "Unauthorized error, attempting to refresh token...");
+			if (auth_helper_->authenticate()) {
+				// Update headers with new token
+				updateAuthHeader();
 
-  RCLCPP_DEBUG(get_logger(), "Response: %s", writeCallback.data.c_str());
+				// Retry the request with new token
+				curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, default_headers_);
+				res = curl_easy_perform(curl_handle);
+				curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &http_code);
+				if (res != CURLE_OK) {
+					RCLCPP_ERROR(get_logger(), "Retry DELETE request failed: %s", curl_easy_strerror(res));
+				}
+			}
+		}
+	} else {
+		// Remove the session ID from the map on successful deletion
+		session_ids.erase(session_handle);
+		RCLCPP_INFO(get_logger(), "Successfully deleted session %s", session_id.c_str());
+	}
+
+	// Reset the custom request method
+	curl_easy_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, nullptr);
+
+	RCLCPP_DEBUG(get_logger(), "Response: %s", writeCallback.data.c_str());
 }
