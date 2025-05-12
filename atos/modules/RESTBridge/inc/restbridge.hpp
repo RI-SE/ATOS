@@ -15,6 +15,8 @@
 #include <time.h>
 
 using json = nlohmann::json;
+using session_handle = std::string;
+using session_id = std::string;
 
 // Helper struct for CURL write callback
 struct WriteCallback {
@@ -25,10 +27,7 @@ struct WriteCallback {
 	}
 };
 
-/*!
- * \brief The RESTBridge is a ros2 node that demonstrates how to use the Module
- * class
- */
+
 class RESTBridge : public Module {
 public:
 	static inline std::string const moduleName = "rest_bridge";
@@ -39,7 +38,7 @@ protected:
 	void onCustomCommandAction(const atos_interfaces::msg::CustomCommandAction::SharedPtr msg);
 
 private:
-	ROSChannels::CustomCommandAction::Sub customCommandActionMsgSub; //!< Subscriber to icdc messages requests
+	ROSChannels::CustomCommandAction::Sub customCommandActionMsgSub;
 
 	// Auth related members
 	bool auth_enabled_;
@@ -47,9 +46,11 @@ private:
 	std::string client_id_;
 	std::string client_secret_;
 	std::string access_token_;
+	std::map<session_handle, session_id> session_ids = {};
 
 	json parseJsonData(std::string& msg);
-	void POST(const std::string& endpoint, const json& data);
+	void POST(const std::string& endpoint, const json& data, const session_handle& session_handle);
+	void DELETE(const std::string& endpoint, const session_handle& session_handle);
 	bool authenticate();
 	bool refreshToken();
 	void setupCurlHandle();
@@ -57,11 +58,9 @@ private:
 	CURL* curl_handle;
 	struct curl_slist* default_headers_;
 
-	// Add these new members
 	time_t token_expiry_time_		  = 0;
 	const int refresh_buffer_seconds_ = 60; // Refresh token 60 seconds before expiry
 	rclcpp::TimerBase::SharedPtr token_refresh_timer_;
 
-	// Add this new method
 	void setupTokenRefreshTimer();
 };

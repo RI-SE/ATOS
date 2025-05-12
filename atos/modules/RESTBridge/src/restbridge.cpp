@@ -163,11 +163,19 @@ bool RESTBridge::authenticate() {
 }
 
 void RESTBridge::onCustomCommandAction(const atos_interfaces::msg::CustomCommandAction::SharedPtr msg) {
-	if (msg->type == atos_interfaces::msg::CustomCommandAction::POST_JSON) {
-		RCLCPP_INFO(get_logger(), "Received POST_JSON custom command action");
+	// POST
+  if (msg->type == atos_interfaces::msg::CustomCommandAction::POST) {
+		RCLCPP_INFO(get_logger(), "Received POST custom command action");
 		RCLCPP_INFO(get_logger(), "Content: %s", msg->content.c_str());
 		json jsonData = parseJsonData(msg->content);
-		POST(jsonData["endpoint"].get<std::string>(), jsonData["data"]);
+		POST(jsonData["endpoint"].get<std::string>(), jsonData["data"], jsonData["session_handle"].get<std::string>());
+	}
+  // DELETE
+  if (msg->type == atos_interfaces::msg::CustomCommandAction::DELETE) {
+		RCLCPP_INFO(get_logger(), "Received DELETE custom command action");
+		RCLCPP_INFO(get_logger(), "Content: %s", msg->content.c_str());
+		json jsonData = parseJsonData(msg->content);
+		DELETE(jsonData["endpoint"].get<std::string>(), jsonData["session_handle"].get<std::string>());
 	}
 }
 
@@ -182,7 +190,7 @@ json RESTBridge::parseJsonData(std::string& msg) {
 	return j;
 }
 
-void RESTBridge::POST(const std::string& endpoint, const json& data) {
+void RESTBridge::POST(const std::string& endpoint, const json& data, const session_handle& session_handle) {
 	if (!curl_handle)
 		return;
 
@@ -194,7 +202,7 @@ void RESTBridge::POST(const std::string& endpoint, const json& data) {
 		}
 	}
 
-	WriteCallback writeCallback;  // Add this to capture the response
+	WriteCallback writeCallback;
 
 	std::string json_str  = data.dump();
 	const char* json_data = json_str.c_str();
@@ -203,31 +211,110 @@ void RESTBridge::POST(const std::string& endpoint, const json& data) {
 	curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, json_data);
 	curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, default_headers_);
 	
+	// Make sure we're using POST method (not a leftover DELETE or other custom request)
+	curl_easy_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, nullptr);
+	curl_easy_setopt(curl_handle, CURLOPT_POST, 1L);
+	
 	// Add these lines to capture the response
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteCallback::callback);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &writeCallback);
 
 	CURLcode res = curl_easy_perform(curl_handle);
+	long http_code = 0;
+	curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &http_code);
 
 	if (res != CURLE_OK) {
 		RCLCPP_ERROR(get_logger(), "POST request failed: %s", curl_easy_strerror(res));
 
 		// If we get an unauthorized error, try to refresh the token and retry
-		long http_code;
-		curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &http_code);
-
 		if (http_code == 401 && auth_enabled_) {
 			RCLCPP_INFO(get_logger(), "Unauthorized error, attempting to refresh token...");
 			if (authenticate()) {
 				// Retry the request with new token
 				curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, default_headers_);
 				res = curl_easy_perform(curl_handle);
+				curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &http_code);
 				if (res != CURLE_OK) {
 					RCLCPP_ERROR(get_logger(), "Retry POST request failed: %s", curl_easy_strerror(res));
 				}
 			}
 		}
 	}
+	
 	// Print the response
 	RCLCPP_DEBUG(get_logger(), "Response: %s", writeCallback.data.c_str());
+	
+	// Only try to parse the response if we got a successful status code
+	if ((http_code >= 200 && http_code < 300) && !writeCallback.data.empty()) {
+		try {
+			// Add the session id to the map from sessionId in the json response data if it exists
+			json response = parseJsonData(writeCallback.data);
+			if (response.contains("sessionId")) {
+				session_ids[session_handle] = response["sessionId"].get<std::string>();
+				RCLCPP_INFO(get_logger(), "Stored session ID for handle %s", session_handle.c_str());
+			}
+		} catch (const std::exception& e) {
+			RCLCPP_ERROR(get_logger(), "Failed to parse response JSON: %s", e.what());
+		}
+	}
+	
+	// Reset POST flag for subsequent requests
+	curl_easy_setopt(curl_handle, CURLOPT_POST, 0L);
+}
+
+void RESTBridge::DELETE(const std::string& endpoint, const session_handle& session_handle) {
+  if (session_ids.find(session_handle) == session_ids.end()) {
+    RCLCPP_ERROR(get_logger(), "Session handle not found in map");
+    return;
+  }
+  std::string session_id = session_ids[session_handle];
+  std::string endpoint_with_session_id = endpoint + "/" + session_id;
+
+  // If authentication is enabled and we don't have a token, try to authenticate
+  if (auth_enabled_ && access_token_.empty()) {
+    if (!authenticate()) {
+      RCLCPP_ERROR(get_logger(), "Failed to authenticate before DELETE request");
+      return;
+    }
+  }
+
+  WriteCallback writeCallback;
+  
+  curl_easy_setopt(curl_handle, CURLOPT_URL, endpoint_with_session_id.c_str());
+  curl_easy_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, "DELETE");
+  curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, default_headers_);
+
+  curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteCallback::callback);
+  curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &writeCallback);
+
+  CURLcode res = curl_easy_perform(curl_handle);
+
+  if (res != CURLE_OK) {
+    RCLCPP_ERROR(get_logger(), "DELETE request failed: %s", curl_easy_strerror(res));
+    
+    // If we get an unauthorized error, try to refresh the token and retry
+    long http_code;
+    curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &http_code);
+
+    if (http_code == 401 && auth_enabled_) {
+      RCLCPP_INFO(get_logger(), "Unauthorized error, attempting to refresh token...");
+      if (authenticate()) {
+        // Retry the request with new token
+        curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, default_headers_);
+        res = curl_easy_perform(curl_handle);
+        if (res != CURLE_OK) {
+          RCLCPP_ERROR(get_logger(), "Retry DELETE request failed: %s", curl_easy_strerror(res));
+        }
+      }
+    }
+  } else {
+    // Remove the session ID from the map on successful deletion
+    session_ids.erase(session_handle);
+    RCLCPP_INFO(get_logger(), "Successfully deleted session %s", session_id.c_str());
+  }
+
+  // Reset the custom request method
+  curl_easy_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, nullptr);
+
+  RCLCPP_DEBUG(get_logger(), "Response: %s", writeCallback.data.c_str());
 }
