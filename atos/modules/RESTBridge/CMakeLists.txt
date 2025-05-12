@@ -7,6 +7,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 project(rest_bridge)
 find_package(atos_interfaces REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # Define target names
 set(REST_BRIDGE_TARGET ${PROJECT_NAME})
@@ -30,7 +31,8 @@ set(TARGET_LIBRARIES
 	${COREUTILS_LIBRARY}
 	${SOCKET_LIBRARY}
 	${COMMON_LIBRARY}
-	${CURL_LIBRARIES} curl)
+	${CURL_LIBRARIES} curl
+	OpenSSL::SSL OpenSSL::Crypto)
 
 target_link_libraries(${REST_BRIDGE_TARGET} ${TARGET_LIBRARIES})
 
@@ -39,6 +41,7 @@ target_include_directories(${REST_BRIDGE_TARGET} PUBLIC SYSTEM
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COMMON_HEADERS}
 	${COREUTILS_HEADERS}
+	${OPENSSL_INCLUDE_DIR}
 )
 
 # ROS specific rules
