@@ -17,36 +17,36 @@ from launch_ros.actions import Node
 def get_experimental_nodes():
     files = launch_base.get_files()
     return [
-        Node(
-            package="atos",
-            namespace="atos",
-            executable="trajectorylet_streamer",
-            name="trajectorylet_streamer",
-            parameters=[files["params"]],
-        ),
-        Node(
-            package="atos",
-            namespace="atos",
-            executable="mqtt_bridge",
-            name="mqtt_bridge",
-            # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
-            parameters=[files["params"]],
-            # arguments=["--ros-args", "--log-level", "debug"],  # To get RCL_DEBUG prints
-        ),
-        Node(
-            package="atos",
-            namespace="atos",
-            executable="osi_adapter",
-            name="osi_adapter",
-            parameters=[files["params"]],
-        ),
-        Node(
-            package="atos",
-            namespace="atos",
-            executable="back_to_start",
-            name="back_to_start",
-            parameters=[files["params"]],
-        ),
+        # Node(
+        #     package="atos",
+        #     namespace="atos",
+        #     executable="trajectorylet_streamer",
+        #     name="trajectorylet_streamer",
+        #     parameters=[files["params"]],
+        # ),
+        # Node(
+        #     package="atos",
+        #     namespace="atos",
+        #     executable="mqtt_bridge",
+        #     name="mqtt_bridge",
+        #     # prefix=['gdbserver localhost:3000'], ## To use with VSC debugger
+        #     parameters=[files["params"]],
+        #     # arguments=["--ros-args", "--log-level", "debug"],  # To get RCL_DEBUG prints
+        # ),
+        # Node(
+        #     package="atos",
+        #     namespace="atos",
+        #     executable="osi_adapter",
+        #     name="osi_adapter",
+        #     parameters=[files["params"]],
+        # ),
+        # Node(
+        #     package="atos",
+        #     namespace="atos",
+        #     executable="back_to_start",
+        #     name="back_to_start",
+        #     parameters=[files["params"]],
+        # ),
         Node(
             package="atos",
             namespace="atos",
