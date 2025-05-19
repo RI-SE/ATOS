@@ -62,6 +62,13 @@ def get_experimental_nodes():
             name="monr_relay",
             parameters=[files["params"]],
         ),
+        Node(
+            package="atos",
+            namespace="atos",
+            executable="sqlbridge.py",
+            name="sqlbridge",
+            parameters=[files["params"]],
+        ),
     ]
 
 

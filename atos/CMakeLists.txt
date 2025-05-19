@@ -144,6 +144,7 @@ if(BUILD_TESTING)
 endif()
 
 install(PROGRAMS modules/OpenScenarioGateway/openscenariogateway.py DESTINATION lib/atos)
+install(PROGRAMS modules/SqlBridge/sqlbridge.py                     DESTINATION lib/atos)
 
 ament_package()
 
