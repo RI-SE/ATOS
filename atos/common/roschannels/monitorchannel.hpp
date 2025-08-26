@@ -113,13 +113,13 @@ inline message_type fromISOMonr(const uint32_t id,
 	outdata.acceleration.accel.angular.y = 0;
 	outdata.acceleration.accel.angular.z = 0;
 
-	outdata.error_status.abort_request = indata.error.abortRequest;
-	outdata.error_status.outside_geofence = indata.error.outsideGeofence;
+	outdata.error_status.abort_request			  = indata.error.abortRequest;
+	outdata.error_status.outside_geofence		  = indata.error.outsideGeofence;
 	outdata.error_status.bad_positioning_accuracy = indata.error.badPositioningAccuracy;
-	outdata.error_status.engine_fault = indata.error.engineFault;
-	outdata.error_status.battery_fault = indata.error.batteryFault;
-	outdata.error_status.sync_point_ended = indata.error.syncPointEnded;
-	outdata.error_status.unknown_error = indata.error.unknownError;
+	outdata.error_status.engine_fault			  = indata.error.engineFault;
+	outdata.error_status.battery_fault			  = indata.error.batteryFault;
+	outdata.error_status.sync_point_ended		  = indata.error.syncPointEnded;
+	outdata.error_status.unknown_error			  = indata.error.unknownError;
 
 	outdata.raw_data = raw_data;
 
