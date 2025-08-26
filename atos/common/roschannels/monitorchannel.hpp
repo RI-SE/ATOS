@@ -80,7 +80,7 @@ inline message_type fromISOMonr(const uint32_t id,
 	outdata.pose.header.stamp		  = stamp;
 	outdata.velocity.header.stamp	  = stamp;
 	outdata.acceleration.header.stamp = stamp;
-	
+
 	// Set frame ids
 	outdata.atos_header.header.frame_id	 = "map"; // TODO
 	outdata.pose.header.frame_id		 = "map"; // TODO
