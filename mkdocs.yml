@@ -28,6 +28,7 @@ nav:
       - "Usage/Modules/IntegrationTesting.md"
       - "Usage/Modules/JournalControl.md"
       - "Usage/Modules/MQTTBridge.md"
+      - "Usage/Modules/RESTBridge.md"
       - "Usage/Modules/OSIAdapter.md"
       - "Usage/Modules/ObjectControl.md"
       - "Usage/Modules/PointcloudPublisher.md"
