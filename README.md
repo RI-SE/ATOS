@@ -46,12 +46,12 @@ ATOS comes with an installation script that automates the installation process. 
 ## <a name="Native build"></a> Building from source manually
 You can find instructions on how to manually install ATOS and its dependencies from source [here](https://atos.readthedocs.io/en/latest/Installation/installation/).
 
-## ATOSMini development launch
-ATOSMini is a lightweight development stack built around `truck_object_control` and `truck_object_gui` and does not start OpenScenarioGateway, JournalControl, or EsminiAdapter.
+## ATOSFleetManagement development launch
+ATOSFleetManagement is a lightweight development stack built around `truck_object_control` and `truck_object_gui` and does not start OpenScenarioGateway, JournalControl, or EsminiAdapter.
 
 After building, start it with:
 ```bash
-ros2 launch atos launch_atosmini.py insecure:=True
+ros2 launch atos launch_atosfleetmanagement.py insecure:=True
 ```
 
 The placeholder COT input topic for TruckObjectControl is:

@@ -17,7 +17,7 @@ from atos_gui.controlpanel.controlpanel import ControlPanelNode
 from atos_gui.objectpanel.objectpanel import ObjectPanelNode
 
 USE_SSL = len(sys.argv) > 1 and sys.argv[1] == "True"
-ATOSMINI_MODE = len(sys.argv) > 2 and sys.argv[2].lower() == "atosmini"
+FLEET_MODE = len(sys.argv) > 2 and sys.argv[2].lower() == "atosfleetmanagement"
 
 
 def main() -> None:
@@ -26,15 +26,15 @@ def main() -> None:
     pass
 
 
-def render_atosmini_pages() -> None:
-    nicegui.ui.link("ATOSMini Home", "/")
+def render_atosfleetmanagement_pages() -> None:
+    nicegui.ui.link("ATOSFleetManagement Home", "/")
 
     @ui.page(path="/", title="TruckObjectGUI")
     def render_home() -> None:
-        ui.label("TruckObjectGUI (ATOSMini mode)").classes("text-h4")
+        ui.label("TruckObjectGUI (ATOSFleetManagement mode)").classes("text-h4")
         ui.markdown(
             """
-This GUI is running in **ATOSMini mode**.
+This GUI is running in **ATOSFleetManagement mode**.
 
 Active runtime components:
 - `truck_object_control`
@@ -57,8 +57,8 @@ def ros_main() -> None:
     executor = MultiThreadedExecutor()
     nodes = []
 
-    if ATOSMINI_MODE:
-        render_atosmini_pages()
+    if FLEET_MODE:
+        render_atosfleetmanagement_pages()
     else:
         nicegui.ui.link("Control Panel", "/control")
         nicegui.ui.link("Config Panel", "/config")
@@ -99,7 +99,7 @@ uvicorn_args = {
     "uvicorn_reload_dirs": str(Path(__file__).parent.resolve()),
     "port": 3000,
     "show": False,
-    "title": "TruckObjectGUI" if ATOSMINI_MODE else "ATOS GUI",
+    "title": "TruckObjectGUI" if FLEET_MODE else "ATOS GUI",
 }
 
 if USE_SSL:
