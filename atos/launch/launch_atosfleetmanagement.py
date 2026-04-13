@@ -15,9 +15,11 @@ sys.path.insert(0, os.path.join(get_package_prefix('atos'), 'share', 'atos', 'la
 def generate_launch_description():
     insecure_websockets = LaunchConfiguration('insecure')
     foxbridge = LaunchConfiguration('foxbridge')
+    with_simulator = LaunchConfiguration('with_truck_simulator')
 
     insecure_launch_arg = DeclareLaunchArgument('insecure', default_value='False')
     foxbridge_launch_arg = DeclareLaunchArgument('foxbridge', default_value='True')
+    simulator_launch_arg = DeclareLaunchArgument('with_truck_simulator', default_value='False')
 
     fox_tls_bridge_params = [
         {'port': 8765},
@@ -47,6 +49,7 @@ def generate_launch_description():
     return LaunchDescription([
         foxbridge_launch_arg,
         insecure_launch_arg,
+        simulator_launch_arg,
         Node(
             condition=IfCondition(PythonExpression(['not ', LaunchConfiguration('insecure')])),
             package='atos_gui',
@@ -70,6 +73,14 @@ def generate_launch_description():
             namespace='atos',
             executable='truck_object_control',
             name='truck_object_control',
+            output='screen',
+        ),
+        Node(
+            condition=IfCondition(with_simulator),
+            package='atos',
+            namespace='atos',
+            executable='atos_truck_simulator',
+            name='atos_truck_simulator',
             output='screen',
         ),
         Node(
