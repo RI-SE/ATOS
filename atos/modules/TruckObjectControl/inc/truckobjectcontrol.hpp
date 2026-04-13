@@ -8,16 +8,31 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
 
+#include <atomic>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <unordered_map>
+#include <vector>
 
 class TruckObjectControl : public rclcpp::Node {
 public:
   TruckObjectControl();
+  ~TruckObjectControl() override;
 
 private:
+  struct GeoPoint {
+    double lat = 0.0;
+    double lon = 0.0;
+    double distance_m = 0.0;
+  };
+
   struct TruckState {
     double distance_along_trajectory_m = 0.0;
+    double lat = 0.0;
+    double lon = 0.0;
+    double speed_kmh = 0.0;
+    double course_deg = 0.0;
     bool tcp_connected = false;
     rclcpp::Time last_cot_stamp = rclcpp::Time(0, 0, RCL_ROS_TIME);
   };
@@ -25,26 +40,51 @@ private:
   struct CotObservation {
     std::string truck_id;
     double distance_along_trajectory_m = 0.0;
+    double lat = 0.0;
+    double lon = 0.0;
+    double speed_kmh = 0.0;
+    double course_deg = 0.0;
     bool tcp_connected = false;
   };
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr cot_sub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr speed_command_pub_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr truck_state_pub_;
   rclcpp::TimerBase::SharedPtr evaluation_timer_;
 
+  std::mutex state_mutex_;
   std::unordered_map<std::string, TruckState> trucks_;
+  std::vector<GeoPoint> trajectory_path_;
 
   double warning_distance_m_ = 400.0;
   double stop_distance_m_ = 200.0;
   double warning_speed_kmh_ = 30.0;
   double stop_speed_kmh_ = 0.0;
   double cot_timeout_seconds_ = 2.0;
+  int cot_tcp_port_ = 8114;
+  std::string cot_tcp_bind_address_ = "0.0.0.0";
+  std::string trajectory_geojson_path_ = "/home/sepast/atos_ws/src/atos/conf/conf/RuralRoad_center_of_driving_lane_ccw.geojson";
 
   double last_published_speed_kmh_ = -1.0;
 
+  std::atomic<bool> tcp_running_{false};
+  int tcp_server_fd_ = -1;
+  std::thread tcp_accept_thread_;
+  std::vector<std::thread> tcp_client_threads_;
+  std::mutex tcp_threads_mutex_;
+
   void onCotMessage(const std_msgs::msg::String::SharedPtr msg);
   void evaluateAndPublishSpeedCommand();
+  void publishTruckState(const std::string &truck_id, const TruckState &state);
 
   bool parseCotPlaceholder(const std::string &payload, CotObservation &out) const;
+  bool parseCotXml(const std::string &payload, CotObservation &out) const;
   bool isCotFresh(const TruckState &state, const rclcpp::Time &now) const;
+  bool loadTrajectoryPath();
+  double projectDistanceAlongTrajectory(double lat, double lon) const;
+
+  void startTcpServer();
+  void stopTcpServer();
+  void acceptTcpClients();
+  void handleTcpClient(int client_fd, const std::string &peer_name);
 };

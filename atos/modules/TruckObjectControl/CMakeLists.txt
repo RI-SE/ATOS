@@ -15,6 +15,8 @@ find_package(std_msgs REQUIRED)
 
 include(GNUInstallDirs)
 
+set(COREUTILS_LIBRARY ATOSCoreUtil)
+
 add_executable(${PROJECT_NAME}
   ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/truckobjectcontrol.cpp
@@ -22,6 +24,10 @@ add_executable(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME} PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/inc
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../common
+)
+target_link_libraries(${PROJECT_NAME}
+  ${COREUTILS_LIBRARY}
 )
 
 ament_target_dependencies(${PROJECT_NAME}
@@ -29,8 +35,31 @@ ament_target_dependencies(${PROJECT_NAME}
   std_msgs
 )
 
+add_executable(atos_truck_simulator
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/main_simulator.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/atostrucksimulator.cpp
+)
+target_include_directories(atos_truck_simulator PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/inc
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../common
+)
+target_link_libraries(atos_truck_simulator
+  ${COREUTILS_LIBRARY}
+)
+ament_target_dependencies(atos_truck_simulator
+  rclcpp
+  std_msgs
+)
+
 install(CODE "MESSAGE(STATUS \"Installing target ${PROJECT_NAME}\")")
 install(TARGETS ${PROJECT_NAME}
+  RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/atos"
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+install(CODE "MESSAGE(STATUS \"Installing target atos_truck_simulator\")")
+install(TARGETS atos_truck_simulator
   RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/atos"
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
