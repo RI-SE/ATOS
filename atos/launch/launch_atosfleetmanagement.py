@@ -54,7 +54,7 @@ def generate_launch_description():
             executable='truck_object_gui',
             name='truck_object_gui',
             output='screen',
-            arguments=['True', 'atosmini'],
+            arguments=['True', 'atosfleetmanagement'],
         ),
         Node(
             condition=IfCondition(LaunchConfiguration('insecure')),
@@ -63,7 +63,7 @@ def generate_launch_description():
             executable='truck_object_gui',
             name='truck_object_gui',
             output='screen',
-            arguments=['False', 'atosmini'],
+            arguments=['False', 'atosfleetmanagement'],
         ),
         Node(
             package='atos',
