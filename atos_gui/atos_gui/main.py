@@ -15,63 +15,99 @@ from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from atos_gui.configpanel.configpanel import ConfigPanelNode
 from atos_gui.controlpanel.controlpanel import ControlPanelNode
 from atos_gui.objectpanel.objectpanel import ObjectPanelNode
-from atos_interfaces.srv import *
 
-USE_SSL = sys.argv[1] == "True"
+USE_SSL = len(sys.argv) > 1 and sys.argv[1] == "True"
+ATOSMINI_MODE = len(sys.argv) > 2 and sys.argv[2].lower() == "atosmini"
+
 
 
 def main() -> None:
-    # NOTE: This function is defined as the ROS entry point in setup.py, but it's empty to enable NiceGUI auto-reloading
+    # NOTE: This function is defined as the ROS entry point in setup.py,
+    # but it's empty to enable NiceGUI auto-reloading.
     pass
 
 
+def render_atosmini_pages() -> None:
+    nicegui.ui.link("ATOSMini Home", "/")
+
+    @ui.page(path="/", title="TruckObjectGUI")
+    def render_home() -> None:
+        ui.label("TruckObjectGUI (ATOSMini mode)").classes("text-h4")
+        ui.markdown(
+            """
+This GUI is running in **ATOSMini mode**.
+
+Active runtime components:
+- `truck_object_control`
+- `foxglove_bridge` / `rosbridge`
+
+Expected COT topic:
+- `/atos/truck_objects/cot`
+
+Speed command topic:
+- `/atos/truck_objects/speed_command`
+
+Placeholder COT payload format:
+- `id=<truck_id>;distance_m=<value>;tcp_connected=<0|1>`
+            """.strip()
+        )
+
+
 def ros_main() -> None:
-    nicegui.ui.link("Control Panel", "/control")
-    nicegui.ui.link("Config Panel", "/config")
-    nicegui.ui.link("Object Panel", "/object")
     rclpy.init()
-    control_panel = ControlPanelNode()
-    config_panel = ConfigPanelNode()
-    object_panel = ObjectPanelNode()
     executor = MultiThreadedExecutor()
-    executor.add_node(control_panel)
-    executor.add_node(config_panel)
-    executor.add_node(object_panel)
+    nodes = []
+
+    if ATOSMINI_MODE:
+        render_atosmini_pages()
+    else:
+        nicegui.ui.link("Control Panel", "/control")
+        nicegui.ui.link("Config Panel", "/config")
+        nicegui.ui.link("Object Panel", "/object")
+
+        control_panel = ControlPanelNode()
+        config_panel = ConfigPanelNode()
+        object_panel = ObjectPanelNode()
+        nodes = [control_panel, config_panel, object_panel]
+
+        for node in nodes:
+            executor.add_node(node)
+
     try:
-        executor.spin()
+        if nodes:
+            executor.spin()
     except ExternalShutdownException:
         pass
     finally:
         executor.shutdown()
-        control_panel.destroy_node()
-        config_panel.destroy_node()
-        object_panel.destroy_node()
+        for node in nodes:
+            node.destroy_node()
+        rclpy.shutdown()
+
+def print_access_hint() -> None:
+    scheme = "https" if USE_SSL else "http"
+    print(f"TruckObjectGUI ready. Open {scheme}://localhost:3000", flush=True)
 
 
-# Starting the ros node in a thread managed by nicegui. It will be restarted with "on_startup" after a reload.
-# It has to be in a thread, since NiceGUI wants the main thread for itself.
-app.on_startup(lambda: threading.Thread(target=ros_main).start())
+# Start the ROS node logic in a thread managed by nicegui.
+app.on_startup(lambda: threading.Thread(target=ros_main, daemon=True).start())
+app.on_startup(print_access_hint)
 
-ui_run.APP_IMPORT_STRING = f"{__name__}:app"  # ROS2 uses a non-standard module name, so we need to specify it here
+ui_run.APP_IMPORT_STRING = f"{__name__}:app"  # ROS2 uses non-standard module naming.
 
-# Prepare the arguments for ui.run()
 uvicorn_args = {
     "uvicorn_reload_dirs": str(Path(__file__).parent.resolve()),
-    # 'favicon': '/images/favicon.ico',
     "port": 3000,
-    "show": False,  # Disable auto-opening the browser
-    "title": "ATOS GUI",
+    "show": False,
+    "title": "TruckObjectGUI" if ATOSMINI_MODE else "ATOS GUI",
 }
 
-# If use_ssl is True, add the SSL arguments
 if USE_SSL:
     uvicorn_args["ssl_keyfile"] = Path.home() / ".astazero/ATOS/certs/selfsigned.key"
     uvicorn_args["ssl_certfile"] = Path.home() / ".astazero/ATOS/certs/selfsigned.crt"
 
-# Call ui.run() with the prepared arguments
 ui.run(**uvicorn_args)
 
-# If print is above ui.run(), it will be printed twice for some reason
 if USE_SSL:
     print(
         "ATTENTION: Using SSL, use https://localhost:3000 to access the GUI instead",
