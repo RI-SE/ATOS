@@ -12,6 +12,7 @@ project(truck_object_control)
 
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 
 include(GNUInstallDirs)
 
@@ -33,6 +34,7 @@ target_link_libraries(${PROJECT_NAME}
 ament_target_dependencies(${PROJECT_NAME}
   rclcpp
   std_msgs
+  ament_index_cpp
 )
 
 add_executable(atos_truck_simulator
@@ -49,6 +51,7 @@ target_link_libraries(atos_truck_simulator
 ament_target_dependencies(atos_truck_simulator
   rclcpp
   std_msgs
+  ament_index_cpp
 )
 
 install(CODE "MESSAGE(STATUS \"Installing target ${PROJECT_NAME}\")")

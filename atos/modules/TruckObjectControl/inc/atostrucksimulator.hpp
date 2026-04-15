@@ -25,7 +25,7 @@ private:
   std::string uid_ = "L5S-TRUCK-SIM";
   std::string tcp_host_ = "127.0.0.1";
   int tcp_port_ = 8114;
-  std::string trajectory_geojson_path_ = "/home/sepast/atos_ws/src/atos/conf/conf/RuralRoad_center_of_driving_lane_ccw.geojson";
+  std::string trajectory_geojson_path_ = "";
   int start_index_ = 0;
   double initial_speed_kmh_ = 0.0;
   double target_speed_kmh_ = 40.0;

@@ -5,6 +5,8 @@
  */
 #include "truckobjectcontrol.hpp"
 
+#include <ament_index_cpp/get_package_prefix.hpp>
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -13,6 +15,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <nlohmann/json.hpp>
@@ -27,6 +31,7 @@ using json = nlohmann::json;
 namespace {
 constexpr size_t kReceiveBufferSize = 4096;
 constexpr int kAcceptPollSleepMs = 100;
+constexpr const char *kGeoJsonName = "RuralRoad_center_of_driving_lane_ccw.geojson";
 
 double degToRad(double value) {
   return value * M_PI / 180.0;
@@ -41,6 +46,35 @@ double geodesicDistanceMeters(double lat1, double lon1, double lat2, double lon2
                        std::sin(dlon / 2.0) * std::sin(dlon / 2.0);
   const double c = 2.0 * std::atan2(std::sqrt(a), std::sqrt(1.0 - a));
   return earth_radius_m * c;
+}
+
+std::string resolveTrajectoryPath(const std::string &configured_path) {
+  namespace fs = std::filesystem;
+  if (!configured_path.empty() && fs::exists(configured_path)) {
+    return configured_path;
+  }
+
+  std::vector<fs::path> candidates;
+  candidates.emplace_back(fs::current_path() / "conf" / "conf" / kGeoJsonName);
+  candidates.emplace_back(fs::current_path() / ".." / "conf" / "conf" / kGeoJsonName);
+
+  if (const char *home = std::getenv("HOME")) {
+    candidates.emplace_back(fs::path(home) / "atos_ws" / "src" / "atos" / "conf" / "conf" / kGeoJsonName);
+    candidates.emplace_back(fs::path(home) / "Documents" / "repos" / "ATOS" / "conf" / "conf" / kGeoJsonName);
+  }
+
+  try {
+    const auto prefix = fs::path(ament_index_cpp::get_package_prefix("atos"));
+    candidates.emplace_back(prefix / "etc" / "conf" / kGeoJsonName);
+  } catch (...) {
+  }
+
+  for (const auto &candidate : candidates) {
+    if (fs::exists(candidate)) {
+      return candidate.string();
+    }
+  }
+  return configured_path;
 }
 } // namespace
 
@@ -62,6 +96,7 @@ TruckObjectControl::TruckObjectControl() : Node("truck_object_control") {
   cot_tcp_port_ = get_parameter("cot_tcp_port").as_int();
   cot_tcp_bind_address_ = get_parameter("cot_tcp_bind_address").as_string();
   trajectory_geojson_path_ = get_parameter("trajectory_geojson_path").as_string();
+  trajectory_geojson_path_ = resolveTrajectoryPath(trajectory_geojson_path_);
 
   cot_sub_ = create_subscription<std_msgs::msg::String>(
       "truck_objects/cot", 50, std::bind(&TruckObjectControl::onCotMessage, this, _1));

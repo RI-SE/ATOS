@@ -63,7 +63,7 @@ private:
   double cot_timeout_seconds_ = 2.0;
   int cot_tcp_port_ = 8114;
   std::string cot_tcp_bind_address_ = "0.0.0.0";
-  std::string trajectory_geojson_path_ = "/home/sepast/atos_ws/src/atos/conf/conf/RuralRoad_center_of_driving_lane_ccw.geojson";
+  std::string trajectory_geojson_path_ = "";
 
   double last_published_speed_kmh_ = -1.0;
 
