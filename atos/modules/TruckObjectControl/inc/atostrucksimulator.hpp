@@ -29,9 +29,10 @@ private:
   int start_index_ = 0;
   double initial_speed_kmh_ = 0.0;
   double target_speed_kmh_ = 40.0;
-  double acceleration_mps2_ = 0.8;
+  double acceleration_mps2_ = 2.0;
   double publish_hz_ = 5.0;
   bool loop_path_ = true;
+  bool ignore_warning_speed_commands_ = false;
 
   double current_distance_m_ = 0.0;
   double current_speed_mps_ = 0.0;

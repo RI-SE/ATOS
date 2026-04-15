@@ -55,6 +55,7 @@ AtosTruckSimulator::AtosTruckSimulator() : Node("atos_truck_simulator") {
   declare_parameter("acceleration_mps2", acceleration_mps2_);
   declare_parameter("publish_hz", publish_hz_);
   declare_parameter("loop_path", loop_path_);
+  declare_parameter("ignore_warning_speed_commands", ignore_warning_speed_commands_);
 
   uid_ = get_parameter("uid").as_string();
   tcp_host_ = get_parameter("tcp_host").as_string();
@@ -66,6 +67,7 @@ AtosTruckSimulator::AtosTruckSimulator() : Node("atos_truck_simulator") {
   acceleration_mps2_ = std::max(0.01, get_parameter("acceleration_mps2").as_double());
   publish_hz_ = std::max(1.0, get_parameter("publish_hz").as_double());
   loop_path_ = get_parameter("loop_path").as_bool();
+  ignore_warning_speed_commands_ = get_parameter("ignore_warning_speed_commands").as_bool();
 
   if (!loadTrajectoryPath()) {
     RCLCPP_ERROR(get_logger(), "Failed to load trajectory at '%s'", trajectory_geojson_path_.c_str());
@@ -92,8 +94,9 @@ AtosTruckSimulator::AtosTruckSimulator() : Node("atos_truck_simulator") {
                                         std::bind(&AtosTruckSimulator::simulationStep, this));
 
   RCLCPP_INFO(get_logger(),
-              "AtosTruckSimulator started (uid=%s, start_index=%d, target=%.1f km/h, accel=%.2f m/s^2, tcp=%s:%d)",
-              uid_.c_str(), start_index_, target_speed_kmh_, acceleration_mps2_, tcp_host_.c_str(), tcp_port_);
+              "AtosTruckSimulator started (uid=%s, start_index=%d, target=%.1f km/h, accel=%.2f m/s^2, tcp=%s:%d, ignore_warning=%s)",
+              uid_.c_str(), start_index_, target_speed_kmh_, acceleration_mps2_, tcp_host_.c_str(), tcp_port_,
+              ignore_warning_speed_commands_ ? "true" : "false");
 }
 
 bool AtosTruckSimulator::loadTrajectoryPath() {
@@ -318,7 +321,13 @@ void AtosTruckSimulator::onSpeedCommand(const std_msgs::msg::String::SharedPtr m
   const auto value_end = msg->data.find(';', value_start);
   const auto value = msg->data.substr(value_start, value_end - value_start);
   try {
-    target_speed_kmh_ = std::max(0.0, std::stod(value));
+    const double commanded_speed_kmh = std::max(0.0, std::stod(value));
+    // Keep this simulator at its cruise speed through first-limit warning commands,
+    // but still obey full-stop commands at the second limit.
+    if (ignore_warning_speed_commands_ && commanded_speed_kmh > 0.0) {
+      return;
+    }
+    target_speed_kmh_ = commanded_speed_kmh;
   } catch (...) {
     return;
   }

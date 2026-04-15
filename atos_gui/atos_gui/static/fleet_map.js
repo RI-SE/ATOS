@@ -135,6 +135,38 @@
     });
   }
 
+  function computeAheadDistanceMap(trucks, pathLengthMeters) {
+    const result = {};
+    const candidates = trucks
+      .filter(function(item) {
+        return item.tcp_connected && Number.isFinite(Number(item.distance_m));
+      })
+      .map(function(item) {
+        return {
+          uid: String(item.uid || "truck"),
+          distance_m: Number(item.distance_m),
+        };
+      })
+      .sort(function(a, b) { return a.distance_m - b.distance_m; });
+
+    if (candidates.length < 2) {
+      return result;
+    }
+
+    for (let i = 0; i < candidates.length; i += 1) {
+      const current = candidates[i];
+      const next = candidates[(i + 1) % candidates.length];
+      let gap = next.distance_m - current.distance_m;
+      if (gap <= 0 && pathLengthMeters > 0) {
+        gap += pathLengthMeters;
+      }
+      if (gap > 0) {
+        result[current.uid] = gap;
+      }
+    }
+    return result;
+  }
+
   function renderSvg(container, coords, trucks) {
     const width = Math.max(container.clientWidth, 700);
     const height = Math.max(container.clientHeight, 420);
@@ -171,20 +203,46 @@
     const totalMeters = computeTotalLengthMeters(coords);
     const totalKm = totalMeters / 1000.0;
 
+    const aheadDistanceMap = computeAheadDistanceMap(trucks, totalMeters);
+
     const truckCircles = trucks.map(function(item) {
       const p = toSvgXY(Number(item.lon), Number(item.lat));
       const uid = String(item.uid || "truck");
       const speedKmh = Number(item.speed_kmh || 0);
       const courseDeg = Number(item.course_deg || 0);
       const color = item.tcp_connected ? "#dc2626" : "#6b7280";
+      const ahead = aheadDistanceMap[uid];
+      const aheadText =
+        speedKmh > 0.1 && Number.isFinite(ahead)
+          ? (" next: " + ahead.toFixed(1) + " m")
+          : " next: -";
       return (
         "<g>" +
           "<circle cx='" + p.x.toFixed(2) + "' cy='" + p.y.toFixed(2) + "' r='5' fill='" + color + "' />" +
           "<text x='" + (p.x + 8).toFixed(2) + "' y='" + (p.y - 8).toFixed(2) + "' " +
             "font-size='12' font-family='sans-serif' fill='#111827'>" +
-            uid + " " + speedKmh.toFixed(1) + " km/h @" + courseDeg.toFixed(0) + "°" +
+            uid + " " + speedKmh.toFixed(1) + " km/h @" + courseDeg.toFixed(0) + "°" + aheadText +
           "</text>" +
         "</g>"
+      );
+    }).join("");
+
+    const truckRows = trucks.map(function(item) {
+      const uid = String(item.uid || "truck");
+      const speedKmh = Number(item.speed_kmh || 0);
+      const courseDeg = Number(item.course_deg || 0);
+      const ahead = aheadDistanceMap[uid];
+      const aheadCell =
+        speedKmh > 0.1 && Number.isFinite(ahead)
+          ? ahead.toFixed(1) + " m"
+          : "-";
+      return (
+        "<tr>" +
+          "<td style='padding:2px 8px 2px 0;'>" + uid + "</td>" +
+          "<td style='padding:2px 8px 2px 0;'>" + speedKmh.toFixed(1) + " km/h</td>" +
+          "<td style='padding:2px 8px 2px 0;'>" + courseDeg.toFixed(0) + "°</td>" +
+          "<td style='padding:2px 0;'><b>" + aheadCell + "</b></td>" +
+        "</tr>"
       );
     }).join("");
 
@@ -199,6 +257,13 @@
       "<div><b>Total length (Vincenty):</b> " + totalMeters.toFixed(2) + " m</div>" +
       "<div><b>Total length:</b> " + totalKm.toFixed(3) + " km</div>" +
       "<div><b>Live trucks:</b> " + trucks.length + "</div>" +
+      "<div style='padding-top:6px;'><b>Distance To Next Truck Ahead</b></div>" +
+      "<table style='font-family:sans-serif;font-size:13px;border-collapse:collapse;'>" +
+      "<thead><tr><th style='text-align:left;padding:2px 8px 2px 0;'>Truck</th>" +
+      "<th style='text-align:left;padding:2px 8px 2px 0;'>Speed</th>" +
+      "<th style='text-align:left;padding:2px 8px 2px 0;'>Course</th>" +
+      "<th style='text-align:left;padding:2px 0;'>Next ahead</th></tr></thead>" +
+      "<tbody>" + truckRows + "</tbody></table>" +
       "</div>";
   }
 
