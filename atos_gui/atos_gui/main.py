@@ -26,6 +26,7 @@ FLEET_STATIC_ROUTE = "/atos_gui_static"
 FLEET_STATIC_DIR = Path(__file__).parent / "static"
 FLEET_STATE_LOCK = threading.Lock()
 FLEET_TRUCK_STATES: dict[str, dict] = {}
+FLEET_GEOJSON_CACHE: dict[str, dict] = {}
 
 
 
@@ -35,18 +36,18 @@ def main() -> None:
     pass
 
 
-def _candidate_geojson_paths() -> list[Path]:
+def _candidate_conf_dirs() -> list[Path]:
     candidates = [
-        Path.home() / ".astazero/ATOS/conf" / GEOJSON_NAME,
-        Path.home() / "atos_ws/src/atos/conf/conf" / GEOJSON_NAME,
-        Path.home() / "Documents/repos/ATOS/conf/conf" / GEOJSON_NAME,
+        Path.home() / ".astazero/ATOS/conf",
+        Path.home() / "atos_ws/src/atos/conf/conf",
+        Path.home() / "Documents/repos/ATOS/conf/conf",
     ]
 
     try:
         from ament_index_python.packages import get_package_prefix
 
         atos_prefix = Path(get_package_prefix("atos"))
-        candidates.append(atos_prefix / "etc/conf" / GEOJSON_NAME)
+        candidates.append(atos_prefix / "etc/conf")
     except Exception:
         pass
 
@@ -62,20 +63,65 @@ def _candidate_geojson_paths() -> list[Path]:
     return unique_candidates
 
 
-def _load_fleet_geojson() -> tuple[dict | None, Path | None]:
-    for path in _candidate_geojson_paths():
-        if path.exists():
-            try:
-                return json.loads(path.read_text()), path
-            except Exception:
-                continue
-    return None, None
+def _resolve_geojson_path(path_name: str) -> Path | None:
+    sanitized = Path(path_name).name
+    if not sanitized:
+        return None
+
+    direct = Path(path_name)
+    if direct.is_absolute() and direct.exists():
+        return direct
+
+    for conf_dir in _candidate_conf_dirs():
+        candidate = conf_dir / sanitized
+        if candidate.exists():
+            return candidate
+
+    return None
 
 
-def _fleet_snapshot_payload() -> str:
+def _load_geojson_by_name(path_name: str) -> tuple[dict | None, Path | None]:
+    sanitized = Path(path_name).name
+    if not sanitized:
+        return None, None
+
+    if sanitized in FLEET_GEOJSON_CACHE:
+        return FLEET_GEOJSON_CACHE[sanitized], _resolve_geojson_path(sanitized)
+
+    path = _resolve_geojson_path(sanitized)
+    if not path:
+        return None, None
+
+    try:
+        payload = json.loads(path.read_text())
+        FLEET_GEOJSON_CACHE[sanitized] = payload
+        return payload, path
+    except Exception:
+        return None, None
+
+
+def _fleet_map_payload_json() -> str:
     with FLEET_STATE_LOCK:
         trucks = list(FLEET_TRUCK_STATES.values())
-    return json.dumps(trucks).replace("</", "<\\/")
+
+    path_names = {GEOJSON_NAME}
+    for truck in trucks:
+        path_name = truck.get("path_name")
+        if path_name:
+            path_names.add(Path(str(path_name)).name)
+
+    paths_payload = {}
+    for path_name in sorted(path_names):
+        geojson, _ = _load_geojson_by_name(path_name)
+        if geojson:
+            paths_payload[path_name] = geojson
+
+    payload = {
+        "default_path_name": GEOJSON_NAME,
+        "paths": paths_payload,
+        "trucks": trucks,
+    }
+    return json.dumps(payload).replace("</", "<\\/")
 
 
 class FleetStateNode(Node):
@@ -93,6 +139,9 @@ class FleetStateNode(Node):
         uid = payload.get("uid")
         if not uid:
             return
+
+        if payload.get("path_name"):
+            payload["path_name"] = Path(str(payload["path_name"])).name
 
         with FLEET_STATE_LOCK:
             FLEET_TRUCK_STATES[str(uid)] = payload
@@ -136,25 +185,24 @@ Live truck state topic for map overlay:
                 )
 
             with ui.tab_panel(road_tab):
-                geojson, source_path = _load_fleet_geojson()
-                ui.label("RuralRoad centerline visualization").classes("text-h5")
+                default_geojson, source_path = _load_geojson_by_name(GEOJSON_NAME)
+                ui.label("Path visualization by COT path_name").classes("text-h5")
 
-                if not geojson:
-                    ui.label("Could not load geojson file.").classes("text-red-600")
-                    ui.markdown("Searched:\n" + "\n".join([f"- `{p}`" for p in _candidate_geojson_paths()]))
+                if not default_geojson:
+                    ui.label("Could not load default geojson file.").classes("text-red-600")
+                    ui.markdown("Searched conf dirs:\n" + "\n".join([f"- `{p}`" for p in _candidate_conf_dirs()]))
                     return
 
-                ui.label(f"Source: {source_path}").classes("text-sm text-gray-600")
-                map_id = "rural-road-map"
+                ui.label(f"Default source: {source_path}").classes("text-sm text-gray-600")
+                map_id = "fleet-road-map"
                 ui.html(f'<div id="{map_id}" style="height:75vh;width:100%;border-radius:8px;"></div>')
 
-                geojson_payload = json.dumps(geojson).replace("</", "<\\/")
                 ui.timer(
                     0.2,
                     lambda: ui.run_javascript(
                         f"""
 (() => {{
-  const payload = {geojson_payload};
+  const payload = {_fleet_map_payload_json()};
   const containerId = "{map_id}";
   let attempts = 0;
   const maxAttempts = 60;
@@ -164,7 +212,7 @@ Live truck state topic for map overlay:
     const hasEl = !!document.getElementById(containerId);
     if (hasFn && hasEl) {{
       clearInterval(timer);
-      window.renderFleetRoadMap(containerId, payload, {_fleet_snapshot_payload()});
+      window.renderFleetRoadMap(containerId, payload);
       return;
     }}
     if (attempts >= maxAttempts) {{
@@ -183,7 +231,7 @@ Live truck state topic for map overlay:
                 ui.timer(
                     0.5,
                     lambda: ui.run_javascript(
-                        f"window.updateFleetTruckStates('{map_id}', {_fleet_snapshot_payload()});"
+                        f"window.updateFleetRoadMap('{map_id}', {_fleet_map_payload_json()});"
                     ),
                 )
 
