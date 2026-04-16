@@ -33,7 +33,7 @@ using json = nlohmann::json;
 namespace {
 constexpr size_t kReceiveBufferSize = 4096;
 constexpr int kAcceptPollSleepMs = 100;
-constexpr const char *kGeoJsonName = "RuralRoad_center_of_driving_lane_ccw.geojson";
+constexpr const char *kDefaultGeoJsonName = "RuralRoad_center_of_driving_lane_ccw.geojson";
 
 double degToRad(double value) {
   return value * M_PI / 180.0;
@@ -50,24 +50,24 @@ double geodesicDistanceMeters(double lat1, double lon1, double lat2, double lon2
   return earth_radius_m * c;
 }
 
-std::string resolveTrajectoryPath(const std::string &configured_path) {
+std::string resolveDefaultTrajectoryPath(const std::string &configured_path) {
   namespace fs = std::filesystem;
   if (!configured_path.empty() && fs::exists(configured_path)) {
     return configured_path;
   }
 
   std::vector<fs::path> candidates;
-  candidates.emplace_back(fs::current_path() / "conf" / "conf" / kGeoJsonName);
-  candidates.emplace_back(fs::current_path() / ".." / "conf" / "conf" / kGeoJsonName);
+  candidates.emplace_back(fs::current_path() / "conf" / "conf" / kDefaultGeoJsonName);
+  candidates.emplace_back(fs::current_path() / ".." / "conf" / "conf" / kDefaultGeoJsonName);
 
   if (const char *home = std::getenv("HOME")) {
-    candidates.emplace_back(fs::path(home) / "atos_ws" / "src" / "atos" / "conf" / "conf" / kGeoJsonName);
-    candidates.emplace_back(fs::path(home) / "Documents" / "repos" / "ATOS" / "conf" / "conf" / kGeoJsonName);
+    candidates.emplace_back(fs::path(home) / "atos_ws" / "src" / "atos" / "conf" / "conf" / kDefaultGeoJsonName);
+    candidates.emplace_back(fs::path(home) / "Documents" / "repos" / "ATOS" / "conf" / "conf" / kDefaultGeoJsonName);
   }
 
   try {
     const auto prefix = fs::path(ament_index_cpp::get_package_prefix("atos"));
-    candidates.emplace_back(prefix / "etc" / "conf" / kGeoJsonName);
+    candidates.emplace_back(prefix / "etc" / "conf" / kDefaultGeoJsonName);
   } catch (...) {
   }
 
@@ -98,7 +98,8 @@ TruckObjectControl::TruckObjectControl() : Node("truck_object_control") {
   cot_tcp_port_ = get_parameter("cot_tcp_port").as_int();
   cot_tcp_bind_address_ = get_parameter("cot_tcp_bind_address").as_string();
   trajectory_geojson_path_ = get_parameter("trajectory_geojson_path").as_string();
-  trajectory_geojson_path_ = resolveTrajectoryPath(trajectory_geojson_path_);
+  trajectory_geojson_path_ = resolveDefaultTrajectoryPath(trajectory_geojson_path_);
+  default_path_name_ = std::filesystem::path(trajectory_geojson_path_).filename().string();
 
   cot_sub_ = create_subscription<std_msgs::msg::String>(
       "truck_objects/cot", 50, std::bind(&TruckObjectControl::onCotMessage, this, _1));
@@ -139,6 +140,8 @@ void TruckObjectControl::publishTruckState(const std::string &truck_id, const Tr
   payload["speed_kmh"] = state.speed_mps * 3.6;
   payload["course_deg"] = state.course_deg;
   payload["tcp_connected"] = state.tcp_connected;
+  payload["path_name"] = state.path_name;
+  payload["path_index"] = state.path_index;
   payload["stamp_sec"] = now().seconds();
 
   std_msgs::msg::String msg;
@@ -164,6 +167,8 @@ void TruckObjectControl::onCotMessage(const std_msgs::msg::String::SharedPtr msg
     entry.speed_mps = observation.speed_mps;
     entry.course_deg = observation.course_deg;
     entry.tcp_connected = observation.tcp_connected;
+    entry.path_name = observation.path_name;
+    entry.path_index = observation.path_index;
     entry.last_cot_stamp = now();
     state = entry;
   }
@@ -208,11 +213,16 @@ bool TruckObjectControl::parseCotPlaceholder(const std::string &payload, CotObse
     if (fields.find("speed_mps") != fields.end()) {
       out.speed_mps = std::stod(fields.at("speed_mps"));
     } else if (fields.find("speed_kmh") != fields.end()) {
-      // Backward compatibility for older placeholder publishers.
       out.speed_mps = std::stod(fields.at("speed_kmh")) / 3.6;
     }
     if (fields.find("course_deg") != fields.end()) {
       out.course_deg = std::stod(fields.at("course_deg"));
+    }
+    if (fields.find("path_name") != fields.end()) {
+      out.path_name = fields.at("path_name");
+    }
+    if (fields.find("path_index") != fields.end()) {
+      out.path_index = std::stoi(fields.at("path_index"));
     }
   } catch (...) {
     return false;
@@ -221,12 +231,12 @@ bool TruckObjectControl::parseCotPlaceholder(const std::string &payload, CotObse
   return true;
 }
 
-bool TruckObjectControl::parseCotXml(const std::string &payload, CotObservation &out) const {
-  // Expected input resembles:
-  // <event ... uid="..." ...><point lat="..." lon="..."/><detail><track speed="..." course="..."/></detail></event>
+bool TruckObjectControl::parseCotXml(const std::string &payload, CotObservation &out) {
   static const std::regex uid_re(R"re(uid="([^"]+)")re");
   static const std::regex point_re(R"re(<point[^>]*\blat="([^"]+)"[^>]*\blon="([^"]+)")re");
   static const std::regex track_re(R"re(<track[^>]*\bspeed="([^"]+)"[^>]*\bcourse="([^"]+)")re");
+  static const std::regex path_name_re(R"re(<atos[^>]*\bpath_name="([^"]+)")re");
+  static const std::regex path_index_re(R"re(<atos[^>]*\bpath_index="([^"]+)")re");
 
   std::smatch m;
   if (!std::regex_search(payload, m, uid_re) || m.size() < 2) {
@@ -252,7 +262,6 @@ bool TruckObjectControl::parseCotXml(const std::string &payload, CotObservation 
   out.course_deg = 0.0;
   if (std::regex_search(payload, m, track_re) && m.size() >= 3) {
     try {
-      // CoT track speed is in m/s.
       out.speed_mps = std::stod(m[1].str());
       out.course_deg = std::stod(m[2].str());
     } catch (...) {
@@ -261,7 +270,36 @@ bool TruckObjectControl::parseCotXml(const std::string &payload, CotObservation 
     }
   }
 
-  out.distance_along_trajectory_m = projectDistanceAlongTrajectory(out.lat, out.lon);
+  out.path_name.clear();
+  out.path_index = -1;
+  if (std::regex_search(payload, m, path_name_re) && m.size() >= 2) {
+    out.path_name = m[1].str();
+  }
+  if (std::regex_search(payload, m, path_index_re) && m.size() >= 2) {
+    try {
+      out.path_index = std::stoi(m[1].str());
+    } catch (...) {
+      out.path_index = -1;
+    }
+  }
+
+  const std::vector<GeoPoint> *trajectory = nullptr;
+  if (!out.path_name.empty()) {
+    trajectory = getTrajectoryForPath(out.path_name);
+  }
+  if (!trajectory) {
+    trajectory = &trajectory_path_;
+    if (out.path_name.empty()) {
+      out.path_name = default_path_name_;
+    }
+  }
+
+  if (trajectory && out.path_index >= 0 && static_cast<size_t>(out.path_index) < trajectory->size()) {
+    out.distance_along_trajectory_m = (*trajectory)[static_cast<size_t>(out.path_index)].distance_m;
+  } else {
+    out.distance_along_trajectory_m = projectDistanceAlongTrajectory(out.lat, out.lon, trajectory);
+  }
+
   out.tcp_connected = true;
   return true;
 }
@@ -271,10 +309,10 @@ bool TruckObjectControl::isCotFresh(const TruckState &state, const rclcpp::Time 
   return age >= 0.0 && age <= cot_timeout_seconds_;
 }
 
-bool TruckObjectControl::loadTrajectoryPath() {
-  trajectory_path_.clear();
+bool TruckObjectControl::loadTrajectoryPathFromFile(const std::string &path, std::vector<GeoPoint> &out) const {
+  out.clear();
 
-  std::ifstream input(trajectory_geojson_path_);
+  std::ifstream input(path);
   if (!input.is_open()) {
     return false;
   }
@@ -325,12 +363,9 @@ bool TruckObjectControl::loadTrajectoryPath() {
     if (!coord.is_array() || coord.size() < 2) {
       continue;
     }
-    const double lon = coord[0].get<double>();
-    const double lat = coord[1].get<double>();
-
     GeoPoint p;
-    p.lat = lat;
-    p.lon = lon;
+    p.lon = coord[0].get<double>();
+    p.lat = coord[1].get<double>();
     p.distance_m = cumulative;
 
     if (has_prev) {
@@ -338,22 +373,116 @@ bool TruckObjectControl::loadTrajectoryPath() {
       p.distance_m = cumulative;
     }
 
-    trajectory_path_.push_back(p);
+    out.push_back(p);
     prev = p;
     has_prev = true;
   }
 
-  return trajectory_path_.size() >= 2;
+  return out.size() >= 2;
 }
 
-double TruckObjectControl::projectDistanceAlongTrajectory(double lat, double lon) const {
-  if (trajectory_path_.empty()) {
+bool TruckObjectControl::loadTrajectoryPath() {
+  if (!loadTrajectoryPathFromFile(trajectory_geojson_path_, trajectory_path_)) {
+    return false;
+  }
+
+  std::lock_guard<std::mutex> lock(trajectory_cache_mutex_);
+  trajectory_cache_[default_path_name_] = trajectory_path_;
+  return true;
+}
+
+std::string TruckObjectControl::resolveTrajectoryPathByName(const std::string &path_name) const {
+  namespace fs = std::filesystem;
+
+  if (path_name.empty()) {
+    return trajectory_geojson_path_;
+  }
+
+  const fs::path raw(path_name);
+  if (raw.is_absolute() && fs::exists(raw)) {
+    return raw.string();
+  }
+
+  const fs::path base_name = raw.filename();
+  if (base_name.empty()) {
+    return "";
+  }
+
+  const fs::path configured = fs::path(trajectory_geojson_path_).parent_path() / base_name;
+  if (fs::exists(configured)) {
+    return configured.string();
+  }
+
+  std::vector<fs::path> candidates;
+  candidates.emplace_back(fs::current_path() / "conf" / "conf" / base_name);
+  candidates.emplace_back(fs::current_path() / ".." / "conf" / "conf" / base_name);
+
+  if (const char *home = std::getenv("HOME")) {
+    candidates.emplace_back(fs::path(home) / "atos_ws" / "src" / "atos" / "conf" / "conf" / base_name);
+    candidates.emplace_back(fs::path(home) / "Documents" / "repos" / "ATOS" / "conf" / "conf" / base_name);
+  }
+
+  try {
+    const auto prefix = fs::path(ament_index_cpp::get_package_prefix("atos"));
+    candidates.emplace_back(prefix / "etc" / "conf" / base_name);
+  } catch (...) {
+  }
+
+  for (const auto &candidate : candidates) {
+    if (fs::exists(candidate)) {
+      return candidate.string();
+    }
+  }
+
+  return "";
+}
+
+const std::vector<TruckObjectControl::GeoPoint> *TruckObjectControl::getTrajectoryForPath(const std::string &path_name) {
+  const std::string key = std::filesystem::path(path_name).filename().string();
+  if (key.empty()) {
+    return nullptr;
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(trajectory_cache_mutex_);
+    const auto it = trajectory_cache_.find(key);
+    if (it != trajectory_cache_.end()) {
+      return &it->second;
+    }
+  }
+
+  const std::string resolved_path = resolveTrajectoryPathByName(key);
+  if (resolved_path.empty()) {
+    return nullptr;
+  }
+
+  std::vector<GeoPoint> loaded;
+  if (!loadTrajectoryPathFromFile(resolved_path, loaded)) {
+    return nullptr;
+  }
+
+  std::lock_guard<std::mutex> lock(trajectory_cache_mutex_);
+  auto [it, inserted] = trajectory_cache_.emplace(key, std::move(loaded));
+  if (inserted) {
+    RCLCPP_INFO(get_logger(), "Loaded trajectory '%s' with %zu points from %s", key.c_str(), it->second.size(),
+                resolved_path.c_str());
+  }
+  return &it->second;
+}
+
+double TruckObjectControl::projectDistanceAlongTrajectory(double lat, double lon,
+                                                          const std::vector<GeoPoint> *trajectory) const {
+  const std::vector<GeoPoint> *path = trajectory;
+  if (!path || path->empty()) {
+    path = &trajectory_path_;
+  }
+  if (!path || path->empty()) {
     return 0.0;
   }
 
   double best_distance_to_path_m = std::numeric_limits<double>::infinity();
   double best_distance_along_m = 0.0;
-  for (const auto &p : trajectory_path_) {
+  for (const auto &p : *path) {
     const double d = geodesicDistanceMeters(lat, lon, p.lat, p.lon);
     if (d < best_distance_to_path_m) {
       best_distance_to_path_m = d;
@@ -425,6 +554,10 @@ void TruckObjectControl::stopTcpServer() {
     }
     tcp_client_fds_.clear();
   }
+  {
+    std::lock_guard<std::mutex> lock(tcp_command_mutex_);
+    uid_to_client_fd_.clear();
+  }
 
   std::lock_guard<std::mutex> lock(tcp_threads_mutex_);
   for (auto &thread : tcp_client_threads_) {
@@ -482,7 +615,7 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string &peer_
     while (tcp_running_.load()) {
       const ssize_t received = ::recv(client_fd, receive_buffer, sizeof(receive_buffer), 0);
       if (received == 0) {
-        break; // peer closed
+        break;
       }
       if (received < 0) {
         if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -533,8 +666,14 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string &peer_
           entry.speed_mps = observation.speed_mps;
           entry.course_deg = observation.course_deg;
           entry.tcp_connected = true;
+          entry.path_name = observation.path_name;
+          entry.path_index = observation.path_index;
           entry.last_cot_stamp = now();
           state = entry;
+        }
+        {
+          std::lock_guard<std::mutex> lock(tcp_command_mutex_);
+          uid_to_client_fd_[observation.truck_id] = client_fd;
         }
 
         seen_uids.insert(observation.truck_id);
@@ -562,6 +701,13 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string &peer_
     if (found) {
       publishTruckState(uid, state);
     }
+    {
+      std::lock_guard<std::mutex> lock(tcp_command_mutex_);
+      const auto it = uid_to_client_fd_.find(uid);
+      if (it != uid_to_client_fd_.end() && it->second == client_fd) {
+        uid_to_client_fd_.erase(it);
+      }
+    }
   }
 
   {
@@ -574,8 +720,12 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string &peer_
 }
 
 void TruckObjectControl::evaluateAndPublishSpeedCommand() {
-  std::vector<double> connected_positions;
-  std::vector<std::string> connected_ids;
+  struct ConnectedTruck {
+    std::string id;
+    double distance_m = 0.0;
+    int path_index = -1;
+  };
+  std::vector<ConnectedTruck> connected;
 
   const auto now_time = now();
   {
@@ -584,53 +734,89 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
       if (!state.tcp_connected || !isCotFresh(state, now_time)) {
         continue;
       }
-      connected_positions.push_back(state.distance_along_trajectory_m);
-      connected_ids.push_back(id);
+      connected.push_back(ConnectedTruck{id, state.distance_along_trajectory_m, state.path_index});
     }
   }
 
-  if (connected_positions.size() < 2) {
+  if (connected.size() < 2) {
     return;
   }
 
-  std::sort(connected_positions.begin(), connected_positions.end());
+  std::sort(connected.begin(), connected.end(),
+            [](const ConnectedTruck &a, const ConnectedTruck &b) { return a.distance_m < b.distance_m; });
 
   double min_gap_m = std::numeric_limits<double>::infinity();
-  for (size_t i = 1; i < connected_positions.size(); ++i) {
-    min_gap_m = std::min(min_gap_m, std::fabs(connected_positions[i] - connected_positions[i - 1]));
+  for (size_t i = 1; i < connected.size(); ++i) {
+    min_gap_m = std::min(min_gap_m, std::fabs(connected[i].distance_m - connected[i - 1].distance_m));
   }
 
-  double target_speed_kmh = -1.0;
+  double target_speed_mps = -1.0;
   std::string reason = "no_limit";
 
   if (min_gap_m < stop_distance_m_) {
-    target_speed_kmh = stop_speed_kmh_;
+    target_speed_mps = stop_speed_kmh_ / 3.6;
     reason = "min_gap_below_stop_distance";
   } else if (min_gap_m < warning_distance_m_) {
-    target_speed_kmh = warning_speed_kmh_;
+    target_speed_mps = warning_speed_kmh_ / 3.6;
     reason = "min_gap_below_warning_distance";
   }
 
-  if (target_speed_kmh < 0.0) {
+  if (target_speed_mps < 0.0) {
     return;
   }
 
-  if (std::fabs(last_published_speed_kmh_ - target_speed_kmh) < 1e-6) {
+  if (std::fabs(last_published_speed_mps_ - target_speed_mps) < 1e-6) {
     return;
   }
 
+  // Keep ROS command as a global signal while TCP commands are individualized per truck.
   std_msgs::msg::String command;
-  command.data = "target_speed_kmh=" + std::to_string(target_speed_kmh) +
-                 ";scope=all_connected_with_valid_tcp_and_fresh_cot" +
-                 ";reason=" + reason +
+  command.data = "target_speed_mps=" + std::to_string(target_speed_mps) +
+                 ";scope=all_connected_with_valid_tcp_and_fresh_cot" + ";reason=" + reason +
                  ";min_gap_m=" + std::to_string(min_gap_m) +
-                 ";connected_count=" + std::to_string(connected_ids.size());
+                 ";connected_count=" + std::to_string(connected.size());
 
   speed_command_pub_->publish(command);
-  last_published_speed_kmh_ = target_speed_kmh;
+  for (size_t i = 0; i < connected.size(); ++i) {
+    const bool has_ahead = (i + 1) < connected.size();
+    const std::string ahead_uid = has_ahead ? connected[i + 1].id : "none";
+    const double ahead_gap = has_ahead ? (connected[i + 1].distance_m - connected[i].distance_m) : -1.0;
+    const int ahead_path_index = has_ahead ? connected[i + 1].path_index : -1;
+
+    const std::string tcp_command =
+        "target_speed_mps=" + std::to_string(target_speed_mps) + ";distance_to_truck_ahead_m=" +
+        std::to_string(ahead_gap) + ";truck_ahead_path_index=" + std::to_string(ahead_path_index) +
+        ";truck_ahead_uid=" + ahead_uid + ";reason=" + reason + ";min_gap_m=" + std::to_string(min_gap_m) +
+        ";connected_count=" + std::to_string(connected.size());
+    sendSpeedCommandToTcpClient(connected[i].id, tcp_command);
+  }
+  last_published_speed_mps_ = target_speed_mps;
 
   RCLCPP_WARN(get_logger(),
-              "Published speed command %.1f km/h (reason=%s, min_gap=%.2f m, connected=%zu, ids=%s)",
-              target_speed_kmh, reason.c_str(), min_gap_m, connected_ids.size(),
-              connected_ids.empty() ? "-" : connected_ids.front().c_str());
+              "Published speed command %.2f m/s (reason=%s, min_gap=%.2f m, connected=%zu, first_id=%s)",
+              target_speed_mps, reason.c_str(), min_gap_m, connected.size(),
+              connected.empty() ? "-" : connected.front().id.c_str());
+}
+
+void TruckObjectControl::sendSpeedCommandToTcpClient(const std::string &target_id, const std::string &command) {
+  int target_fd = -1;
+  {
+    std::lock_guard<std::mutex> lock(tcp_command_mutex_);
+    const auto it = uid_to_client_fd_.find(target_id);
+    if (it != uid_to_client_fd_.end()) {
+      target_fd = it->second;
+    }
+  }
+
+  if (target_fd < 0) {
+    return;
+  }
+
+  const std::string payload = command + "\n";
+  const ssize_t sent = ::send(target_fd, payload.data(), payload.size(), MSG_NOSIGNAL);
+  if (sent < 0) {
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000,
+                         "Failed to send TCP speed command to uid=%s fd=%d (errno=%d)", target_id.c_str(),
+                         target_fd, errno);
+  }
 }

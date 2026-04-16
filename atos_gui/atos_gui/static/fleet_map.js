@@ -132,14 +132,52 @@
       return item &&
         Number.isFinite(Number(item.lat)) &&
         Number.isFinite(Number(item.lon));
+    }).map(function(item) {
+      const normalized = Object.assign({}, item);
+      normalized.uid = String(item.uid || "truck");
+      normalized.path_name = item.path_name ? String(item.path_name) : "";
+      normalized.path_index = Number.isFinite(Number(item.path_index)) ? Number(item.path_index) : -1;
+      return normalized;
     });
   }
 
-  function computeAheadDistanceMap(trucks, pathLengthMeters) {
+  function selectPathName(state) {
+    const trucks = state.trucks || [];
+    const counts = {};
+    trucks.forEach(function(item) {
+      const pathName = item.path_name || state.defaultPathName;
+      if (!pathName) {
+        return;
+      }
+      counts[pathName] = (counts[pathName] || 0) + 1;
+    });
+
+    let bestName = state.defaultPathName;
+    let bestCount = -1;
+    Object.keys(counts).forEach(function(name) {
+      if (counts[name] > bestCount) {
+        bestCount = counts[name];
+        bestName = name;
+      }
+    });
+
+    if (!bestName || !state.pathsByName[bestName]) {
+      const available = Object.keys(state.pathsByName);
+      if (available.length > 0) {
+        bestName = available[0];
+      }
+    }
+    return bestName;
+  }
+
+  function computeAheadDistanceMap(trucks, pathLengthMeters, selectedPathName) {
     const result = {};
     const candidates = trucks
       .filter(function(item) {
-        return item.tcp_connected && Number.isFinite(Number(item.distance_m));
+        const itemPath = item.path_name || selectedPathName;
+        return itemPath === selectedPathName &&
+          item.tcp_connected &&
+          Number.isFinite(Number(item.distance_m));
       })
       .map(function(item) {
         return {
@@ -167,7 +205,7 @@
     return result;
   }
 
-  function renderSvg(container, coords, trucks) {
+  function renderSvg(container, coords, trucks, selectedPathName, pathsByName) {
     const width = Math.max(container.clientWidth, 700);
     const height = Math.max(container.clientHeight, 420);
     const padding = 30;
@@ -203,15 +241,21 @@
     const totalMeters = computeTotalLengthMeters(coords);
     const totalKm = totalMeters / 1000.0;
 
-    const aheadDistanceMap = computeAheadDistanceMap(trucks, totalMeters);
+    const filteredTrucks = trucks.filter(function(item) {
+      const itemPath = item.path_name || selectedPathName;
+      return itemPath === selectedPathName;
+    });
 
-    const truckCircles = trucks.map(function(item) {
+    const aheadDistanceMap = computeAheadDistanceMap(filteredTrucks, totalMeters, selectedPathName);
+
+    const truckCircles = filteredTrucks.map(function(item) {
       const p = toSvgXY(Number(item.lon), Number(item.lat));
       const uid = String(item.uid || "truck");
       const speedKmh = Number.isFinite(Number(item.speed_mps))
         ? Number(item.speed_mps) * 3.6
         : Number(item.speed_kmh || 0);
       const courseDeg = Number(item.course_deg || 0);
+      const pathIndex = Number(item.path_index || -1);
       const color = item.tcp_connected ? "#dc2626" : "#6b7280";
       const ahead = aheadDistanceMap[uid];
       const aheadText =
@@ -223,18 +267,19 @@
           "<circle cx='" + p.x.toFixed(2) + "' cy='" + p.y.toFixed(2) + "' r='5' fill='" + color + "' />" +
           "<text x='" + (p.x + 8).toFixed(2) + "' y='" + (p.y - 8).toFixed(2) + "' " +
             "font-size='12' font-family='sans-serif' fill='#111827'>" +
-            uid + " " + speedKmh.toFixed(1) + " km/h @" + courseDeg.toFixed(0) + "°" + aheadText +
+            uid + " [idx " + pathIndex + "] " + speedKmh.toFixed(1) + " km/h @" + courseDeg.toFixed(0) + "°" + aheadText +
           "</text>" +
         "</g>"
       );
     }).join("");
 
-    const truckRows = trucks.map(function(item) {
+    const truckRows = filteredTrucks.map(function(item) {
       const uid = String(item.uid || "truck");
       const speedKmh = Number.isFinite(Number(item.speed_mps))
         ? Number(item.speed_mps) * 3.6
         : Number(item.speed_kmh || 0);
       const courseDeg = Number(item.course_deg || 0);
+      const pathIndex = Number(item.path_index || -1);
       const ahead = aheadDistanceMap[uid];
       const aheadCell =
         speedKmh > 0.1 && Number.isFinite(ahead)
@@ -243,11 +288,21 @@
       return (
         "<tr>" +
           "<td style='padding:2px 8px 2px 0;'>" + uid + "</td>" +
+          "<td style='padding:2px 8px 2px 0;'>" + pathIndex + "</td>" +
           "<td style='padding:2px 8px 2px 0;'>" + speedKmh.toFixed(1) + " km/h</td>" +
           "<td style='padding:2px 8px 2px 0;'>" + courseDeg.toFixed(0) + "°</td>" +
           "<td style='padding:2px 0;'><b>" + aheadCell + "</b></td>" +
         "</tr>"
       );
+    }).join("");
+
+    const allPathNames = Object.keys(pathsByName).sort();
+    const pathSummary = allPathNames.map(function(pathName) {
+      const count = trucks.filter(function(t) {
+        const tPath = t.path_name || selectedPathName;
+        return tPath === pathName;
+      }).length;
+      return "<li><code>" + pathName + "</code>: " + count + " truck(s)</li>";
     }).join("");
 
     container.innerHTML =
@@ -257,13 +312,17 @@
       truckCircles +
       "</svg>" +
       "<div style='padding-top:8px;font-family:sans-serif;font-size:13px;'>" +
+      "<div><b>Selected path:</b> <code>" + selectedPathName + "</code></div>" +
       "<div><b>Path points:</b> " + coords.length + "</div>" +
       "<div><b>Total length (Vincenty):</b> " + totalMeters.toFixed(2) + " m</div>" +
       "<div><b>Total length:</b> " + totalKm.toFixed(3) + " km</div>" +
-      "<div><b>Live trucks:</b> " + trucks.length + "</div>" +
+      "<div><b>Live trucks on selected path:</b> " + filteredTrucks.length + "</div>" +
+      "<div style='padding-top:6px;'><b>Available paths in payload</b></div>" +
+      "<ul style='margin:4px 0 8px 16px;'>" + pathSummary + "</ul>" +
       "<div style='padding-top:6px;'><b>Distance To Next Truck Ahead</b></div>" +
       "<table style='font-family:sans-serif;font-size:13px;border-collapse:collapse;'>" +
       "<thead><tr><th style='text-align:left;padding:2px 8px 2px 0;'>Truck</th>" +
+      "<th style='text-align:left;padding:2px 8px 2px 0;'>Path idx</th>" +
       "<th style='text-align:left;padding:2px 8px 2px 0;'>Speed</th>" +
       "<th style='text-align:left;padding:2px 8px 2px 0;'>Course</th>" +
       "<th style='text-align:left;padding:2px 0;'>Next ahead</th></tr></thead>" +
@@ -281,29 +340,45 @@
       return;
     }
 
-    const coords = findPathCoordinates(state.geojson);
-    if (coords.length === 0) {
-      container.innerHTML = "<div style='padding:12px;color:#b91c1c;font-weight:600;'>No LineString found in geojson.</div>";
+    const selectedPathName = selectPathName(state);
+    const geojson = state.pathsByName[selectedPathName];
+    const coords = findPathCoordinates(geojson);
+
+    if (!selectedPathName || coords.length === 0) {
+      container.innerHTML = "<div style='padding:12px;color:#b91c1c;font-weight:600;'>No valid path found in payload.</div>";
       return;
     }
-    renderSvg(container, coords, normalizeTruckStates(state.trucks));
+
+    renderSvg(container, coords, state.trucks, selectedPathName, state.pathsByName);
+  }
+
+  function normalizePayload(payload) {
+    const normalized = payload || {};
+    normalized.default_path_name = String(normalized.default_path_name || "");
+    normalized.paths = normalized.paths && typeof normalized.paths === "object" ? normalized.paths : {};
+    normalized.trucks = normalizeTruckStates(normalized.trucks || []);
+    return normalized;
   }
 
   window.__fleetRoadMapState = window.__fleetRoadMapState || {};
 
-  window.renderFleetRoadMap = function(containerId, geojson, trucks) {
+  window.renderFleetRoadMap = function(containerId, payload) {
+    const p = normalizePayload(payload);
     window.__fleetRoadMapState[containerId] = {
-      geojson: geojson,
-      trucks: normalizeTruckStates(trucks),
+      defaultPathName: p.default_path_name,
+      pathsByName: p.paths,
+      trucks: p.trucks,
     };
     renderInternal(containerId);
   };
 
-  window.updateFleetTruckStates = function(containerId, trucks) {
-    if (!window.__fleetRoadMapState[containerId]) {
-      return;
-    }
-    window.__fleetRoadMapState[containerId].trucks = normalizeTruckStates(trucks);
+  window.updateFleetRoadMap = function(containerId, payload) {
+    const p = normalizePayload(payload);
+    window.__fleetRoadMapState[containerId] = {
+      defaultPathName: p.default_path_name,
+      pathsByName: p.paths,
+      trucks: p.trucks,
+    };
     renderInternal(containerId);
   };
 })();
