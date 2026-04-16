@@ -1,0 +1,18 @@
+[Unit]
+Description=ATOSFleetManagement Docker Service
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/atos
+EnvironmentFile=-/etc/default/atosfleetmanagement
+ExecStart=/usr/bin/docker compose -f /opt/atos/docker-compose-fleetmanagement.yml up -d --build
+ExecStop=/usr/bin/docker compose -f /opt/atos/docker-compose-fleetmanagement.yml down
+TimeoutStartSec=0
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

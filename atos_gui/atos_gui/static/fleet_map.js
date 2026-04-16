@@ -208,7 +208,9 @@
     const truckCircles = trucks.map(function(item) {
       const p = toSvgXY(Number(item.lon), Number(item.lat));
       const uid = String(item.uid || "truck");
-      const speedKmh = Number(item.speed_kmh || 0);
+      const speedKmh = Number.isFinite(Number(item.speed_mps))
+        ? Number(item.speed_mps) * 3.6
+        : Number(item.speed_kmh || 0);
       const courseDeg = Number(item.course_deg || 0);
       const color = item.tcp_connected ? "#dc2626" : "#6b7280";
       const ahead = aheadDistanceMap[uid];
@@ -229,7 +231,9 @@
 
     const truckRows = trucks.map(function(item) {
       const uid = String(item.uid || "truck");
-      const speedKmh = Number(item.speed_kmh || 0);
+      const speedKmh = Number.isFinite(Number(item.speed_mps))
+        ? Number(item.speed_mps) * 3.6
+        : Number(item.speed_kmh || 0);
       const courseDeg = Number(item.course_deg || 0);
       const ahead = aheadDistanceMap[uid];
       const aheadCell =

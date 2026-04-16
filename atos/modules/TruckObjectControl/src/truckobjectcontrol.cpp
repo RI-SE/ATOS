@@ -8,8 +8,10 @@
 #include <ament_index_cpp/get_package_prefix.hpp>
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -133,7 +135,8 @@ void TruckObjectControl::publishTruckState(const std::string &truck_id, const Tr
   payload["distance_m"] = state.distance_along_trajectory_m;
   payload["lat"] = state.lat;
   payload["lon"] = state.lon;
-  payload["speed_kmh"] = state.speed_kmh;
+  payload["speed_mps"] = state.speed_mps;
+  payload["speed_kmh"] = state.speed_mps * 3.6;
   payload["course_deg"] = state.course_deg;
   payload["tcp_connected"] = state.tcp_connected;
   payload["stamp_sec"] = now().seconds();
@@ -158,7 +161,7 @@ void TruckObjectControl::onCotMessage(const std_msgs::msg::String::SharedPtr msg
     entry.distance_along_trajectory_m = observation.distance_along_trajectory_m;
     entry.lat = observation.lat;
     entry.lon = observation.lon;
-    entry.speed_kmh = observation.speed_kmh;
+    entry.speed_mps = observation.speed_mps;
     entry.course_deg = observation.course_deg;
     entry.tcp_connected = observation.tcp_connected;
     entry.last_cot_stamp = now();
@@ -202,8 +205,11 @@ bool TruckObjectControl::parseCotPlaceholder(const std::string &payload, CotObse
       out.lat = std::stod(fields.at("lat"));
       out.lon = std::stod(fields.at("lon"));
     }
-    if (fields.find("speed_kmh") != fields.end()) {
-      out.speed_kmh = std::stod(fields.at("speed_kmh"));
+    if (fields.find("speed_mps") != fields.end()) {
+      out.speed_mps = std::stod(fields.at("speed_mps"));
+    } else if (fields.find("speed_kmh") != fields.end()) {
+      // Backward compatibility for older placeholder publishers.
+      out.speed_mps = std::stod(fields.at("speed_kmh")) / 3.6;
     }
     if (fields.find("course_deg") != fields.end()) {
       out.course_deg = std::stod(fields.at("course_deg"));
@@ -242,16 +248,15 @@ bool TruckObjectControl::parseCotXml(const std::string &payload, CotObservation 
     return false;
   }
 
-  out.speed_kmh = 0.0;
+  out.speed_mps = 0.0;
   out.course_deg = 0.0;
   if (std::regex_search(payload, m, track_re) && m.size() >= 3) {
     try {
-      // The incoming example uses speed in m/s; convert to km/h for command logic and UI.
-      const double speed_ms = std::stod(m[1].str());
-      out.speed_kmh = speed_ms * 3.6;
+      // CoT track speed is in m/s.
+      out.speed_mps = std::stod(m[1].str());
       out.course_deg = std::stod(m[2].str());
     } catch (...) {
-      out.speed_kmh = 0.0;
+      out.speed_mps = 0.0;
       out.course_deg = 0.0;
     }
   }
@@ -367,6 +372,7 @@ void TruckObjectControl::startTcpServer() {
 
   int enable = 1;
   (void)setsockopt(tcp_server_fd_, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+  (void)setsockopt(tcp_server_fd_, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable));
 
   sockaddr_in addr{};
   addr.sin_family = AF_INET;
@@ -411,6 +417,15 @@ void TruckObjectControl::stopTcpServer() {
     tcp_accept_thread_.join();
   }
 
+  {
+    std::lock_guard<std::mutex> lock(tcp_threads_mutex_);
+    for (const int fd : tcp_client_fds_) {
+      ::shutdown(fd, SHUT_RDWR);
+      ::close(fd);
+    }
+    tcp_client_fds_.clear();
+  }
+
   std::lock_guard<std::mutex> lock(tcp_threads_mutex_);
   for (auto &thread : tcp_client_threads_) {
     if (thread.joinable()) {
@@ -427,11 +442,22 @@ void TruckObjectControl::acceptTcpClients() {
     const int client_fd =
         ::accept(tcp_server_fd_, reinterpret_cast<sockaddr *>(&client_addr), &client_len);
     if (client_fd < 0) {
-      if (tcp_running_.load()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(kAcceptPollSleepMs));
+      if (!tcp_running_.load()) {
+        break;
       }
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000,
+                           "TCP accept failed (errno=%d). Listener will continue.", errno);
+      std::this_thread::sleep_for(std::chrono::milliseconds(kAcceptPollSleepMs));
       continue;
     }
+
+    int keepalive = 1;
+    (void)setsockopt(client_fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
+
+    timeval recv_timeout{};
+    recv_timeout.tv_sec = 1;
+    recv_timeout.tv_usec = 0;
+    (void)setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout));
 
     char ip_buf[INET_ADDRSTRLEN] = {0};
     const char *peer_ip = ::inet_ntop(AF_INET, &client_addr.sin_addr, ip_buf, sizeof(ip_buf));
@@ -441,6 +467,7 @@ void TruckObjectControl::acceptTcpClients() {
     RCLCPP_INFO(get_logger(), "Accepted TruckObject TCP client %s", peer.str().c_str());
 
     std::lock_guard<std::mutex> lock(tcp_threads_mutex_);
+    tcp_client_fds_.insert(client_fd);
     tcp_client_threads_.emplace_back(&TruckObjectControl::handleTcpClient, this, client_fd, peer.str());
   }
 }
@@ -450,58 +477,73 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string &peer_
   buffer.reserve(8 * 1024);
   std::set<std::string> seen_uids;
 
-  char receive_buffer[kReceiveBufferSize];
-  while (tcp_running_.load()) {
-    const ssize_t received = ::recv(client_fd, receive_buffer, sizeof(receive_buffer), 0);
-    if (received <= 0) {
-      break;
-    }
-    buffer.append(receive_buffer, static_cast<size_t>(received));
-
-    while (true) {
-      const size_t start_pos = buffer.find("<event");
-      if (start_pos == std::string::npos) {
-        if (buffer.size() > 32 * 1024) {
-          buffer.clear();
-        }
-        break;
+  try {
+    char receive_buffer[kReceiveBufferSize];
+    while (tcp_running_.load()) {
+      const ssize_t received = ::recv(client_fd, receive_buffer, sizeof(receive_buffer), 0);
+      if (received == 0) {
+        break; // peer closed
       }
-      const size_t end_pos = buffer.find("</event>", start_pos);
-      if (end_pos == std::string::npos) {
-        if (start_pos > 0) {
-          buffer.erase(0, start_pos);
+      if (received < 0) {
+        if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
+          continue;
         }
+        RCLCPP_WARN(get_logger(),
+                    "TCP receive error from %s (errno=%d). Closing this connection only.",
+                    peer_name.c_str(), errno);
         break;
       }
 
-      const size_t event_end = end_pos + std::string("</event>").size();
-      const std::string xml = buffer.substr(start_pos, event_end - start_pos);
-      buffer.erase(0, event_end);
+      buffer.append(receive_buffer, static_cast<size_t>(received));
 
-      CotObservation observation;
-      if (!parseCotXml(xml, observation)) {
-        RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000,
-                             "Failed to parse COT XML from TCP client %s", peer_name.c_str());
-        continue;
+      while (true) {
+        const size_t start_pos = buffer.find("<event");
+        if (start_pos == std::string::npos) {
+          if (buffer.size() > 32 * 1024) {
+            buffer.clear();
+          }
+          break;
+        }
+        const size_t end_pos = buffer.find("</event>", start_pos);
+        if (end_pos == std::string::npos) {
+          if (start_pos > 0) {
+            buffer.erase(0, start_pos);
+          }
+          break;
+        }
+
+        const size_t event_end = end_pos + std::string("</event>").size();
+        const std::string xml = buffer.substr(start_pos, event_end - start_pos);
+        buffer.erase(0, event_end);
+
+        CotObservation observation;
+        if (!parseCotXml(xml, observation)) {
+          RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000,
+                              "Failed to parse COT XML from TCP client %s", peer_name.c_str());
+          continue;
+        }
+
+        TruckState state;
+        {
+          std::lock_guard<std::mutex> lock(state_mutex_);
+          auto &entry = trucks_[observation.truck_id];
+          entry.distance_along_trajectory_m = observation.distance_along_trajectory_m;
+          entry.lat = observation.lat;
+          entry.lon = observation.lon;
+          entry.speed_mps = observation.speed_mps;
+          entry.course_deg = observation.course_deg;
+          entry.tcp_connected = true;
+          entry.last_cot_stamp = now();
+          state = entry;
+        }
+
+        seen_uids.insert(observation.truck_id);
+        publishTruckState(observation.truck_id, state);
       }
-
-      TruckState state;
-      {
-        std::lock_guard<std::mutex> lock(state_mutex_);
-        auto &entry = trucks_[observation.truck_id];
-        entry.distance_along_trajectory_m = observation.distance_along_trajectory_m;
-        entry.lat = observation.lat;
-        entry.lon = observation.lon;
-        entry.speed_kmh = observation.speed_kmh;
-        entry.course_deg = observation.course_deg;
-        entry.tcp_connected = true;
-        entry.last_cot_stamp = now();
-        state = entry;
-      }
-
-      seen_uids.insert(observation.truck_id);
-      publishTruckState(observation.truck_id, state);
     }
+  } catch (...) {
+    RCLCPP_WARN(get_logger(), "Unexpected exception while handling client %s. Connection will be closed.",
+                peer_name.c_str());
   }
 
   for (const auto &uid : seen_uids) {
@@ -522,6 +564,10 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string &peer_
     }
   }
 
+  {
+    std::lock_guard<std::mutex> lock(tcp_threads_mutex_);
+    tcp_client_fds_.erase(client_fd);
+  }
   ::shutdown(client_fd, SHUT_RDWR);
   ::close(client_fd);
   RCLCPP_INFO(get_logger(), "TruckObject TCP client disconnected: %s", peer_name.c_str());

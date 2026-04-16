@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -31,7 +32,7 @@ private:
     double distance_along_trajectory_m = 0.0;
     double lat = 0.0;
     double lon = 0.0;
-    double speed_kmh = 0.0;
+    double speed_mps = 0.0;
     double course_deg = 0.0;
     bool tcp_connected = false;
     rclcpp::Time last_cot_stamp = rclcpp::Time(0, 0, RCL_ROS_TIME);
@@ -42,7 +43,7 @@ private:
     double distance_along_trajectory_m = 0.0;
     double lat = 0.0;
     double lon = 0.0;
-    double speed_kmh = 0.0;
+    double speed_mps = 0.0;
     double course_deg = 0.0;
     bool tcp_connected = false;
   };
@@ -72,6 +73,7 @@ private:
   std::thread tcp_accept_thread_;
   std::vector<std::thread> tcp_client_threads_;
   std::mutex tcp_threads_mutex_;
+  std::set<int> tcp_client_fds_;
 
   void onCotMessage(const std_msgs::msg::String::SharedPtr msg);
   void evaluateAndPublishSpeedCommand();
