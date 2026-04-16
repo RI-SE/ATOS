@@ -23,6 +23,37 @@ if [ -z "${ROS_DISTRO:-}" ]; then
     echo "ROS_DISTRO is not set. Source /opt/ros/<distro>/setup.bash before running this script."
     exit 1
 fi
+apt_update_retry() {
+    local attempts=5
+    local delay=5
+    local i=1
+    while [ "$i" -le "$attempts" ]; do
+        if sudo apt-get update; then
+            return 0
+        fi
+        echo "apt update failed (attempt ${i}/${attempts}); cleaning apt cache and retrying..."
+        sudo apt-get clean
+        sudo rm -rf /var/lib/apt/lists/*
+        sleep "$delay"
+        i=$((i + 1))
+    done
+    return 1
+}
+
+apt_install_retry() {
+    local attempts=3
+    local delay=5
+    local i=1
+    while [ "$i" -le "$attempts" ]; do
+        if sudo apt-get install -y "$@"; then
+            return 0
+        fi
+        echo "apt install failed (attempt ${i}/${attempts}); retrying..."
+        sleep "$delay"
+        i=$((i + 1))
+    done
+    return 1
+}
 
 PIP_INSTALL_CMD=(python3 -m pip install)
 if python3 -m pip help install 2>/dev/null | grep -q -- "--break-system-packages"; then
@@ -32,7 +63,9 @@ fi
 # Update and install required dependencies specified in dependencies.txt and requirements.txt file
 apt_deps=$(cat ${ATOS_REPO_PATH}/scripts/installation/dependencies.txt | tr '\n' ' ')
 echo "Installing dependencies... $apt_deps"
-sudo apt update && sudo apt install -y ${apt_deps}
+apt_update_retry
+apt_install_retry ${apt_deps}
+apt_install_retry python3-pip
 "${PIP_INSTALL_CMD[@]}" -r ${ATOS_REPO_PATH}/scripts/installation/requirements.txt
 
 # Check if apt failed to install dependencies
@@ -46,7 +79,8 @@ if ! (apt list | grep -q "ros-$ROS_DISTRO-desktop"); then
     echo "Adding the ROS2 $ROS_DISTRO apt repository..."
 
     # Install ROS2 prerequisites
-    sudo apt update && sudo apt install -y lsb-release ros-dev-tools
+    apt_update_retry
+    apt_install_retry lsb-release ros-dev-tools
 
     # Authorize the ROS2 gpg key with apt
     sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
@@ -60,7 +94,8 @@ fi
 
 # Install ROS2 packages
 echo "Installing ROS2 packages..."
-sudo apt install -y \
+apt_update_retry
+apt_install_retry \
     ros-${ROS_DISTRO}-desktop \
     python3-rosdep \
     ros-${ROS_DISTRO}-launch-pytest
