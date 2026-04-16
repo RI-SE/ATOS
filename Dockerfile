@@ -25,3 +25,8 @@ RUN --mount=type=cache,target=/var/cache/apt \
 COPY . .
 RUN ./scripts/installation/install_atos.sh ${REPO_DIR}
 WORKDIR /root/atos_ws
+RUN chmod +x /root/atos_git/scripts/run_atosfleetmanagement.sh
+
+EXPOSE 8420 8765 9090 8114
+
+CMD ["/bin/bash", "-lc", "/root/atos_git/scripts/run_atosfleetmanagement.sh"]

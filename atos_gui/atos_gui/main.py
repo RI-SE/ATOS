@@ -221,7 +221,7 @@ def ros_main() -> None:
 
 def print_access_hint() -> None:
     scheme = "https" if USE_SSL else "http"
-    print(f"TruckObjectGUI ready. Open {scheme}://localhost:3000", flush=True)
+    print(f"TruckObjectGUI ready. Open {scheme}://localhost:8420", flush=True)
 
 
 # Start the ROS node logic in a thread managed by nicegui.
@@ -232,7 +232,8 @@ ui_run.APP_IMPORT_STRING = f"{__name__}:app"  # ROS2 uses non-standard module na
 
 uvicorn_args = {
     "uvicorn_reload_dirs": str(Path(__file__).parent.resolve()),
-    "port": 3000,
+    "host": "0.0.0.0",
+    "port": 8420,
     "show": False,
     "title": "TruckObjectGUI" if FLEET_MODE else "ATOS GUI",
 }
@@ -244,7 +245,4 @@ if USE_SSL:
 ui.run(**uvicorn_args)
 
 if USE_SSL:
-    print(
-        "ATTENTION: Using SSL, use https://localhost:3000 to access the GUI instead",
-        flush=True,
-    )
+    print("ATTENTION: Using SSL, use https://localhost:8420 to access the GUI instead", flush=True)
