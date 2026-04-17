@@ -142,6 +142,7 @@ void TruckObjectControl::publishTruckState(const std::string &truck_id, const Tr
   payload["tcp_connected"] = state.tcp_connected;
   payload["path_name"] = state.path_name;
   payload["path_index"] = state.path_index;
+  payload["last_tcp_command"] = state.last_tcp_command;
   payload["stamp_sec"] = now().seconds();
 
   std_msgs::msg::String msg;
@@ -865,5 +866,21 @@ void TruckObjectControl::sendSpeedCommandToTcpClient(const std::string &target_i
     RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000,
                          "Failed to send TCP speed command to uid=%s fd=%d (errno=%d)", target_id.c_str(),
                          target_fd, errno);
+    return;
+  }
+
+  TruckState state_copy;
+  bool has_state = false;
+  {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+    const auto it = trucks_.find(target_id);
+    if (it != trucks_.end()) {
+      it->second.last_tcp_command = command;
+      state_copy = it->second;
+      has_state = true;
+    }
+  }
+  if (has_state) {
+    publishTruckState(target_id, state_copy);
   }
 }
