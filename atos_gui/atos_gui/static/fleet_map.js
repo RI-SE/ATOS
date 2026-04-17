@@ -175,9 +175,7 @@
     const candidates = trucks
       .filter(function(item) {
         const itemPath = item.path_name || selectedPathName;
-        return itemPath === selectedPathName &&
-          item.tcp_connected &&
-          Number.isFinite(Number(item.distance_m));
+        return itemPath === selectedPathName && Number.isFinite(Number(item.distance_m));
       })
       .map(function(item) {
         return {
@@ -280,6 +278,7 @@
         : Number(item.speed_kmh || 0);
       const courseDeg = Number(item.course_deg || 0);
       const pathIndex = Number(item.path_index || -1);
+      const lastTcpCommand = String(item.last_tcp_command || "-");
       const ahead = aheadDistanceMap[uid];
       const aheadCell =
         Number.isFinite(ahead)
@@ -291,7 +290,8 @@
           "<td style='padding:2px 8px 2px 0;'>" + pathIndex + "</td>" +
           "<td style='padding:2px 8px 2px 0;'>" + speedKmh.toFixed(1) + " km/h</td>" +
           "<td style='padding:2px 8px 2px 0;'>" + courseDeg.toFixed(0) + "°</td>" +
-          "<td style='padding:2px 0;'><b>" + aheadCell + "</b></td>" +
+          "<td style='padding:2px 8px 2px 0;'><b>" + aheadCell + "</b></td>" +
+          "<td style='padding:2px 0;max-width:700px;word-break:break-all;'>" + lastTcpCommand + "</td>" +
         "</tr>"
       );
     }).join("");
@@ -325,7 +325,8 @@
       "<th style='text-align:left;padding:2px 8px 2px 0;'>Path idx</th>" +
       "<th style='text-align:left;padding:2px 8px 2px 0;'>Speed</th>" +
       "<th style='text-align:left;padding:2px 8px 2px 0;'>Course</th>" +
-      "<th style='text-align:left;padding:2px 0;'>Next ahead</th></tr></thead>" +
+      "<th style='text-align:left;padding:2px 8px 2px 0;'>Next ahead</th>" +
+      "<th style='text-align:left;padding:2px 0;'>Last TCP command</th></tr></thead>" +
       "<tbody>" + truckRows + "</tbody></table>" +
       "</div>";
   }
