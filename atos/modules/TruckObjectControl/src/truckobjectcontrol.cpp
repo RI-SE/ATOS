@@ -722,8 +722,10 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string &peer_
 void TruckObjectControl::evaluateAndPublishSpeedCommand() {
   struct ConnectedTruck {
     std::string id;
+    std::string path_name;
     double distance_m = 0.0;
     int path_index = -1;
+    std::string previous_command;
   };
   std::vector<ConnectedTruck> connected;
 
@@ -734,7 +736,8 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
       if (!state.tcp_connected || !isCotFresh(state, now_time)) {
         continue;
       }
-      connected.push_back(ConnectedTruck{id, state.distance_along_trajectory_m, state.path_index});
+      connected.push_back(ConnectedTruck{id, state.path_name, state.distance_along_trajectory_m,
+                                         state.path_index, state.last_control_command});
     }
   }
 
@@ -742,24 +745,90 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
     return;
   }
 
-  std::sort(connected.begin(), connected.end(),
-            [](const ConnectedTruck &a, const ConnectedTruck &b) { return a.distance_m < b.distance_m; });
+  std::unordered_map<std::string, std::vector<ConnectedTruck>> by_path;
+  for (const auto &truck : connected) {
+    by_path[truck.path_name].push_back(truck);
+  }
 
   double min_gap_m = std::numeric_limits<double>::infinity();
-  for (size_t i = 1; i < connected.size(); ++i) {
-    min_gap_m = std::min(min_gap_m, std::fabs(connected[i].distance_m - connected[i - 1].distance_m));
+  bool any_stop = false;
+  bool any_slowdown = false;
+  size_t sent_commands = 0;
+
+  for (auto &[path_name, group] : by_path) {
+    std::sort(group.begin(), group.end(),
+              [](const ConnectedTruck &a, const ConnectedTruck &b) { return a.distance_m < b.distance_m; });
+
+    for (size_t i = 0; i < group.size(); ++i) {
+      const bool has_ahead = (i + 1) < group.size();
+      const std::string ahead_uid = has_ahead ? group[i + 1].id : "none";
+      const double ahead_gap = has_ahead ? (group[i + 1].distance_m - group[i].distance_m) : -1.0;
+      const int ahead_path_index = has_ahead ? group[i + 1].path_index : -1;
+
+      if (has_ahead) {
+        min_gap_m = std::min(min_gap_m, ahead_gap);
+      }
+
+      const std::string previous_command = group[i].previous_command;
+      std::string control_command = previous_command.empty() ? "RESUME" : previous_command;
+
+      const bool in_warning_band = has_ahead && (ahead_gap <= 500.0 && ahead_gap > 200.0);
+      const bool in_stop_band = has_ahead && (ahead_gap <= 200.0);
+      if (in_warning_band) {
+        control_command = "SLOWDOWN";
+      }
+      if (in_stop_band) {
+        control_command = "STOP";
+      }
+      if (has_ahead && ahead_gap > 300.0 && previous_command == "STOP") {
+        control_command = "SLOWDOWN";
+      }
+      if (has_ahead && ahead_gap > 700.0 && previous_command == "SLOWDOWN") {
+        control_command = "RESUME";
+      }
+
+      std::string target_speed_mps_value = "nochange";
+      if (control_command == "STOP") {
+        target_speed_mps_value = std::to_string(stop_speed_kmh_ / 3.6);
+        any_stop = true;
+      } else if (control_command == "SLOWDOWN") {
+        target_speed_mps_value = std::to_string(warning_speed_kmh_ / 3.6);
+        any_slowdown = true;
+      }
+
+      {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        auto it = trucks_.find(group[i].id);
+        if (it != trucks_.end()) {
+          it->second.last_control_command = control_command;
+        }
+      }
+
+      const std::string reason =
+          (control_command == "STOP")
+              ? "truck_ahead_below_stop_distance"
+              : (control_command == "SLOWDOWN" ? "truck_ahead_slowdown_state" : "truck_ahead_resume_state");
+      const std::string tcp_command =
+          "command=" + control_command + ";target_speed_mps=" + target_speed_mps_value +
+          ";distance_to_truck_ahead_m=" + std::to_string(ahead_gap) +
+          ";truck_ahead_path_index=" + std::to_string(ahead_path_index) + ";truck_ahead_uid=" + ahead_uid +
+          ";reason=" + reason + ";min_gap_m=" + (std::isfinite(min_gap_m) ? std::to_string(min_gap_m) : "-1") +
+          ";connected_count=" + std::to_string(connected.size()) + ";path_name=" + path_name;
+      sendSpeedCommandToTcpClient(group[i].id, tcp_command);
+      sent_commands += 1;
+    }
   }
+
   if (!std::isfinite(min_gap_m)) {
     min_gap_m = -1.0;
   }
 
-  // Global ROS signal keeps the strictest fleet state.
   std::string fleet_target_speed_mps_value = "nochange";
   std::string fleet_reason = "no_limit";
-  if (min_gap_m >= 0.0 && min_gap_m < stop_distance_m_) {
+  if (any_stop) {
     fleet_target_speed_mps_value = std::to_string(stop_speed_kmh_ / 3.6);
     fleet_reason = "min_gap_below_stop_distance";
-  } else if (min_gap_m >= 0.0 && min_gap_m < warning_distance_m_) {
+  } else if (any_slowdown) {
     fleet_target_speed_mps_value = std::to_string(warning_speed_kmh_ / 3.6);
     fleet_reason = "min_gap_below_warning_distance";
   }
@@ -769,38 +838,11 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
                  ";scope=all_connected_with_valid_tcp_and_fresh_cot" + ";reason=" + fleet_reason +
                  ";min_gap_m=" + std::to_string(min_gap_m) +
                  ";connected_count=" + std::to_string(connected.size());
-
   speed_command_pub_->publish(command);
-  for (size_t i = 0; i < connected.size(); ++i) {
-    const bool has_ahead = (i + 1) < connected.size();
-    const std::string ahead_uid = has_ahead ? connected[i + 1].id : "none";
-    const double ahead_gap = has_ahead ? (connected[i + 1].distance_m - connected[i].distance_m) : -1.0;
-    const int ahead_path_index = has_ahead ? connected[i + 1].path_index : -1;
-    const bool inhibit_start = has_ahead && ahead_gap < stop_distance_m_;
-
-    std::string target_speed_mps_value = "nochange";
-    std::string reason = "no_limit";
-    if (inhibit_start) {
-      target_speed_mps_value = std::to_string(stop_speed_kmh_ / 3.6);
-      reason = "truck_ahead_below_stop_distance";
-    } else if (has_ahead && ahead_gap < warning_distance_m_) {
-      target_speed_mps_value = std::to_string(warning_speed_kmh_ / 3.6);
-      reason = "truck_ahead_below_warning_distance";
-    }
-
-    const std::string tcp_command =
-        "target_speed_mps=" + target_speed_mps_value + ";distance_to_truck_ahead_m=" +
-        std::to_string(ahead_gap) + ";truck_ahead_path_index=" + std::to_string(ahead_path_index) +
-        ";truck_ahead_uid=" + ahead_uid + ";inhibit_start=" + (inhibit_start ? "1" : "0") +
-        ";reason=" + reason + ";min_gap_m=" + std::to_string(min_gap_m) +
-        ";connected_count=" + std::to_string(connected.size());
-    sendSpeedCommandToTcpClient(connected[i].id, tcp_command);
-  }
 
   RCLCPP_WARN(get_logger(),
-              "Published fleet speed command target_speed_mps=%s (reason=%s, min_gap=%.2f m, connected=%zu, first_id=%s)",
-              fleet_target_speed_mps_value.c_str(), fleet_reason.c_str(), min_gap_m, connected.size(),
-              connected.empty() ? "-" : connected.front().id.c_str());
+              "Published fleet speed command target_speed_mps=%s (reason=%s, min_gap=%.2f m, connected=%zu, tcp_cmds=%zu)",
+              fleet_target_speed_mps_value.c_str(), fleet_reason.c_str(), min_gap_m, connected.size(), sent_commands);
 }
 
 void TruckObjectControl::sendSpeedCommandToTcpClient(const std::string &target_id, const std::string &command) {

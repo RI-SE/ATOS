@@ -37,6 +37,7 @@ private:
     bool tcp_connected = false;
     std::string path_name = "";
     int path_index = -1;
+    std::string last_control_command = "";
     rclcpp::Time last_cot_stamp = rclcpp::Time(0, 0, RCL_ROS_TIME);
   };
 
