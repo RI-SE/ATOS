@@ -738,7 +738,7 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
     }
   }
 
-  if (connected.size() < 2) {
+  if (connected.empty()) {
     return;
   }
 
@@ -749,30 +749,24 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
   for (size_t i = 1; i < connected.size(); ++i) {
     min_gap_m = std::min(min_gap_m, std::fabs(connected[i].distance_m - connected[i - 1].distance_m));
   }
-
-  double target_speed_mps = -1.0;
-  std::string reason = "no_limit";
-
-  if (min_gap_m < stop_distance_m_) {
-    target_speed_mps = stop_speed_kmh_ / 3.6;
-    reason = "min_gap_below_stop_distance";
-  } else if (min_gap_m < warning_distance_m_) {
-    target_speed_mps = warning_speed_kmh_ / 3.6;
-    reason = "min_gap_below_warning_distance";
+  if (!std::isfinite(min_gap_m)) {
+    min_gap_m = -1.0;
   }
 
-  if (target_speed_mps < 0.0) {
-    return;
+  // Global ROS signal keeps the strictest fleet state.
+  std::string fleet_target_speed_mps_value = "nochange";
+  std::string fleet_reason = "no_limit";
+  if (min_gap_m >= 0.0 && min_gap_m < stop_distance_m_) {
+    fleet_target_speed_mps_value = std::to_string(stop_speed_kmh_ / 3.6);
+    fleet_reason = "min_gap_below_stop_distance";
+  } else if (min_gap_m >= 0.0 && min_gap_m < warning_distance_m_) {
+    fleet_target_speed_mps_value = std::to_string(warning_speed_kmh_ / 3.6);
+    fleet_reason = "min_gap_below_warning_distance";
   }
 
-  if (std::fabs(last_published_speed_mps_ - target_speed_mps) < 1e-6) {
-    return;
-  }
-
-  // Keep ROS command as a global signal while TCP commands are individualized per truck.
   std_msgs::msg::String command;
-  command.data = "target_speed_mps=" + std::to_string(target_speed_mps) +
-                 ";scope=all_connected_with_valid_tcp_and_fresh_cot" + ";reason=" + reason +
+  command.data = "target_speed_mps=" + fleet_target_speed_mps_value +
+                 ";scope=all_connected_with_valid_tcp_and_fresh_cot" + ";reason=" + fleet_reason +
                  ";min_gap_m=" + std::to_string(min_gap_m) +
                  ";connected_count=" + std::to_string(connected.size());
 
@@ -782,19 +776,30 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
     const std::string ahead_uid = has_ahead ? connected[i + 1].id : "none";
     const double ahead_gap = has_ahead ? (connected[i + 1].distance_m - connected[i].distance_m) : -1.0;
     const int ahead_path_index = has_ahead ? connected[i + 1].path_index : -1;
+    const bool inhibit_start = has_ahead && ahead_gap < stop_distance_m_;
+
+    std::string target_speed_mps_value = "nochange";
+    std::string reason = "no_limit";
+    if (inhibit_start) {
+      target_speed_mps_value = std::to_string(stop_speed_kmh_ / 3.6);
+      reason = "truck_ahead_below_stop_distance";
+    } else if (has_ahead && ahead_gap < warning_distance_m_) {
+      target_speed_mps_value = std::to_string(warning_speed_kmh_ / 3.6);
+      reason = "truck_ahead_below_warning_distance";
+    }
 
     const std::string tcp_command =
-        "target_speed_mps=" + std::to_string(target_speed_mps) + ";distance_to_truck_ahead_m=" +
+        "target_speed_mps=" + target_speed_mps_value + ";distance_to_truck_ahead_m=" +
         std::to_string(ahead_gap) + ";truck_ahead_path_index=" + std::to_string(ahead_path_index) +
-        ";truck_ahead_uid=" + ahead_uid + ";reason=" + reason + ";min_gap_m=" + std::to_string(min_gap_m) +
+        ";truck_ahead_uid=" + ahead_uid + ";inhibit_start=" + (inhibit_start ? "1" : "0") +
+        ";reason=" + reason + ";min_gap_m=" + std::to_string(min_gap_m) +
         ";connected_count=" + std::to_string(connected.size());
     sendSpeedCommandToTcpClient(connected[i].id, tcp_command);
   }
-  last_published_speed_mps_ = target_speed_mps;
 
   RCLCPP_WARN(get_logger(),
-              "Published speed command %.2f m/s (reason=%s, min_gap=%.2f m, connected=%zu, first_id=%s)",
-              target_speed_mps, reason.c_str(), min_gap_m, connected.size(),
+              "Published fleet speed command target_speed_mps=%s (reason=%s, min_gap=%.2f m, connected=%zu, first_id=%s)",
+              fleet_target_speed_mps_value.c_str(), fleet_reason.c_str(), min_gap_m, connected.size(),
               connected.empty() ? "-" : connected.front().id.c_str());
 }
 

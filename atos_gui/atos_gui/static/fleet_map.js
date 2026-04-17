@@ -259,7 +259,7 @@
       const color = item.tcp_connected ? "#dc2626" : "#6b7280";
       const ahead = aheadDistanceMap[uid];
       const aheadText =
-        speedKmh > 0.1 && Number.isFinite(ahead)
+        Number.isFinite(ahead)
           ? (" next: " + ahead.toFixed(1) + " m")
           : " next: -";
       return (
@@ -282,7 +282,7 @@
       const pathIndex = Number(item.path_index || -1);
       const ahead = aheadDistanceMap[uid];
       const aheadCell =
-        speedKmh > 0.1 && Number.isFinite(ahead)
+        Number.isFinite(ahead)
           ? ahead.toFixed(1) + " m"
           : "-";
       return (

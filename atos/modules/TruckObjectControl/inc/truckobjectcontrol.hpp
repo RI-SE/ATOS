@@ -73,8 +73,6 @@ private:
   std::string trajectory_geojson_path_ = "";
   std::string default_path_name_ = "";
 
-  double last_published_speed_mps_ = -1.0;
-
   std::atomic<bool> tcp_running_{false};
   int tcp_server_fd_ = -1;
   std::thread tcp_accept_thread_;
