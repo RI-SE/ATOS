@@ -34,30 +34,31 @@ public:
 	static inline std::string const moduleName = "esmini_adapter";
 	static inline std::filesystem::path oscFilePath;
 	static int initializeModule();
-	EsminiAdapter(EsminiAdapter const &) = delete;
-	EsminiAdapter &operator=(EsminiAdapter const &) = delete;
+	EsminiAdapter(EsminiAdapter const&)			   = delete;
+	EsminiAdapter& operator=(EsminiAdapter const&) = delete;
 	static std::shared_ptr<EsminiAdapter> instance();
 
 private:
 	EsminiAdapter();
 
-	ROSChannels::StoryBoardElementStateChange::Pub
-		storyBoardElementStateChangePub;
+	ROSChannels::StoryBoardElementStateChange::Pub storyBoardElementStateChangePub;
 	ROSChannels::ConnectedObjectIds::Sub connectedObjectIdsSub;
 	ROSChannels::Exit::Sub exitSub;
 	ROSChannels::StateChange::Sub stateChangeSub;
 	std::unordered_map<uint32_t, ROSChannels::Path::Pub> pathPublishers;
 	std::unordered_map<uint32_t, ROSChannels::GNSSPath::Pub> gnssPathPublishers;
 
-	static std::unordered_map<uint32_t,std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
+	static std::unordered_map<uint32_t, std::shared_ptr<ROSChannels::Monitor::Sub>> monrSubscribers;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetObjectTrajectory>> objectTrajectoryService;
 	static std::shared_ptr<rclcpp::Service<atos_interfaces::srv::GetTestOrigin>> testOriginService;
 
 	rclcpp::CallbackGroup::SharedPtr oscFilePathClient_cb_group_;
 	rclcpp::CallbackGroup::SharedPtr objectIdsClient_cb_group_;
 
-	rclcpp::Client<atos_interfaces::srv::GetOpenScenarioFilePath>::SharedPtr oscFilePathClient_;	//!< Client to request the current open scenario file path
-	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr objectIdsClient_;	//!< Client to request the ATOS object id for each openx entity name
+	rclcpp::Client<atos_interfaces::srv::GetOpenScenarioFilePath>::SharedPtr
+	  oscFilePathClient_; //!< Client to request the current open scenario file path
+	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr
+	  objectIdsClient_; //!< Client to request the ATOS object id for each openx entity name
 
 	void onMonitorMessage(const ROSChannels::Monitor::message_type::SharedPtr monr, uint32_t id);
 	// Below is a quickfix, fix properly later
@@ -73,19 +74,16 @@ private:
 	static std::filesystem::path getOpenDriveFile();
 	static void handleStoryBoardElementChange(const char* name, int type, int state, const char* full_path);
 	static void runEsminiSimulation();
-	static void getObjectStates(double timeStep, std::map<uint32_t,std::vector<SE_ScenarioObjectState>>& states);
-	static ATOS::Trajectory getTrajectoryFromObjectState(uint32_t,std::vector<SE_ScenarioObjectState>& states);
+	static void getObjectStates(double timeStep, std::map<uint32_t, std::vector<SE_ScenarioObjectState>>& states);
+	static ATOS::Trajectory getTrajectoryFromObjectState(uint32_t, std::vector<SE_ScenarioObjectState>& states);
 	static std::string projStrFromGeoReference(RM_GeoReference& geoRef);
 	static std::map<uint32_t, ATOS::Trajectory> extractTrajectories(double timeStep);
 
-	static void onRequestObjectTrajectory(
-		const std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Request>
-			req,
-		std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Response> res);
+	static void onRequestObjectTrajectory(const std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Request> req,
+										  std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Response> res);
 
-	static void onRequestTestOrigin(
-		const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,
-		std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response>);
+	static void onRequestTestOrigin(const std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Request>,
+									std::shared_ptr<atos_interfaces::srv::GetTestOrigin::Response>);
 
 	static std::unordered_map<int, std::string> atosIDToObjectName;
 	static std::unordered_map<std::string, int> objectNameToAtosId;

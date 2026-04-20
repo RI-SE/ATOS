@@ -1,15 +1,17 @@
 # Don't launch this file directly, rather use the launch files one level up instead
+import copy
 import os
-from launch_ros.actions import Node
+from pathlib import Path
+
+import rclpy.logging as logging
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
-from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from pathlib import Path
+from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch_ros.actions import Node
+
 from .validate_files import validate_atos_dir
-import rclpy.logging as logging
-import copy
 
 
 def print_version():

@@ -23,9 +23,11 @@ public:
 
 	virtual Socket await();
 	virtual Socket await(const Address& localAddr, const Port port);
+
 protected:
 	virtual void listen();
 	virtual Socket accept();
+
 private:
 	static const unsigned int MAX_QUEUED_CONNECTIONS = 10;
 };
@@ -40,8 +42,9 @@ public:
 	std::pair<std::vector<char>, HostInfo> recvfrom();
 	void sendto(const std::pair<const std::vector<char>, const HostInfo>& data);
 	void sendto(const std::pair<const std::vector<char>, const HostInfo>& data, const size_t nBytes);
+
 private:
 	static const int IO_BUFFER_SIZE = 4096;
-	std::vector<char> recvBuffer = std::vector<char>(IO_BUFFER_SIZE);
-	std::vector<char> sendBuffer = std::vector<char>(IO_BUFFER_SIZE);
+	std::vector<char> recvBuffer	= std::vector<char>(IO_BUFFER_SIZE);
+	std::vector<char> sendBuffer	= std::vector<char>(IO_BUFFER_SIZE);
 };

@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import json
 from scenariogeneration import xosc
-import copy
 
 # Fixed parameters
 MONDEO_ID = "1"

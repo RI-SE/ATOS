@@ -5,7 +5,7 @@
  */
 #include "integrationtestinghandler.hpp"
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	rclcpp::init(argc, argv);
 	auto integrationTestingHandlerNode = std::make_shared<IntegrationTestingHandler>();
 	rclcpp::spin(integrationTestingHandlerNode);

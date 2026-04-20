@@ -4,18 +4,18 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include <iostream>
-#include <unistd.h>
 #include <signal.h>
+#include <unistd.h>
 
-#include "util.h"
 #include "directcontrol.hpp"
+#include "util.h"
 
 using namespace std::chrono;
 
 static std::shared_ptr<DirectControl> dc;
 
 int main(int argc, char** argv) {
-	rclcpp::init(argc,argv);
+	rclcpp::init(argc, argv);
 	dc = std::make_shared<DirectControl>();
 	dc->initializeModule();
 	dc->startThreads();

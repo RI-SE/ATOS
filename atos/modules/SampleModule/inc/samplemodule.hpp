@@ -6,21 +6,23 @@
 
 #pragma once
 
-#include <thread>
-#include <std_srvs/srv/set_bool.hpp>
-#include "roschannels/test_channels.hpp"
 #include "module.hpp"
+#include "roschannels/test_channels.hpp"
 #include "server.hpp"
+#include <std_srvs/srv/set_bool.hpp>
+#include <thread>
 
 /*!
- * \brief The SampleModule is a ros2 node that demonstrates how to use the Module class 
+ * \brief The SampleModule is a ros2 node that demonstrates how to use the Module class
  */
-class SampleModule : public Module{
+class SampleModule : public Module {
 public:
 	static inline std::string const moduleName = "sample_module";
 	SampleModule();
 	std::vector<std::uint32_t> getObjectIds();
-	bool getAborting() const { return aborting_; }
+	bool getAborting() const {
+		return aborting_;
+	}
 
 private:
 	ROSChannels::Init::Sub initSub;
@@ -32,8 +34,8 @@ private:
 	void onInitMessage(ROSChannels::Init::message_type::SharedPtr) override;
 	void onAbortMessage(ROSChannels::Abort::message_type::SharedPtr) override;
 	void onAllClearMessage(ROSChannels::AllClear::message_type::SharedPtr) override;
-	void OnCallbackSetBool(const std::shared_ptr<std_srvs::srv::SetBool::Request> request, 
-								std::shared_ptr<std_srvs::srv::SetBool::Response> response);
+	void OnCallbackSetBool(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+						   std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
 	std::vector<std::uint32_t> objectIds;
 	bool aborting_ = false;

@@ -5,12 +5,12 @@
  */
 #pragma once
 
-#include <future>
-#include <chrono>
-#include <netinet/in.h>
+#include "channel.hpp"
 #include "iso22133.h"
 #include "loggable.hpp"
-#include "channel.hpp"
+#include <chrono>
+#include <future>
+#include <netinet/in.h>
 
 /*!
  * \brief The ObjectConnection class holds network connection data for
@@ -22,17 +22,16 @@ public:
 	Channel cmd;
 	Channel mntr;
 
-	ObjectConnection(rclcpp::Logger log, int id)
-		: Loggable(log),
-			cmd(SOCK_STREAM, log, id),
-			mntr(SOCK_DGRAM, log, id) {
-			pipe(interruptionPipeFds);
-		}
+	ObjectConnection(rclcpp::Logger log, int id) :
+	  Loggable(log),
+	  cmd(SOCK_STREAM, log, id),
+	  mntr(SOCK_DGRAM, log, id) {
+		pipe(interruptionPipeFds);
+	}
 
 	bool isValid() const;
 	bool isConnected() const;
-	void connect(std::shared_future<void> stopRequest,
-				 const std::chrono::milliseconds retryPeriod);
+	void connect(std::shared_future<void> stopRequest, const std::chrono::milliseconds retryPeriod);
 	void disconnect();
 	ISOMessageID pendingMessageType(bool awaitNext = false);
 	void interruptSocket() {
@@ -40,6 +39,7 @@ public:
 		write(interruptionPipeFds[1], &i, sizeof(i));
 		close(interruptionPipeFds[1]);
 	}
+
 private:
 	int interruptionPipeFds[2];
 };

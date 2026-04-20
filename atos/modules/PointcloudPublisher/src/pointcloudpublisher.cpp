@@ -5,17 +5,17 @@
  */
 
 #include "pointcloudpublisher.hpp"
-#include <pcl_conversions/pcl_conversions.h>
 #include <chrono>
+#include <pcl_conversions/pcl_conversions.h>
 #include <string>
 
 /**
  * @brief PointcloudPublisher constructor.
  *
  */
-PointcloudPublisher::PointcloudPublisher() : Module(PointcloudPublisher::moduleName),
-																						 initSub(*this, std::bind(&PointcloudPublisher::onInitMessage, this, std::placeholders::_1))
-{
+PointcloudPublisher::PointcloudPublisher() :
+  Module(PointcloudPublisher::moduleName),
+  initSub(*this, std::bind(&PointcloudPublisher::onInitMessage, this, std::placeholders::_1)) {
 	std::vector<std::string> default_files = {""};
 	declare_parameter("pointcloud_files", default_files);
 }
@@ -47,8 +47,7 @@ void PointcloudPublisher::initialize() {
 void PointcloudPublisher::readPointcloudParams() {
 	get_parameter("pointcloud_files", pointcloudFiles);
 	const std::string homeDir = getenv("HOME");
-	for (auto &pointcloudFile : pointcloudFiles)
-	{
+	for (auto& pointcloudFile : pointcloudFiles) {
 		pointcloudFile = homeDir + "/.astazero/ATOS/pointclouds/" + pointcloudFile;
 	}
 }
@@ -58,17 +57,16 @@ void PointcloudPublisher::readPointcloudParams() {
  *
  */
 void PointcloudPublisher::loadPointClouds() {
-	for (auto &pointcloudFile : pointcloudFiles)
-	{
+	for (auto& pointcloudFile : pointcloudFiles) {
 		auto pointcloud = std::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
-		if (pcl::io::loadPCDFile<pcl::PointXYZRGB>(pointcloudFile, *pointcloud) == -1)
-		{
+		if (pcl::io::loadPCDFile<pcl::PointXYZRGB>(pointcloudFile, *pointcloud) == -1) {
 			RCLCPP_ERROR(get_logger(), "Could not read file %s", pointcloudFile.c_str());
-		}
-		else
-		{
+		} else {
 			pointclouds[pointcloudFile] = pointcloud;
-			RCLCPP_INFO(get_logger(), "Loaded pointcloud %s with %d points", pointcloudFile.c_str(), pointcloud->width * pointcloud->height);
+			RCLCPP_INFO(get_logger(),
+						"Loaded pointcloud %s with %d points",
+						pointcloudFile.c_str(),
+						pointcloud->width * pointcloud->height);
 		}
 	}
 }
@@ -78,9 +76,9 @@ void PointcloudPublisher::loadPointClouds() {
  *
  */
 void PointcloudPublisher::createPublishers() {
-	for (auto &pointcloudFile : pointcloudFiles)
-	{
-		auto pointcloudPub = std::make_shared<ROSChannels::Pointcloud::Pub>(*this, getPublisherTopicName(pointcloudFile));
+	for (auto& pointcloudFile : pointcloudFiles) {
+		auto pointcloudPub =
+		  std::make_shared<ROSChannels::Pointcloud::Pub>(*this, getPublisherTopicName(pointcloudFile));
 		pointcloudPubs[pointcloudFile] = pointcloudPub;
 	}
 }
@@ -91,7 +89,7 @@ void PointcloudPublisher::createPublishers() {
  * @param path Path to make topicn ame from
  * @return std::string The topic name
  */
-std::string PointcloudPublisher::getPublisherTopicName(const std::string &path) const {
+std::string PointcloudPublisher::getPublisherTopicName(const std::string& path) const {
 	auto str = path.substr(path.rfind('/') + 1);
 	return str.substr(0, str.length() - 4);
 }
@@ -103,13 +101,12 @@ std::string PointcloudPublisher::getPublisherTopicName(const std::string &path) 
 void PointcloudPublisher::onInitMessage(const ROSChannels::Init::message_type::SharedPtr) {
 	initialize();
 
-	for (auto &pointcloudFile : pointcloudFiles)
-	{
+	for (auto& pointcloudFile : pointcloudFiles) {
 		sensor_msgs::msg::PointCloud2 msg;
 		auto pointcloud = pointclouds[pointcloudFile];
 		pcl::toROSMsg(*pointcloud, msg);
 		msg.header.frame_id = "map";
-		msg.header.stamp = this->get_clock()->now();
+		msg.header.stamp	= this->get_clock()->now();
 
 		auto pointcloudPub = pointcloudPubs[pointcloudFile];
 		pointcloudPub->publish(msg);

@@ -8,17 +8,16 @@
 #include "module.hpp"
 #include "roschannels/commandchannels.hpp"
 
-
 class IntegrationTestingHandler : public Module {
 
-	public:
-		IntegrationTestingHandler();
-		~IntegrationTestingHandler();
+public:
+	IntegrationTestingHandler();
+	~IntegrationTestingHandler();
 
-	private:
-	  static inline std::string const moduleName = "integration_testing_handler";
-		std::map<std::string, bool> integrationTests;
+private:
+	static inline std::string const moduleName = "integration_testing_handler";
+	std::map<std::string, bool> integrationTests;
 
-		void getIntegrationTests();
-		void executeIntegrationTests();
+	void getIntegrationTests();
+	void executeIntegrationTests();
 };

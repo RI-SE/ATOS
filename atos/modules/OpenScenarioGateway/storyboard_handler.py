@@ -1,10 +1,10 @@
 import sys
-from scenariogeneration import xosc
+
 from modules.OpenScenarioGateway.custom_command_action import CustomCommandAction
+from scenariogeneration import xosc
 
 
 class StoryBoardHandler:
-
     def __init__(self, scenario_file: str):
         self.scenario_file = scenario_file
         self.xosc = xosc.ParseOpenScenario(scenario_file)

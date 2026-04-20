@@ -5,23 +5,27 @@
  */
 #pragma once
 
-#include "roschannel.hpp"
 #include "atos_interfaces/msg/object_state_change.hpp"
+#include "roschannel.hpp"
 
 namespace ROSChannels {
-    namespace ObjectStateChange {
-        const std::string topicName = "object_state_change";
-        using message_type = atos_interfaces::msg::ObjectStateChange;
-        const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
+namespace ObjectStateChange {
+const std::string topicName	 = "object_state_change";
+using message_type			 = atos_interfaces::msg::ObjectStateChange;
+const rclcpp::QoS defaultQoS = rclcpp::QoS(rclcpp::KeepAll());
 
-        class Pub : public BasePub<message_type> {
-        public:
-            Pub(rclcpp::Node& node, const rclcpp::QoS& qos = defaultQoS) : BasePub<message_type>(node, topicName, qos) {}
-        };
+class Pub : public BasePub<message_type> {
+public:
+	Pub(rclcpp::Node& node, const rclcpp::QoS& qos = defaultQoS) :
+	  BasePub<message_type>(node, topicName, qos) {}
+};
 
-        class Sub : public BaseSub<message_type> {
-        public:
-            Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback, const rclcpp::QoS& qos = defaultQoS) : BaseSub<message_type>(node, topicName, callback, qos) {}
-        };
-    }
-}
+class Sub : public BaseSub<message_type> {
+public:
+	Sub(rclcpp::Node& node,
+		std::function<void(const message_type::SharedPtr)> callback,
+		const rclcpp::QoS& qos = defaultQoS) :
+	  BaseSub<message_type>(node, topicName, callback, qos) {}
+};
+} // namespace ObjectStateChange
+} // namespace ROSChannels

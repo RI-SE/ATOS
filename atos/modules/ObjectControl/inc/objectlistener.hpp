@@ -5,23 +5,19 @@
  */
 #pragma once
 
+#include "loggable.hpp"
 #include "objectcontrol.hpp"
 #include "testobject.hpp"
-#include "loggable.hpp"
 #include <thread>
 
 class ObjectControl;
 class ObjectControlState;
 
-class ObjectListener : public Loggable
-{
+class ObjectListener : public Loggable {
 public:
-	ObjectListener(
-		ObjectControl*,
-		std::shared_ptr<TestObject>,
-		rclcpp::Logger
-	);
+	ObjectListener(ObjectControl*, std::shared_ptr<TestObject>, rclcpp::Logger);
 	~ObjectListener();
+
 private:
 	std::shared_ptr<TestObject> obj;
 	ObjectControl* handler;
@@ -30,4 +26,3 @@ private:
 	void listen();
 	bool quit = false;
 };
-
