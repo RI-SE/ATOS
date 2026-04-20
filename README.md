@@ -30,7 +30,7 @@ docker run --network="host"  --ipc=host --privileged -it -v ~/.astazero/ATOS/:/r
 ```
 If you run Docker Desktop you will need to specify the ports to expose to the host computer.
 ```bash
-docker run --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ -p 80:80 -p 8080:8080 -p 8081:8081 -p 8082:8082 -p 3000:3000 -p 3443:3443 -p 55555:55555 -p 443:443 -p 9090:9090 astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py insecure:=True"
+docker run --ipc=host --privileged -it -v ~/.astazero/ATOS/:/root/.astazero/ATOS/ -p 80:80 -p 8080:8080 -p 8081:8081 -p 8082:8082 -p 8420:8420 -p 3443:3443 -p 55555:55555 -p 443:443 -p 9090:9090 astazero/atos_docker_env:latest bash -c "source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py insecure:=True"
 ```
 
 See the [GUI](../Usage/GUI/foxglove.md) documentation on how to enable secure connections. 
@@ -45,6 +45,77 @@ ATOS comes with an installation script that automates the installation process. 
 
 ## <a name="Native build"></a> Building from source manually
 You can find instructions on how to manually install ATOS and its dependencies from source [here](https://atos.readthedocs.io/en/latest/Installation/installation/).
+
+## ATOSFleetManagement development launch
+ATOSFleetManagement is a lightweight development stack built around `truck_object_control` and `truck_object_gui` and does not start OpenScenarioGateway, JournalControl, or EsminiAdapter.
+
+After building, start it with:
+```bash
+ros2 launch atos launch_atosfleetmanagement.py insecure:=True
+```
+
+The placeholder COT input topic for TruckObjectControl is:
+```text
+/atos/truck_objects/cot
+```
+Expected temporary payload format:
+```text
+id=<truck_id>;distance_m=<value>;tcp_connected=<0|1>
+```
+TruckObjectControl publishes speed commands on:
+```text
+/atos/truck_objects/speed_command
+```
+
+### ATOSFleetManagement in Docker (with or without simulators)
+Build and start with docker compose:
+```bash
+docker compose -f docker-compose-fleetmanagement.yml up --build
+```
+
+Start with simulated trucks enabled:
+```bash
+WITH_TRUCK_SIMULATOR=True docker compose -f docker-compose-fleetmanagement.yml up --build
+```
+
+Start with simulated trucks disabled:
+```bash
+WITH_TRUCK_SIMULATOR=False docker compose -f docker-compose-fleetmanagement.yml up --build
+```
+
+Open TruckObjectGUI at:
+```text
+http://localhost:8420
+```
+
+### Run as system service (Docker + systemd)
+Example deployment folder on server: `/opt/atos`.
+
+1. Copy repository to server:
+```bash
+sudo mkdir -p /opt/atos
+sudo rsync -a ./ /opt/atos/
+```
+
+2. Install service env file and customize:
+```bash
+sudo cp /opt/atos/scripts/atosfleetmanagement.env.example /etc/default/atosfleetmanagement
+sudo nano /etc/default/atosfleetmanagement
+```
+
+3. Install and enable service:
+```bash
+sudo cp /opt/atos/scripts/atosfleetmanagement.service /etc/systemd/system/atosfleetmanagement.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now atosfleetmanagement
+```
+
+4. Service management:
+```bash
+sudo systemctl status atosfleetmanagement
+sudo systemctl restart atosfleetmanagement
+sudo journalctl -u atosfleetmanagement -f
+```
 
 # <a name="usage"></a> Using ATOS with a Graphical User Interface (GUI)
 Please click [here](https://atos.readthedocs.io/en/latest/Usage/GUI/foxglove/) for instructions on how to use ATOS with a GUI.
@@ -73,4 +144,3 @@ This project has partly been funded by the below organisations. The herein expre
 </picture>
 <br>
 <br>
-
