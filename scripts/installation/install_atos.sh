@@ -32,7 +32,11 @@ echo "Dependecy installation done and ATOS workspace created."
 # First make sure the submodules are up to date
 echo "Updating submodules to make sure they are up to date..."
 cd $HOME/atos_ws/src/atos
-git submodule update --init --recursive
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git submodule update --init --recursive
+else
+    echo "Skipping submodule update: source tree is not a git repository in this environment."
+fi
 cd -
 
 # temporarily cd into the workspace and build with colcon

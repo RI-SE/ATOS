@@ -16,6 +16,10 @@ services:
       - INSECURE=${INSECURE:-True}
       - WITH_TRUCK_SIMULATOR=${WITH_TRUCK_SIMULATOR:-False}
       - FOXBRIDGE=${FOXBRIDGE:-True}
+      - COT_TLS_REQUIRE_CLIENT_CERT=${COT_TLS_REQUIRE_CLIENT_CERT:-False}
+      - COT_TLS_CERT_PATH=${COT_TLS_CERT_PATH:-}
+      - COT_TLS_KEY_PATH=${COT_TLS_KEY_PATH:-}
+      - COT_TLS_CA_PATH=${COT_TLS_CA_PATH:-}
     volumes:
       - ~/.astazero/ATOS/:/root/.astazero/ATOS/
     network_mode: "host"

@@ -16,10 +16,18 @@ def generate_launch_description():
     insecure_websockets = LaunchConfiguration('insecure')
     foxbridge = LaunchConfiguration('foxbridge')
     with_simulator = LaunchConfiguration('with_truck_simulator')
+    cot_tls_require_client_cert = LaunchConfiguration('cot_tls_require_client_cert')
+    cot_tls_cert_path = LaunchConfiguration('cot_tls_cert_path')
+    cot_tls_key_path = LaunchConfiguration('cot_tls_key_path')
+    cot_tls_ca_path = LaunchConfiguration('cot_tls_ca_path')
 
     insecure_launch_arg = DeclareLaunchArgument('insecure', default_value='False')
     foxbridge_launch_arg = DeclareLaunchArgument('foxbridge', default_value='True')
     simulator_launch_arg = DeclareLaunchArgument('with_truck_simulator', default_value='False')
+    cot_tls_require_client_cert_launch_arg = DeclareLaunchArgument('cot_tls_require_client_cert', default_value='False')
+    cot_tls_cert_path_launch_arg = DeclareLaunchArgument('cot_tls_cert_path', default_value='')
+    cot_tls_key_path_launch_arg = DeclareLaunchArgument('cot_tls_key_path', default_value='')
+    cot_tls_ca_path_launch_arg = DeclareLaunchArgument('cot_tls_ca_path', default_value='')
 
     fox_tls_bridge_params = [
         {'port': 8765},
@@ -50,6 +58,10 @@ def generate_launch_description():
         foxbridge_launch_arg,
         insecure_launch_arg,
         simulator_launch_arg,
+        cot_tls_require_client_cert_launch_arg,
+        cot_tls_cert_path_launch_arg,
+        cot_tls_key_path_launch_arg,
+        cot_tls_ca_path_launch_arg,
         Node(
             condition=IfCondition(PythonExpression(['not ', LaunchConfiguration('insecure')])),
             package='atos_gui',
@@ -74,6 +86,12 @@ def generate_launch_description():
             executable='truck_object_control',
             name='truck_object_control',
             output='screen',
+            parameters=[
+                {'cot_tls_require_client_cert': cot_tls_require_client_cert},
+                {'cot_tls_cert_path': cot_tls_cert_path},
+                {'cot_tls_key_path': cot_tls_key_path},
+                {'cot_tls_ca_path': cot_tls_ca_path},
+            ],
         ),
         Node(
             condition=IfCondition(with_simulator),
