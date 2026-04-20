@@ -34,6 +34,7 @@ atos:
           - placeholder1 # The MQTT topic that should be bridged, corresponds to the sub-object in the YAML
         placeholder1:
           ros_topic: placeholder1 # ROS topic on which corresponding MQTT messages are published
+          msg_type: std_msgs/msg/Empty # ROS message type for this bridge
           advanced: # Optional settings for each topic
             mqtt:
               qos: 1 # [0] MQTT QoS value
