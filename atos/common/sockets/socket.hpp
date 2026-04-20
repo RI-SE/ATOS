@@ -8,32 +8,25 @@
 #define SOCKET_DEBUG
 
 #include "socketexceptions.hpp"
-#include <cstdint>
 #include <chrono>
-#include <map>
-#include <vector>
-#include <sys/socket.h>
+#include <cstdint>
 #include <fcntl.h>
+#include <map>
 #include <netinet/in.h>
+#include <sys/socket.h>
 #include <unistd.h>
+#include <vector>
 
-class BasicSocket
-{
+class BasicSocket {
 public:
-	typedef enum {
-		STREAM = SOCK_STREAM,
-		DATAGRAM = SOCK_DGRAM
-	} SocketType;
+	typedef enum { STREAM = SOCK_STREAM, DATAGRAM = SOCK_DGRAM } SocketType;
 	typedef uint16_t Port;
 	typedef std::string Address;
 	typedef struct {
 		Address address;
 		Port port;
 	} HostInfo;
-	typedef enum {
-		NO_OPTION = 0,
-		NOSIGNAL = MSG_NOSIGNAL
-	} MessageOption;
+	typedef enum { NO_OPTION = 0, NOSIGNAL = MSG_NOSIGNAL } MessageOption;
 
 	BasicSocket();
 	BasicSocket(const SocketType type, const bool debug = false);
@@ -55,36 +48,31 @@ public:
 
 	SocketType getType() const;
 	Address getRemoteIP() const;
-	Address getLocalIP() const {throw std::runtime_error("Not implemented");}
+	Address getLocalIP() const {
+		throw std::runtime_error("Not implemented");
+	}
 	Port getRemotePort() const;
 	Port getLocalPort() const;
 
 	void close();
 	void open(const SocketType type);
+
 protected:
 	typedef enum {
-		DEBUG = SO_DEBUG,
+		DEBUG	  = SO_DEBUG,
 		REUSEADDR = SO_REUSEADDR,
 		KEEPALIVE = SO_KEEPALIVE,
-		LINGER = SO_LINGER,
-		TYPE = SO_TYPE
+		LINGER	  = SO_LINGER,
+		TYPE	  = SO_TYPE
 	} SocketOption;
-	typedef enum {
-		NONBLOCKING = O_NONBLOCK
-	} FileOption;
-	std::map<SocketOption,std::string> mSocketOptionNames = {
-		{DEBUG, "SO_DEBUG"},
-		{REUSEADDR, "SO_REUSEADDR"},
-		{KEEPALIVE, "SO_KEEPALIVE"},
-		{LINGER, "SO_LINGER"},
-		{TYPE, "SO_TYPE"}
-	};
-	std::map<MessageOption, std::string> mMessageOptionNames = {
-		{NOSIGNAL, "MSG_NOSIGNAL"}
-	};
-	std::map<FileOption,std::string> mFileOptionNames = {
-		{NONBLOCKING, "O_NONBLOCK"}
-	};
+	typedef enum { NONBLOCKING = O_NONBLOCK } FileOption;
+	std::map<SocketOption, std::string> mSocketOptionNames	 = {{DEBUG, "SO_DEBUG"},
+																{REUSEADDR, "SO_REUSEADDR"},
+																{KEEPALIVE, "SO_KEEPALIVE"},
+																{LINGER, "SO_LINGER"},
+																{TYPE, "SO_TYPE"}};
+	std::map<MessageOption, std::string> mMessageOptionNames = {{NOSIGNAL, "MSG_NOSIGNAL"}};
+	std::map<FileOption, std::string> mFileOptionNames		 = {{NONBLOCKING, "O_NONBLOCK"}};
 
 	void setOption(const SocketOption option, const int value);
 	void setOption(const SocketOption option, const struct linger value);
@@ -107,12 +95,11 @@ private:
 	int preCloseFlush(const std::chrono::system_clock::duration& timeout);
 };
 
-class Socket : public BasicSocket
-{
+class Socket : public BasicSocket {
 public:
-
 	using BasicSocket::BasicSocket;
-	Socket(const Socket&) : BasicSocket() {}
+	Socket(const Socket&) :
+	  BasicSocket() {}
 	Socket(Socket&& other);
 	Socket& operator=(const Socket& other);
 	Socket& operator=(Socket&& other);
@@ -123,9 +110,6 @@ public:
 
 private:
 	static const int IO_BUFFER_SIZE = 4096;
-	std::vector<char> recvBuffer = std::vector<char>(IO_BUFFER_SIZE);
-	std::vector<char> sendBuffer = std::vector<char>(IO_BUFFER_SIZE);
+	std::vector<char> recvBuffer	= std::vector<char>(IO_BUFFER_SIZE);
+	std::vector<char> sendBuffer	= std::vector<char>(IO_BUFFER_SIZE);
 };
-
-
-

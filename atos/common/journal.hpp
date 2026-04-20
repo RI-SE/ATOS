@@ -11,11 +11,7 @@
 #include "util.h"
 #include <rclcpp/logging.hpp>
 
-typedef enum {
-	JOURNAL_RECORD_MONITOR_DATA,
-	JOURNAL_RECORD_EVENT,
-	JOURNAL_RECORD_STRING
-} JournalRecordType;
+typedef enum { JOURNAL_RECORD_MONITOR_DATA, JOURNAL_RECORD_EVENT, JOURNAL_RECORD_STRING } JournalRecordType;
 
 int JournalInit(const char* name, rclcpp::Logger logger);
 int JournalRecordData(JournalRecordType type, const char* format, ...);

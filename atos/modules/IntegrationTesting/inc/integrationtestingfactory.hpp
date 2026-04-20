@@ -8,12 +8,11 @@
 #include "integrationtesting.hpp"
 #include "scenarioexecution.hpp"
 
-
 class IntegrationTestingFactory {
 
-	public:
-		IntegrationTestingFactory();
-		~IntegrationTestingFactory();
+public:
+	IntegrationTestingFactory();
+	~IntegrationTestingFactory();
 
-		std::shared_ptr<IntegrationTesting> createIntegrationTestExecution(const std::string& testName);
+	std::shared_ptr<IntegrationTesting> createIntegrationTestExecution(const std::string& testName);
 };

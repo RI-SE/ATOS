@@ -6,10 +6,10 @@
 #include "objectcontrol.hpp"
 #include <rclcpp/executor.hpp>
 
-int main(int argc, char **argv) {
-	rclcpp::init(argc,argv);
+int main(int argc, char** argv) {
+	rclcpp::init(argc, argv);
 	auto exec = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
-	auto obc = std::make_shared<ObjectControl>(exec);
+	auto obc  = std::make_shared<ObjectControl>(exec);
 	exec->add_node(obc);
 	exec->spin();
 	rclcpp::shutdown();

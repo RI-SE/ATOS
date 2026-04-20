@@ -5,11 +5,11 @@
  */
 
 #pragma once
-#include <stdexcept>
-#include <cstring>
 #include <arpa/inet.h>
 #include <cstdio>
+#include <cstring>
 #include <iostream>
+#include <stdexcept>
 
 namespace SocketErrors {
 
@@ -22,36 +22,51 @@ protected:
 	}
 };
 
-class ArgumentError : public std::invalid_argument, public StdErrorPrinter {
+class ArgumentError
+  : public std::invalid_argument
+  , public StdErrorPrinter {
 public:
-	ArgumentError() : std::invalid_argument("") {}
-	ArgumentError(const std::string& msg)
-		: std::invalid_argument(msg) {}
-	ArgumentError(const std::string& msg, const int errorNo)
-		: std::invalid_argument(msg + " (" + strerror(errorNo) + ")") {}
+	ArgumentError() :
+	  std::invalid_argument("") {}
+	ArgumentError(const std::string& msg) :
+	  std::invalid_argument(msg) {}
+	ArgumentError(const std::string& msg, const int errorNo) :
+	  std::invalid_argument(msg + " (" + strerror(errorNo) + ")") {}
 	virtual ~ArgumentError() {}
 };
 class NtopError final : public ArgumentError {
 public:
-	NtopError(const int errorNo) : ArgumentError("Failed to stringify IP address", errorNo) { perror("inet_ntop"); }
+	NtopError(const int errorNo) :
+	  ArgumentError("Failed to stringify IP address", errorNo) {
+		perror("inet_ntop");
+	}
 };
 class PtonError final : public ArgumentError {
 public:
-	PtonError(const int errorNo) : ArgumentError("Failed to parse IP string", errorNo) { perror("inet_pton"); }
+	PtonError(const int errorNo) :
+	  ArgumentError("Failed to parse IP string", errorNo) {
+		perror("inet_pton");
+	}
 };
 
-class RuntimeError : public std::runtime_error, public StdErrorPrinter {
+class RuntimeError
+  : public std::runtime_error
+  , public StdErrorPrinter {
 public:
-	RuntimeError() : std::runtime_error("") {}
-	RuntimeError(const std::string& msg)
-		: std::runtime_error(msg) {}
-	RuntimeError(const std::string& msg, const int errorNo)
-		: std::runtime_error(msg + " (" + strerror(errorNo) + ")") {
+	RuntimeError() :
+	  std::runtime_error("") {}
+	RuntimeError(const std::string& msg) :
+	  std::runtime_error(msg) {}
+	RuntimeError(const std::string& msg, const int errorNo) :
+	  std::runtime_error(msg + " (" + strerror(errorNo) + ")") {
 		mErrorNo = errorNo;
 	}
 	virtual ~RuntimeError() {}
 
-	int getErrorNo() const { return mErrorNo; }
+	int getErrorNo() const {
+		return mErrorNo;
+	}
+
 private:
 	int mErrorNo = 0;
 };
@@ -67,37 +82,53 @@ public:
  */
 class ConfigurationError : public RuntimeError {
 public:
-	ConfigurationError(const std::string& msg, const int errorNo) : RuntimeError(msg, errorNo) {}
+	ConfigurationError(const std::string& msg, const int errorNo) :
+	  RuntimeError(msg, errorNo) {}
 };
 class GetSockOptError final : public ConfigurationError {
 public:
-	GetSockOptError(const std::string& optionName, const int errorNo)
-		: ConfigurationError("Failed to get socket option " + optionName, errorNo) { perror("getsockopt"); }
+	GetSockOptError(const std::string& optionName, const int errorNo) :
+	  ConfigurationError("Failed to get socket option " + optionName, errorNo) {
+		perror("getsockopt");
+	}
 };
 class SetSockOptError final : public ConfigurationError {
 public:
-	SetSockOptError(const std::string& optionName, const int errorNo)
-		: ConfigurationError("Failed to set socket option " + optionName, errorNo) { perror("setsockopt"); }
+	SetSockOptError(const std::string& optionName, const int errorNo) :
+	  ConfigurationError("Failed to set socket option " + optionName, errorNo) {
+		perror("setsockopt");
+	}
 };
 class FileControlError : public ConfigurationError {
 public:
-	FileControlError(const std::string& msg, const std::string& optionName, const int errorNo) : ConfigurationError(msg + " for option " + optionName, errorNo) { perror("fcntl"); }
+	FileControlError(const std::string& msg, const std::string& optionName, const int errorNo) :
+	  ConfigurationError(msg + " for option " + optionName, errorNo) {
+		perror("fcntl");
+	}
 };
 class FileControlGetError final : public FileControlError {
 public:
-	FileControlGetError(const std::string& optionName, const int errorNo) : FileControlError("Failed to get file status flags", optionName, errorNo) {}
+	FileControlGetError(const std::string& optionName, const int errorNo) :
+	  FileControlError("Failed to get file status flags", optionName, errorNo) {}
 };
 class FileControlSetError final : public FileControlError {
 public:
-	FileControlSetError(const std::string& optionName, const int errorNo) : FileControlError("Failed to set file status flags", optionName, errorNo) {}
+	FileControlSetError(const std::string& optionName, const int errorNo) :
+	  FileControlError("Failed to set file status flags", optionName, errorNo) {}
 };
 class SocketGetPeerNameError final : public ConfigurationError {
 public:
-	SocketGetPeerNameError(const int errorNo) : ConfigurationError("Failed to get remote socket address", errorNo) { perror("getpeername"); }
+	SocketGetPeerNameError(const int errorNo) :
+	  ConfigurationError("Failed to get remote socket address", errorNo) {
+		perror("getpeername");
+	}
 };
 class SocketGetSockNameError final : public ConfigurationError {
 public:
-	SocketGetSockNameError(const int errorNo) : ConfigurationError("Failed to get bound local socket address", errorNo) { perror("getsockname"); }
+	SocketGetSockNameError(const int errorNo) :
+	  ConfigurationError("Failed to get bound local socket address", errorNo) {
+		perror("getsockname");
+	}
 };
 
 /*!
@@ -106,52 +137,65 @@ public:
  */
 class SocketOperationError : public RuntimeError {
 public:
-	SocketOperationError(const std::string& opName, const int errorNo)
-		: RuntimeError("Failed at " + opName + " call", errorNo) { perror(opName.c_str()); }
+	SocketOperationError(const std::string& opName, const int errorNo) :
+	  RuntimeError("Failed at " + opName + " call", errorNo) {
+		perror(opName.c_str());
+	}
 };
 class SocketCreateError final : public SocketOperationError {
 public:
-	SocketCreateError(const int errorNo) : SocketOperationError("socket", errorNo) {}
+	SocketCreateError(const int errorNo) :
+	  SocketOperationError("socket", errorNo) {}
 };
 class SocketRecvError final : public SocketOperationError {
 public:
-	SocketRecvError(const int errorNo) : SocketOperationError("recv", errorNo) {}
+	SocketRecvError(const int errorNo) :
+	  SocketOperationError("recv", errorNo) {}
 };
 class SocketRecvFromError final : public SocketOperationError {
 public:
-	SocketRecvFromError(const int errorNo) : SocketOperationError("recvfrom", errorNo) {}
+	SocketRecvFromError(const int errorNo) :
+	  SocketOperationError("recvfrom", errorNo) {}
 };
 class SocketSendError final : public SocketOperationError {
 public:
-	SocketSendError(const int errorNo) : SocketOperationError("send", errorNo) {}
+	SocketSendError(const int errorNo) :
+	  SocketOperationError("send", errorNo) {}
 };
 class SocketSendToError final : public SocketOperationError {
 public:
-	SocketSendToError(const int errorNo) : SocketOperationError("sendto", errorNo) {}
+	SocketSendToError(const int errorNo) :
+	  SocketOperationError("sendto", errorNo) {}
 };
 class SocketSelectError final : public SocketOperationError {
 public:
-	SocketSelectError(const int errorNo) : SocketOperationError("select", errorNo) {}
+	SocketSelectError(const int errorNo) :
+	  SocketOperationError("select", errorNo) {}
 };
 class SocketConnectError final : public SocketOperationError {
 public:
-	SocketConnectError(const int errorNo) : SocketOperationError("connect", errorNo) {}
+	SocketConnectError(const int errorNo) :
+	  SocketOperationError("connect", errorNo) {}
 };
 class SocketDuplicateError final : public SocketOperationError {
 public:
-	SocketDuplicateError(const int errorNo) : SocketOperationError("dup", errorNo) {}
+	SocketDuplicateError(const int errorNo) :
+	  SocketOperationError("dup", errorNo) {}
 };
 class SocketBindError final : public SocketOperationError {
 public:
-	SocketBindError(const int errorNo) : SocketOperationError("bind", errorNo) {}
+	SocketBindError(const int errorNo) :
+	  SocketOperationError("bind", errorNo) {}
 };
 class SocketListenError final : public SocketOperationError {
 public:
-	SocketListenError(const int errorNo) : SocketOperationError("listen", errorNo) {}
+	SocketListenError(const int errorNo) :
+	  SocketOperationError("listen", errorNo) {}
 };
 class SocketAcceptError final : public SocketOperationError {
 public:
-	SocketAcceptError(const int errorNo) : SocketOperationError("accept", errorNo) {}
+	SocketAcceptError(const int errorNo) :
+	  SocketOperationError("accept", errorNo) {}
 };
 
-}
+} // namespace SocketErrors

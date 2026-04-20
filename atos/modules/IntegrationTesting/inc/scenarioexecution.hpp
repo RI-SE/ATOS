@@ -5,25 +5,24 @@
  */
 #pragma once
 
-#include "integrationtesting.hpp"
 #include "atos_interfaces/msg/monitor.hpp"
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
-
+#include "integrationtesting.hpp"
 
 class ScenarioExecution : public IntegrationTesting {
 
-	public:
-		ScenarioExecution();
-		~ScenarioExecution();
+public:
+	ScenarioExecution();
+	~ScenarioExecution();
 
-	private:
-		std::shared_ptr<rclcpp::Subscription<atos_interfaces::msg::Monitor>> monitorSub;
-		std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>> getObjectTrajectoryClient;
-		bool followedTrajectory;
+private:
+	std::shared_ptr<rclcpp::Subscription<atos_interfaces::msg::Monitor>> monitorSub;
+	std::shared_ptr<rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>> getObjectTrajectoryClient;
+	bool followedTrajectory;
 
-		void runIntegrationTest() override;
-		void printResult() override;
-		std::vector<std::pair<double, double>> getTrajectoryPoints();
-		void checkObjectStoppedAtLastPoint();
-		void placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr msg);
+	void runIntegrationTest() override;
+	void printResult() override;
+	std::vector<std::pair<double, double>> getTrajectoryPoints();
+	void checkObjectStoppedAtLastPoint();
+	void placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr msg);
 };

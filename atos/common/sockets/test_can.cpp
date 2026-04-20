@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
 	// TODO test receive functionality
 
 	can_frame frame;
-	frame.can_id = 0x123;
+	frame.can_id  = 0x123;
 	frame.data[0] = 0x0B;
 	frame.data[1] = 0x0E;
 	frame.data[2] = 0x0E;
@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
 	assert(bytesSent > 0); // TODO exact byte count
 	std::cout << "Sent " << bytesSent << " bytes" << std::endl;
 
-	frame.can_id = 0x100;
+	frame.can_id  = 0x100;
 	frame.data[0] = 0x0D;
 	frame.data[1] = 0x0E;
 	frame.data[2] = 0x0A;
@@ -46,5 +46,4 @@ int main(int argc, char** argv) {
 	std::cout << "Sent " << bytesSent << " bytes" << std::endl;
 	std::cout << "CAN handler test successful" << std::endl;
 	return 0;
-
 }

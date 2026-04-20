@@ -5,11 +5,11 @@
  */
 #pragma once
 
-#include <thread>
-#include "module.hpp"
-#include "tcphandler.hpp"
-#include "server.hpp"
 #include "atos_interfaces/msg/control_signal_percentage.hpp"
+#include "module.hpp"
+#include "server.hpp"
+#include "tcphandler.hpp"
+#include <thread>
 
 class DirectControl : public Module {
 public:

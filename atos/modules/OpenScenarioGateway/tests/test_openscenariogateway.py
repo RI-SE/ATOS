@@ -1,10 +1,11 @@
 import os
-import pytest
-import rclpy
 
 import modules.OpenScenarioGateway.openscenariogateway as openxgw
-import atos_interfaces.srv as srv
+import pytest
+import rclpy
 import rclpy.parameter
+
+import atos_interfaces.srv as srv
 
 
 @pytest.fixture(scope="module")

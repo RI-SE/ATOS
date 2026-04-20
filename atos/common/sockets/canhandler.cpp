@@ -5,24 +5,22 @@
  */
 
 #include "canhandler.hpp"
-#include <iostream>
 #include <cstring>
+#include <iostream>
 
 #include <net/if.h>
-#include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <unistd.h>
 
-
 CANHandler::CANHandler(const bool blocking) {
 	this->blocking = blocking;
 }
 
-int CANHandler::connectTo(
-		const std::string &interface) {
+int CANHandler::connectTo(const std::string& interface) {
 
 	struct ifreq ifr;
 	can_frame frame;
@@ -36,17 +34,16 @@ int CANHandler::connectTo(
 	std::strcpy(ifr.ifr_name, interface.c_str());
 	ioctl(sockfd, SIOCGIFINDEX, &ifr);
 
-	addr.can_family = AF_CAN;
+	addr.can_family	 = AF_CAN;
 	addr.can_ifindex = ifr.ifr_ifindex;
 
 	std::cout << "Binding CAN handler to interface " << interface << std::endl;
-	if (bind(sockfd, reinterpret_cast<struct sockaddr *>(&addr),
-			 sizeof (addr))) {
+	if (bind(sockfd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr))) {
 		perror("bind");
 		return -1;
 	}
 
-	bytesRead = recv(sockfd, &frame, sizeof (frame), MSG_DONTWAIT);
+	bytesRead = recv(sockfd, &frame, sizeof(frame), MSG_DONTWAIT);
 	if (bytesRead < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
 		perror("recv");
 		close(sockfd);
@@ -56,15 +53,13 @@ int CANHandler::connectTo(
 	return 0;
 }
 
-ssize_t CANHandler::receive(can_frame &frame) {
+ssize_t CANHandler::receive(can_frame& frame) {
 	ssize_t bytesRead = 0;
-	bytesRead = recv(sockfd, &frame, sizeof (frame),
-						blocking ? 0 : MSG_DONTWAIT);
+	bytesRead		  = recv(sockfd, &frame, sizeof(frame), blocking ? 0 : MSG_DONTWAIT);
 	if (bytesRead < 0) {
 		if (!blocking && (errno == EAGAIN || errno == EWOULDBLOCK)) {
 			bytesRead = 0;
-		}
-		else {
+		} else {
 			perror("recv");
 			close(sockfd);
 		}
@@ -72,15 +67,13 @@ ssize_t CANHandler::receive(can_frame &frame) {
 	return bytesRead;
 }
 
-ssize_t CANHandler::transmit(const can_frame &frame){
+ssize_t CANHandler::transmit(const can_frame& frame) {
 	ssize_t bytesSent = 0;
-	bytesSent = send(sockfd, &frame, sizeof (struct can_frame), 
-						blocking ? 0 : MSG_DONTWAIT);
+	bytesSent		  = send(sockfd, &frame, sizeof(struct can_frame), blocking ? 0 : MSG_DONTWAIT);
 	if (bytesSent < 0) {
 		if (!blocking && (errno == EAGAIN || errno == EWOULDBLOCK)) {
 			bytesSent = 0;
-		}
-		else {
+		} else {
 			perror("send");
 			close(sockfd);
 		}
