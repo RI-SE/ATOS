@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <openssl/ssl.h>
 #include <set>
 #include <string>
 #include <thread>
@@ -72,6 +73,10 @@ private:
   double cot_timeout_seconds_ = 2.0;
   int cot_tcp_port_ = 8114;
   std::string cot_tcp_bind_address_ = "0.0.0.0";
+  bool cot_tls_require_client_cert_ = false;
+  std::string cot_tls_cert_path_ = "";
+  std::string cot_tls_key_path_ = "";
+  std::string cot_tls_ca_path_ = "";
   std::string trajectory_geojson_path_ = "";
   std::string default_path_name_ = "";
 
@@ -83,6 +88,8 @@ private:
   std::set<int> tcp_client_fds_;
   std::mutex tcp_command_mutex_;
   std::unordered_map<std::string, int> uid_to_client_fd_;
+  std::unordered_map<std::string, SSL *> uid_to_ssl_;
+  SSL_CTX *ssl_ctx_ = nullptr;
 
   void onCotMessage(const std_msgs::msg::String::SharedPtr msg);
   void evaluateAndPublishSpeedCommand();
@@ -103,4 +110,5 @@ private:
   void acceptTcpClients();
   void handleTcpClient(int client_fd, const std::string &peer_name);
   void sendSpeedCommandToTcpClient(const std::string &target_id, const std::string &command);
+  bool initializeTlsContext();
 };

@@ -4,8 +4,10 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "truckobjectcontrol.hpp"
+#include <csignal>
 
 int main(int argc, char **argv) {
+  std::signal(SIGPIPE, SIG_IGN);
   rclcpp::init(argc, argv);
   auto node = std::make_shared<TruckObjectControl>();
   rclcpp::spin(node);

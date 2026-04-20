@@ -14,3 +14,4 @@
     proj-bin
     clang
     libstdc++-12-dev
+    libssl-dev

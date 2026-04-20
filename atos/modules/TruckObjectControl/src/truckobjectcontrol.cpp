@@ -14,6 +14,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include <openssl/err.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -25,6 +27,7 @@
 #include <regex>
 #include <set>
 #include <sstream>
+#include <stdexcept>
 #include <vector>
 
 using std::placeholders::_1;
@@ -88,6 +91,10 @@ TruckObjectControl::TruckObjectControl() : Node("truck_object_control") {
   declare_parameter("cot_timeout_seconds", cot_timeout_seconds_);
   declare_parameter("cot_tcp_port", cot_tcp_port_);
   declare_parameter("cot_tcp_bind_address", cot_tcp_bind_address_);
+  declare_parameter("cot_tls_require_client_cert", cot_tls_require_client_cert_);
+  declare_parameter("cot_tls_cert_path", cot_tls_cert_path_);
+  declare_parameter("cot_tls_key_path", cot_tls_key_path_);
+  declare_parameter("cot_tls_ca_path", cot_tls_ca_path_);
   declare_parameter("trajectory_geojson_path", trajectory_geojson_path_);
 
   warning_distance_m_ = get_parameter("warning_distance_m").as_double();
@@ -97,6 +104,10 @@ TruckObjectControl::TruckObjectControl() : Node("truck_object_control") {
   cot_timeout_seconds_ = get_parameter("cot_timeout_seconds").as_double();
   cot_tcp_port_ = get_parameter("cot_tcp_port").as_int();
   cot_tcp_bind_address_ = get_parameter("cot_tcp_bind_address").as_string();
+  cot_tls_require_client_cert_ = get_parameter("cot_tls_require_client_cert").as_bool();
+  cot_tls_cert_path_ = get_parameter("cot_tls_cert_path").as_string();
+  cot_tls_key_path_ = get_parameter("cot_tls_key_path").as_string();
+  cot_tls_ca_path_ = get_parameter("cot_tls_ca_path").as_string();
   trajectory_geojson_path_ = get_parameter("trajectory_geojson_path").as_string();
   trajectory_geojson_path_ = resolveDefaultTrajectoryPath(trajectory_geojson_path_);
   default_path_name_ = std::filesystem::path(trajectory_geojson_path_).filename().string();
@@ -122,12 +133,16 @@ TruckObjectControl::TruckObjectControl() : Node("truck_object_control") {
   startTcpServer();
 
   RCLCPP_INFO(get_logger(),
-              "TruckObjectControl started. Listening for COT XML on tcp://%s:%d and placeholder topic 'truck_objects/cot'.",
+              "TruckObjectControl started. Listening for COT XML on tls://%s:%d and placeholder topic 'truck_objects/cot'.",
               cot_tcp_bind_address_.c_str(), cot_tcp_port_);
 }
 
 TruckObjectControl::~TruckObjectControl() {
   stopTcpServer();
+  if (ssl_ctx_ != nullptr) {
+    SSL_CTX_free(ssl_ctx_);
+    ssl_ctx_ = nullptr;
+  }
 }
 
 void TruckObjectControl::publishTruckState(const std::string &truck_id, const TruckState &state) {
@@ -493,7 +508,72 @@ double TruckObjectControl::projectDistanceAlongTrajectory(double lat, double lon
   return best_distance_along_m;
 }
 
+bool TruckObjectControl::initializeTlsContext() {
+  if (ssl_ctx_ != nullptr) {
+    return true;
+  }
+
+  if (cot_tls_cert_path_.empty() || cot_tls_key_path_.empty()) {
+    RCLCPP_ERROR(get_logger(), "TLS enabled but cot_tls_cert_path or cot_tls_key_path is empty.");
+    return false;
+  }
+
+  SSL_load_error_strings();
+  OpenSSL_add_ssl_algorithms();
+
+  ssl_ctx_ = SSL_CTX_new(TLS_server_method());
+  if (ssl_ctx_ == nullptr) {
+    RCLCPP_ERROR(get_logger(), "Failed to create TLS server context.");
+    return false;
+  }
+
+  SSL_CTX_set_min_proto_version(ssl_ctx_, TLS1_2_VERSION);
+
+  if (SSL_CTX_use_certificate_file(ssl_ctx_, cot_tls_cert_path_.c_str(), SSL_FILETYPE_PEM) != 1) {
+    RCLCPP_ERROR(get_logger(), "Failed to load TLS certificate from '%s'.", cot_tls_cert_path_.c_str());
+    SSL_CTX_free(ssl_ctx_);
+    ssl_ctx_ = nullptr;
+    return false;
+  }
+
+  if (SSL_CTX_use_PrivateKey_file(ssl_ctx_, cot_tls_key_path_.c_str(), SSL_FILETYPE_PEM) != 1) {
+    RCLCPP_ERROR(get_logger(), "Failed to load TLS private key from '%s'.", cot_tls_key_path_.c_str());
+    SSL_CTX_free(ssl_ctx_);
+    ssl_ctx_ = nullptr;
+    return false;
+  }
+
+  if (SSL_CTX_check_private_key(ssl_ctx_) != 1) {
+    RCLCPP_ERROR(get_logger(), "TLS private key does not match certificate.");
+    SSL_CTX_free(ssl_ctx_);
+    ssl_ctx_ = nullptr;
+    return false;
+  }
+
+  if (!cot_tls_ca_path_.empty()) {
+    if (SSL_CTX_load_verify_locations(ssl_ctx_, cot_tls_ca_path_.c_str(), nullptr) != 1) {
+      RCLCPP_ERROR(get_logger(), "Failed to load TLS CA file from '%s'.", cot_tls_ca_path_.c_str());
+      SSL_CTX_free(ssl_ctx_);
+      ssl_ctx_ = nullptr;
+      return false;
+    }
+  }
+
+  if (cot_tls_require_client_cert_) {
+    SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
+  } else {
+    SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_NONE, nullptr);
+  }
+
+  return true;
+}
+
 void TruckObjectControl::startTcpServer() {
+  if (!initializeTlsContext()) {
+    RCLCPP_ERROR(get_logger(), "COT listener startup failed: TLS setup failed.");
+    return;
+  }
+
   tcp_server_fd_ = ::socket(AF_INET, SOCK_STREAM, 0);
   if (tcp_server_fd_ < 0) {
     RCLCPP_ERROR(get_logger(), "Failed to create TCP socket for COT listener.");
@@ -558,6 +638,7 @@ void TruckObjectControl::stopTcpServer() {
   {
     std::lock_guard<std::mutex> lock(tcp_command_mutex_);
     uid_to_client_fd_.clear();
+    uid_to_ssl_.clear();
   }
 
   std::lock_guard<std::mutex> lock(tcp_threads_mutex_);
@@ -610,21 +691,44 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string &peer_
   std::string buffer;
   buffer.reserve(8 * 1024);
   std::set<std::string> seen_uids;
+  SSL *ssl = nullptr;
 
   try {
+    ssl = SSL_new(ssl_ctx_);
+    if (ssl == nullptr) {
+      RCLCPP_WARN(get_logger(), "Failed to create TLS session for %s.", peer_name.c_str());
+      throw std::runtime_error("SSL_new failed");
+    }
+
+    if (SSL_set_fd(ssl, client_fd) != 1) {
+      RCLCPP_WARN(get_logger(), "Failed to bind TLS session to socket for %s.", peer_name.c_str());
+      throw std::runtime_error("SSL_set_fd failed");
+    }
+
+    if (SSL_accept(ssl) != 1) {
+      char ssl_error[256] = {0};
+      ERR_error_string_n(ERR_get_error(), ssl_error, sizeof(ssl_error));
+      RCLCPP_WARN(get_logger(),
+                  "TLS handshake failed for %s: %s",
+                  peer_name.c_str(),
+                  ssl_error[0] == '\0' ? "unknown error" : ssl_error);
+      throw std::runtime_error("SSL_accept failed");
+    }
+
     char receive_buffer[kReceiveBufferSize];
     while (tcp_running_.load()) {
-      const ssize_t received = ::recv(client_fd, receive_buffer, sizeof(receive_buffer), 0);
-      if (received == 0) {
-        break;
-      }
-      if (received < 0) {
-        if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
+      const ssize_t received = SSL_read(ssl, receive_buffer, static_cast<int>(sizeof(receive_buffer)));
+      if (received <= 0) {
+        const int ssl_read_error = SSL_get_error(ssl, static_cast<int>(received));
+        if (ssl_read_error == SSL_ERROR_WANT_READ || ssl_read_error == SSL_ERROR_WANT_WRITE) {
           continue;
         }
+        if (ssl_read_error == SSL_ERROR_ZERO_RETURN) {
+          break;
+        }
         RCLCPP_WARN(get_logger(),
-                    "TCP receive error from %s (errno=%d). Closing this connection only.",
-                    peer_name.c_str(), errno);
+                    "TLS receive error from %s (ssl_error=%d). Closing this connection only.",
+                    peer_name.c_str(), ssl_read_error);
         break;
       }
 
@@ -675,6 +779,7 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string &peer_
         {
           std::lock_guard<std::mutex> lock(tcp_command_mutex_);
           uid_to_client_fd_[observation.truck_id] = client_fd;
+          uid_to_ssl_[observation.truck_id] = ssl;
         }
 
         seen_uids.insert(observation.truck_id);
@@ -708,12 +813,18 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string &peer_
       if (it != uid_to_client_fd_.end() && it->second == client_fd) {
         uid_to_client_fd_.erase(it);
       }
+      uid_to_ssl_.erase(uid);
     }
   }
 
   {
     std::lock_guard<std::mutex> lock(tcp_threads_mutex_);
     tcp_client_fds_.erase(client_fd);
+  }
+  if (ssl != nullptr) {
+    (void)SSL_shutdown(ssl);
+    SSL_free(ssl);
+    ssl = nullptr;
   }
   ::shutdown(client_fd, SHUT_RDWR);
   ::close(client_fd);
@@ -848,24 +959,30 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 
 void TruckObjectControl::sendSpeedCommandToTcpClient(const std::string &target_id, const std::string &command) {
   int target_fd = -1;
+  SSL *target_ssl = nullptr;
   {
     std::lock_guard<std::mutex> lock(tcp_command_mutex_);
     const auto it = uid_to_client_fd_.find(target_id);
     if (it != uid_to_client_fd_.end()) {
       target_fd = it->second;
     }
+    const auto ssl_it = uid_to_ssl_.find(target_id);
+    if (ssl_it != uid_to_ssl_.end()) {
+      target_ssl = ssl_it->second;
+    }
   }
 
-  if (target_fd < 0) {
+  if (target_fd < 0 || target_ssl == nullptr) {
     return;
   }
 
   const std::string payload = command + "\n";
-  const ssize_t sent = ::send(target_fd, payload.data(), payload.size(), MSG_NOSIGNAL);
-  if (sent < 0) {
+  const ssize_t sent = SSL_write(target_ssl, payload.data(), static_cast<int>(payload.size()));
+  if (sent <= 0) {
+    const int ssl_write_error = SSL_get_error(target_ssl, static_cast<int>(sent));
     RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000,
-                         "Failed to send TCP speed command to uid=%s fd=%d (errno=%d)", target_id.c_str(),
-                         target_fd, errno);
+                         "Failed to send TLS speed command to uid=%s fd=%d (ssl_error=%d)", target_id.c_str(),
+                         target_fd, ssl_write_error);
     return;
   }
 

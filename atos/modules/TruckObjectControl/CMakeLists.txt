@@ -13,6 +13,7 @@ project(truck_object_control)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(ament_index_cpp REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 include(GNUInstallDirs)
 
@@ -29,6 +30,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 target_link_libraries(${PROJECT_NAME}
   ${COREUTILS_LIBRARY}
+  OpenSSL::SSL
+  OpenSSL::Crypto
 )
 
 ament_target_dependencies(${PROJECT_NAME}
