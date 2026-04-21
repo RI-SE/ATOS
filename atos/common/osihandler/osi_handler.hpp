@@ -6,18 +6,17 @@
 
 /**
  * @file osi_handler.h
- * @author Albin Nykvist 
- * @brief  Osi handler class for encoding/decoding osi messages 
+ * @author Albin Nykvist
+ * @brief  Osi handler class for encoding/decoding osi messages
  * @date 2021-05-25
  */
 
 #pragma once
-#include <chrono>
-#include "osi3/osi_sensorview.pb.h"
 #include "osi3/osi_sensordata.pb.h"
+#include "osi3/osi_sensorview.pb.h"
+#include <chrono>
 
-class OsiHandler
-{
+class OsiHandler {
 public:
 	/*!
 	 * \struct GlobalObjectGroundTruth_t
@@ -152,40 +151,49 @@ public:
 		} orientation_rad;
 	} LocalObjectGroundTruth_t;
 
-    /*!
-     * \brief Decode groundtruth content of Sensorview osi message. 
-     * \param msg Recieved serialized OSI message. 
-     * \param msgSize Size of recieved OSI message. 
-     * \param debug Debug flag for printing message content.
-     */
-	void decodeSvGtMessage(const std::vector<char>& msg, const int msgSize, std::vector<GlobalObjectGroundTruth_t>& retval, std::string& projStr, const bool debug);
+	/*!
+	 * \brief Decode groundtruth content of Sensorview osi message.
+	 * \param msg Recieved serialized OSI message.
+	 * \param msgSize Size of recieved OSI message.
+	 * \param debug Debug flag for printing message content.
+	 */
+	void decodeSvGtMessage(const std::vector<char>& msg,
+						   const int msgSize,
+						   std::vector<GlobalObjectGroundTruth_t>& retval,
+						   std::string& projStr,
+						   const bool debug);
 	std::string encodeSvGtMessage(const std::vector<GlobalObjectGroundTruth_t>& data,
-						   const std::chrono::system_clock::time_point& timestamp,
-						   const std::string& projectionString, const bool debug);
+								  const std::chrono::system_clock::time_point& timestamp,
+								  const std::string& projectionString,
+								  const bool debug);
 
 	std::string encodeSvGtMessage(const GlobalObjectGroundTruth_t& data,
-						   const std::chrono::system_clock::time_point& timestamp,
-						   const std::string& projectionString, const bool debug);
+								  const std::chrono::system_clock::time_point& timestamp,
+								  const std::string& projectionString,
+								  const bool debug);
 
 	std::string encodeSvGtMessage(const std::vector<LocalObjectGroundTruth_t>& data,
-						   const std::chrono::system_clock::time_point& timestamp,
-						   const std::string& projectionString, const bool debug);
+								  const std::chrono::system_clock::time_point& timestamp,
+								  const std::string& projectionString,
+								  const bool debug);
 
 	std::string encodeSvGtMessage(const LocalObjectGroundTruth_t& data,
-						   const std::chrono::system_clock::time_point& timestamp,
-						   const std::string& projectionString, const bool debug);
+								  const std::chrono::system_clock::time_point& timestamp,
+								  const std::string& projectionString,
+								  const bool debug);
 
 	/*!
-     * \brief Decode content of SensorData osi message. 
-     * \param msg Recieved serialized OSI message. 
-     * \param msgSize Size of recieved OSI message. 
-     * \param debug Debug flag for printing message content.
-     */
+	 * \brief Decode content of SensorData osi message.
+	 * \param msg Recieved serialized OSI message.
+	 * \param msgSize Size of recieved OSI message.
+	 * \param debug Debug flag for printing message content.
+	 */
 	void decodeSdMessage(const std::vector<char>& msg, const int msgSize, const bool debug);
 
-    // Public Sensorview message object. Calling decodeSvGtMessage will update the content. 
-	osi3::SensorView Sv; // Use the internal methods to access the data. For example see the debug section of decodeSvGtMessage
-	// Public Sensordata message object. Calling decodeSdMessage will update the content. 
-	osi3::SensorData Sd; // Use the internal methods to access the data. For example see the debug section of decodeSdMessage
-    
+	// Public Sensorview message object. Calling decodeSvGtMessage will update the content.
+	osi3::SensorView
+	  Sv; // Use the internal methods to access the data. For example see the debug section of decodeSvGtMessage
+	// Public Sensordata message object. Calling decodeSdMessage will update the content.
+	osi3::SensorData
+	  Sd; // Use the internal methods to access the data. For example see the debug section of decodeSdMessage
 };

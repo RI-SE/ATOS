@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 
 import hashlib
-import json
 import time
-import atos_interfaces.srv
 from os import path
-import rclpy
-import rclpy.logging
-import atos_interfaces.msg
-from rcl_interfaces.msg import SetParametersResult
-from rclpy.node import Node
-from std_msgs.msg import Empty
-from scenariogeneration import xosc
-from modules.OpenScenarioGateway.storyboard_handler import StoryBoardHandler
 from typing import List
 
+import rclpy
+import rclpy.logging
+from modules.OpenScenarioGateway.storyboard_handler import StoryBoardHandler
+from rcl_interfaces.msg import SetParametersResult
+from rclpy.node import Node
+from scenariogeneration import xosc
+from std_msgs.msg import Empty
+
+import atos_interfaces.msg
+import atos_interfaces.srv
 
 ROOT_FOLDER_PATH_PARAMETER = "root_folder_path"
 ACTIVE_OBJECT_NAME_PARAMETER = "active_object_names"
@@ -34,7 +34,6 @@ class ScenarioObject:
 
 
 class OpenScenarioGateway(Node):
-
     def __init__(self):
         super().__init__("open_scenario_gateway")
 
@@ -201,8 +200,7 @@ class OpenScenarioGateway(Node):
     def get_all_objects_in_scenario(self, scenario_file) -> List[ScenarioObject]:
         scenario = xosc.ParseOpenScenario(scenario_file)
         scenario_objects = {
-            id
-            + 1: ScenarioObject(
+            id + 1: ScenarioObject(
                 name=scenario_object.name,
                 catalog_ref=xosc.CatalogReference(
                     scenario_object.entityobject.catalogname,

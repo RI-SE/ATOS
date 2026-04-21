@@ -5,12 +5,11 @@
  */
 #include "esminiadapter.hpp"
 
-
 static std::shared_ptr<EsminiAdapter> esminiAdapter;
 
 int main(int argc, char** argv) {
-	rclcpp::init(argc,argv);
-	auto exec = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
+	rclcpp::init(argc, argv);
+	auto exec	  = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
 	esminiAdapter = EsminiAdapter::instance();
 	esminiAdapter->initializeModule();
 	exec->add_node(esminiAdapter);

@@ -1,5 +1,5 @@
 import os
-import pytest
+
 import modules.OpenScenarioGateway.storyboard_handler as sh
 
 

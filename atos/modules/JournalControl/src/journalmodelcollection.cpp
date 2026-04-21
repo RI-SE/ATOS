@@ -5,12 +5,11 @@
  */
 #include "journalmodelcollection.hpp"
 #include "journal.hpp"
-#include <regex>
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
-#include <algorithm>
-
+#include <regex>
 
 #define DATE_STRING_MAX_LEN 20
 
@@ -20,14 +19,14 @@
 void JournalModelCollection::placeStartBookmarks() {
 
 	auto journalFilesFromToday = getJournalFilesFromToday();
-	auto currentDate = getCurrentDateAsString();
+	auto currentDate		   = getCurrentDateAsString();
 
 	this->clear();
 
-	for (const auto &journalFile : journalFilesFromToday) {
+	for (const auto& journalFile : journalFilesFromToday) {
 		RCLCPP_DEBUG(get_logger(), "Storing start bookmark in file %s", journalFile.c_str());
 		JournalModel journal(get_logger());
-		auto datePosition = journalFile.stem().string().find("-" + currentDate);
+		auto datePosition  = journalFile.stem().string().find("-" + currentDate);
 		journal.moduleName = journalFile.stem().string().substr(0, datePosition);
 		journal.startReference.place(journalFile);
 		journal.containedFiles.insert(journalFile);
@@ -37,20 +36,19 @@ void JournalModelCollection::placeStartBookmarks() {
 	this->startDay = floor<days>(system_clock::now());
 }
 
-
 /*!
  * \brief placeStopBookmarks Stores references to the current end of file of all journals.
  */
 void JournalModelCollection::placeStopBookmarks() {
 
 	auto journalFilesFromToday = getJournalFilesFromToday();
-	auto currentDate = getCurrentDateAsString();
+	auto currentDate		   = getCurrentDateAsString();
 
-	for (const auto &journalFile : journalFilesFromToday) {
+	for (const auto& journalFile : journalFilesFromToday) {
 		RCLCPP_DEBUG(get_logger(), "Storing stop bookmark in file %s", journalFile.c_str());
 		// Find existing journal matching module name from file
 		JournalModel soughtJournal(get_logger());
-		auto datePosition = journalFile.stem().string().find("-" + currentDate);
+		auto datePosition		 = journalFile.stem().string().find("-" + currentDate);
 		soughtJournal.moduleName = journalFile.stem().string().substr(0, datePosition);
 		soughtJournal.startReference.place(journalFile, true); // In case we are emplacing, startReference at beginning
 		// Insert checks if an equivalent element (same module) already exists
@@ -88,22 +86,20 @@ void JournalModelCollection::insertNonBookmarked() {
 	// is not specified, place it at beginning of the first file found.
 	for (auto day = startDay; day <= stopDay; day += std::chrono::days(1)) {
 		auto journalFilesFromDay = getJournalFilesFrom(day);
-		auto date = getDateAsString(day);
+		auto date				 = getDateAsString(day);
 
-		for (const auto &journalFile : journalFilesFromDay) {
+		for (const auto& journalFile : journalFilesFromDay) {
 			// Find existing journal matching module name from file
 			JournalModel soughtJournal(get_logger());
-			auto datePosition = journalFile.stem().string().find("-" + date);
+			auto datePosition		 = journalFile.stem().string().find("-" + date);
 			soughtJournal.moduleName = journalFile.stem().string().substr(0, datePosition);
 			// Insert checks if an equivalent element (same module) already exists
 			auto matchingJournal = insert(soughtJournal).first;
 			if (matchingJournal->containedFiles.insert(journalFile).second) {
-				RCLCPP_DEBUG(get_logger(), "Inserted non-bookmarked file %s",
-						   journalFile.c_str());
+				RCLCPP_DEBUG(get_logger(), "Inserted non-bookmarked file %s", journalFile.c_str());
 			}
 			if (!matchingJournal->startReference.valid) {
-				RCLCPP_DEBUG(get_logger(), "Storing start bookmark at beginning of file %s",
-						   journalFile.c_str());
+				RCLCPP_DEBUG(get_logger(), "Storing start bookmark at beginning of file %s", journalFile.c_str());
 				matchingJournal->startReference.place(journalFile, true);
 			}
 		}
@@ -114,15 +110,14 @@ void JournalModelCollection::insertNonBookmarked() {
 	for (auto journal : *this) {
 		if (!journal.stopReference.valid) {
 			for (auto day = stopDay; day >= startDay; day -= std::chrono::days(1)) {
-				auto date = getDateAsString(day);
+				auto date		= getDateAsString(day);
 				auto isFromDate = [date](const fs::path& filePath) {
 					return filePath.filename().string().find(date) != std::string::npos;
 				};
-				auto matchingFile = std::find_if(journal.containedFiles.begin(),
-												 journal.containedFiles.end(), isFromDate);
+				auto matchingFile =
+				  std::find_if(journal.containedFiles.begin(), journal.containedFiles.end(), isFromDate);
 				if (matchingFile != journal.containedFiles.end()) {
-					RCLCPP_DEBUG(get_logger(), "Storing end bookmark at end of file %s",
-							   matchingFile->c_str());
+					RCLCPP_DEBUG(get_logger(), "Storing end bookmark at end of file %s", matchingFile->c_str());
 					journal.stopReference.place(*matchingFile);
 					break;
 				}
@@ -130,7 +125,6 @@ void JournalModelCollection::insertNonBookmarked() {
 		}
 	}
 }
-
 
 /*!
  * \brief dumpToFile Generates a merged file based on input journals
@@ -140,14 +134,14 @@ void JournalModelCollection::insertNonBookmarked() {
  */
 int JournalModelCollection::dumpToFile(std::string fileName) {
 
-	int retval = 0;
+	int retval				  = 0;
 	char journalDir[PATH_MAX] = {'\0'};
 
-	//TODO: Create a function for this. 
-	UtilGetJournalDirectoryPath(journalDir, sizeof (journalDir));
+	// TODO: Create a function for this.
+	UtilGetJournalDirectoryPath(journalDir, sizeof(journalDir));
 	// If a filename with the same name exists, add a number to the end of the filename
 	int maxnum = 0;
-  for (const auto & entry : fs::directory_iterator(std::string(journalDir))) {
+	for (const auto& entry : fs::directory_iterator(std::string(journalDir))) {
 		auto entryFileName = entry.path().filename().string();
 		// Find the file with maximum number
 		if (entryFileName.find(fileName) != std::string::npos) {
@@ -183,9 +177,9 @@ int JournalModelCollection::dumpToFile(std::string fileName) {
 		std::streampos beg;			//!< First character index of relevant section
 		std::streampos end;			//!< Last character index of relevant section
 		std::string lastRead;		//!< Last read string from ::istrm member
-		unsigned int nReadRows = 0;	//!< Number of rows read from ::istrm member
+		unsigned int nReadRows = 0; //!< Number of rows read from ::istrm member
 		//! The < operator tells which of two is oldest at its last read line
-		bool operator< (const JournalFileSection &other) const {
+		bool operator<(const JournalFileSection& other) const {
 			std::istringstream strThis(lastRead), strOther(other.lastRead);
 			double timeThis = 0.0, timeOther = 0.0;
 			strThis >> timeThis;
@@ -200,51 +194,48 @@ int JournalModelCollection::dumpToFile(std::string fileName) {
 	// After this, the vector contains opened streams positioned
 	// for reading at the line closest to the start time.
 	std::vector<JournalFileSection> inputFiles;
-	for (const auto &journal : *this) {
-		for (const fs::path &file : journal.containedFiles) {
-			JournalFileSection &section = inputFiles.emplace_back();
-			section.path = file;
+	for (const auto& journal : *this) {
+		for (const fs::path& file : journal.containedFiles) {
+			JournalFileSection& section = inputFiles.emplace_back();
+			section.path				= file;
 			section.istrm.open(file);
 			if (section.istrm.is_open()) {
 				RCLCPP_DEBUG(get_logger(), "Opened file %s", file.c_str());
 				if (file == journal.startReference.getFilePath()) {
 					section.beg = journal.startReference.getPosition();
-				}
-				else {
+				} else {
 					section.istrm.seekg(0, section.istrm.beg);
 					section.beg = section.istrm.tellg();
 				}
 
 				if (file == journal.stopReference.getFilePath()) {
 					section.end = journal.stopReference.getPosition();
-				}
-				else {
+				} else {
 					section.istrm.seekg(0, section.istrm.end);
 					section.end = section.istrm.tellg();
 				}
 				section.istrm.seekg(section.beg);
 
 				if (section.end - section.beg < 0) {
-					RCLCPP_ERROR(get_logger(), "End precedes beginning in file %s: beg @%ld, end @%ld",
-							   file.c_str(), (long int)section.beg, (long int)section.end);
+					RCLCPP_ERROR(get_logger(),
+								 "End precedes beginning in file %s: beg @%ld, end @%ld",
+								 file.c_str(),
+								 (long int)section.beg,
+								 (long int)section.end);
 					section.istrm.close();
 					inputFiles.pop_back();
-				}
-				else if (section.beg == section.end) {
+				} else if (section.beg == section.end) {
 					RCLCPP_DEBUG(get_logger(), "No data found");
 					section.istrm.close();
 					inputFiles.pop_back();
-				}
-				else if (!std::getline(section.istrm, section.lastRead)) {
+				} else if (!std::getline(section.istrm, section.lastRead)) {
 					RCLCPP_DEBUG(get_logger(), "Failed to read line");
 					section.istrm.close();
 					inputFiles.pop_back();
-				}
-				else {
+				} else {
 					section.nReadRows++;
 				}
-			}
-			else {
+			} else {
 				RCLCPP_ERROR(get_logger(), "Unable to open %s for reading", file.c_str());
 				inputFiles.pop_back();
 				retval = -1;
@@ -253,22 +244,22 @@ int JournalModelCollection::dumpToFile(std::string fileName) {
 	}
 
 	// Each iteration, transfer the line starting with the oldest timestamp to the output file and read the next
-	while(!inputFiles.empty()) {
+	while (!inputFiles.empty()) {
 		std::vector<JournalFileSection>::iterator oldestFile = std::min_element(inputFiles.begin(), inputFiles.end());
 		ostrm << oldestFile->lastRead << std::endl;
 		if (!std::getline(oldestFile->istrm, oldestFile->lastRead)) {
-			RCLCPP_DEBUG(get_logger(), "Reached end of journal file %s, read %u rows",
-					   oldestFile->path.c_str(), oldestFile->nReadRows);
+			RCLCPP_DEBUG(get_logger(),
+						 "Reached end of journal file %s, read %u rows",
+						 oldestFile->path.c_str(),
+						 oldestFile->nReadRows);
 			oldestFile->istrm.close();
 			inputFiles.erase(oldestFile);
-		}
-		else if (oldestFile->nReadRows > oldestFile->end - oldestFile->beg) {
-			RCLCPP_DEBUG(get_logger(), "Read %u rows from journal file %s",
-					   oldestFile->nReadRows, oldestFile->path.c_str());
+		} else if (oldestFile->nReadRows > oldestFile->end - oldestFile->beg) {
+			RCLCPP_DEBUG(
+			  get_logger(), "Read %u rows from journal file %s", oldestFile->nReadRows, oldestFile->path.c_str());
 			oldestFile->istrm.close();
 			inputFiles.erase(oldestFile);
-		}
-		else {
+		} else {
 			oldestFile->nReadRows++;
 		}
 	}
@@ -291,11 +282,11 @@ std::string JournalModelCollection::getCurrentDateAsString() {
  * \param date Timestamp for which date string is to be extracted.
  * \return A std::string containing the date representation
  */
-std::string JournalModelCollection::getDateAsString(const std::chrono::system_clock::time_point &date) {
-	using Clock = std::chrono::system_clock;
+std::string JournalModelCollection::getDateAsString(const std::chrono::system_clock::time_point& date) {
+	using Clock							 = std::chrono::system_clock;
 	char dateString[DATE_STRING_MAX_LEN] = {'\0'};
-	auto dateRaw = Clock::to_time_t(date);
-	auto dateStructPtr = std::localtime(&dateRaw);
+	auto dateRaw						 = Clock::to_time_t(date);
+	auto dateStructPtr					 = std::localtime(&dateRaw);
 	std::strftime(dateString, DATE_STRING_MAX_LEN, "%Y-%m-%d", dateStructPtr);
 	return dateString;
 }
@@ -306,13 +297,12 @@ std::string JournalModelCollection::getDateAsString(const std::chrono::system_cl
  * \param date Date for which journals are to be fetched
  * \return A std::vector containing file paths
  */
-std::vector<fs::path> JournalModelCollection::getJournalFilesFrom(const std::chrono::system_clock::time_point &date) {
+std::vector<fs::path> JournalModelCollection::getJournalFilesFrom(const std::chrono::system_clock::time_point& date) {
 	std::vector<fs::path> journalsFromDate;
 	std::vector<char> buffer(PATH_MAX, '\0');
 
 	UtilGetJournalDirectoryPath(buffer.data(), buffer.size());
-	buffer.erase(std::find(buffer.begin(), buffer.end(), '\0'),
-								 buffer.end());
+	buffer.erase(std::find(buffer.begin(), buffer.end(), '\0'), buffer.end());
 	fs::path journalDirPath(buffer.begin(), buffer.end());
 
 	if (!exists(journalDirPath)) {
@@ -321,11 +311,11 @@ std::vector<fs::path> JournalModelCollection::getJournalFilesFrom(const std::chr
 
 	auto dateString = getDateAsString(date);
 
-	for (const auto &dirEntry : fs::directory_iterator(journalDirPath)) {
-		if (fs::is_regular_file(dirEntry.status())
-				&& dirEntry.path().extension().string().find(JOURNAL_FILE_ENDING) != std::string::npos) {
+	for (const auto& dirEntry : fs::directory_iterator(journalDirPath)) {
+		if (fs::is_regular_file(dirEntry.status()) &&
+			dirEntry.path().extension().string().find(JOURNAL_FILE_ENDING) != std::string::npos) {
 			// Check if file contains current date
-			size_t pos =  dirEntry.path().string().find(dateString);
+			size_t pos = dirEntry.path().string().find(dateString);
 			if (pos != std::string::npos) {
 				journalsFromDate.push_back(dirEntry.path());
 			}
@@ -341,12 +331,12 @@ std::vector<fs::path> JournalModelCollection::getJournalFilesFrom(const std::chr
  * \param outputFile Stream to which contents are to be printed
  * \return 0 on success, -1 otherwise
  */
-int JournalModelCollection::printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile) {
+int JournalModelCollection::printFilesTo(const fs::path& inputDirectory, std::ostream& outputFile) {
 
 	if (!exists(inputDirectory)) {
 		throw std::runtime_error("Unable to find directory " + inputDirectory.string());
 	}
-	for (const auto &dirEntry : fs::directory_iterator(inputDirectory)) {
+	for (const auto& dirEntry : fs::directory_iterator(inputDirectory)) {
 		if (fs::is_regular_file(dirEntry.status())) {
 			const auto inputFile = dirEntry.path();
 			std::ifstream istrm(inputFile.string());

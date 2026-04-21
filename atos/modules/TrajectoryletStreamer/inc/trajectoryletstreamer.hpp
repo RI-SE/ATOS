@@ -3,10 +3,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-#include <chrono>
-#include <map>
-#include <memory>
-#include <vector>
 #include "atos_interfaces/srv/get_object_ids.hpp"
 #include "atos_interfaces/srv/get_object_trajectory.hpp"
 #include "module.hpp"
@@ -14,14 +10,18 @@
 #include "roschannels/commandchannels.hpp"
 #include "trajectory.hpp"
 #include "trajectorypublisher.hpp"
+#include <chrono>
+#include <map>
+#include <memory>
+#include <vector>
 
 namespace ATOS {
 
 class TrajectoryletStreamer : public Module {
-   public:
+public:
 	TrajectoryletStreamer();
 
-   private:
+private:
 	static inline std::string const moduleName = "trajectorylet_streamer";
 	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr);
 	void onObjectsConnectedMessage(const ROSChannels::ObjectsConnected::message_type::SharedPtr);
@@ -36,9 +36,9 @@ class TrajectoryletStreamer : public Module {
 	ROSChannels::Abort::Sub abortSub;
 	ROSChannels::Stop::Sub stopSub;
 
-	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr idClient;	 //!< Client to request object ids
+	rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedPtr idClient; //!< Client to request object ids
 	rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedPtr
-		trajectoryClient;  //!< Client to request object trajectories
+	  trajectoryClient; //!< Client to request object trajectories
 
 	std::vector<std::shared_ptr<TrajectoryPublisher>> publishers;
 
@@ -47,4 +47,4 @@ class TrajectoryletStreamer : public Module {
 	std::chrono::milliseconds chunkLength;
 };
 
-}  // namespace ATOS
+} // namespace ATOS

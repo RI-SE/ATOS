@@ -19,20 +19,18 @@ using json = nlohmann::json;
  */
 class RESTBridge : public Module {
 public:
-  static inline std::string const moduleName = "rest_bridge";
-  RESTBridge();
-  ~RESTBridge();
+	static inline std::string const moduleName = "rest_bridge";
+	RESTBridge();
+	~RESTBridge();
 
 protected:
-  void onCustomCommandAction(
-      const atos_interfaces::msg::CustomCommandAction::SharedPtr msg);
+	void onCustomCommandAction(const atos_interfaces::msg::CustomCommandAction::SharedPtr msg);
 
 private:
-  ROSChannels::CustomCommandAction::Sub
-      customCommandActionMsgSub; //!< Subscriber to icdc messages requests
+	ROSChannels::CustomCommandAction::Sub customCommandActionMsgSub; //!< Subscriber to icdc messages requests
 
-  json parseJsonData(std::string &msg);
-  void POST(const std::string &endpoint, const json &data);
+	json parseJsonData(std::string& msg);
+	void POST(const std::string& endpoint, const json& data);
 
-  CURL *curl_handle;
+	CURL* curl_handle;
 };

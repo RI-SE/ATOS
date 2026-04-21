@@ -1,20 +1,19 @@
 #include "samplemodule.hpp"
-#include "roschannels/commandchannels.hpp"
 #include "rclcpp/wait_for_message.hpp"
+#include "roschannels/commandchannels.hpp"
 
 using namespace ROSChannels;
 using namespace std::chrono_literals;
 using namespace std::placeholders;
 
 SampleModule::SampleModule() :
-	Module(moduleName),
-	initSub(*this, std::bind(&SampleModule::onInitMessage, this, _1)),
-	abortSub(*this, std::bind(&SampleModule::onAbortMessage, this, _1)),
-	allClearSub(*this, std::bind(&SampleModule::onAllClearMessage, this, _1)),
-	smOnInitResponsePub(*this)
-{
-    service_server = create_service<std_srvs::srv::SetBool>(
-        "/sample_module_test_service", std::bind(&SampleModule::OnCallbackSetBool, this, _1, _2));
+  Module(moduleName),
+  initSub(*this, std::bind(&SampleModule::onInitMessage, this, _1)),
+  abortSub(*this, std::bind(&SampleModule::onAbortMessage, this, _1)),
+  allClearSub(*this, std::bind(&SampleModule::onAllClearMessage, this, _1)),
+  smOnInitResponsePub(*this) {
+	service_server = create_service<std_srvs::srv::SetBool>("/sample_module_test_service",
+															std::bind(&SampleModule::OnCallbackSetBool, this, _1, _2));
 }
 
 //! Message queue callbacks
@@ -24,7 +23,8 @@ void SampleModule::onInitMessage(const Init::message_type::SharedPtr) {
 	// Get the object id of the objects in the scenario
 	ConnectedObjectIds::message_type connectedObjectIds;
 	// Wait for a single message containing a vector of ids, at most 1000ms
-	rclcpp::wait_for_message(connectedObjectIds, shared_from_this(), std::string(get_namespace()) + "connected_object_ids", 1000ms);
+	rclcpp::wait_for_message(
+	  connectedObjectIds, shared_from_this(), std::string(get_namespace()) + "connected_object_ids", 1000ms);
 	// Populate a list of object IDs
 	for (auto id : connectedObjectIds.ids) {
 		objectIds.push_back(id);
@@ -38,17 +38,15 @@ void SampleModule::onAbortMessage(const Abort::message_type::SharedPtr) {
 
 void SampleModule::onAllClearMessage(const AllClear::message_type::SharedPtr) {}
 
-
 void SampleModule::OnCallbackSetBool(const std::shared_ptr<std_srvs::srv::SetBool::Request>,
-											std::shared_ptr<std_srvs::srv::SetBool::Response> response)
-{
+									 std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
 	response->message = "succeeded";
 	response->success = true;
 }
 
 /*! \brief  returns the object ids of the objects in the scenario
  * \return a vector of object ids
-*/
+ */
 std::vector<std::uint32_t> SampleModule::getObjectIds() {
 	return objectIds;
 }

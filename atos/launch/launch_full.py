@@ -1,14 +1,18 @@
-import sys
 import os
+import sys
+
 from ament_index_python.packages import get_package_prefix
-sys.path.insert(0, os.path.join( # Need to modify the sys.path since we launch from the ros2 installed path
-    get_package_prefix('atos'),
-    'share', 'atos', 'launch'))
+
+sys.path.insert(
+    0,
+    os.path.join(  # Need to modify the sys.path since we launch from the ros2 installed path
+        get_package_prefix("atos"), "share", "atos", "launch"
+    ),
+)
 import launch_utils.launch_base as launch_base
 from launch import LaunchDescription
-from launch_ros.actions import Node
-from launch_graphical import get_graphical_nodes
 from launch_experimental import get_experimental_nodes
+from launch_graphical import get_graphical_nodes
 
 
 def generate_launch_description():
@@ -17,10 +21,10 @@ def generate_launch_description():
     graphical_nodes = get_graphical_nodes()
     experimental_nodes = get_experimental_nodes()
 
-    for node in graphical_nodes: 
-      base_nodes.append(node)
-		
+    for node in graphical_nodes:
+        base_nodes.append(node)
+
     for node in experimental_nodes:
-      base_nodes.append(node)
+        base_nodes.append(node)
 
     return LaunchDescription(base_nodes)

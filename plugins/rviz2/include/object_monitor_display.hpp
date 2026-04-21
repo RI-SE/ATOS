@@ -5,8 +5,6 @@
  */
 #pragma once
 
-#include <atos_interfaces/msg/monitor.hpp>
-#include <rviz_common/ros_topic_display.hpp>
 #include "rviz_common/interaction/forwards.hpp"
 #include "rviz_common/properties/color_property.hpp"
 #include "rviz_common/properties/enum_property.hpp"
@@ -15,19 +13,21 @@
 #include "rviz_rendering/objects/arrow.hpp"
 #include "rviz_rendering/objects/axes.hpp"
 #include "rviz_rendering/objects/shape.hpp"
+#include <atos_interfaces/msg/monitor.hpp>
+#include <rviz_common/ros_topic_display.hpp>
 
 namespace atos_rviz_plugins {
 
 class MonitorDisplay : public rviz_common::RosTopicDisplay<atos_interfaces::msg::Monitor> {
 	Q_OBJECT
-   public:
+public:
 	enum Shape {
 		Arrow,
 		Axes,
 	};
 	MonitorDisplay();
 
-   private:
+private:
 	void processMessage(atos_interfaces::msg::Monitor::ConstSharedPtr msg);
 	void onInitialize() override;
 	void reset() override;
@@ -37,7 +37,7 @@ class MonitorDisplay : public rviz_common::RosTopicDisplay<atos_interfaces::msg:
 
 	~MonitorDisplay() override;
 
-   private Q_SLOTS:
+private Q_SLOTS:
 
 	void updateShapeVisibility();
 	void updateShapeChoice();
@@ -45,7 +45,7 @@ class MonitorDisplay : public rviz_common::RosTopicDisplay<atos_interfaces::msg:
 	void updateAxisGeometry();
 	void updateArrowGeometry();
 
-   private:
+private:
 	rviz_common::properties::EnumProperty* shape_property_;
 
 	rviz_common::properties::ColorProperty* color_property_;
@@ -65,4 +65,4 @@ class MonitorDisplay : public rviz_common::RosTopicDisplay<atos_interfaces::msg:
 	bool pose_valid_;
 };
 
-}  // namespace atos_rviz_plugins
+} // namespace atos_rviz_plugins

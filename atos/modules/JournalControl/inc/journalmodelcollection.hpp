@@ -6,28 +6,31 @@
 #ifndef JOURNALMODELCOLLECTION_HPP
 #define JOURNALMODELCOLLECTION_HPP
 
-#include <unordered_set>
-#include <chrono>
-#include <string>
-#include <vector>
 #include "journalmodel.hpp"
 #include "loggable.hpp"
+#include <chrono>
+#include <string>
+#include <unordered_set>
+#include <vector>
 
 // Add a C++20 type
 namespace std::chrono {
-	typedef duration<int64_t, ratio<60*60*24>> days;
+typedef duration<int64_t, ratio<60 * 60 * 24>> days;
 }
 
-class JournalModelCollection : public std::unordered_set<JournalModel>, public Loggable {
+class JournalModelCollection
+  : public std::unordered_set<JournalModel>
+  , public Loggable {
 public:
-	JournalModelCollection(rclcpp::Logger log) : Loggable(log) {}
+	JournalModelCollection(rclcpp::Logger log) :
+	  Loggable(log) {}
 	void placeStartBookmarks();
 	void placeStopBookmarks();
 	void insertNonBookmarked();
 	int dumpToFile(std::string filename);
 	std::string toString() const {
 		std::string retval = "";
-		for (const auto &journal : *this) {
+		for (const auto& journal : *this) {
 			retval += journal.toString() + "\n";
 		}
 		if (this->size() > 0) {
@@ -35,18 +38,18 @@ public:
 		}
 		return retval;
 	}
+
 private:
 	std::chrono::time_point<std::chrono::system_clock, std::chrono::days> startDay;
 	std::chrono::time_point<std::chrono::system_clock, std::chrono::days> stopDay;
 
-
-    static std::string getDateAsString(const std::chrono::system_clock::time_point &date);
-    static std::string getCurrentDateAsString();
-    static std::vector<fs::path> getJournalFilesFrom(const std::chrono::system_clock::time_point &date);
-    static std::vector<fs::path> getJournalFilesFromToday() {
-	    return getJournalFilesFrom(std::chrono::system_clock::now());
-    }
-    static int printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile);
+	static std::string getDateAsString(const std::chrono::system_clock::time_point& date);
+	static std::string getCurrentDateAsString();
+	static std::vector<fs::path> getJournalFilesFrom(const std::chrono::system_clock::time_point& date);
+	static std::vector<fs::path> getJournalFilesFromToday() {
+		return getJournalFilesFrom(std::chrono::system_clock::now());
+	}
+	static int printFilesTo(const fs::path& inputDirectory, std::ostream& outputFile);
 };
 
 #endif // JOURNALMODELCOLLECTION_HPP
