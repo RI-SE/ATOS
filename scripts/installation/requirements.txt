@@ -2,3 +2,5 @@ pre-commit
 pyOpenSSL >= 23.2.0
 numpy<2.0
 scenariogeneration
+pytest>=6.2,<7.5
+anyio>=3.6,<4.0
