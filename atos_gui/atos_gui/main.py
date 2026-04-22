@@ -24,6 +24,7 @@ FLEET_MODE = len(sys.argv) > 2 and sys.argv[2].lower() == "atosfleetmanagement"
 GEOJSON_NAME = "RuralRoad_center_of_driving_lane_ccw.geojson"
 FLEET_STATIC_ROUTE = "/atos_gui_static"
 FLEET_STATIC_DIR = Path(__file__).parent / "static"
+FLEET_MAP_JS_VERSION = "20260422-1"
 FLEET_STATE_LOCK = threading.Lock()
 FLEET_TRUCK_STATES: dict[str, dict] = {}
 FLEET_GEOJSON_CACHE: dict[str, dict] = {}
@@ -153,7 +154,7 @@ def render_atosfleetmanagement_pages() -> None:
 
     @ui.page(path="/", title="TruckObjectGUI")
     def render_home() -> None:
-        ui.add_head_html(f'<script src="{FLEET_STATIC_ROUTE}/fleet_map.js"></script>')
+        ui.add_head_html(f'<script src="{FLEET_STATIC_ROUTE}/fleet_map.js?v={FLEET_MAP_JS_VERSION}"></script>')
         ui.label("TruckObjectGUI (ATOSFleetManagement mode)").classes("text-h4")
 
         with ui.tabs().classes("w-full") as tabs:

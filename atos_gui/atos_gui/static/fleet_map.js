@@ -191,14 +191,12 @@
 
     for (let i = 0; i < candidates.length; i += 1) {
       const current = candidates[i];
-      const hasAhead = (i + 1) < candidates.length;
-      if (!hasAhead) {
-        continue;
+      const next = candidates[(i + 1) % candidates.length];
+      let gap = next.distance_m - current.distance_m;
+      if (gap <= 0 && pathLengthMeters > 0) {
+        gap += pathLengthMeters;
       }
-      const next = candidates[i + 1];
-      const gap = next.distance_m - current.distance_m;
-      // Match TruckObjectControl backend logic: no circular wrap-around.
-      if (gap > 0) {
+      if (gap > 0.01) {
         result[current.uid] = gap;
       }
     }
