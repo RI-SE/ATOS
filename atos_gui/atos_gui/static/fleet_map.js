@@ -3,6 +3,16 @@
     return value * Math.PI / 180.0;
   }
 
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, '&#39;');
+  }
+
+
   // Constants aligned with atos/common/util.c:
   // EARTH_EQUATOR_RADIUS_M = 6378137.0 and INVERSE_FLATTENING = 298.257223563
   function vincentyDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -138,6 +148,8 @@
       normalized.path_name = item.path_name ? String(item.path_name) : "";
       normalized.path_index = Number.isFinite(Number(item.path_index)) ? Number(item.path_index) : -1;
       return normalized;
+    }).sort(function(a, b) {
+      return a.uid.localeCompare(b.uid, undefined, { sensitivity: "base", numeric: true });
     });
   }
 
@@ -204,8 +216,8 @@
   }
 
   function renderSvg(container, coords, trucks, selectedPathName, pathsByName) {
-    const width = Math.max(container.clientWidth, 700);
-    const height = Math.max(container.clientHeight, 420);
+    const width = 600;
+    const height = 650;
     const padding = 30;
 
     let minLon = Infinity;
@@ -278,7 +290,9 @@
         : Number(item.speed_kmh || 0);
       const courseDeg = Number(item.course_deg || 0);
       const pathIndex = Number(item.path_index || -1);
+      const lastCotMessage = String(item.last_cot_message || "-");
       const lastTcpCommand = String(item.last_tcp_command || "-");
+      const tcpWarning = String(item.last_tcp_warning || "");
       const ahead = aheadDistanceMap[uid];
       const aheadCell =
         Number.isFinite(ahead)
@@ -291,7 +305,13 @@
           "<td style='padding:2px 8px 2px 0;'>" + speedKmh.toFixed(1) + " km/h</td>" +
           "<td style='padding:2px 8px 2px 0;'>" + courseDeg.toFixed(0) + "°</td>" +
           "<td style='padding:2px 8px 2px 0;'><b>" + aheadCell + "</b></td>" +
-          "<td style='padding:2px 0;max-width:700px;word-break:break-all;'>" + lastTcpCommand + "</td>" +
+          "<td style='padding:2px 0;max-width:760px;'>" +
+            "<div><b>Latest CoT</b></div>" +
+            "<pre style='margin:2px 0 0 0;max-height:120px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-family:monospace;font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:6px;background:#f8fafc;'>" + escapeHtml(lastCotMessage) + "</pre>" +
+            "<div style='padding-top:4px;'><b>Last TCP</b></div>" +
+            "<pre style='margin:2px 0 0 0;max-height:120px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-family:monospace;font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:6px;background:#f8fafc;'>" + escapeHtml(lastTcpCommand) + "</pre>" +
+            (tcpWarning ? "<div style='padding-top:4px;color:#b91c1c;font-weight:600;'>TCP warning: " + escapeHtml(tcpWarning) + "</div>" : "") +
+          "</td>" +
         "</tr>"
       );
     }).join("");
@@ -306,12 +326,15 @@
     }).join("");
 
     container.innerHTML =
-      "<svg width='100%' height='" + height + "' viewBox='0 0 " + width + " " + height + "' " +
+      "<div style='display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;'>" +
+      "<div style='flex:0 0 auto;width:600px;'>" +
+      "<svg width='" + width + "' height='" + height + "' viewBox='0 0 " + width + " " + height + "' " +
       "style='background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;'>" +
       "<polyline fill='none' stroke='#0ea5e9' stroke-width='3' points='" + linePoints + "'/>" +
       truckCircles +
       "</svg>" +
-      "<div style='padding-top:8px;font-family:sans-serif;font-size:13px;'>" +
+      "</div>" +
+      "<div style='flex:1 1 420px;min-width:420px;padding:2px 4px;font-family:sans-serif;font-size:13px;'>" +
       "<div><b>Selected path:</b> <code>" + selectedPathName + "</code></div>" +
       "<div><b>Path points:</b> " + coords.length + "</div>" +
       "<div><b>Total length (Vincenty):</b> " + totalMeters.toFixed(2) + " m</div>" +
@@ -326,8 +349,9 @@
       "<th style='text-align:left;padding:2px 8px 2px 0;'>Speed</th>" +
       "<th style='text-align:left;padding:2px 8px 2px 0;'>Course</th>" +
       "<th style='text-align:left;padding:2px 8px 2px 0;'>Next ahead</th>" +
-      "<th style='text-align:left;padding:2px 0;'>Last TCP command</th></tr></thead>" +
+      "<th style='text-align:left;padding:2px 0;'>Latest CoT / Last TCP</th></tr></thead>" +
       "<tbody>" + truckRows + "</tbody></table>" +
+      "</div>" +
       "</div>";
   }
 
