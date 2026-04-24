@@ -306,9 +306,9 @@
           "<td style='padding:2px 8px 2px 0;'>" + courseDeg.toFixed(0) + "°</td>" +
           "<td style='padding:2px 8px 2px 0;'><b>" + aheadCell + "</b></td>" +
           "<td style='padding:2px 0;max-width:760px;'>" +
-            "<div><b>Latest CoT</b></div>" +
+            "<div><b>Latest CoT (Rx)</b></div>" +
             "<pre style='margin:2px 0 0 0;max-height:120px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-family:monospace;font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:6px;background:#f8fafc;'>" + escapeHtml(lastCotMessage) + "</pre>" +
-            "<div style='padding-top:4px;'><b>Last TCP</b></div>" +
+            "<div style='padding-top:4px;'><b>Latest TCP (Tx)</b></div>" +
             "<pre style='margin:2px 0 0 0;max-height:120px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-family:monospace;font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:6px;background:#f8fafc;'>" + escapeHtml(lastTcpCommand) + "</pre>" +
             (tcpWarning ? "<div style='padding-top:4px;color:#b91c1c;font-weight:600;'>TCP warning: " + escapeHtml(tcpWarning) + "</div>" : "") +
           "</td>" +
@@ -333,8 +333,7 @@
       "<polyline fill='none' stroke='#0ea5e9' stroke-width='3' points='" + linePoints + "'/>" +
       truckCircles +
       "</svg>" +
-      "</div>" +
-      "<div style='flex:1 1 420px;min-width:420px;padding:2px 4px;font-family:sans-serif;font-size:13px;'>" +
+      "<div style='padding:8px 2px 0 2px;font-family:sans-serif;font-size:13px;'>" +
       "<div><b>Selected path:</b> <code>" + selectedPathName + "</code></div>" +
       "<div><b>Path points:</b> " + coords.length + "</div>" +
       "<div><b>Total length (Vincenty):</b> " + totalMeters.toFixed(2) + " m</div>" +
@@ -342,6 +341,9 @@
       "<div><b>Live trucks on selected path:</b> " + filteredTrucks.length + "</div>" +
       "<div style='padding-top:6px;'><b>Available paths in payload</b></div>" +
       "<ul style='margin:4px 0 8px 16px;'>" + pathSummary + "</ul>" +
+      "</div>" +
+      "</div>" +
+      "<div style='flex:1 1 420px;min-width:420px;padding:2px 4px;font-family:sans-serif;font-size:13px;'>" +
       "<div style='padding-top:6px;'><b>Distance To Next Truck Ahead</b></div>" +
       "<table style='font-family:sans-serif;font-size:13px;border-collapse:collapse;'>" +
       "<thead><tr><th style='text-align:left;padding:2px 8px 2px 0;'>Truck</th>" +
@@ -349,7 +351,7 @@
       "<th style='text-align:left;padding:2px 8px 2px 0;'>Speed</th>" +
       "<th style='text-align:left;padding:2px 8px 2px 0;'>Course</th>" +
       "<th style='text-align:left;padding:2px 8px 2px 0;'>Next ahead</th>" +
-      "<th style='text-align:left;padding:2px 0;'>Latest CoT / Last TCP</th></tr></thead>" +
+      "<th style='text-align:left;padding:2px 0;'>Latest CoT (Rx) / Latest TCP (Tx)</th></tr></thead>" +
       "<tbody>" + truckRows + "</tbody></table>" +
       "</div>" +
       "</div>";

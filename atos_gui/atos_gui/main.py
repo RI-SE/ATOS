@@ -24,7 +24,7 @@ FLEET_MODE = len(sys.argv) > 2 and sys.argv[2].lower() == "atosfleetmanagement"
 GEOJSON_NAME = "RuralRoad_center_of_driving_lane_ccw.geojson"
 FLEET_STATIC_ROUTE = "/atos_gui_static"
 FLEET_STATIC_DIR = Path(__file__).parent / "static"
-FLEET_MAP_JS_VERSION = "20260423-7"
+FLEET_MAP_JS_VERSION = "20260424-3"
 FLEET_STATE_LOCK = threading.Lock()
 FLEET_TRUCK_STATES: dict[str, dict] = {}
 FLEET_GEOJSON_CACHE: dict[str, dict] = {}
