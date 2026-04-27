@@ -6,7 +6,7 @@
 #include <string>
 
 #include <rclcpp/clock.hpp>
-#include <rclcpp/logger.hpp>
+#include <rclcpp/logging.hpp>
 #include <rclcpp/serialization.hpp>
 #include <rclcpp/serialized_message.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
@@ -46,6 +46,9 @@ public:
 			return serialized;
 		}
 
+		RCLCPP_WARN(rclcpp::get_logger("mqtt2ros_utils"),
+					"Message type %s not supported. Returning empty serialized message",
+					msg_type.c_str());
 		return rclcpp::SerializedMessage();
 	}
 

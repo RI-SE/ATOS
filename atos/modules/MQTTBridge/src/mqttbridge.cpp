@@ -392,10 +392,9 @@ void MqttBridge::message_arrived(mqtt::const_message_ptr mqtt_msg) {
 	RCLCPP_DEBUG(get_logger(), "Received MQTT message on topic '%s'", mqtt_topic.c_str());
 	Mqtt2RosInterface& mqtt2ros = mqtt2ros_[mqtt_topic];
 
-	// Publish empty message to ROS topic
 	const auto msg = Mqtt2RosUtils::get_serialized_msg(mqtt2ros.ros.msg_type, mqtt_msg->get_payload_str());
 	mqtt2ros.ros.publisher->publish(msg);
-	RCLCPP_DEBUG(get_logger(), "Published empty message to ROS topic '%s'", mqtt2ros.ros.topic.c_str());
+	RCLCPP_DEBUG(get_logger(), "Published MQTT message to ROS topic '%s'", mqtt2ros.ros.topic.c_str());
 }
 
 template<typename T>
