@@ -49,6 +49,30 @@ ament_target_dependencies(${MQTT_BRIDGE_TARGET}
   atos_interfaces
 )
 
+if(BUILD_TESTING)
+	find_package(ament_cmake_gtest REQUIRED)
+	set(TESTFILES "tests/mqtt2ros_tests.cpp")
+
+	ament_add_gtest(mqtt_bridge_test ${TESTFILES})
+	if(TARGET mqtt_bridge_test)
+		target_link_libraries(mqtt_bridge_test
+			${ATOS_COMMON_LIBRARY}
+			${nlohmann_json}
+			paho-mqttpp3
+			paho-mqtt3as
+			fmt
+		)
+		target_include_directories(mqtt_bridge_test PUBLIC
+			${CMAKE_CURRENT_SOURCE_DIR}/inc
+			${COMMON_HEADERS}
+		)
+		ament_target_dependencies(mqtt_bridge_test
+			rclcpp
+			atos_interfaces
+		)
+	endif()
+endif()
+
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${MQTT_BRIDGE_TARGET}\")")
 install(TARGETS ${MQTT_BRIDGE_TARGET}
