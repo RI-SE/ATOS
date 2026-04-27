@@ -4,6 +4,9 @@ networks:
     driver: bridge
 services:
   atos:
+    depends_on:
+      isoObject:
+        condition: service_started
     image: astazero/atos_docker_env:test
     networks:
       - atos-net
