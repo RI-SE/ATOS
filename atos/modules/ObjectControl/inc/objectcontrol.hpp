@@ -270,8 +270,6 @@ public:
 	//! \brief Read the configured object and trajectory files and load related data
 	//!			into the ScenarioHandler.
 	bool loadScenario();
-	//! \brief Read all object files and fill the list of TestObjects.
-	void loadObjectFiles();
 	//! \brief Transform the scenario trajectories relative to the trajectory of the
 	//!			specified object.
 	void transformScenarioRelativeTo(const uint32_t objectID);

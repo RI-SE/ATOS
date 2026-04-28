@@ -13,6 +13,8 @@ atos:
   object_control:
     ros__parameters:
       max_missing_heartbeats: 100
+      max_missing_monr: 100
+      monr_timeout_period_ms: 1000
       transmitter_id: 15
   osi_adapter:
     ros__parameters:
