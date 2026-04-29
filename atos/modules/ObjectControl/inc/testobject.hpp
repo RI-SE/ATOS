@@ -136,6 +136,9 @@ public:
 	virtual std::chrono::milliseconds getMaxAllowedMonitorPeriod() const {
 		return this->maxAllowedMonitorPeriod;
 	}
+	virtual void setMaxAllowedMonitorPeriod(const std::chrono::milliseconds maxAllowedMonitorPeriod) {
+		this->maxAllowedMonitorPeriod = maxAllowedMonitorPeriod;
+	}
 	virtual MonitorMessage readMonitorMessage() {
 		MonitorMessage retval;
 		this->comms.mntr >> retval;
