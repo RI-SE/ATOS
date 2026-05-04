@@ -176,8 +176,9 @@ public:
 		  Connecting + sml::event<events::Ready>									= Ready,
 
 		  Ready + sml::on_entry<sml::_> / ready_on_entry(),
-		  Ready + sml::event<events::Abort>												  = Aborting,
-		  Ready + sml::event<events::Arm>												  = Armed,
+		  Ready + sml::event<events::Abort> = Aborting,
+		  Ready + sml::event<events::Arm>	= Armed,
+		  Ready + sml::event<events::Connect> / ready_reload(),
 		  Ready + sml::event<events::Disconnect>										  = Idle,
 		  Ready + sml::event<events::DisconnectedFromObject> / disconnected_from_object() = Connecting,
 		  Ready + sml::event<events::RemoteControl>										  = RemoteControl,

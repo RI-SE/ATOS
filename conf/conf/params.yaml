@@ -7,7 +7,7 @@ atos:
       timestep: 0.1
   open_scenario_gateway:
     ros__parameters:
-      open_scenario_file: "GaragePlanScenario.xosc"
+      open_scenario_file: ["GaragePlanScenario.xosc"]
       active_object_names: ["1"]
       start_delay_ms: 0
   object_control:

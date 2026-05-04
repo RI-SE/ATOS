@@ -50,7 +50,7 @@ EsminiAdapter::EsminiAdapter() :
 	oscFilePathClient_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 	objectIdsClient_cb_group_	= this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 	oscFilePathClient_			= create_client<atos_interfaces::srv::GetOpenScenarioFilePath>(
-	   ServiceNames::getOpenScenarioFilePath, rmw_qos_profile_services_default, oscFilePathClient_cb_group_);
+	  ServiceNames::getOpenScenarioFilePath, rmw_qos_profile_services_default, oscFilePathClient_cb_group_);
 	objectIdsClient_ = create_client<atos_interfaces::srv::GetObjectIds>(
 	  ServiceNames::getObjectIds, rmw_qos_profile_services_default, objectIdsClient_cb_group_);
 	declare_parameter("timestep", 0.1);
@@ -573,7 +573,7 @@ void EsminiAdapter::runEsminiSimulation() {
 
 void EsminiAdapter::onRequestObjectTrajectory(const std::shared_ptr<ObjectTrajectorySrv::Request> req,
 											  std::shared_ptr<ObjectTrajectorySrv::Response> res) {
-	res->id;
+	res->id = req->id;
 	me->fetchOSCFilePath();
 	if (me->runSimulation || me->atosObjectIdToTraj.find(req->id) == me->atosObjectIdToTraj.end()) {
 		me->runEsminiSimulation();

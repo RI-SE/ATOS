@@ -679,16 +679,45 @@ void ObjectControl::resetTestObjects() {
  * @param isResetting state-flag to indicate if the reset procedure is currently running
  */
 void ObjectControl::reloadScenarioTrajectories() {
-	// Check if we already have loaded the scenario trajectories
-	if (!this->isResetting) {
-		RCLCPP_INFO(get_logger(), "Scenario trajectories already loaded");
-		return;
-	}
-	this->isResetting = false;
 	RCLCPP_INFO(get_logger(), "Reloading scenario trajectories");
-	// Request the scenario trajectory for each object
 	for (auto& id : getVehicleIDs()) {
-		this->setObjectTrajectory(id);
+		auto trajRequest = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
+		trajRequest->id	 = id;
+		trajectoryClient->async_send_request(
+		  trajRequest,
+		  [this, id](const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
+			  auto response = future.get();
+			  if (!response->success) {
+				  RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object ID %u", id);
+				  return;
+			  }
+			  ATOS::Trajectory traj(get_logger());
+			  traj.initializeFromCartesianTrajectory(response->trajectory);
+			  objects.at(id)->setTrajectory(traj);
+
+			  // Re-fetch origin (may reference a different ODR file after a scenario switch)
+			  auto originRequest = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
+			  originClient->async_send_request(
+				originRequest,
+				[this, id, traj](const rclcpp::Client<atos_interfaces::srv::GetTestOrigin>::SharedFuture originFuture) {
+					auto originResponse = originFuture.get();
+					objects.at(id)->setOrigin({originResponse->origin.position.latitude,
+											   originResponse->origin.position.longitude,
+											   originResponse->origin.position.altitude,
+											   true,
+											   true,
+											   true});
+					RCLCPP_INFO(get_logger(),
+								"Updated origin for object ID %u: (%.6f, %.6f, %.3f)",
+								id,
+								originResponse->origin.position.latitude,
+								originResponse->origin.position.longitude,
+								originResponse->origin.position.altitude);
+					objects.at(id)->sendTrajectory();
+					this->republishTrajectoryPaths(id);
+					RCLCPP_INFO(get_logger(), "Reloaded trajectory for object ID %u with %lu points", id, traj.size());
+				});
+		  });
 	}
 }
 
@@ -719,7 +748,7 @@ void ObjectControl::republishTrajectoryPaths(uint32_t id) {
 void ObjectControl::trajectoryCallback(
   const rclcpp::Client<atos_interfaces::srv::GetObjectTrajectory>::SharedFuture future) {
 	this->trajResponse = future.get();
-	auto id			   = returnTrajResponse->id;
+	auto id			   = trajResponse->id;
 	// Check if the return trajectory service call was successful
 	if (!trajResponse->success) {
 		RCLCPP_ERROR(get_logger(), "Get trajectory service call failed for object %u", id);
