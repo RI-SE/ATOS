@@ -47,7 +47,7 @@ class OpenScenarioGateway(Node):
         self.active_objects = {}
         self.vehicle_catalog = None
         self.scenarios: dict[str, ScenarioData] = {}
-        self._active_scenario_file: str = ""
+        self.active_scenario_file: str = ""
 
         self.scenario_file_md5hash = None
 
@@ -65,7 +65,7 @@ class OpenScenarioGateway(Node):
         # ROS subscriptions/publishers
         self.init_ = self.create_subscription(Empty, "init", self.init_callback, 10)
         self.arm_ = self.create_subscription(Empty, "arm", self.arm_callback, 10)
-        self.active_scenario_sub_ = self.create_subscription(
+        self.active_scenario_sub = self.create_subscription(
             String, "active_scenario", self.active_scenario_callback, 10
         )
 
@@ -104,10 +104,10 @@ class OpenScenarioGateway(Node):
         self.scenarios = {}
         for file_name in self.get_parameter(SCENARIO_FILE_PARAMETER).value:
             self.update_scenario(file_name)
-        # Default to the first scenario after init
+        # Default to the first scenario in the list
         files = self.get_parameter(SCENARIO_FILE_PARAMETER).value
-        if not self._active_scenario_file and files:
-            self._active_scenario_file = files[0]
+        if not self.active_scenario_file and files:
+            self.active_scenario_file = files[0]
         self.update_active_scenario_objects(
             self.get_parameter(ACTIVE_OBJECT_NAME_PARAMETER).value
         )
@@ -118,16 +118,19 @@ class OpenScenarioGateway(Node):
             self.active_objects[id].started = False
 
     def story_board_element_state_change_callback(self, story_board_element):
-        active = self.active_scenario
-        if active is None:
+        active_scenario = self.active_scenario
+        if active_scenario is None:
+            self.get_logger().error(
+                "Received story board element state change but no active scenario is set"
+            )
             return
         if (
-            story_board_element.name in active.start_actions_to_obj_name.keys()
+            story_board_element.name in active_scenario.start_actions_to_obj_name.keys()
             and story_board_element.state == RUNNING
         ):
             self.handle_start_actions(story_board_element)
         elif (
-            story_board_element.full_path in active.custom_command_map
+            story_board_element.full_path in active_scenario.custom_command_map
             and story_board_element.state == RUNNING
         ):
             self.handle_custom_command_action(story_board_element)
@@ -172,12 +175,10 @@ class OpenScenarioGateway(Node):
 
     def active_scenario_callback(self, msg: String):
         if msg.data in self.scenarios:
-            self._active_scenario_file = msg.data
+            self.active_scenario_file = msg.data
             self.get_logger().info(f"Active scenario set to: {msg.data}")
         else:
-            self.get_logger().warn(
-                f"Received unknown scenario '{msg.data}'. Call init first."
-            )
+            self.get_logger().warn(f"Received unknown scenario '{msg.data}'")
 
     def parameter_callback(self, params):
         for param in params:
@@ -294,8 +295,8 @@ class OpenScenarioGateway(Node):
 
     @property
     def active_scenario_file_name(self) -> str:
-        if self._active_scenario_file and self._active_scenario_file in self.scenarios:
-            return self._active_scenario_file
+        if self.active_scenario_file and self.active_scenario_file in self.scenarios:
+            return self.active_scenario_file
         files = self.get_parameter(SCENARIO_FILE_PARAMETER).value
         return files[0] if files else ""
 

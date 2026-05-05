@@ -57,7 +57,7 @@ class ControlPanelNode(Node):
 
         self.scenario_names = []
         self.selected_scenario = ""
-        self._scenario_select = None
+        self.scenario_select = None
         self.active_scenario_pub = self.create_publisher(
             String, "/atos/active_scenario", QOS
         )
@@ -117,24 +117,27 @@ class ControlPanelNode(Node):
                     color="grey",
                 )
             with ui.row().classes("items-center"):
-                self._scenario_select = (
-                    ui.select(
-                        options=self.scenario_names,
-                        label="Active scenario",
-                        on_change=lambda e: [
-                            self.set_active_scenario(e.value),
-                            self.connectPub.publish(Empty()),
-                        ],
+                with ui.element("div"):
+                    self.scenario_select = (
+                        ui.select(
+                            options=self.scenario_names,
+                            label="Active scenario",
+                            on_change=lambda e: [
+                                self.set_active_scenario(e.value),
+                                self.connectPub.publish(Empty()),
+                            ],
+                        )
+                        .bind_value(self, "selected_scenario")
+                        .bind_enabled_from(
+                            self.OBC_state, "state", backward=lambda s: s == "CONNECTED"
+                        )
+                        .props("outlined dense")
                     )
-                    .bind_value(self, "selected_scenario")
-                    .bind_enabled_from(
-                        self.OBC_state, "state", backward=lambda s: s == "CONNECTED"
+                    ui.tooltip(
+                        "Changing scenario can ony be done in CONNECTED state"
+                    ).bind_visibility_from(
+                        self.OBC_state, "state", backward=lambda s: s != "CONNECTED"
                     )
-                    .props("outlined dense")
-                )
-                ui.label(
-                    "Changing scenario can ony be done in CONNECTED state"
-                ).classes("text-sm text-grey-7 italic")
             with ui.row():
                 ui.label().bind_text_from(
                     self.OBC_state, "state", backward=lambda n: f"State: {n}"
@@ -153,7 +156,9 @@ class ControlPanelNode(Node):
 
     def fetch_scenario_names(self) -> None:
         if not self.get_scenario_names_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().warn("open_scenario_gateway get_parameters not available")
+            self.get_logger().warn(
+                "Failed to fetch scenario names: service not available"
+            )
             return
         req = GetParameters.Request()
         req.names = ["open_scenario_file"]
@@ -173,12 +178,12 @@ class ControlPanelNode(Node):
         ):
             names = list(response.values[0].string_array_value)
             self.scenario_names = names
-            if self._scenario_select is not None:
-                self._scenario_select.options = names
+            if self.scenario_select is not None:
+                self.scenario_select.options = names
                 if not self.selected_scenario and names:
                     self.selected_scenario = names[0]
-                    self._scenario_select.set_value(names[0])
-                self._scenario_select.update()
+                    self.scenario_select.set_value(names[0])
+                self.scenario_select.update()
 
     def set_active_scenario(self, scenario_name: str) -> None:
         if not isinstance(scenario_name, str) or not scenario_name:

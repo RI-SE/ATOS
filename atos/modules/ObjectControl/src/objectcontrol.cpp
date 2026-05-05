@@ -675,8 +675,6 @@ void ObjectControl::resetTestObjects() {
 
 /**
  * @brief Reloads the scenario trajectories for all objects
- *
- * @param isResetting state-flag to indicate if the reset procedure is currently running
  */
 void ObjectControl::reloadScenarioTrajectories() {
 	RCLCPP_INFO(get_logger(), "Reloading scenario trajectories");
@@ -695,7 +693,7 @@ void ObjectControl::reloadScenarioTrajectories() {
 			  traj.initializeFromCartesianTrajectory(response->trajectory);
 			  objects.at(id)->setTrajectory(traj);
 
-			  // Re-fetch origin (may reference a different ODR file after a scenario switch)
+			  // Update origin (might be different .xodr for different .xosc)
 			  auto originRequest = std::make_shared<atos_interfaces::srv::GetTestOrigin::Request>();
 			  originClient->async_send_request(
 				originRequest,
