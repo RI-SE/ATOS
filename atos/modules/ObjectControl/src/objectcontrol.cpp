@@ -56,13 +56,13 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	this->declare_parameter("max_missing_heartbeats", 100);
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
 	idClient			  = create_client<atos_interfaces::srv::GetObjectIds>(
-	   ServiceNames::getObjectIds, rclcpp::ServicesQoS(), id_client_cb_group_);
+	   ServiceNames::getObjectIds, rmw_qos_profile_services_default, id_client_cb_group_);
 	originClient = create_client<atos_interfaces::srv::GetTestOrigin>(
-	  ServiceNames::getTestOrigin, rclcpp::ServicesQoS(), origin_client_cb_group_);
+	  ServiceNames::getTestOrigin, rmw_qos_profile_services_default, origin_client_cb_group_);
 	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(
-	  ServiceNames::getObjectTrajectory, rclcpp::ServicesQoS(), traj_client_cb_group_);
+	  ServiceNames::getObjectTrajectory, rmw_qos_profile_services_default, traj_client_cb_group_);
 	ipClient = create_client<atos_interfaces::srv::GetObjectIp>(
-	  ServiceNames::getObjectIp, rclcpp::ServicesQoS(), ip_client_cb_group_);
+	  ServiceNames::getObjectIp, rmw_qos_profile_services_default, ip_client_cb_group_);
 	returnTrajectoryClient =
 	  create_client<atos_interfaces::srv::GetObjectReturnTrajectory>(ServiceNames::getObjectReturnTrajectory);
 	stateService = create_service<atos_interfaces::srv::GetObjectControlState>(

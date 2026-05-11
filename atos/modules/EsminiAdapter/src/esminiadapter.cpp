@@ -12,6 +12,7 @@
 #include <cmath>
 #include <chrono>
 #include <regex>
+#include <type_traits>
 
 #include "atos_interfaces/msg/cartesian_trajectory.hpp"
 #include "rclcpp/wait_for_message.hpp"
@@ -26,6 +27,20 @@ using ObjectTriggerSrv = atos_interfaces::srv::GetObjectTriggerStart;
 using std::placeholders::_1;
 using std::placeholders::_2;
 using namespace std::chrono_literals;
+
+namespace
+{
+template <typename ReportObjectPosFn>
+int reportObjectPos(ReportObjectPosFn reportFn, int objectId, double timestamp, double x, double y, double z, double h, double p, double r)
+{
+	if constexpr (std::is_invocable_v<ReportObjectPosFn, int, float, float, float, float, float, float, float>) {
+		return reportFn(objectId, static_cast<float>(timestamp), static_cast<float>(x), static_cast<float>(y), static_cast<float>(z),
+						static_cast<float>(h), static_cast<float>(p), static_cast<float>(r));
+	} else {
+		return reportFn(objectId, x, y, z, h, p, r);
+	}
+}
+}
 
 
 
@@ -52,9 +67,9 @@ EsminiAdapter::EsminiAdapter() : Module(moduleName),
 	oscFilePathClient_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 	objectIdsClient_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 	oscFilePathClient_ = create_client<atos_interfaces::srv::GetOpenScenarioFilePath>(
-	  ServiceNames::getOpenScenarioFilePath, rclcpp::ServicesQoS(), oscFilePathClient_cb_group_);
+	  ServiceNames::getOpenScenarioFilePath, rmw_qos_profile_services_default, oscFilePathClient_cb_group_);
 	objectIdsClient_ = create_client<atos_interfaces::srv::GetObjectIds>(
-	  ServiceNames::getObjectIds, rclcpp::ServicesQoS(), objectIdsClient_cb_group_);
+	  ServiceNames::getObjectIds, rmw_qos_profile_services_default, objectIdsClient_cb_group_);
 	declare_parameter("timestep", 0.1);
 
 }
@@ -232,7 +247,7 @@ void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr 
 	auto speed = monr->velocity.twist.linear;
 
 	// Reporting to Esmini
-	SE_ReportObjectPos(esminiObjectId, pos.x, pos.y, pos.z, yaw, pitch, roll);
+	reportObjectPos(&SE_ReportObjectPos, esminiObjectId, SE_GetSimulationTime(), pos.x, pos.y, pos.z, yaw, pitch, roll);
 	SE_ReportObjectSpeed(esminiObjectId, speed.x);
 }
 
