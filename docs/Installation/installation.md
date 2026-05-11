@@ -17,7 +17,7 @@ sudo chown -R $USER:$USER ~/.astazero/ATOS/
 ```
 
 ## <a name="Installation script"></a> Running natively
-ATOS comes with an installation script that automates the installation process. It is intended for use on Ubuntu 22.04. The script will install ROS 2, ATOS dependencies, and ATOS itself. It will also create a workspace and build ATOS. The script can be executed using the following command:
+ATOS comes with an installation script that automates the installation process. Native installation is supported on Ubuntu 20.04 with ROS 2 Foxy, Ubuntu 22.04 with ROS 2 Humble, and Ubuntu 24.04 with ROS 2 Jazzy. The script will install ROS 2, ATOS dependencies, and ATOS itself. It will also create a workspace and build ATOS. The script can be executed using the following command:
 ```bash
 ./setup_atos.sh
 ```

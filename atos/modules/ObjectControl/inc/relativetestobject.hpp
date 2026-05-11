@@ -5,9 +5,9 @@
  */
 #pragma once
 
-#include "positioning.h"
-#include "roschannels/monitorchannel.hpp"
 #include "testobject.hpp"
+#include "roschannels/monitorchannel.hpp"
+#include "positioning.h"
 
 class RelativeTestObject : public TestObject {
 public:
@@ -16,15 +16,15 @@ public:
 	RelativeTestObject(RelativeTestObject&&);
 
 	RelativeTestObject& operator=(const RelativeTestObject&) = delete;
-	RelativeTestObject& operator=(RelativeTestObject&&)		 = default;
+	RelativeTestObject& operator=(RelativeTestObject&&) = delete;
 
 private:
-	virtual ObjectMonitorType transformCoordinate(const ObjectMonitorType& point,
-												  const ObjectMonitorType& anchor,
-												  const bool debug);
-	virtual MonitorMessage readMonitorMessage() override;
-
-	ROSChannels::Monitor::AnchorSub anchorSub;
-	ObjectMonitorType lastAnchorMonr;
-	void updateAnchor(const ROSChannels::Monitor::message_type::SharedPtr);
+    virtual ObjectMonitorType transformCoordinate(const ObjectMonitorType& point,
+        const ObjectMonitorType& anchor,
+        const bool debug);
+    virtual MonitorMessage readMonitorMessage() override;
+    
+    ROSChannels::Monitor::AnchorSub anchorSub;
+    ObjectMonitorType lastAnchorMonr;
+    void updateAnchor(const ROSChannels::Monitor::message_type::SharedPtr);
 };

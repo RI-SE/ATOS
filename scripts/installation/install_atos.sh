@@ -13,6 +13,21 @@ ATOS_REPO_PATH="$1"
 source "${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 check_command_failed $? "Failed to source ${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 
+ROS_DISTRO="${ROS_DISTRO:-$(get_supported_ros_distro)}"
+check_command_failed $? "Failed to determine ROS 2 distribution for this Ubuntu release."
+ATOS_VENV_PATH="$(get_atos_venv_path)"
+
+if [ -z "${ROS_DISTRO}" ]; then
+    echo "Failed to determine a supported ROS 2 distribution for this Ubuntu release."
+    exit 1
+fi
+
+if [ ! -f "${ATOS_VENV_PATH}/bin/activate" ]; then
+    echo "ATOS Python virtual environment was not found at ${ATOS_VENV_PATH}."
+    echo "Run setup_atos.sh again to recreate Python dependencies."
+    exit 1
+fi
+
 ################################################
 ############## Install ATOS ####################
 ################################################
@@ -42,6 +57,8 @@ cd -
 # temporarily cd into the workspace and build with colcon
 echo "Building ATOS..."
 cd $HOME/atos_ws
+# shellcheck disable=SC1090
+source "${ATOS_VENV_PATH}/bin/activate"
 source /opt/ros/$ROS_DISTRO/setup.bash
 MAKEFLAGS=-j4 colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 check_command_failed $? "Failed to build ATOS."
@@ -51,15 +68,23 @@ cd -
 ###### Configure setup scripts ######
 #####################################
 
+atos_venv_setup_script="source $ATOS_VENV_PATH/bin/activate"
+atos_python_site_packages="$(python -c 'import site; print(site.getsitepackages()[0])')"
+check_command_failed $? "Failed to determine ATOS Python site-packages path."
+atos_pythonpath_script="export PYTHONPATH=$atos_python_site_packages:\$PYTHONPATH"
 atos_setup_script="source $HOME/atos_ws/install/setup."
 ros2_setup_script="source /opt/ros/$ROS_DISTRO/setup."
 
 case "$SHELL" in
     */bash)
+        add_source_line_if_needed $HOME/.bashrc "bash" "${atos_venv_setup_script}"
+        add_source_line_if_needed $HOME/.bashrc "bash" "${atos_pythonpath_script}"
         add_source_line_if_needed $HOME/.bashrc "bash" "${ros2_setup_script}"
         add_source_line_if_needed $HOME/.bashrc "bash" "${atos_setup_script}"
     ;;
     */zsh)
+        add_source_line_if_needed $HOME/.zshrc "zsh" "${atos_venv_setup_script}"
+        add_source_line_if_needed $HOME/.zshrc "zsh" "${atos_pythonpath_script}"
         add_source_line_if_needed $HOME/.zshrc "zsh" "${ros2_setup_script}"
         add_source_line_if_needed $HOME/.zshrc "zsh" "${atos_setup_script}"
     ;;

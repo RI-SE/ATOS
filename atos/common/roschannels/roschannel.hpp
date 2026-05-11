@@ -5,35 +5,36 @@
  */
 #pragma once
 
-#include <functional>
 #include <rclcpp/rclcpp.hpp>
 #include <string>
+#include <functional>
 
 namespace ROSChannels {
 
 template<typename T>
 class BasePub {
 public:
-	BasePub(rclcpp::Node& node, const std::string& topicName, const rclcpp::QoS& qos = rclcpp::QoS(rclcpp::KeepAll())) :
-	  pub(node.create_publisher<T>(topicName, qos)) {}
-	BasePub() = delete;
-	typename rclcpp::Publisher<T>::SharedPtr pub;
-	inline virtual void publish(const T& msg) {
-		assert(pub);
-		pub->publish(msg);
-	};
+    BasePub(rclcpp::Node& node,
+        const std::string& topicName,
+        const rclcpp::QoS& qos = rclcpp::QoS(rclcpp::KeepAll()))
+        : pub(node.create_publisher<T>(topicName, qos)) {}
+    BasePub() = delete;
+    virtual ~BasePub() = default;
+    typename rclcpp::Publisher<T>::SharedPtr pub;
+    inline virtual void publish(const T& msg) { assert(pub); pub->publish(msg); };
 };
 
 template<typename T>
 class BaseSub {
 public:
-	BaseSub(rclcpp::Node& node,
-			const std::string& topicName,
-			std::function<void(const typename T::SharedPtr)> callback,
-			const rclcpp::QoS& qos = rclcpp::QoS(rclcpp::KeepAll())) :
-	  sub(node.create_subscription<T>(topicName, qos, callback)) {}
-	BaseSub() = delete;
-	typename rclcpp::Subscription<T>::SharedPtr sub;
+    BaseSub(rclcpp::Node& node,
+        const std::string& topicName,
+        std::function<void(const typename T::SharedPtr)> callback,
+        const rclcpp::QoS& qos = rclcpp::QoS(rclcpp::KeepAll()))
+        : sub(node.create_subscription<T>(topicName, qos, callback)) {}
+    BaseSub() = delete;
+    virtual ~BaseSub() = default;
+    typename rclcpp::Subscription<T>::SharedPtr sub;
 };
 
 } // namespace ROSChannels
