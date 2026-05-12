@@ -60,7 +60,7 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
 	idClient			  = create_client<atos_interfaces::srv::GetObjectIds>(
-	  ServiceNames::getObjectIds, rmw_qos_profile_services_default, id_client_cb_group_);
+	   ServiceNames::getObjectIds, rmw_qos_profile_services_default, id_client_cb_group_);
 	originClient = create_client<atos_interfaces::srv::GetTestOrigin>(
 	  ServiceNames::getTestOrigin, rmw_qos_profile_services_default, origin_client_cb_group_);
 	trajectoryClient = create_client<atos_interfaces::srv::GetObjectTrajectory>(

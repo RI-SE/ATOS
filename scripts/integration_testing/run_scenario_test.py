@@ -30,7 +30,13 @@ def integration_test_proc():
     """
     # Launch a process to test
     return launch.actions.ExecuteProcess(
-        cmd=["ros2", "launch", "atos", "launch_integration_testing.py", "foxbridge:=False"],
+        cmd=[
+            "ros2",
+            "launch",
+            "atos",
+            "launch_integration_testing.py",
+            "foxbridge:=False",
+        ],
         shell=True,
         cached_output=True,
         output="screen",
