@@ -132,17 +132,17 @@ inline message_type fromISOMonr(const uint32_t id,
 
 inline ObjectMonitorType toISOMonr(message_type& indata) {
 	ObjectMonitorType outdata;
-	outdata.timestamp.tv_sec		 = indata.atos_header.header.stamp.sec;
-	outdata.timestamp.tv_usec		 = indata.atos_header.header.stamp.nanosec / 1000;
-	outdata.state					 = static_cast<ObjectStateType>(indata.object_state.state);
-	outdata.position.isPositionValid = true;
-	outdata.position.isXcoordValid	 = true;
-	outdata.position.isYcoordValid	 = true;
-	outdata.position.isZcoordValid	 = true;
-	outdata.position.xCoord_m		 = indata.pose.pose.position.x;
-	outdata.position.yCoord_m		 = indata.pose.pose.position.y;
-	outdata.position.zCoord_m		 = indata.pose.pose.position.z;
-	outdata.position.isHeadingValid	 = true;
+	outdata.timestamp.tv_sec				= indata.atos_header.header.stamp.sec;
+	outdata.timestamp.tv_usec				= indata.atos_header.header.stamp.nanosec / 1000;
+	outdata.state							= static_cast<ObjectStateType>(indata.object_state.state);
+	outdata.position.isPositionValid		= true;
+	outdata.position.isXcoordValid			= true;
+	outdata.position.isYcoordValid			= true;
+	outdata.position.isZcoordValid			= true;
+	outdata.position.xCoord_m				= indata.pose.pose.position.x;
+	outdata.position.yCoord_m				= indata.pose.pose.position.y;
+	outdata.position.zCoord_m				= indata.pose.pose.position.z;
+	outdata.position.isHeadingValid			= true;
 	geometry_msgs::msg::Quaternion quat_msg = indata.pose.pose.orientation;
 	tf2::Quaternion quat_tf(quat_msg.x, quat_msg.y, quat_msg.z, quat_msg.w);
 	double r{}, p{}, y{};

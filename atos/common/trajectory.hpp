@@ -15,8 +15,8 @@
 #include <limits>
 #include <math.h>
 #include <nav_msgs/msg/path.hpp>
-#include <regex>
 #include <rclcpp/rclcpp.hpp>
+#include <regex>
 #include <vector>
 
 #include "atos_interfaces/msg/cartesian_trajectory.hpp"
