@@ -295,17 +295,17 @@ bool ObjectControl::loadScenario() {
 			std::future<bool> trajLoadedFuture	 = trajLoaded.get_future();
 			std::future<bool> ipLoadedFuture	 = ipLoaded.get_future();
 			std::future<bool> originLoadedFuture = originLoaded.get_future();
-			if (auto status = trajLoadedFuture.wait_for(5s);
+			if (auto status = trajLoadedFuture.wait_for(20s);
 				status != std::future_status::ready || !trajLoadedFuture.get()) {
 				RCLCPP_ERROR(get_logger(), "Trajectory loading failed for object ID %u", id);
 				successful = false;
 			}
-			if (auto status = ipLoadedFuture.wait_for(250ms);
+			if (auto status = ipLoadedFuture.wait_for(2s);
 				status != std::future_status::ready || !ipLoadedFuture.get()) {
 				RCLCPP_ERROR(get_logger(), "IP loading failed for object ID %u", id);
 				successful = false;
 			}
-			if (auto status = originLoadedFuture.wait_for(250ms);
+			if (auto status = originLoadedFuture.wait_for(2s);
 				status != std::future_status::ready || !originLoadedFuture.get()) {
 				RCLCPP_ERROR(get_logger(), "Origin loading failed for object ID %u", id);
 				successful = false;
@@ -326,7 +326,7 @@ bool ObjectControl::loadScenario() {
 	auto future	 = idClient->async_send_request(request, idsCallback);
 	// Wait for all objects to load
 	std::future scenarioLoadedFuture = scenarioLoaded.get_future();
-	if (auto status = scenarioLoadedFuture.wait_for(10s); status == std::future_status::ready) {
+	if (auto status = scenarioLoadedFuture.wait_for(30s); status == std::future_status::ready) {
 		return scenarioLoadedFuture.get(); // Get the status value
 	} else if (status == std::future_status::timeout) {
 		RCLCPP_ERROR(get_logger(), "Scenario loading timed out");
