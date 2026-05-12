@@ -8,6 +8,7 @@
 #include "atos_interfaces/msg/monitor.hpp"
 #include "positioning.h"
 #include "roschannel.hpp"
+#include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
 #if ROS_FOXY
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
@@ -97,7 +98,10 @@ inline message_type fromISOMonr(const uint32_t id,
 	if (indata.position.isHeadingValid) {
 		tf2::Quaternion orientation;
 		orientation.setRPY(0, 0, indata.position.heading_rad);
-		outdata.pose.pose.orientation = tf2::toMsg(orientation);
+		outdata.pose.pose.orientation.x = orientation.x();
+		outdata.pose.pose.orientation.y = orientation.y();
+		outdata.pose.pose.orientation.z = orientation.z();
+		outdata.pose.pose.orientation.w = orientation.w();
 	}
 	outdata.velocity.twist.linear.x	 = indata.speed.isLongitudinalValid ? indata.speed.longitudinal_m_s : 0;
 	outdata.velocity.twist.linear.y	 = indata.speed.isLateralValid ? indata.speed.lateral_m_s : 0;
@@ -139,9 +143,8 @@ inline ObjectMonitorType toISOMonr(message_type& indata) {
 	outdata.position.yCoord_m		 = indata.pose.pose.position.y;
 	outdata.position.zCoord_m		 = indata.pose.pose.position.z;
 	outdata.position.isHeadingValid	 = true;
-	tf2::Quaternion quat_tf;
 	geometry_msgs::msg::Quaternion quat_msg = indata.pose.pose.orientation;
-	tf2::fromMsg(quat_msg, quat_tf);
+	tf2::Quaternion quat_tf(quat_msg.x, quat_msg.y, quat_msg.z, quat_msg.w);
 	double r{}, p{}, y{};
 	tf2::Matrix3x3 m(quat_tf);
 	m.getRPY(r, p, y);

@@ -11,6 +11,8 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
 
 #if ROS_FOXY
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
@@ -62,7 +64,10 @@ atos_interfaces::msg::CartesianTrajectory Trajectory::toCartesianTrajectory() {
 		// Rotation
 		tf2::Quaternion q;
 		q.setRPY(0, 0, point.getHeading());
-		tf2::convert(q, pointMsg.pose.orientation);
+		pointMsg.pose.orientation.x = q.x();
+		pointMsg.pose.orientation.y = q.y();
+		pointMsg.pose.orientation.z = q.z();
+		pointMsg.pose.orientation.w = q.w();
 
 		// Velocity TODO convert longitudinal / lateral into xyz coordinate system
 		pointMsg.twist.linear.x = point.getLongitudinalVelocity();
@@ -82,8 +87,8 @@ atos_interfaces::msg::CartesianTrajectory Trajectory::toCartesianTrajectory() {
 nav_msgs::msg::Path Trajectory::toPath() const {
 	nav_msgs::msg::Path path;
 	path.header.frame_id = "map";
-	path.header.stamp	 = rclcpp::Time(0);
 	auto rosTimeOffset	 = rclcpp::Time(std::chrono::system_clock::now().time_since_epoch().count());
+	path.header.stamp	 = rosTimeOffset;
 	for (const auto& point : this->points) {
 		geometry_msgs::msg::PoseStamped pose;
 		pose.header.stamp	 = rosTimeOffset + rclcpp::Duration(point.getTime());
@@ -92,7 +97,10 @@ nav_msgs::msg::Path Trajectory::toPath() const {
 		pose.pose.position.z = point.getPosition().z();
 		tf2::Quaternion q;
 		q.setRPY(0, 0, point.getHeading());
-		tf2::convert(q, pose.pose.orientation);
+		pose.pose.orientation.x = q.x();
+		pose.pose.orientation.y = q.y();
+		pose.pose.orientation.z = q.z();
+		pose.pose.orientation.w = q.w();
 		path.poses.push_back(pose);
 	}
 	// Force same coordinate frame as header
