@@ -28,13 +28,13 @@ FLEET_MAP_JS_VERSION = "20260424-3"
 FLEET_STATE_LOCK = threading.Lock()
 FLEET_TRUCK_STATES: dict[str, dict] = {}
 FLEET_GEOJSON_CACHE: dict[str, dict] = {}
+APP_CONFIGURED = False
 
 
 
 def main() -> None:
-    # NOTE: This function is defined as the ROS entry point in setup.py,
-    # but it's empty to enable NiceGUI auto-reloading.
-    pass
+    configure_app()
+    ui.run(**build_ui_run_args())
 
 
 def _candidate_conf_dirs() -> list[Path]:
@@ -273,25 +273,33 @@ def print_access_hint() -> None:
     print(f"TruckObjectGUI ready. Open {scheme}://localhost:8420", flush=True)
 
 
-# Start the ROS node logic in a thread managed by nicegui.
-app.on_startup(lambda: threading.Thread(target=ros_main, daemon=True).start())
-app.on_startup(print_access_hint)
+def configure_app() -> None:
+    global APP_CONFIGURED
+    if APP_CONFIGURED:
+        return
 
-ui_run.APP_IMPORT_STRING = f"{__name__}:app"  # ROS2 uses non-standard module naming.
+    app.on_startup(lambda: threading.Thread(target=ros_main, daemon=True).start())
+    app.on_startup(print_access_hint)
+    APP_CONFIGURED = True
 
-uvicorn_args = {
-    "uvicorn_reload_dirs": str(Path(__file__).parent.resolve()),
-    "host": "0.0.0.0",
-    "port": 8420,
-    "show": False,
-    "title": "TruckObjectGUI" if FLEET_MODE else "ATOS GUI",
-}
 
-if USE_SSL:
-    uvicorn_args["ssl_keyfile"] = Path.home() / ".astazero/ATOS/certs/selfsigned.key"
-    uvicorn_args["ssl_certfile"] = Path.home() / ".astazero/ATOS/certs/selfsigned.crt"
+def build_ui_run_args() -> dict:
+    ui_run.APP_IMPORT_STRING = f"{__name__}:app"
 
-ui.run(**uvicorn_args)
+    uvicorn_args = {
+        "host": "0.0.0.0",
+        "port": 8420,
+        "reload": False,
+        "show": False,
+        "title": "TruckObjectGUI" if FLEET_MODE else "ATOS GUI",
+    }
 
-if USE_SSL:
-    print("ATTENTION: Using SSL, use https://localhost:8420 to access the GUI instead", flush=True)
+    if USE_SSL:
+        uvicorn_args["ssl_keyfile"] = Path.home() / ".astazero/ATOS/certs/selfsigned.key"
+        uvicorn_args["ssl_certfile"] = Path.home() / ".astazero/ATOS/certs/selfsigned.crt"
+
+    return uvicorn_args
+
+
+if __name__ in {"__main__", "__mp_main__"}:
+    main()
