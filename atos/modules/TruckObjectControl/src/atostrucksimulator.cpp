@@ -60,11 +60,6 @@ std::string resolveTrajectoryPath(const std::string& configured_path) {
 	candidates.emplace_back(fs::current_path() / "conf" / "conf" / kGeoJsonName);
 	candidates.emplace_back(fs::current_path() / ".." / "conf" / "conf" / kGeoJsonName);
 
-	if (const char* home = std::getenv("HOME")) {
-		candidates.emplace_back(fs::path(home) / "atos_ws" / "src" / "atos" / "conf" / "conf" / kGeoJsonName);
-		candidates.emplace_back(fs::path(home) / "Documents" / "repos" / "ATOS" / "conf" / "conf" / kGeoJsonName);
-	}
-
 	try {
 		const auto prefix = fs::path(ament_index_cpp::get_package_prefix("atos"));
 		candidates.emplace_back(prefix / "etc" / "conf" / kGeoJsonName);

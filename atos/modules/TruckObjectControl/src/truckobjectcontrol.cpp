@@ -31,6 +31,7 @@
 #include <nlohmann/json.hpp>
 #include <regex>
 #include <set>
+#include <string_view>
 #include <sstream>
 #include <stdexcept>
 #include <vector>
@@ -39,19 +40,19 @@ using std::placeholders::_1;
 using json = nlohmann::json;
 
 namespace {
-constexpr size_t kReceiveBufferSize		   = 4096;
+constexpr std::size_t kReceiveBufferSize		   = 4096;
 constexpr int kAcceptPollSleepMs		   = 100;
 constexpr int kTlsHandshakeRetrySleepMs	   = 10;
 constexpr int kTlsReadPollTimeoutMs		   = 1000;
 constexpr int kTlsIoRetrySleepMs		   = 10;
 constexpr int kTlsWriteMaxTransientRetries = 100;
-constexpr const char* kDefaultGeoJsonName  = "RuralRoad_center_of_driving_lane_ccw.geojson";
+constexpr std::string_view kDefaultGeoJsonName = "RuralRoad_center_of_driving_lane_ccw.geojson";
 
-double degToRad(double value) {
+double degToRad(const double value) {
 	return value * M_PI / 180.0;
 }
 
-double geodesicDistanceMeters(double lat1, double lon1, double lat2, double lon2) {
+double geodesicDistanceMeters(const double lat1, const double lon1, const double lat2, const double lon2) {
 	const double earth_radius_m = 6378137.0;
 	const double dlat			= degToRad(lat2 - lat1);
 	const double dlon			= degToRad(lon2 - lon1);
@@ -66,7 +67,7 @@ struct LocalXY {
 	double y = 0.0;
 };
 
-LocalXY toLocalXY(double ref_lat_deg, double ref_lon_deg, double lat_deg, double lon_deg) {
+LocalXY toLocalXY(const double ref_lat_deg, const double ref_lon_deg, const double lat_deg, const double lon_deg) {
 	constexpr double earth_radius_m = 6378137.0;
 	const double ref_lat_rad		= degToRad(ref_lat_deg);
 	const double dlat				= degToRad(lat_deg - ref_lat_deg);
@@ -105,12 +106,6 @@ std::string resolveDefaultTrajectoryPath(const std::string& configured_path) {
 	candidates.emplace_back(fs::current_path() / "conf" / "conf" / kDefaultGeoJsonName);
 	candidates.emplace_back(fs::current_path() / ".." / "conf" / "conf" / kDefaultGeoJsonName);
 
-	if (const char* home = std::getenv("HOME")) {
-		candidates.emplace_back(fs::path(home) / "atos_ws" / "src" / "atos" / "conf" / "conf" / kDefaultGeoJsonName);
-		candidates.emplace_back(fs::path(home) / "Documents" / "repos" / "ATOS" / "conf" / "conf" /
-								kDefaultGeoJsonName);
-	}
-
 	try {
 		const auto prefix = fs::path(ament_index_cpp::get_package_prefix("atos"));
 		candidates.emplace_back(prefix / "etc" / "conf" / kDefaultGeoJsonName);
@@ -127,57 +122,57 @@ std::string resolveDefaultTrajectoryPath(const std::string& configured_path) {
 
 TruckObjectControl::TruckObjectControl() :
   Node("truck_object_control") {
-	declare_parameter("warning_distance_m", warning_distance_m_);
-	declare_parameter("stop_distance_m", stop_distance_m_);
-	declare_parameter("warning_speed_kmh", warning_speed_kmh_);
-	declare_parameter("stop_speed_kmh", stop_speed_kmh_);
-	declare_parameter("cot_timeout_seconds", cot_timeout_seconds_);
-	declare_parameter("cot_tcp_port", cot_tcp_port_);
-	declare_parameter("cot_tcp_bind_address", cot_tcp_bind_address_);
-	declare_parameter("cot_tls_require_client_cert", cot_tls_require_client_cert_);
-	declare_parameter("cot_tls_cert_path", cot_tls_cert_path_);
-	declare_parameter("cot_tls_key_path", cot_tls_key_path_);
-	declare_parameter("cot_tls_ca_path", cot_tls_ca_path_);
-	declare_parameter("trajectory_geojson_path", trajectory_geojson_path_);
+	declare_parameter("warning_distance_m", m_warning_distance_m);
+	declare_parameter("stop_distance_m", m_stop_distance_m);
+	declare_parameter("warning_speed_kmh", m_warning_speed_kmh);
+	declare_parameter("stop_speed_kmh", m_stop_speed_kmh);
+	declare_parameter("cot_timeout_seconds", m_cot_timeout_seconds);
+	declare_parameter("cot_tcp_port", m_cot_tcp_port);
+	declare_parameter("cot_tcp_bind_address", m_cot_tcp_bind_address);
+	declare_parameter("cot_tls_require_client_cert", m_cot_tls_require_client_cert);
+	declare_parameter("cot_tls_cert_path", m_cot_tls_cert_path);
+	declare_parameter("cot_tls_key_path", m_cot_tls_key_path);
+	declare_parameter("cot_tls_ca_path", m_cot_tls_ca_path);
+	declare_parameter("trajectory_geojson_path", m_trajectory_geojson_path);
 
-	warning_distance_m_			 = get_parameter("warning_distance_m").as_double();
-	stop_distance_m_			 = get_parameter("stop_distance_m").as_double();
-	warning_speed_kmh_			 = get_parameter("warning_speed_kmh").as_double();
-	stop_speed_kmh_				 = get_parameter("stop_speed_kmh").as_double();
-	cot_timeout_seconds_		 = get_parameter("cot_timeout_seconds").as_double();
-	cot_tcp_port_				 = get_parameter("cot_tcp_port").as_int();
-	cot_tcp_bind_address_		 = get_parameter("cot_tcp_bind_address").as_string();
-	cot_tls_require_client_cert_ = get_parameter("cot_tls_require_client_cert").as_bool();
-	cot_tls_cert_path_			 = get_parameter("cot_tls_cert_path").as_string();
-	cot_tls_key_path_			 = get_parameter("cot_tls_key_path").as_string();
-	cot_tls_ca_path_			 = get_parameter("cot_tls_ca_path").as_string();
-	cot_tls_enabled_			 = (!cot_tls_cert_path_.empty() && !cot_tls_key_path_.empty());
-	if (!cot_tls_enabled_ && (!cot_tls_cert_path_.empty() || !cot_tls_key_path_.empty())) {
+	m_warning_distance_m			 = get_parameter("warning_distance_m").as_double();
+	m_stop_distance_m				 = get_parameter("stop_distance_m").as_double();
+	m_warning_speed_kmh			 = get_parameter("warning_speed_kmh").as_double();
+	m_stop_speed_kmh				 = get_parameter("stop_speed_kmh").as_double();
+	m_cot_timeout_seconds		 = get_parameter("cot_timeout_seconds").as_double();
+	m_cot_tcp_port				 = get_parameter("cot_tcp_port").as_int();
+	m_cot_tcp_bind_address		 = get_parameter("cot_tcp_bind_address").as_string();
+	m_cot_tls_require_client_cert = get_parameter("cot_tls_require_client_cert").as_bool();
+	m_cot_tls_cert_path			 = get_parameter("cot_tls_cert_path").as_string();
+	m_cot_tls_key_path			 = get_parameter("cot_tls_key_path").as_string();
+	m_cot_tls_ca_path			 = get_parameter("cot_tls_ca_path").as_string();
+	m_cot_tls_enabled			 = (!m_cot_tls_cert_path.empty() && !m_cot_tls_key_path.empty());
+	if (!m_cot_tls_enabled && (!m_cot_tls_cert_path.empty() || !m_cot_tls_key_path.empty())) {
 		RCLCPP_WARN(get_logger(),
 					"Incomplete TLS config for COT listener (cert or key missing). Falling back to plain TCP.");
 	}
-	trajectory_geojson_path_ = get_parameter("trajectory_geojson_path").as_string();
-	trajectory_geojson_path_ = resolveDefaultTrajectoryPath(trajectory_geojson_path_);
-	default_path_name_		 = std::filesystem::path(trajectory_geojson_path_).filename().string();
+	m_trajectory_geojson_path = get_parameter("trajectory_geojson_path").as_string();
+	m_trajectory_geojson_path = resolveDefaultTrajectoryPath(m_trajectory_geojson_path);
+	m_default_path_name		 = std::filesystem::path(m_trajectory_geojson_path).filename().string();
 
-	cot_sub_ = create_subscription<std_msgs::msg::String>(
+	m_cot_sub = create_subscription<std_msgs::msg::String>(
 	  "truck_objects/cot", 50, std::bind(&TruckObjectControl::onCotMessage, this, _1));
 
-	speed_command_pub_ = create_publisher<std_msgs::msg::String>("truck_objects/speed_command", 20);
-	truck_state_pub_   = create_publisher<std_msgs::msg::String>("truck_objects/state", 50);
+	m_speed_command_pub = create_publisher<std_msgs::msg::String>("truck_objects/speed_command", 20);
+	m_truck_state_pub   = create_publisher<std_msgs::msg::String>("truck_objects/state", 50);
 
-	evaluation_timer_ = create_wall_timer(std::chrono::milliseconds(200),
+	m_evaluation_timer = create_wall_timer(std::chrono::milliseconds(200),
 										  std::bind(&TruckObjectControl::evaluateAndPublishSpeedCommand, this));
 
 	if (!loadTrajectoryPath()) {
 		RCLCPP_WARN(get_logger(),
 					"Failed to load trajectory path from '%s'. Distance along trajectory will stay 0.",
-					trajectory_geojson_path_.c_str());
+					m_trajectory_geojson_path.c_str());
 	} else {
 		RCLCPP_INFO(get_logger(),
 					"Loaded trajectory path with %zu points from %s",
-					trajectory_path_.size(),
-					trajectory_geojson_path_.c_str());
+					m_trajectory_path.size(),
+					m_trajectory_geojson_path.c_str());
 	}
 
 	startTcpServer();
@@ -185,16 +180,16 @@ TruckObjectControl::TruckObjectControl() :
 	RCLCPP_INFO(
 	  get_logger(),
 	  "TruckObjectControl started. Listening for COT XML on %s://%s:%d and placeholder topic 'truck_objects/cot'.",
-	  cot_tls_enabled_ ? "tls" : "tcp",
-	  cot_tcp_bind_address_.c_str(),
-	  cot_tcp_port_);
+	  m_cot_tls_enabled ? "tls" : "tcp",
+	  m_cot_tcp_bind_address.c_str(),
+	  m_cot_tcp_port);
 }
 
 TruckObjectControl::~TruckObjectControl() {
 	stopTcpServer();
-	if (ssl_ctx_ != nullptr) {
-		SSL_CTX_free(ssl_ctx_);
-		ssl_ctx_ = nullptr;
+	if (m_ssl_ctx != nullptr) {
+		SSL_CTX_free(m_ssl_ctx);
+		m_ssl_ctx = nullptr;
 	}
 }
 
@@ -217,7 +212,7 @@ void TruckObjectControl::publishTruckState(const std::string& truck_id, const Tr
 
 	std_msgs::msg::String msg;
 	msg.data = payload.dump();
-	truck_state_pub_->publish(msg);
+	m_truck_state_pub->publish(msg);
 }
 
 void TruckObjectControl::onCotMessage(const std_msgs::msg::String::SharedPtr msg) {
@@ -229,8 +224,8 @@ void TruckObjectControl::onCotMessage(const std_msgs::msg::String::SharedPtr msg
 
 	TruckState state;
 	{
-		std::lock_guard<std::mutex> lock(state_mutex_);
-		auto& entry						  = trucks_[observation.truck_id];
+		std::lock_guard<std::mutex> lock(m_state_mutex);
+		auto& entry						  = m_trucks[observation.truck_id];
 		entry.distance_along_trajectory_m = observation.distance_along_trajectory_m;
 		entry.lat						  = observation.lat;
 		entry.lon						  = observation.lon;
@@ -353,9 +348,9 @@ bool TruckObjectControl::parseCotXml(const std::string& payload, CotObservation&
 		trajectory = getTrajectoryForPath(out.path_name);
 	}
 	if (!trajectory) {
-		trajectory = &trajectory_path_;
+		trajectory = &m_trajectory_path;
 		if (out.path_name.empty()) {
-			out.path_name = default_path_name_;
+			out.path_name = m_default_path_name;
 		}
 	}
 
@@ -370,7 +365,7 @@ bool TruckObjectControl::parseCotXml(const std::string& payload, CotObservation&
 
 bool TruckObjectControl::isCotFresh(const TruckState& state, const rclcpp::Time& now_time) const {
 	const auto age = (now_time - state.last_cot_stamp).seconds();
-	return age >= 0.0 && age <= cot_timeout_seconds_;
+	return age >= 0.0 && age <= m_cot_timeout_seconds;
 }
 
 bool TruckObjectControl::loadTrajectoryPathFromFile(const std::string& path, std::vector<GeoPoint>& out) const {
@@ -446,12 +441,12 @@ bool TruckObjectControl::loadTrajectoryPathFromFile(const std::string& path, std
 }
 
 bool TruckObjectControl::loadTrajectoryPath() {
-	if (!loadTrajectoryPathFromFile(trajectory_geojson_path_, trajectory_path_)) {
+	if (!loadTrajectoryPathFromFile(m_trajectory_geojson_path, m_trajectory_path)) {
 		return false;
 	}
 
-	std::lock_guard<std::mutex> lock(trajectory_cache_mutex_);
-	trajectory_cache_[default_path_name_] = trajectory_path_;
+	std::lock_guard<std::mutex> lock(m_trajectory_cache_mutex);
+	m_trajectory_cache[m_default_path_name] = m_trajectory_path;
 	return true;
 }
 
@@ -459,7 +454,7 @@ std::string TruckObjectControl::resolveTrajectoryPathByName(const std::string& p
 	namespace fs = std::filesystem;
 
 	if (path_name.empty()) {
-		return trajectory_geojson_path_;
+		return m_trajectory_geojson_path;
 	}
 
 	const fs::path raw(path_name);
@@ -472,7 +467,7 @@ std::string TruckObjectControl::resolveTrajectoryPathByName(const std::string& p
 		return "";
 	}
 
-	const fs::path configured = fs::path(trajectory_geojson_path_).parent_path() / base_name;
+	const fs::path configured = fs::path(m_trajectory_geojson_path).parent_path() / base_name;
 	if (fs::exists(configured)) {
 		return configured.string();
 	}
@@ -480,11 +475,6 @@ std::string TruckObjectControl::resolveTrajectoryPathByName(const std::string& p
 	std::vector<fs::path> candidates;
 	candidates.emplace_back(fs::current_path() / "conf" / "conf" / base_name);
 	candidates.emplace_back(fs::current_path() / ".." / "conf" / "conf" / base_name);
-
-	if (const char* home = std::getenv("HOME")) {
-		candidates.emplace_back(fs::path(home) / "atos_ws" / "src" / "atos" / "conf" / "conf" / base_name);
-		candidates.emplace_back(fs::path(home) / "Documents" / "repos" / "ATOS" / "conf" / "conf" / base_name);
-	}
 
 	try {
 		const auto prefix = fs::path(ament_index_cpp::get_package_prefix("atos"));
@@ -508,9 +498,9 @@ const std::vector<TruckObjectControl::GeoPoint>* TruckObjectControl::getTrajecto
 	}
 
 	{
-		std::lock_guard<std::mutex> lock(trajectory_cache_mutex_);
-		const auto it = trajectory_cache_.find(key);
-		if (it != trajectory_cache_.end()) {
+		std::lock_guard<std::mutex> lock(m_trajectory_cache_mutex);
+		const auto it = m_trajectory_cache.find(key);
+		if (it != m_trajectory_cache.end()) {
 			return &it->second;
 		}
 	}
@@ -525,8 +515,8 @@ const std::vector<TruckObjectControl::GeoPoint>* TruckObjectControl::getTrajecto
 		return nullptr;
 	}
 
-	std::lock_guard<std::mutex> lock(trajectory_cache_mutex_);
-	auto [it, inserted] = trajectory_cache_.emplace(key, std::move(loaded));
+	std::lock_guard<std::mutex> lock(m_trajectory_cache_mutex);
+	auto [it, inserted] = m_trajectory_cache.emplace(key, std::move(loaded));
 	if (inserted) {
 		RCLCPP_INFO(get_logger(),
 					"Loaded trajectory '%s' with %zu points from %s",
@@ -537,13 +527,13 @@ const std::vector<TruckObjectControl::GeoPoint>* TruckObjectControl::getTrajecto
 	return &it->second;
 }
 
-double TruckObjectControl::projectDistanceAlongTrajectory(double lat,
-														  double lon,
+double TruckObjectControl::projectDistanceAlongTrajectory(const double lat,
+														  const double lon,
 														  const std::vector<GeoPoint>* trajectory,
 														  int* projected_path_index) const {
 	const std::vector<GeoPoint>* path = trajectory;
 	if (!path || path->empty()) {
-		path = &trajectory_path_;
+		path = &m_trajectory_path;
 	}
 	if (!path || path->empty()) {
 		if (projected_path_index != nullptr) {
@@ -595,11 +585,11 @@ double TruckObjectControl::projectDistanceAlongTrajectory(double lat,
 }
 
 bool TruckObjectControl::initializeTlsContext() {
-	if (ssl_ctx_ != nullptr) {
+	if (m_ssl_ctx != nullptr) {
 		return true;
 	}
 
-	if (cot_tls_cert_path_.empty() || cot_tls_key_path_.empty()) {
+	if (m_cot_tls_cert_path.empty() || m_cot_tls_key_path.empty()) {
 		RCLCPP_ERROR(get_logger(), "TLS enabled but cot_tls_cert_path or cot_tls_key_path is empty.");
 		return false;
 	}
@@ -607,127 +597,127 @@ bool TruckObjectControl::initializeTlsContext() {
 	SSL_load_error_strings();
 	OpenSSL_add_ssl_algorithms();
 
-	ssl_ctx_ = SSL_CTX_new(TLS_server_method());
-	if (ssl_ctx_ == nullptr) {
+	m_ssl_ctx = SSL_CTX_new(TLS_server_method());
+	if (m_ssl_ctx == nullptr) {
 		RCLCPP_ERROR(get_logger(), "Failed to create TLS server context.");
 		return false;
 	}
 
-	SSL_CTX_set_min_proto_version(ssl_ctx_, TLS1_2_VERSION);
+	SSL_CTX_set_min_proto_version(m_ssl_ctx, TLS1_2_VERSION);
 
-	if (SSL_CTX_use_certificate_file(ssl_ctx_, cot_tls_cert_path_.c_str(), SSL_FILETYPE_PEM) != 1) {
-		RCLCPP_ERROR(get_logger(), "Failed to load TLS certificate from '%s'.", cot_tls_cert_path_.c_str());
-		SSL_CTX_free(ssl_ctx_);
-		ssl_ctx_ = nullptr;
+	if (SSL_CTX_use_certificate_file(m_ssl_ctx, m_cot_tls_cert_path.c_str(), SSL_FILETYPE_PEM) != 1) {
+		RCLCPP_ERROR(get_logger(), "Failed to load TLS certificate from '%s'.", m_cot_tls_cert_path.c_str());
+		SSL_CTX_free(m_ssl_ctx);
+		m_ssl_ctx = nullptr;
 		return false;
 	}
 
-	if (SSL_CTX_use_PrivateKey_file(ssl_ctx_, cot_tls_key_path_.c_str(), SSL_FILETYPE_PEM) != 1) {
-		RCLCPP_ERROR(get_logger(), "Failed to load TLS private key from '%s'.", cot_tls_key_path_.c_str());
-		SSL_CTX_free(ssl_ctx_);
-		ssl_ctx_ = nullptr;
+	if (SSL_CTX_use_PrivateKey_file(m_ssl_ctx, m_cot_tls_key_path.c_str(), SSL_FILETYPE_PEM) != 1) {
+		RCLCPP_ERROR(get_logger(), "Failed to load TLS private key from '%s'.", m_cot_tls_key_path.c_str());
+		SSL_CTX_free(m_ssl_ctx);
+		m_ssl_ctx = nullptr;
 		return false;
 	}
 
-	if (SSL_CTX_check_private_key(ssl_ctx_) != 1) {
+	if (SSL_CTX_check_private_key(m_ssl_ctx) != 1) {
 		RCLCPP_ERROR(get_logger(), "TLS private key does not match certificate.");
-		SSL_CTX_free(ssl_ctx_);
-		ssl_ctx_ = nullptr;
+		SSL_CTX_free(m_ssl_ctx);
+		m_ssl_ctx = nullptr;
 		return false;
 	}
 
-	if (!cot_tls_ca_path_.empty()) {
-		if (SSL_CTX_load_verify_locations(ssl_ctx_, cot_tls_ca_path_.c_str(), nullptr) != 1) {
-			RCLCPP_ERROR(get_logger(), "Failed to load TLS CA file from '%s'.", cot_tls_ca_path_.c_str());
-			SSL_CTX_free(ssl_ctx_);
-			ssl_ctx_ = nullptr;
+	if (!m_cot_tls_ca_path.empty()) {
+		if (SSL_CTX_load_verify_locations(m_ssl_ctx, m_cot_tls_ca_path.c_str(), nullptr) != 1) {
+			RCLCPP_ERROR(get_logger(), "Failed to load TLS CA file from '%s'.", m_cot_tls_ca_path.c_str());
+			SSL_CTX_free(m_ssl_ctx);
+			m_ssl_ctx = nullptr;
 			return false;
 		}
 	}
 
-	if (cot_tls_require_client_cert_) {
-		SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
+	if (m_cot_tls_require_client_cert) {
+		SSL_CTX_set_verify(m_ssl_ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
 	} else {
-		SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_NONE, nullptr);
+		SSL_CTX_set_verify(m_ssl_ctx, SSL_VERIFY_NONE, nullptr);
 	}
 
 	return true;
 }
 
 void TruckObjectControl::startTcpServer() {
-	if (cot_tls_enabled_ && !initializeTlsContext()) {
+	if (m_cot_tls_enabled && !initializeTlsContext()) {
 		RCLCPP_ERROR(get_logger(), "COT listener startup failed: TLS setup failed.");
 		return;
 	}
 
-	tcp_server_fd_ = ::socket(AF_INET, SOCK_STREAM, 0);
-	if (tcp_server_fd_ < 0) {
+	m_tcp_server_fd = ::socket(AF_INET, SOCK_STREAM, 0);
+	if (m_tcp_server_fd < 0) {
 		RCLCPP_ERROR(get_logger(), "Failed to create TCP socket for COT listener.");
 		return;
 	}
 
 	int enable = 1;
-	(void)setsockopt(tcp_server_fd_, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
-	(void)setsockopt(tcp_server_fd_, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable));
+	(void)setsockopt(m_tcp_server_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+	(void)setsockopt(m_tcp_server_fd, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable));
 
 	sockaddr_in addr{};
 	addr.sin_family = AF_INET;
-	addr.sin_port	= htons(static_cast<uint16_t>(cot_tcp_port_));
-	if (::inet_pton(AF_INET, cot_tcp_bind_address_.c_str(), &addr.sin_addr) != 1) {
-		RCLCPP_ERROR(get_logger(), "Invalid bind address '%s' for COT TCP listener.", cot_tcp_bind_address_.c_str());
-		::close(tcp_server_fd_);
-		tcp_server_fd_ = -1;
+	addr.sin_port	= htons(static_cast<uint16_t>(m_cot_tcp_port));
+	if (::inet_pton(AF_INET, m_cot_tcp_bind_address.c_str(), &addr.sin_addr) != 1) {
+		RCLCPP_ERROR(get_logger(), "Invalid bind address '%s' for COT TCP listener.", m_cot_tcp_bind_address.c_str());
+		::close(m_tcp_server_fd);
+		m_tcp_server_fd = -1;
 		return;
 	}
 
-	if (::bind(tcp_server_fd_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
+	if (::bind(m_tcp_server_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
 		RCLCPP_ERROR(
-		  get_logger(), "Failed to bind COT TCP listener on %s:%d", cot_tcp_bind_address_.c_str(), cot_tcp_port_);
-		::close(tcp_server_fd_);
-		tcp_server_fd_ = -1;
+		  get_logger(), "Failed to bind COT TCP listener on %s:%d", m_cot_tcp_bind_address.c_str(), m_cot_tcp_port);
+		::close(m_tcp_server_fd);
+		m_tcp_server_fd = -1;
 		return;
 	}
 
-	if (::listen(tcp_server_fd_, 8) < 0) {
+	if (::listen(m_tcp_server_fd, 8) < 0) {
 		RCLCPP_ERROR(get_logger(), "Failed to listen on COT TCP listener.");
-		::close(tcp_server_fd_);
-		tcp_server_fd_ = -1;
+		::close(m_tcp_server_fd);
+		m_tcp_server_fd = -1;
 		return;
 	}
 
-	tcp_running_.store(true);
-	tcp_accept_thread_ = std::thread(&TruckObjectControl::acceptTcpClients, this);
+	m_tcp_running.store(true);
+	m_tcp_accept_thread = std::thread(&TruckObjectControl::acceptTcpClients, this);
 }
 
 void TruckObjectControl::stopTcpServer() {
-	tcp_running_.store(false);
+	m_tcp_running.store(false);
 
-	if (tcp_server_fd_ >= 0) {
-		::shutdown(tcp_server_fd_, SHUT_RDWR);
-		::close(tcp_server_fd_);
-		tcp_server_fd_ = -1;
+	if (m_tcp_server_fd >= 0) {
+		::shutdown(m_tcp_server_fd, SHUT_RDWR);
+		::close(m_tcp_server_fd);
+		m_tcp_server_fd = -1;
 	}
 
-	if (tcp_accept_thread_.joinable()) {
-		tcp_accept_thread_.join();
+	if (m_tcp_accept_thread.joinable()) {
+		m_tcp_accept_thread.join();
 	}
 
 	{
-		std::lock_guard<std::mutex> lock(tcp_threads_mutex_);
-		for (const int fd : tcp_client_fds_) {
+		std::lock_guard<std::mutex> lock(m_tcp_threads_mutex);
+		for (const int fd : m_tcp_client_fds) {
 			::shutdown(fd, SHUT_RDWR);
 			::close(fd);
 		}
-		tcp_client_fds_.clear();
+		m_tcp_client_fds.clear();
 	}
 	{
-		std::lock_guard<std::mutex> lock(tcp_command_mutex_);
-		uid_to_client_fd_.clear();
-		uid_to_ssl_.clear();
+		std::lock_guard<std::mutex> lock(m_tcp_command_mutex);
+		m_uid_to_client_fd.clear();
+		m_uid_to_ssl.clear();
 	}
 	{
-		std::lock_guard<std::mutex> lock(tcp_sessions_mutex_);
-		for (auto& [fd, session] : tcp_sessions_) {
+		std::lock_guard<std::mutex> lock(m_tcp_sessions_mutex);
+		for (auto& [fd, session] : m_tcp_sessions) {
 			{
 				std::lock_guard<std::mutex> qlock(session->queue_mutex);
 				session->stop_sender = true;
@@ -736,31 +726,31 @@ void TruckObjectControl::stopTcpServer() {
 		}
 	}
 
-	std::lock_guard<std::mutex> lock(tcp_threads_mutex_);
-	for (auto& thread : tcp_client_threads_) {
+	std::lock_guard<std::mutex> lock(m_tcp_threads_mutex);
+	for (auto& thread : m_tcp_client_threads) {
 		if (thread.joinable()) {
 			thread.join();
 		}
 	}
-	tcp_client_threads_.clear();
+	m_tcp_client_threads.clear();
 	{
-		std::lock_guard<std::mutex> session_lock(tcp_sessions_mutex_);
-		for (auto& [fd, session] : tcp_sessions_) {
+		std::lock_guard<std::mutex> session_lock(m_tcp_sessions_mutex);
+		for (auto& [fd, session] : m_tcp_sessions) {
 			if (session->sender_thread.joinable()) {
 				session->sender_thread.join();
 			}
 		}
-		tcp_sessions_.clear();
+		m_tcp_sessions.clear();
 	}
 }
 
 void TruckObjectControl::acceptTcpClients() {
-	while (tcp_running_.load()) {
+	while (m_tcp_running.load()) {
 		sockaddr_in client_addr{};
 		socklen_t client_len = sizeof(client_addr);
-		const int client_fd	 = ::accept(tcp_server_fd_, reinterpret_cast<sockaddr*>(&client_addr), &client_len);
+		const int client_fd	 = ::accept(m_tcp_server_fd, reinterpret_cast<sockaddr*>(&client_addr), &client_len);
 		if (client_fd < 0) {
-			if (!tcp_running_.load()) {
+			if (!m_tcp_running.load()) {
 				break;
 			}
 			RCLCPP_WARN_THROTTLE(
@@ -797,20 +787,20 @@ void TruckObjectControl::acceptTcpClients() {
 		RCLCPP_INFO(get_logger(), "Accepted TruckObject TCP client %s", peer.str().c_str());
 
 		{
-			std::lock_guard<std::mutex> lock(tcp_sessions_mutex_);
+			std::lock_guard<std::mutex> lock(m_tcp_sessions_mutex);
 			auto session			 = std::make_shared<TcpClientSession>();
 			session->fd				 = client_fd;
 			session->peer_name		 = peer.str();
-			tcp_sessions_[client_fd] = session;
+			m_tcp_sessions[client_fd] = session;
 		}
 
-		std::lock_guard<std::mutex> lock(tcp_threads_mutex_);
-		tcp_client_fds_.insert(client_fd);
-		tcp_client_threads_.emplace_back(&TruckObjectControl::handleTcpClient, this, client_fd, peer.str());
+		std::lock_guard<std::mutex> lock(m_tcp_threads_mutex);
+		m_tcp_client_fds.insert(client_fd);
+		m_tcp_client_threads.emplace_back(&TruckObjectControl::handleTcpClient, this, client_fd, peer.str());
 	}
 }
 
-void TruckObjectControl::handleTcpClient(int client_fd, const std::string& peer_name) {
+void TruckObjectControl::handleTcpClient(const int client_fd, const std::string& peer_name) {
 	std::string buffer;
 	buffer.reserve(8 * 1024);
 	std::set<std::string> seen_uids;
@@ -818,9 +808,9 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string& peer_
 	std::shared_ptr<TcpClientSession> session;
 
 	{
-		std::lock_guard<std::mutex> lock(tcp_sessions_mutex_);
-		const auto it = tcp_sessions_.find(client_fd);
-		if (it != tcp_sessions_.end()) {
+		std::lock_guard<std::mutex> lock(m_tcp_sessions_mutex);
+		const auto it = m_tcp_sessions.find(client_fd);
+		if (it != m_tcp_sessions.end()) {
 			session = it->second;
 		}
 	}
@@ -832,8 +822,8 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string& peer_
 	}
 
 	try {
-		if (cot_tls_enabled_) {
-			ssl = SSL_new(ssl_ctx_);
+		if (m_cot_tls_enabled) {
+			ssl = SSL_new(m_ssl_ctx);
 			if (ssl == nullptr) {
 				RCLCPP_WARN(get_logger(), "Failed to create TLS session for %s.", peer_name.c_str());
 				throw std::runtime_error("SSL_new failed");
@@ -846,7 +836,7 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string& peer_
 
 			SSL_set_mode(ssl, SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
-			while (tcp_running_.load()) {
+			while (m_tcp_running.load()) {
 				const int accept_result = SSL_accept(ssl);
 				if (accept_result == 1) {
 					break;
@@ -873,9 +863,9 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string& peer_
 		session->sender_thread = std::thread(&TruckObjectControl::clientSenderLoop, this, session);
 
 		char receive_buffer[kReceiveBufferSize];
-		while (tcp_running_.load()) {
+		while (m_tcp_running.load()) {
 			ssize_t received = 0;
-			if (cot_tls_enabled_) {
+			if (m_cot_tls_enabled) {
 				pollfd pfd{};
 				pfd.fd				  = client_fd;
 				pfd.events			  = POLLIN;
@@ -978,8 +968,8 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string& peer_
 
 				TruckState state;
 				{
-					std::lock_guard<std::mutex> lock(state_mutex_);
-					auto& entry						  = trucks_[observation.truck_id];
+					std::lock_guard<std::mutex> lock(m_state_mutex);
+					auto& entry						  = m_trucks[observation.truck_id];
 					entry.distance_along_trajectory_m = observation.distance_along_trajectory_m;
 					entry.lat						  = observation.lat;
 					entry.lon						  = observation.lon;
@@ -994,9 +984,9 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string& peer_
 					state							  = entry;
 				}
 				{
-					std::lock_guard<std::mutex> lock(tcp_command_mutex_);
-					const auto existing = uid_to_client_fd_.find(observation.truck_id);
-					if (existing != uid_to_client_fd_.end() && existing->second != client_fd) {
+					std::lock_guard<std::mutex> lock(m_tcp_command_mutex);
+					const auto existing = m_uid_to_client_fd.find(observation.truck_id);
+					if (existing != m_uid_to_client_fd.end() && existing->second != client_fd) {
 						RCLCPP_WARN(get_logger(),
 									"UID '%s' already mapped to fd=%d; remapping to fd=%d from %s. "
 									"Ensure each sender uses a unique uid.",
@@ -1005,9 +995,9 @@ void TruckObjectControl::handleTcpClient(int client_fd, const std::string& peer_
 									client_fd,
 									peer_name.c_str());
 					}
-					uid_to_client_fd_[observation.truck_id] = client_fd;
-					if (cot_tls_enabled_) {
-						uid_to_ssl_[observation.truck_id] = ssl;
+					m_uid_to_client_fd[observation.truck_id] = client_fd;
+					if (m_cot_tls_enabled) {
+						m_uid_to_ssl[observation.truck_id] = ssl;
 					}
 				}
 
@@ -1035,8 +1025,8 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 	std::vector<ConnectedTruck> connected;
 
 	{
-		std::lock_guard<std::mutex> lock(state_mutex_);
-		for (const auto& [id, state] : trucks_) {
+		std::lock_guard<std::mutex> lock(m_state_mutex);
+		for (const auto& [id, state] : m_trucks) {
 			if (!state.tcp_connected) {
 				RCLCPP_WARN_THROTTLE(get_logger(),
 									 *get_clock(),
@@ -1097,8 +1087,8 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 		if (!path_name.empty()) {
 			trajectory = getTrajectoryForPath(path_name);
 		}
-		if ((!trajectory || trajectory->empty()) && !trajectory_path_.empty()) {
-			trajectory = &trajectory_path_;
+		if ((!trajectory || trajectory->empty()) && !m_trajectory_path.empty()) {
+			trajectory = &m_trajectory_path;
 		}
 		if (trajectory && !trajectory->empty()) {
 			path_length_m = trajectory->back().distance_m;
@@ -1170,17 +1160,17 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 
 			std::string target_speed_mps_value = std::to_string(std::max(0.0, group[i].speed_mps));
 			if (control_command == "STOP") {
-				target_speed_mps_value = std::to_string(stop_speed_kmh_ / 3.6);
+				target_speed_mps_value = std::to_string(m_stop_speed_kmh / 3.6);
 				any_stop			   = true;
 			} else if (control_command == "SLOWDOWN") {
-				target_speed_mps_value = std::to_string(warning_speed_kmh_ / 3.6);
+				target_speed_mps_value = std::to_string(m_warning_speed_kmh / 3.6);
 				any_slowdown		   = true;
 			}
 
 			{
-				std::lock_guard<std::mutex> lock(state_mutex_);
-				auto it = trucks_.find(group[i].id);
-				if (it != trucks_.end()) {
+				std::lock_guard<std::mutex> lock(m_state_mutex);
+				auto it = m_trucks.find(group[i].id);
+				if (it != m_trucks.end()) {
 					it->second.last_control_command = control_command;
 				}
 			}
@@ -1191,8 +1181,8 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 				: (control_command == "SLOWDOWN" ? "truck_ahead_slowdown_state" : "truck_ahead_drive_state");
 			uint64_t cmd_seq = 0;
 			{
-				std::lock_guard<std::mutex> lock(state_mutex_);
-				cmd_seq = ++tcp_command_seq_;
+				std::lock_guard<std::mutex> lock(m_state_mutex);
+				cmd_seq = ++m_tcp_command_seq;
 			}
 			const std::string tcp_command =
 			  "command=" + control_command + ";target_speed_mps=" + target_speed_mps_value +
@@ -1208,9 +1198,9 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 			TruckState state_copy;
 			bool has_state = false;
 			{
-				std::lock_guard<std::mutex> lock(state_mutex_);
-				auto it = trucks_.find(group[i].id);
-				if (it != trucks_.end()) {
+				std::lock_guard<std::mutex> lock(m_state_mutex);
+				auto it = m_trucks.find(group[i].id);
+				if (it != m_trucks.end()) {
 					it->second.last_tcp_command = tcp_command;
 					state_copy					= it->second;
 					has_state					= true;
@@ -1232,10 +1222,10 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 	std::string fleet_target_speed_mps_value = "nochange";
 	std::string fleet_reason				 = "no_limit";
 	if (any_stop) {
-		fleet_target_speed_mps_value = std::to_string(stop_speed_kmh_ / 3.6);
+		fleet_target_speed_mps_value = std::to_string(m_stop_speed_kmh / 3.6);
 		fleet_reason				 = "min_gap_below_stop_distance";
 	} else if (any_slowdown) {
-		fleet_target_speed_mps_value = std::to_string(warning_speed_kmh_ / 3.6);
+		fleet_target_speed_mps_value = std::to_string(m_warning_speed_kmh / 3.6);
 		fleet_reason				 = "min_gap_below_warning_distance";
 	}
 
@@ -1243,7 +1233,7 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 	command.data = "target_speed_mps=" + fleet_target_speed_mps_value + ";scope=all_connected_with_valid_tcp" +
 				   ";reason=" + fleet_reason + ";min_gap_m=" + std::to_string(min_gap_m) +
 				   ";connected_count=" + std::to_string(connected.size());
-	speed_command_pub_->publish(command);
+	m_speed_command_pub->publish(command);
 
 	RCLCPP_WARN(
 	  get_logger(),
@@ -1262,9 +1252,9 @@ void TruckObjectControl::updateTruckTcpStatus(const std::string& target_id,
 	TruckState state_copy;
 	bool has_state = false;
 	{
-		std::lock_guard<std::mutex> lock(state_mutex_);
-		const auto it = trucks_.find(target_id);
-		if (it != trucks_.end()) {
+		std::lock_guard<std::mutex> lock(m_state_mutex);
+		const auto it = m_trucks.find(target_id);
+		if (it != m_trucks.end()) {
 			it->second.last_tcp_command = command;
 			it->second.last_tcp_warning = warning;
 			if (mark_disconnected) {
@@ -1281,7 +1271,7 @@ void TruckObjectControl::updateTruckTcpStatus(const std::string& target_id,
 }
 
 void TruckObjectControl::clientSenderLoop(const std::shared_ptr<TcpClientSession>& session) {
-	while (tcp_running_.load()) {
+	while (m_tcp_running.load()) {
 		std::string target_id;
 		std::string command;
 		{
@@ -1300,7 +1290,7 @@ void TruckObjectControl::clientSenderLoop(const std::shared_ptr<TcpClientSession
 		}
 
 		const std::string payload = command + "\n";
-		if (cot_tls_enabled_) {
+		if (m_cot_tls_enabled) {
 			if (session->ssl == nullptr) {
 				updateTruckTcpStatus(target_id, command, "TLS session missing for this truck", true);
 				::shutdown(session->fd, SHUT_RDWR);
@@ -1311,7 +1301,7 @@ void TruckObjectControl::clientSenderLoop(const std::shared_ptr<TcpClientSession
 			int transient_retries = 0;
 			bool send_failed	  = false;
 			std::string send_warning;
-			while (total_sent < payload.size() && tcp_running_.load()) {
+			while (total_sent < payload.size() && m_tcp_running.load()) {
 				{
 					std::lock_guard<std::mutex> lock(session->queue_mutex);
 					if (session->stop_sender) {
@@ -1409,12 +1399,12 @@ void TruckObjectControl::disconnectClientSession(const std::shared_ptr<TcpClient
 
 	std::vector<std::string> affected_uids;
 	{
-		std::lock_guard<std::mutex> lock(tcp_command_mutex_);
-		for (auto it = uid_to_client_fd_.begin(); it != uid_to_client_fd_.end();) {
+		std::lock_guard<std::mutex> lock(m_tcp_command_mutex);
+		for (auto it = m_uid_to_client_fd.begin(); it != m_uid_to_client_fd.end();) {
 			if (it->second == session->fd) {
 				affected_uids.push_back(it->first);
-				uid_to_ssl_.erase(it->first);
-				it = uid_to_client_fd_.erase(it);
+				m_uid_to_ssl.erase(it->first);
+				it = m_uid_to_client_fd.erase(it);
 			} else {
 				++it;
 			}
@@ -1427,8 +1417,8 @@ void TruckObjectControl::disconnectClientSession(const std::shared_ptr<TcpClient
 
 	const int old_fd = session->fd;
 	{
-		std::lock_guard<std::mutex> lock(tcp_threads_mutex_);
-		tcp_client_fds_.erase(old_fd);
+		std::lock_guard<std::mutex> lock(m_tcp_threads_mutex);
+		m_tcp_client_fds.erase(old_fd);
 	}
 
 	if (session->sender_thread.joinable()) {
@@ -1449,8 +1439,8 @@ void TruckObjectControl::disconnectClientSession(const std::shared_ptr<TcpClient
 	}
 
 	{
-		std::lock_guard<std::mutex> lock(tcp_sessions_mutex_);
-		tcp_sessions_.erase(old_fd);
+		std::lock_guard<std::mutex> lock(m_tcp_sessions_mutex);
+		m_tcp_sessions.erase(old_fd);
 	}
 
 	RCLCPP_INFO(
@@ -1460,9 +1450,9 @@ void TruckObjectControl::disconnectClientSession(const std::shared_ptr<TcpClient
 void TruckObjectControl::sendSpeedCommandToTcpClient(const std::string& target_id, const std::string& command) {
 	int target_fd = -1;
 	{
-		std::lock_guard<std::mutex> lock(tcp_command_mutex_);
-		const auto it = uid_to_client_fd_.find(target_id);
-		if (it != uid_to_client_fd_.end()) {
+		std::lock_guard<std::mutex> lock(m_tcp_command_mutex);
+		const auto it = m_uid_to_client_fd.find(target_id);
+		if (it != m_uid_to_client_fd.end()) {
 			target_fd = it->second;
 		}
 	}
@@ -1474,9 +1464,9 @@ void TruckObjectControl::sendSpeedCommandToTcpClient(const std::string& target_i
 
 	std::shared_ptr<TcpClientSession> session;
 	{
-		std::lock_guard<std::mutex> lock(tcp_sessions_mutex_);
-		const auto it = tcp_sessions_.find(target_fd);
-		if (it != tcp_sessions_.end()) {
+		std::lock_guard<std::mutex> lock(m_tcp_sessions_mutex);
+		const auto it = m_tcp_sessions.find(target_fd);
+		if (it != m_tcp_sessions.end()) {
 			session = it->second;
 		}
 	}
