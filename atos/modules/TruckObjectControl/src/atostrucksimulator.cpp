@@ -119,7 +119,7 @@ AtosTruckSimulator::AtosTruckSimulator() :
 		m_start_index = static_cast<int>(m_trajectory_path.size() - 1);
 	}
 
-	m_current_distance_m = m_trajectory_path[static_cast<size_t>(m_start_index)].distance_m;
+	m_current_distance_m = m_trajectory_path[static_cast<size_t>(m_start_index)].distance_along_path_m;
 	m_current_speed_mps	 = std::max(0.0, m_initial_speed_kmh / 3.6);
 	m_last_step_time		 = now();
 
@@ -198,13 +198,13 @@ bool AtosTruckSimulator::loadTrajectoryPath() {
 			continue;
 		}
 		GeoPoint p;
-		p.lon		 = coord[0].get<double>();
-		p.lat		 = coord[1].get<double>();
-		p.distance_m = cumulative;
+		p.lon					 = coord[0].get<double>();
+		p.lat					 = coord[1].get<double>();
+		p.distance_along_path_m = cumulative;
 
 		if (has_prev) {
 			cumulative += geodesicDistanceMeters(prev.lat, prev.lon, p.lat, p.lon);
-			p.distance_m = cumulative;
+			p.distance_along_path_m = cumulative;
 		}
 
 		m_trajectory_path.push_back(p);
@@ -273,7 +273,7 @@ bool AtosTruckSimulator::pointAtDistance(double distance_m,
 		return false;
 	}
 
-	const double max_distance = m_trajectory_path.back().distance_m;
+	const double max_distance = m_trajectory_path.back().distance_along_path_m;
 	double d				  = distance_m;
 	if (m_loop_path && max_distance > kEpsilon) {
 		d = std::fmod(distance_m, max_distance);
@@ -285,7 +285,7 @@ bool AtosTruckSimulator::pointAtDistance(double distance_m,
 	}
 
 	size_t segment_index = 1;
-	while (segment_index < m_trajectory_path.size() && m_trajectory_path[segment_index].distance_m < d) {
+	while (segment_index < m_trajectory_path.size() && m_trajectory_path[segment_index].distance_along_path_m < d) {
 		++segment_index;
 	}
 	if (segment_index >= m_trajectory_path.size()) {
@@ -297,8 +297,8 @@ bool AtosTruckSimulator::pointAtDistance(double distance_m,
 
 	const auto& a				= m_trajectory_path[segment_index - 1];
 	const auto& b				= m_trajectory_path[segment_index];
-	const double segment_length = std::max(kEpsilon, b.distance_m - a.distance_m);
-	const double t				= std::clamp((d - a.distance_m) / segment_length, 0.0, 1.0);
+	const double segment_length = std::max(kEpsilon, b.distance_along_path_m - a.distance_along_path_m);
+	const double t				= std::clamp((d - a.distance_along_path_m) / segment_length, 0.0, 1.0);
 
 	lat = a.lat + (b.lat - a.lat) * t;
 	lon = a.lon + (b.lon - a.lon) * t;
@@ -324,7 +324,7 @@ void AtosTruckSimulator::simulationStep() {
 
 	m_current_distance_m += m_current_speed_mps * dt;
 	if (!m_loop_path) {
-		m_current_distance_m = std::clamp(m_current_distance_m, 0.0, m_trajectory_path.back().distance_m);
+		m_current_distance_m = std::clamp(m_current_distance_m, 0.0, m_trajectory_path.back().distance_along_path_m);
 	}
 
 	double lat		  = 0.0;

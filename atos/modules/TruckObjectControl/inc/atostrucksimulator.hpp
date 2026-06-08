@@ -17,9 +17,9 @@ public:
 
 private:
 	struct GeoPoint {
-		double lat		  = 0.0;
-		double lon		  = 0.0;
-		double distance_m = 0.0;
+		double lat					 = 0.0;
+		double lon					 = 0.0;
+		double distance_along_path_m = 0.0;
 	};
 
 	std::string m_uid					 = "L5S-TRUCK-SIM";
