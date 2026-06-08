@@ -88,18 +88,18 @@ AtosTruckSimulator::AtosTruckSimulator() :
 	declare_parameter("loop_path", m_loop_path);
 	declare_parameter("ignore_warning_speed_commands", m_ignore_warning_speed_commands);
 
-	m_uid						   = get_parameter("uid").as_string();
-	m_tcp_host					   = get_parameter("tcp_host").as_string();
-	m_tcp_port					   = get_parameter("tcp_port").as_int();
-	m_trajectory_geojson_path	   = get_parameter("trajectory_geojson_path").as_string();
-	m_trajectory_geojson_path	   = resolveTrajectoryPath(m_trajectory_geojson_path);
-	m_trajectory_path_name		   = std::filesystem::path(m_trajectory_geojson_path).filename().string();
-	m_start_index				   = get_parameter("start_index").as_int();
-	m_initial_speed_kmh			   = get_parameter("initial_speed_kmh").as_double();
-	m_target_speed_kmh			   = get_parameter("target_speed_kmh").as_double();
-	m_acceleration_mps2			   = std::max(0.01, get_parameter("acceleration_mps2").as_double());
-	m_publish_hz					   = std::max(1.0, get_parameter("publish_hz").as_double());
-	m_loop_path					   = get_parameter("loop_path").as_bool();
+	m_uid							= get_parameter("uid").as_string();
+	m_tcp_host						= get_parameter("tcp_host").as_string();
+	m_tcp_port						= get_parameter("tcp_port").as_int();
+	m_trajectory_geojson_path		= get_parameter("trajectory_geojson_path").as_string();
+	m_trajectory_geojson_path		= resolveTrajectoryPath(m_trajectory_geojson_path);
+	m_trajectory_path_name			= std::filesystem::path(m_trajectory_geojson_path).filename().string();
+	m_start_index					= get_parameter("start_index").as_int();
+	m_initial_speed_kmh				= get_parameter("initial_speed_kmh").as_double();
+	m_target_speed_kmh				= get_parameter("target_speed_kmh").as_double();
+	m_acceleration_mps2				= std::max(0.01, get_parameter("acceleration_mps2").as_double());
+	m_publish_hz					= std::max(1.0, get_parameter("publish_hz").as_double());
+	m_loop_path						= get_parameter("loop_path").as_bool();
 	m_ignore_warning_speed_commands = get_parameter("ignore_warning_speed_commands").as_bool();
 
 	if (!loadTrajectoryPath()) {
@@ -116,7 +116,7 @@ AtosTruckSimulator::AtosTruckSimulator() :
 
 	m_current_distance_m = m_trajectory_path[static_cast<size_t>(m_start_index)].distance_along_path_m;
 	m_current_speed_mps	 = std::max(0.0, m_initial_speed_kmh / 3.6);
-	m_last_step_time		 = now();
+	m_last_step_time	 = now();
 
 	m_speed_command_sub = create_subscription<std_msgs::msg::String>(
 	  "truck_objects/speed_command", 20, std::bind(&AtosTruckSimulator::onSpeedCommand, this, std::placeholders::_1));
@@ -193,8 +193,8 @@ bool AtosTruckSimulator::loadTrajectoryPath() {
 			continue;
 		}
 		GeoPoint p;
-		p.lon					 = coord[0].get<double>();
-		p.lat					 = coord[1].get<double>();
+		p.lon					= coord[0].get<double>();
+		p.lat					= coord[1].get<double>();
 		p.distance_along_path_m = cumulative;
 
 		if (has_prev) {
@@ -310,7 +310,7 @@ bool AtosTruckSimulator::pointAtDistance(double distance_m,
 void AtosTruckSimulator::simulationStep() {
 	const auto now_time = now();
 	const double dt		= std::max(0.001, (now_time - m_last_step_time).seconds());
-	m_last_step_time		= now_time;
+	m_last_step_time	= now_time;
 
 	const double target_speed_mps = std::max(0.0, m_target_speed_kmh / 3.6);
 	const double max_delta		  = m_acceleration_mps2 * dt;

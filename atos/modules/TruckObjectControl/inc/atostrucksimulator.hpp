@@ -22,21 +22,21 @@ private:
 		double distance_along_path_m = 0.0;
 	};
 
-	std::string m_uid					 = "L5S-TRUCK-SIM";
-	std::string m_tcp_host				 = "127.0.0.1";
-	int m_tcp_port						 = 8114;
+	std::string m_uid					  = "L5S-TRUCK-SIM";
+	std::string m_tcp_host				  = "127.0.0.1";
+	int m_tcp_port						  = 8114;
 	std::string m_trajectory_geojson_path = "";
-	std::string m_trajectory_path_name	 = "";
-	int m_start_index					 = 0;
-	double m_initial_speed_kmh			 = 0.0;
-	double m_target_speed_kmh			 = 40.0;
-	double m_acceleration_mps2			 = 2.0;
-	double m_publish_hz					 = 5.0;
-	bool m_loop_path						 = true;
-	bool m_ignore_warning_speed_commands	 = false;
+	std::string m_trajectory_path_name	  = "";
+	int m_start_index					  = 0;
+	double m_initial_speed_kmh			  = 0.0;
+	double m_target_speed_kmh			  = 40.0;
+	double m_acceleration_mps2			  = 2.0;
+	double m_publish_hz					  = 5.0;
+	bool m_loop_path					  = true;
+	bool m_ignore_warning_speed_commands  = false;
 
 	double m_current_distance_m = 0.0;
-	double m_current_speed_mps  = 0.0;
+	double m_current_speed_mps	= 0.0;
 
 	int m_tcp_fd = -1;
 	std::string m_tcp_rx_buffer;

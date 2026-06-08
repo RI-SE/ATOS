@@ -24,10 +24,10 @@ class TruckObjectControl : public rclcpp::Node {
 public:
 	TruckObjectControl();
 	~TruckObjectControl() override;
-	TruckObjectControl(const TruckObjectControl&) = delete;
+	TruckObjectControl(const TruckObjectControl&)			 = delete;
 	TruckObjectControl& operator=(const TruckObjectControl&) = delete;
-	TruckObjectControl(TruckObjectControl&&) = delete;
-	TruckObjectControl& operator=(TruckObjectControl&&) = delete;
+	TruckObjectControl(TruckObjectControl&&)				 = delete;
+	TruckObjectControl& operator=(TruckObjectControl&&)		 = delete;
 
 private:
 	struct GeoPoint {
@@ -89,20 +89,20 @@ private:
 	std::unordered_map<std::string, std::vector<GeoPoint>> m_trajectory_cache;
 	std::mutex m_trajectory_cache_mutex;
 
-	double m_warning_distance_m			 = 400.0;
-	double m_stop_distance_m				 = 200.0;
-	double m_warning_speed_kmh			 = 30.0;
-	double m_stop_speed_kmh				 = 0.0;
-	double m_cot_timeout_seconds			 = 2.0;
-	int m_cot_tcp_port					 = 8114;
-	std::string m_cot_tcp_bind_address	 = "0.0.0.0";
-	bool m_cot_tls_require_client_cert	 = false;
-	std::string m_cot_tls_cert_path		 = "";
-	std::string m_cot_tls_key_path		 = "";
-	std::string m_cot_tls_ca_path		 = "";
-	bool m_cot_tls_enabled				 = false;
+	double m_warning_distance_m			  = 400.0;
+	double m_stop_distance_m			  = 200.0;
+	double m_warning_speed_kmh			  = 30.0;
+	double m_stop_speed_kmh				  = 0.0;
+	double m_cot_timeout_seconds		  = 2.0;
+	int m_cot_tcp_port					  = 8114;
+	std::string m_cot_tcp_bind_address	  = "0.0.0.0";
+	bool m_cot_tls_require_client_cert	  = false;
+	std::string m_cot_tls_cert_path		  = "";
+	std::string m_cot_tls_key_path		  = "";
+	std::string m_cot_tls_ca_path		  = "";
+	bool m_cot_tls_enabled				  = false;
 	std::string m_trajectory_geojson_path = "";
-	std::string m_default_path_name		 = "";
+	std::string m_default_path_name		  = "";
 
 	std::atomic<bool> m_tcp_running{false};
 	int m_tcp_server_fd = -1;
@@ -115,7 +115,7 @@ private:
 	std::unordered_map<int, std::shared_ptr<TcpClientSession>> m_tcp_sessions;
 	std::unordered_map<std::string, int> m_uid_to_client_fd;
 	std::unordered_map<std::string, SSL*> m_uid_to_ssl;
-	SSL_CTX* m_ssl_ctx		  = nullptr;
+	SSL_CTX* m_ssl_ctx		   = nullptr;
 	uint64_t m_tcp_command_seq = 0;
 
 	void onCotMessage(const std_msgs::msg::String::SharedPtr msg);

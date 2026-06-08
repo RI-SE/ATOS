@@ -31,21 +31,21 @@
 #include <nlohmann/json.hpp>
 #include <regex>
 #include <set>
-#include <string_view>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 #include <vector>
 
 using std::placeholders::_1;
 using json = nlohmann::json;
 
 namespace {
-constexpr std::size_t kReceiveBufferSize		   = 4096;
-constexpr int kAcceptPollSleepMs		   = 100;
-constexpr int kTlsHandshakeRetrySleepMs	   = 10;
-constexpr int kTlsReadPollTimeoutMs		   = 1000;
-constexpr int kTlsIoRetrySleepMs		   = 10;
-constexpr int kTlsWriteMaxTransientRetries = 100;
+constexpr std::size_t kReceiveBufferSize	   = 4096;
+constexpr int kAcceptPollSleepMs			   = 100;
+constexpr int kTlsHandshakeRetrySleepMs		   = 10;
+constexpr int kTlsReadPollTimeoutMs			   = 1000;
+constexpr int kTlsIoRetrySleepMs			   = 10;
+constexpr int kTlsWriteMaxTransientRetries	   = 100;
 constexpr std::string_view kDefaultGeoJsonName = "RuralRoad_center_of_driving_lane_ccw.geojson";
 
 double degToRad(const double value) {
@@ -135,34 +135,34 @@ TruckObjectControl::TruckObjectControl() :
 	declare_parameter("cot_tls_ca_path", m_cot_tls_ca_path);
 	declare_parameter("trajectory_geojson_path", m_trajectory_geojson_path);
 
-	m_warning_distance_m			 = get_parameter("warning_distance_m").as_double();
-	m_stop_distance_m				 = get_parameter("stop_distance_m").as_double();
-	m_warning_speed_kmh			 = get_parameter("warning_speed_kmh").as_double();
-	m_stop_speed_kmh				 = get_parameter("stop_speed_kmh").as_double();
-	m_cot_timeout_seconds		 = get_parameter("cot_timeout_seconds").as_double();
-	m_cot_tcp_port				 = get_parameter("cot_tcp_port").as_int();
-	m_cot_tcp_bind_address		 = get_parameter("cot_tcp_bind_address").as_string();
+	m_warning_distance_m		  = get_parameter("warning_distance_m").as_double();
+	m_stop_distance_m			  = get_parameter("stop_distance_m").as_double();
+	m_warning_speed_kmh			  = get_parameter("warning_speed_kmh").as_double();
+	m_stop_speed_kmh			  = get_parameter("stop_speed_kmh").as_double();
+	m_cot_timeout_seconds		  = get_parameter("cot_timeout_seconds").as_double();
+	m_cot_tcp_port				  = get_parameter("cot_tcp_port").as_int();
+	m_cot_tcp_bind_address		  = get_parameter("cot_tcp_bind_address").as_string();
 	m_cot_tls_require_client_cert = get_parameter("cot_tls_require_client_cert").as_bool();
-	m_cot_tls_cert_path			 = get_parameter("cot_tls_cert_path").as_string();
-	m_cot_tls_key_path			 = get_parameter("cot_tls_key_path").as_string();
-	m_cot_tls_ca_path			 = get_parameter("cot_tls_ca_path").as_string();
-	m_cot_tls_enabled			 = (!m_cot_tls_cert_path.empty() && !m_cot_tls_key_path.empty());
+	m_cot_tls_cert_path			  = get_parameter("cot_tls_cert_path").as_string();
+	m_cot_tls_key_path			  = get_parameter("cot_tls_key_path").as_string();
+	m_cot_tls_ca_path			  = get_parameter("cot_tls_ca_path").as_string();
+	m_cot_tls_enabled			  = (!m_cot_tls_cert_path.empty() && !m_cot_tls_key_path.empty());
 	if (!m_cot_tls_enabled && (!m_cot_tls_cert_path.empty() || !m_cot_tls_key_path.empty())) {
 		RCLCPP_WARN(get_logger(),
 					"Incomplete TLS config for COT listener (cert or key missing). Falling back to plain TCP.");
 	}
 	m_trajectory_geojson_path = get_parameter("trajectory_geojson_path").as_string();
 	m_trajectory_geojson_path = resolveDefaultTrajectoryPath(m_trajectory_geojson_path);
-	m_default_path_name		 = std::filesystem::path(m_trajectory_geojson_path).filename().string();
+	m_default_path_name		  = std::filesystem::path(m_trajectory_geojson_path).filename().string();
 
 	m_cot_sub = create_subscription<std_msgs::msg::String>(
 	  "truck_objects/cot", 50, std::bind(&TruckObjectControl::onCotMessage, this, _1));
 
 	m_speed_command_pub = create_publisher<std_msgs::msg::String>("truck_objects/speed_command", 20);
-	m_truck_state_pub   = create_publisher<std_msgs::msg::String>("truck_objects/state", 50);
+	m_truck_state_pub	= create_publisher<std_msgs::msg::String>("truck_objects/state", 50);
 
 	m_evaluation_timer = create_wall_timer(std::chrono::milliseconds(200),
-										  std::bind(&TruckObjectControl::evaluateAndPublishSpeedCommand, this));
+										   std::bind(&TruckObjectControl::evaluateAndPublishSpeedCommand, this));
 
 	if (!loadTrajectoryPath()) {
 		RCLCPP_WARN(get_logger(),
@@ -788,9 +788,9 @@ void TruckObjectControl::acceptTcpClients() {
 
 		{
 			std::lock_guard<std::mutex> lock(m_tcp_sessions_mutex);
-			auto session			 = std::make_shared<TcpClientSession>();
-			session->fd				 = client_fd;
-			session->peer_name		 = peer.str();
+			auto session			  = std::make_shared<TcpClientSession>();
+			session->fd				  = client_fd;
+			session->peer_name		  = peer.str();
 			m_tcp_sessions[client_fd] = session;
 		}
 
