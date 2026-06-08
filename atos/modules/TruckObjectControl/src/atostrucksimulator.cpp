@@ -81,72 +81,72 @@ std::string resolveTrajectoryPath(const std::string& configured_path) {
 
 AtosTruckSimulator::AtosTruckSimulator() :
   Node("atos_truck_simulator") {
-	declare_parameter("uid", uid_);
-	declare_parameter("tcp_host", tcp_host_);
-	declare_parameter("tcp_port", tcp_port_);
-	declare_parameter("trajectory_geojson_path", trajectory_geojson_path_);
-	declare_parameter("start_index", start_index_);
-	declare_parameter("initial_speed_kmh", initial_speed_kmh_);
-	declare_parameter("target_speed_kmh", target_speed_kmh_);
-	declare_parameter("acceleration_mps2", acceleration_mps2_);
-	declare_parameter("publish_hz", publish_hz_);
-	declare_parameter("loop_path", loop_path_);
-	declare_parameter("ignore_warning_speed_commands", ignore_warning_speed_commands_);
+	declare_parameter("uid", m_uid);
+	declare_parameter("tcp_host", m_tcp_host);
+	declare_parameter("tcp_port", m_tcp_port);
+	declare_parameter("trajectory_geojson_path", m_trajectory_geojson_path);
+	declare_parameter("start_index", m_start_index);
+	declare_parameter("initial_speed_kmh", m_initial_speed_kmh);
+	declare_parameter("target_speed_kmh", m_target_speed_kmh);
+	declare_parameter("acceleration_mps2", m_acceleration_mps2);
+	declare_parameter("publish_hz", m_publish_hz);
+	declare_parameter("loop_path", m_loop_path);
+	declare_parameter("ignore_warning_speed_commands", m_ignore_warning_speed_commands);
 
-	uid_						   = get_parameter("uid").as_string();
-	tcp_host_					   = get_parameter("tcp_host").as_string();
-	tcp_port_					   = get_parameter("tcp_port").as_int();
-	trajectory_geojson_path_	   = get_parameter("trajectory_geojson_path").as_string();
-	trajectory_geojson_path_	   = resolveTrajectoryPath(trajectory_geojson_path_);
-	trajectory_path_name_		   = std::filesystem::path(trajectory_geojson_path_).filename().string();
-	start_index_				   = get_parameter("start_index").as_int();
-	initial_speed_kmh_			   = get_parameter("initial_speed_kmh").as_double();
-	target_speed_kmh_			   = get_parameter("target_speed_kmh").as_double();
-	acceleration_mps2_			   = std::max(0.01, get_parameter("acceleration_mps2").as_double());
-	publish_hz_					   = std::max(1.0, get_parameter("publish_hz").as_double());
-	loop_path_					   = get_parameter("loop_path").as_bool();
-	ignore_warning_speed_commands_ = get_parameter("ignore_warning_speed_commands").as_bool();
+	m_uid						   = get_parameter("uid").as_string();
+	m_tcp_host					   = get_parameter("tcp_host").as_string();
+	m_tcp_port					   = get_parameter("tcp_port").as_int();
+	m_trajectory_geojson_path	   = get_parameter("trajectory_geojson_path").as_string();
+	m_trajectory_geojson_path	   = resolveTrajectoryPath(m_trajectory_geojson_path);
+	m_trajectory_path_name		   = std::filesystem::path(m_trajectory_geojson_path).filename().string();
+	m_start_index				   = get_parameter("start_index").as_int();
+	m_initial_speed_kmh			   = get_parameter("initial_speed_kmh").as_double();
+	m_target_speed_kmh			   = get_parameter("target_speed_kmh").as_double();
+	m_acceleration_mps2			   = std::max(0.01, get_parameter("acceleration_mps2").as_double());
+	m_publish_hz					   = std::max(1.0, get_parameter("publish_hz").as_double());
+	m_loop_path					   = get_parameter("loop_path").as_bool();
+	m_ignore_warning_speed_commands = get_parameter("ignore_warning_speed_commands").as_bool();
 
 	if (!loadTrajectoryPath()) {
-		RCLCPP_ERROR(get_logger(), "Failed to load trajectory at '%s'", trajectory_geojson_path_.c_str());
+		RCLCPP_ERROR(get_logger(), "Failed to load trajectory at '%s'", m_trajectory_geojson_path.c_str());
 		return;
 	}
 
-	if (start_index_ < 0) {
-		start_index_ = 0;
+	if (m_start_index < 0) {
+		m_start_index = 0;
 	}
-	if (static_cast<size_t>(start_index_) >= trajectory_path_.size()) {
-		start_index_ = static_cast<int>(trajectory_path_.size() - 1);
+	if (static_cast<size_t>(m_start_index) >= m_trajectory_path.size()) {
+		m_start_index = static_cast<int>(m_trajectory_path.size() - 1);
 	}
 
-	current_distance_m_ = trajectory_path_[static_cast<size_t>(start_index_)].distance_m;
-	current_speed_mps_	= std::max(0.0, initial_speed_kmh_ / 3.6);
-	last_step_time_		= now();
+	m_current_distance_m = m_trajectory_path[static_cast<size_t>(m_start_index)].distance_m;
+	m_current_speed_mps	 = std::max(0.0, m_initial_speed_kmh / 3.6);
+	m_last_step_time		 = now();
 
-	speed_command_sub_ = create_subscription<std_msgs::msg::String>(
+	m_speed_command_sub = create_subscription<std_msgs::msg::String>(
 	  "truck_objects/speed_command", 20, std::bind(&AtosTruckSimulator::onSpeedCommand, this, std::placeholders::_1));
 
-	const auto period_ms = static_cast<int>(1000.0 / publish_hz_);
-	simulation_timer_ =
+	const auto period_ms = static_cast<int>(1000.0 / m_publish_hz);
+	m_simulation_timer =
 	  create_wall_timer(std::chrono::milliseconds(period_ms), std::bind(&AtosTruckSimulator::simulationStep, this));
 
 	RCLCPP_INFO(get_logger(),
 				"AtosTruckSimulator started (uid=%s, path=%s, start_index=%d, target=%.1f km/h, accel=%.2f m/s^2, "
 				"tcp=%s:%d, ignore_warning=%s)",
-				uid_.c_str(),
-				trajectory_path_name_.c_str(),
-				start_index_,
-				target_speed_kmh_,
-				acceleration_mps2_,
-				tcp_host_.c_str(),
-				tcp_port_,
-				ignore_warning_speed_commands_ ? "true" : "false");
+				m_uid.c_str(),
+				m_trajectory_path_name.c_str(),
+				m_start_index,
+				m_target_speed_kmh,
+				m_acceleration_mps2,
+				m_tcp_host.c_str(),
+				m_tcp_port,
+				m_ignore_warning_speed_commands ? "true" : "false");
 }
 
 bool AtosTruckSimulator::loadTrajectoryPath() {
-	trajectory_path_.clear();
+	m_trajectory_path.clear();
 
-	std::ifstream input(trajectory_geojson_path_);
+	std::ifstream input(m_trajectory_geojson_path);
 	if (!input.is_open()) {
 		return false;
 	}
@@ -207,51 +207,51 @@ bool AtosTruckSimulator::loadTrajectoryPath() {
 			p.distance_m = cumulative;
 		}
 
-		trajectory_path_.push_back(p);
+		m_trajectory_path.push_back(p);
 		prev	 = p;
 		has_prev = true;
 	}
 
-	return trajectory_path_.size() >= 2;
+	return m_trajectory_path.size() >= 2;
 }
 
 bool AtosTruckSimulator::ensureTcpConnected() {
-	if (tcp_fd_ >= 0) {
+	if (m_tcp_fd >= 0) {
 		return true;
 	}
 
-	tcp_fd_ = ::socket(AF_INET, SOCK_STREAM, 0);
-	if (tcp_fd_ < 0) {
+	m_tcp_fd = ::socket(AF_INET, SOCK_STREAM, 0);
+	if (m_tcp_fd < 0) {
 		return false;
 	}
 
 	sockaddr_in addr{};
 	addr.sin_family = AF_INET;
-	addr.sin_port	= htons(static_cast<uint16_t>(tcp_port_));
-	if (::inet_pton(AF_INET, tcp_host_.c_str(), &addr.sin_addr) != 1) {
+	addr.sin_port	= htons(static_cast<uint16_t>(m_tcp_port));
+	if (::inet_pton(AF_INET, m_tcp_host.c_str(), &addr.sin_addr) != 1) {
 		closeTcp();
 		return false;
 	}
 
-	if (::connect(tcp_fd_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
+	if (::connect(m_tcp_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
 		closeTcp();
 		return false;
 	}
 
-	const int flags = fcntl(tcp_fd_, F_GETFL, 0);
+	const int flags = fcntl(m_tcp_fd, F_GETFL, 0);
 	if (flags >= 0) {
-		(void)fcntl(tcp_fd_, F_SETFL, flags | O_NONBLOCK);
+		(void)fcntl(m_tcp_fd, F_SETFL, flags | O_NONBLOCK);
 	}
 
 	return true;
 }
 
 void AtosTruckSimulator::closeTcp() {
-	if (tcp_fd_ >= 0) {
-		::shutdown(tcp_fd_, SHUT_RDWR);
-		::close(tcp_fd_);
-		tcp_fd_ = -1;
-		tcp_rx_buffer_.clear();
+	if (m_tcp_fd >= 0) {
+		::shutdown(m_tcp_fd, SHUT_RDWR);
+		::close(m_tcp_fd);
+		m_tcp_fd = -1;
+		m_tcp_rx_buffer.clear();
 	}
 }
 
@@ -269,13 +269,13 @@ bool AtosTruckSimulator::pointAtDistance(double distance_m,
 										 double& lon,
 										 double& course_deg,
 										 int& path_index) const {
-	if (trajectory_path_.size() < 2) {
+	if (m_trajectory_path.size() < 2) {
 		return false;
 	}
 
-	const double max_distance = trajectory_path_.back().distance_m;
+	const double max_distance = m_trajectory_path.back().distance_m;
 	double d				  = distance_m;
-	if (loop_path_ && max_distance > kEpsilon) {
+	if (m_loop_path && max_distance > kEpsilon) {
 		d = std::fmod(distance_m, max_distance);
 		if (d < 0.0) {
 			d += max_distance;
@@ -285,18 +285,18 @@ bool AtosTruckSimulator::pointAtDistance(double distance_m,
 	}
 
 	size_t segment_index = 1;
-	while (segment_index < trajectory_path_.size() && trajectory_path_[segment_index].distance_m < d) {
+	while (segment_index < m_trajectory_path.size() && m_trajectory_path[segment_index].distance_m < d) {
 		++segment_index;
 	}
-	if (segment_index >= trajectory_path_.size()) {
-		segment_index = trajectory_path_.size() - 1;
+	if (segment_index >= m_trajectory_path.size()) {
+		segment_index = m_trajectory_path.size() - 1;
 	}
 	if (segment_index == 0) {
 		segment_index = 1;
 	}
 
-	const auto& a				= trajectory_path_[segment_index - 1];
-	const auto& b				= trajectory_path_[segment_index];
+	const auto& a				= m_trajectory_path[segment_index - 1];
+	const auto& b				= m_trajectory_path[segment_index];
 	const double segment_length = std::max(kEpsilon, b.distance_m - a.distance_m);
 	const double t				= std::clamp((d - a.distance_m) / segment_length, 0.0, 1.0);
 
@@ -314,24 +314,24 @@ bool AtosTruckSimulator::pointAtDistance(double distance_m,
 
 void AtosTruckSimulator::simulationStep() {
 	const auto now_time = now();
-	const double dt		= std::max(0.001, (now_time - last_step_time_).seconds());
-	last_step_time_		= now_time;
+	const double dt		= std::max(0.001, (now_time - m_last_step_time).seconds());
+	m_last_step_time		= now_time;
 
-	const double target_speed_mps = std::max(0.0, target_speed_kmh_ / 3.6);
-	const double max_delta		  = acceleration_mps2_ * dt;
-	const double delta			  = std::clamp(target_speed_mps - current_speed_mps_, -max_delta, max_delta);
-	current_speed_mps_ += delta;
+	const double target_speed_mps = std::max(0.0, m_target_speed_kmh / 3.6);
+	const double max_delta		  = m_acceleration_mps2 * dt;
+	const double delta			  = std::clamp(target_speed_mps - m_current_speed_mps, -max_delta, max_delta);
+	m_current_speed_mps += delta;
 
-	current_distance_m_ += current_speed_mps_ * dt;
-	if (!loop_path_) {
-		current_distance_m_ = std::clamp(current_distance_m_, 0.0, trajectory_path_.back().distance_m);
+	m_current_distance_m += m_current_speed_mps * dt;
+	if (!m_loop_path) {
+		m_current_distance_m = std::clamp(m_current_distance_m, 0.0, m_trajectory_path.back().distance_m);
 	}
 
 	double lat		  = 0.0;
 	double lon		  = 0.0;
 	double course_deg = 0.0;
 	int path_index	  = 0;
-	if (!pointAtDistance(current_distance_m_, lat, lon, course_deg, path_index)) {
+	if (!pointAtDistance(m_current_distance_m, lat, lon, course_deg, path_index)) {
 		return;
 	}
 
@@ -340,8 +340,8 @@ void AtosTruckSimulator::simulationStep() {
 							 *get_clock(),
 							 2000,
 							 "Unable to connect to TruckObjectControl TCP %s:%d",
-							 tcp_host_.c_str(),
-							 tcp_port_);
+							 m_tcp_host.c_str(),
+							 m_tcp_port);
 		return;
 	}
 	pollTcpCommands();
@@ -350,17 +350,17 @@ void AtosTruckSimulator::simulationStep() {
 	const std::string stale_str = utcIso8601FromRosTime(now_time + rclcpp::Duration::from_seconds(10.0));
 
 	std::ostringstream cot;
-	cot << "<event version=\"2.0\" uid=\"" << uid_ << "\" type=\"a-f-G-U-C-I\" time=\"" << time_str << "\" start=\""
+	cot << "<event version=\"2.0\" uid=\"" << m_uid << "\" type=\"a-f-G-U-C-I\" time=\"" << time_str << "\" start=\""
 		<< time_str << "\" stale=\"" << stale_str << "\" how=\"h-e\"><point lat=\"" << std::setprecision(15) << lat
-		<< "\" lon=\"" << lon << "\" speed=\"" << (current_speed_mps_ * 3.6)
-		<< "\" hae=\"10\" ce=\"5\" le=\"5\"/><detail><contact callsign=\"" << uid_
+		<< "\" lon=\"" << lon << "\" speed=\"" << (m_current_speed_mps * 3.6)
+		<< "\" hae=\"10\" ce=\"5\" le=\"5\"/><detail><contact callsign=\"" << m_uid
 		<< "\"/><__group name=\"Dark Green\" role=\"Test Vehicle\"/><takv device=\"AtosTruckSimulator\" "
 		   "platform=\"ATOSFleetManagement\" os=\"Linux\" version=\"1.0\"/><track speed=\""
-		<< (current_speed_mps_ * 3.6) << "\" course=\"" << course_deg << "\"/><atos path_name=\""
-		<< trajectory_path_name_ << "\" path_index=\"" << path_index << "\"/></detail></event>";
+		<< (m_current_speed_mps * 3.6) << "\" course=\"" << course_deg << "\"/><atos path_name=\""
+		<< m_trajectory_path_name << "\" path_index=\"" << path_index << "\"/></detail></event>";
 
 	const std::string payload = cot.str();
-	const ssize_t sent		  = ::send(tcp_fd_, payload.data(), payload.size(), MSG_NOSIGNAL);
+	const ssize_t sent		  = ::send(m_tcp_fd, payload.data(), payload.size(), MSG_NOSIGNAL);
 	if (sent < 0) {
 		RCLCPP_WARN(get_logger(), "TCP send failed, reconnecting...");
 		closeTcp();
@@ -371,12 +371,12 @@ void AtosTruckSimulator::simulationStep() {
 						 *get_clock(),
 						 1000,
 						 "Sim uid=%s path=%s idx=%d distance=%.1f m speed=%.1f km/h target=%.1f km/h lat=%.7f lon=%.7f",
-						 uid_.c_str(),
-						 trajectory_path_name_.c_str(),
+						 m_uid.c_str(),
+						 m_trajectory_path_name.c_str(),
 						 path_index,
-						 current_distance_m_,
-						 current_speed_mps_ * 3.6,
-						 target_speed_kmh_,
+						 m_current_distance_m,
+						 m_current_speed_mps * 3.6,
+						 m_target_speed_kmh,
 						 lat,
 						 lon);
 }
@@ -410,20 +410,20 @@ void AtosTruckSimulator::applySpeedCommandPayload(const std::string& payload) {
 		return;
 	}
 
-	if (ignore_warning_speed_commands_ && commanded_speed_kmh > 0.0) {
+	if (m_ignore_warning_speed_commands && commanded_speed_kmh > 0.0) {
 		return;
 	}
-	target_speed_kmh_ = commanded_speed_kmh;
+	m_target_speed_kmh = commanded_speed_kmh;
 }
 
 void AtosTruckSimulator::pollTcpCommands() {
-	if (tcp_fd_ < 0) {
+	if (m_tcp_fd < 0) {
 		return;
 	}
 
 	char rx[1024];
 	while (true) {
-		const ssize_t n = ::recv(tcp_fd_, rx, sizeof(rx), 0);
+		const ssize_t n = ::recv(m_tcp_fd, rx, sizeof(rx), 0);
 		if (n == 0) {
 			closeTcp();
 			return;
@@ -436,17 +436,17 @@ void AtosTruckSimulator::pollTcpCommands() {
 			return;
 		}
 
-		tcp_rx_buffer_.append(rx, static_cast<size_t>(n));
+		m_tcp_rx_buffer.append(rx, static_cast<size_t>(n));
 		while (true) {
-			const auto nl = tcp_rx_buffer_.find('\n');
+			const auto nl = m_tcp_rx_buffer.find('\n');
 			if (nl == std::string::npos) {
-				if (tcp_rx_buffer_.size() > 4096) {
-					tcp_rx_buffer_.clear();
+				if (m_tcp_rx_buffer.size() > 4096) {
+					m_tcp_rx_buffer.clear();
 				}
 				break;
 			}
-			const std::string line = tcp_rx_buffer_.substr(0, nl);
-			tcp_rx_buffer_.erase(0, nl + 1);
+			const std::string line = m_tcp_rx_buffer.substr(0, nl);
+			m_tcp_rx_buffer.erase(0, nl + 1);
 			if (!line.empty()) {
 				applySpeedCommandPayload(line);
 			}

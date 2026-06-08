@@ -22,30 +22,30 @@ private:
 		double distance_m = 0.0;
 	};
 
-	std::string uid_					 = "L5S-TRUCK-SIM";
-	std::string tcp_host_				 = "127.0.0.1";
-	int tcp_port_						 = 8114;
-	std::string trajectory_geojson_path_ = "";
-	std::string trajectory_path_name_	 = "";
-	int start_index_					 = 0;
-	double initial_speed_kmh_			 = 0.0;
-	double target_speed_kmh_			 = 40.0;
-	double acceleration_mps2_			 = 2.0;
-	double publish_hz_					 = 5.0;
-	bool loop_path_						 = true;
-	bool ignore_warning_speed_commands_	 = false;
+	std::string m_uid					 = "L5S-TRUCK-SIM";
+	std::string m_tcp_host				 = "127.0.0.1";
+	int m_tcp_port						 = 8114;
+	std::string m_trajectory_geojson_path = "";
+	std::string m_trajectory_path_name	 = "";
+	int m_start_index					 = 0;
+	double m_initial_speed_kmh			 = 0.0;
+	double m_target_speed_kmh			 = 40.0;
+	double m_acceleration_mps2			 = 2.0;
+	double m_publish_hz					 = 5.0;
+	bool m_loop_path						 = true;
+	bool m_ignore_warning_speed_commands	 = false;
 
-	double current_distance_m_ = 0.0;
-	double current_speed_mps_  = 0.0;
+	double m_current_distance_m = 0.0;
+	double m_current_speed_mps  = 0.0;
 
-	int tcp_fd_ = -1;
-	std::string tcp_rx_buffer_;
-	std::vector<GeoPoint> trajectory_path_;
+	int m_tcp_fd = -1;
+	std::string m_tcp_rx_buffer;
+	std::vector<GeoPoint> m_trajectory_path;
 
-	rclcpp::TimerBase::SharedPtr simulation_timer_;
-	rclcpp::Subscription<std_msgs::msg::String>::SharedPtr speed_command_sub_;
+	rclcpp::TimerBase::SharedPtr m_simulation_timer;
+	rclcpp::Subscription<std_msgs::msg::String>::SharedPtr m_speed_command_sub;
 
-	rclcpp::Time last_step_time_;
+	rclcpp::Time m_last_step_time;
 
 	bool loadTrajectoryPath();
 	bool ensureTcpConnected();
