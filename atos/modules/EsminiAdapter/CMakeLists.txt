@@ -26,6 +26,7 @@ get_target_property(COMMON_HEADERS ${ATOS_COMMON_LIBRARY} INCLUDE_DIRECTORIES)
 include(GNUInstallDirs)
 
 set(CMAKE_REQUIRED_INCLUDES ${esminiLib_INCLUDE_DIRS})
+set(CMAKE_REQUIRED_LIBRARIES ${esminiLib_LIBRARIES})
 check_cxx_source_compiles("
   #include \"esmini/esminiLib.hpp\"
   int main() {
@@ -33,6 +34,7 @@ check_cxx_source_compiles("
   }
 " ESMINI_REPORT_OBJECT_POS_HAS_TIMESTAMP)
 unset(CMAKE_REQUIRED_INCLUDES)
+unset(CMAKE_REQUIRED_LIBRARIES)
 
 # Create project main executable target
 add_executable(${ESMINI_ADAPTER_TARGET}
