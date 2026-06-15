@@ -221,12 +221,8 @@ void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr 
 	auto speed = monr->velocity.twist.linear;
 
 	// Reporting to Esmini
-#ifdef ESMINI_REPORT_OBJECT_POS_HAS_TIMESTAMP
 	float timestamp = 0.0f; // Not really used according to esmini documentation
 	SE_ReportObjectPos(esminiObjectId, timestamp, pos.x, pos.y, pos.z, yaw, pitch, roll);
-#else
-	SE_ReportObjectPos(esminiObjectId, pos.x, pos.y, pos.z, yaw, pitch, roll);
-#endif
 	SE_ReportObjectSpeed(esminiObjectId, speed.x);
 }
 

@@ -10,7 +10,6 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(esmini_adapter)
-include(CheckCXXSourceCompiles)
 find_package(atos_interfaces REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(esminiLib REQUIRED)
@@ -24,17 +23,6 @@ set(ATOS_COMMON_LIBRARY ATOSCommon)
 set(COREUTILS_LIBRARY ATOSCoreUtil)
 get_target_property(COMMON_HEADERS ${ATOS_COMMON_LIBRARY} INCLUDE_DIRECTORIES)
 include(GNUInstallDirs)
-
-set(CMAKE_REQUIRED_INCLUDES ${esminiLib_INCLUDE_DIRS})
-set(CMAKE_REQUIRED_LIBRARIES ${esminiLib_LIBRARIES})
-check_cxx_source_compiles("
-  #include \"esmini/esminiLib.hpp\"
-  int main() {
-    return SE_ReportObjectPos(0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-  }
-" ESMINI_REPORT_OBJECT_POS_HAS_TIMESTAMP)
-unset(CMAKE_REQUIRED_INCLUDES)
-unset(CMAKE_REQUIRED_LIBRARIES)
 
 # Create project main executable target
 add_executable(${ESMINI_ADAPTER_TARGET}
@@ -55,10 +43,6 @@ target_include_directories(${ESMINI_ADAPTER_TARGET} PUBLIC SYSTEM
 	${esminiLib_INCLUDE_DIRS}
 	${esminiRMLib_INCLUDE_DIRS}
 )
-
-if(ESMINI_REPORT_OBJECT_POS_HAS_TIMESTAMP)
-	target_compile_definitions(${ESMINI_ADAPTER_TARGET} PRIVATE ESMINI_REPORT_OBJECT_POS_HAS_TIMESTAMP)
-endif()
 
 # ROS specific rules
 ament_target_dependencies(${ESMINI_ADAPTER_TARGET}
