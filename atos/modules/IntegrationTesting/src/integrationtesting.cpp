@@ -38,7 +38,10 @@ IntegrationTesting::~IntegrationTesting() {}
  */
 int IntegrationTesting::getObjectControlState() {
 	std::shared_ptr<atos_interfaces::srv::GetObjectControlState::Response> response;
-	this->callService(1000ms, getObjectControlStateClient, response);
+	if (!this->callService(1000ms, getObjectControlStateClient, response) || response == nullptr) {
+		RCLCPP_ERROR(get_logger(), "Failed to call service %s", getObjectControlStateClient->get_service_name());
+		return -1;
+	}
 	return int(response->state);
 }
 

@@ -19,11 +19,21 @@ fi
 
 source "${ATOS_REPO_PATH}/scripts/installation/install_functions.sh"
 
+if [ -z "${ROS_DISTRO:-}" ]; then
+    echo "ROS_DISTRO is not set. Source /opt/ros/<distro>/setup.bash before running this script."
+    exit 1
+fi
+
+PIP_INSTALL_CMD=(python3 -m pip install)
+if python3 -m pip help install 2>/dev/null | grep -q -- "--break-system-packages"; then
+    PIP_INSTALL_CMD+=(--break-system-packages)
+fi
+
 # Update and install required dependencies specified in dependencies.txt and requirements.txt file
 apt_deps=$(cat ${ATOS_REPO_PATH}/scripts/installation/dependencies.txt | tr '\n' ' ')
 echo "Installing dependencies... $apt_deps"
 sudo apt update && sudo apt install -y ${apt_deps}
-python3 -m pip install -r ${ATOS_REPO_PATH}/scripts/installation/requirements.txt
+"${PIP_INSTALL_CMD[@]}" -r ${ATOS_REPO_PATH}/scripts/installation/requirements.txt
 
 # Check if apt failed to install dependencies
 check_command_failed $? "Failed to install dependencies."
@@ -31,8 +41,6 @@ check_command_failed $? "Failed to install dependencies."
 #######################################
 ###### Install ROS2 dependencies ######
 #######################################
-ROS_DISTRO=humble
-
 # Check if the ROS2 repository is already added
 if ! (apt list | grep -q "ros-$ROS_DISTRO-desktop"); then
     echo "Adding the ROS2 $ROS_DISTRO apt repository..."
@@ -67,7 +75,7 @@ check_command_failed $? "Failed to install ROS2 dependencies."
 ######## Install ATOS GUI dependencies ########
 ###############################################
 
-python3 -m pip install -r ${ATOS_REPO_PATH}/atos_gui/requirements.txt 
+"${PIP_INSTALL_CMD[@]}" -r ${ATOS_REPO_PATH}/atos_gui/requirements.txt 
 
 ###########################################
 ###### Install some deps from source ######

@@ -66,6 +66,7 @@ set(WITH_BACK_TO_START ON CACHE BOOL "Enable BackToStart module")
 set(WITH_OPEN_SCENARIO_GATEWAY ON CACHE BOOL "Enable OpenScenario Gateway module")
 set(WITH_REST_BRIDGE ON CACHE BOOL "Enable RESTBridge module")
 set(WITH_MONR_RELAY ON CACHE BOOL "Enable MonrRelay module")
+set(WITH_TRUCK_OBJECT_CONTROL OFF CACHE BOOL "Enable TruckObjectControl module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -105,6 +106,9 @@ if(WITH_REST_BRIDGE)
 endif()
 if(WITH_MONR_RELAY)
         list(APPEND ENABLED_MODULES MonrRelay)
+endif()
+if(WITH_TRUCK_OBJECT_CONTROL)
+        list(APPEND ENABLED_MODULES TruckObjectControl)
 endif()
 
 
