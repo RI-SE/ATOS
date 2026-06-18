@@ -12,6 +12,7 @@ COT_TLS_CA_PATH="${COT_TLS_CA_PATH:-}"
 
 # setup.sh from colcon references vars that may be unset; avoid nounset during sourcing.
 set +u
+source /root/.local/share/atos/venv/bin/activate
 source /root/atos_ws/install/setup.sh
 set -u
 
