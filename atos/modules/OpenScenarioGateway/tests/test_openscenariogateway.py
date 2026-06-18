@@ -22,8 +22,8 @@ def open_scenario_gw():
             ),
             rclpy.parameter.Parameter(
                 "open_scenario_file",
-                rclpy.Parameter.Type.STRING,
-                "GaragePlanScenario.xosc",
+                rclpy.Parameter.Type.STRING_ARRAY,
+                ["GaragePlanScenario.xosc"],
             ),
             rclpy.parameter.Parameter(
                 "active_object_names", rclpy.Parameter.Type.STRING_ARRAY, active_objects

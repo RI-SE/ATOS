@@ -11,7 +11,7 @@ from modules.OpenScenarioGateway.storyboard_handler import StoryBoardHandler
 from rcl_interfaces.msg import SetParametersResult
 from rclpy.node import Node
 from scenariogeneration import xosc
-from std_msgs.msg import Empty
+from std_msgs.msg import Empty, String
 
 import atos_interfaces.msg
 import atos_interfaces.srv
@@ -23,6 +23,12 @@ SCENARIO_FILE_PARAMETER = "open_scenario_file"
 DEFAULT_FOLDER_PATH = path.expanduser("~/.astazero/ATOS/")
 
 RUNNING = 2
+
+
+class ScenarioData:
+    def __init__(self, start_actions_to_obj_name: dict, custom_command_map: dict):
+        self.start_actions_to_obj_name = start_actions_to_obj_name
+        self.custom_command_map = custom_command_map
 
 
 class ScenarioObject:
@@ -40,14 +46,16 @@ class OpenScenarioGateway(Node):
         # Class variables
         self.active_objects = {}
         self.vehicle_catalog = None
-        self.start_actions_to_obj_name = {}
-        self.custom_command_map = {}
+        self.scenarios: dict[str, ScenarioData] = {}
+        self.active_scenario_file: str = ""
 
         self.scenario_file_md5hash = None
 
         # ROS parameters
         self.declare_parameter(ROOT_FOLDER_PATH_PARAMETER, DEFAULT_FOLDER_PATH)
-        self.declare_parameter(SCENARIO_FILE_PARAMETER, "")
+        self.declare_parameter(
+            SCENARIO_FILE_PARAMETER, rclpy.Parameter.Type.STRING_ARRAY
+        )
         self.declare_parameter(
             ACTIVE_OBJECT_NAME_PARAMETER, rclpy.Parameter.Type.STRING_ARRAY
         )
@@ -57,6 +65,9 @@ class OpenScenarioGateway(Node):
         # ROS subscriptions/publishers
         self.init_ = self.create_subscription(Empty, "init", self.init_callback, 10)
         self.arm_ = self.create_subscription(Empty, "arm", self.arm_callback, 10)
+        self.active_scenario_sub = self.create_subscription(
+            String, "active_scenario", self.active_scenario_callback, 10
+        )
 
         self.story_board_element_sub_ = self.create_subscription(
             atos_interfaces.msg.StoryBoardElementStateChange,
@@ -90,7 +101,13 @@ class OpenScenarioGateway(Node):
         )
 
     def init_callback(self, msg):
-        self.update_scenario(self.get_parameter(SCENARIO_FILE_PARAMETER).value)
+        self.scenarios = {}
+        for file_name in self.get_parameter(SCENARIO_FILE_PARAMETER).value:
+            self.update_scenario(file_name)
+        # Default to the first scenario in the list
+        files = self.get_parameter(SCENARIO_FILE_PARAMETER).value
+        if not self.active_scenario_file and files:
+            self.active_scenario_file = files[0]
         self.update_active_scenario_objects(
             self.get_parameter(ACTIVE_OBJECT_NAME_PARAMETER).value
         )
@@ -101,13 +118,19 @@ class OpenScenarioGateway(Node):
             self.active_objects[id].started = False
 
     def story_board_element_state_change_callback(self, story_board_element):
+        active_scenario = self.active_scenario
+        if active_scenario is None:
+            self.get_logger().error(
+                "Received story board element state change but no active scenario is set"
+            )
+            return
         if (
-            story_board_element.name in self.start_actions_to_obj_name.keys()
+            story_board_element.name in active_scenario.start_actions_to_obj_name.keys()
             and story_board_element.state == RUNNING
         ):
             self.handle_start_actions(story_board_element)
         elif (
-            story_board_element.full_path in self.custom_command_map
+            story_board_element.full_path in active_scenario.custom_command_map
             and story_board_element.state == RUNNING
         ):
             self.handle_custom_command_action(story_board_element)
@@ -115,7 +138,7 @@ class OpenScenarioGateway(Node):
     def handle_start_actions(self, story_board_element):
         # Iterate through active objects to send the start command for the target objects
         for object_id, object in self.active_objects.items():
-            target_object_name = self.start_actions_to_obj_name[
+            target_object_name = self.active_scenario.start_actions_to_obj_name[
                 story_board_element.name
             ]
             if object.name in target_object_name and not object.started:
@@ -140,7 +163,9 @@ class OpenScenarioGateway(Node):
                 story_board_element.full_path
             )
         )
-        custom_command = self.custom_command_map[story_board_element.full_path]
+        custom_command = self.active_scenario.custom_command_map[
+            story_board_element.full_path
+        ]
 
         custom_command_msg = atos_interfaces.msg.CustomCommandAction()
         custom_command_msg.type = custom_command.type
@@ -148,10 +173,19 @@ class OpenScenarioGateway(Node):
 
         self.custom_command_action.publish(custom_command_msg)
 
+    def active_scenario_callback(self, msg: String):
+        if msg.data in self.scenarios:
+            self.active_scenario_file = msg.data
+            self.get_logger().info(f"Active scenario set to: {msg.data}")
+        else:
+            self.get_logger().warn(f"Received unknown scenario '{msg.data}'")
+
     def parameter_callback(self, params):
         for param in params:
             if param.name == SCENARIO_FILE_PARAMETER and param.value:
-                self.update_scenario(file_name=param.value)
+                self.scenarios = {}
+                for file_name in param.value:
+                    self.update_scenario(file_name=file_name)
             elif param.name == ACTIVE_OBJECT_NAME_PARAMETER:
                 self.update_active_scenario_objects(active_objects_name=param.value)
         return SetParametersResult(successful=True)
@@ -163,12 +197,14 @@ class OpenScenarioGateway(Node):
             self.get_logger().error("File does not exist: {}".format(scenario_file))
             return
         self.get_logger().info("Loading scenario file: {}".format(scenario_file))
-        self.start_actions_to_obj_name = StoryBoardHandler(
-            scenario_file
-        ).get_follow_trajectory_actions_to_actors_map()
-        self.custom_command_map = StoryBoardHandler(
-            self.getAbsoluteOSCPath(file_name)
-        ).get_custom_command_actions_map()
+        self.scenarios[file_name] = ScenarioData(
+            start_actions_to_obj_name=StoryBoardHandler(
+                scenario_file
+            ).get_follow_trajectory_actions_to_actors_map(),
+            custom_command_map=StoryBoardHandler(
+                scenario_file
+            ).get_custom_command_actions_map(),
+        )
 
     def update_active_scenario_objects(self, active_objects_name: List[str]):
         if len(active_objects_name) != len(set(active_objects_name)):
@@ -257,10 +293,19 @@ class OpenScenarioGateway(Node):
         response.success = True
         return response
 
+    @property
+    def active_scenario_file_name(self) -> str:
+        if self.active_scenario_file and self.active_scenario_file in self.scenarios:
+            return self.active_scenario_file
+        files = self.get_parameter(SCENARIO_FILE_PARAMETER).value
+        return files[0] if files else ""
+
+    @property
+    def active_scenario(self) -> ScenarioData:
+        return self.scenarios.get(self.active_scenario_file_name)
+
     def getScenarioFilePath(self) -> str:
-        return self.getAbsoluteOSCPath(
-            self.get_parameter(SCENARIO_FILE_PARAMETER).value
-        )
+        return self.getAbsoluteOSCPath(self.active_scenario_file_name)
 
     def getAbsoluteOSCPath(self, file_name: str) -> str:
         return path.join(

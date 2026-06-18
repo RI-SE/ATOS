@@ -5,8 +5,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import rclpy
 from nicegui import ui
+from rcl_interfaces.msg import ParameterType
+from rcl_interfaces.srv import GetParameters
 from rclpy.node import Node
-from std_msgs.msg import Empty
+from std_msgs.msg import Empty, String
 
 from atos_interfaces.srv import *
 
@@ -53,6 +55,17 @@ class ControlPanelNode(Node):
             0.5, self.get_object_control_state_callback
         )
 
+        self.scenario_names = []
+        self.selected_scenario = ""
+        self.scenario_select = None
+        self.active_scenario_pub = self.create_publisher(
+            String, "/atos/active_scenario", QOS
+        )
+        self.get_scenario_names_client = self.create_client(
+            GetParameters,
+            "/atos/open_scenario_gateway/get_parameters",
+        )
+
         self.OBC_state = {"state": "UNDEFINED"}
         self.lost_connection = True
 
@@ -68,7 +81,12 @@ class ControlPanelNode(Node):
                 ).props("size=large ")
             with ui.row():
                 ui.button(
-                    "Init", on_click=lambda: self.initPub.publish(Empty()), color="blue"
+                    "Init",
+                    on_click=lambda: [
+                        self.initPub.publish(Empty()),
+                        self.fetch_scenario_names(),
+                    ],
+                    color="blue",
                 )
                 ui.button(
                     "Connect",
@@ -98,6 +116,28 @@ class ControlPanelNode(Node):
                     on_click=lambda: self.allClearPub.publish(Empty()),
                     color="grey",
                 )
+            with ui.row().classes("items-center"):
+                with ui.element("div"):
+                    self.scenario_select = (
+                        ui.select(
+                            options=self.scenario_names,
+                            label="Active scenario",
+                            on_change=lambda e: [
+                                self.set_active_scenario(e.value),
+                                self.connectPub.publish(Empty()),
+                            ],
+                        )
+                        .bind_value(self, "selected_scenario")
+                        .bind_enabled_from(
+                            self.OBC_state, "state", backward=lambda s: s == "CONNECTED"
+                        )
+                        .props("outlined dense")
+                    )
+                    ui.tooltip(
+                        "Changing scenario can ony be done in CONNECTED state"
+                    ).bind_visibility_from(
+                        self.OBC_state, "state", backward=lambda s: s != "CONNECTED"
+                    )
             with ui.row():
                 ui.label().bind_text_from(
                     self.OBC_state, "state", backward=lambda n: f"State: {n}"
@@ -113,6 +153,44 @@ class ControlPanelNode(Node):
                     on_click=lambda: self.reloadObjectSettingsPub.publish(Empty()),
                     color="grey",
                 )
+
+    def fetch_scenario_names(self) -> None:
+        if not self.get_scenario_names_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().warn(
+                "Failed to fetch scenario names: service not available"
+            )
+            return
+        req = GetParameters.Request()
+        req.names = ["open_scenario_file"]
+        self.get_scenario_names_client.call_async(req).add_done_callback(
+            self.on_scenario_names_fetched
+        )
+
+    def on_scenario_names_fetched(self, future) -> None:
+        try:
+            response = future.result()
+        except Exception as e:
+            self.get_logger().error(f"Failed to fetch scenario names: {e}")
+            return
+        if (
+            response.values
+            and response.values[0].type == ParameterType.PARAMETER_STRING_ARRAY
+        ):
+            names = list(response.values[0].string_array_value)
+            self.scenario_names = names
+            if self.scenario_select is not None:
+                self.scenario_select.options = names
+                if not self.selected_scenario and names:
+                    self.selected_scenario = names[0]
+                    self.scenario_select.set_value(names[0])
+                self.scenario_select.update()
+
+    def set_active_scenario(self, scenario_name: str) -> None:
+        if not isinstance(scenario_name, str) or not scenario_name:
+            return
+        msg = String()
+        msg.data = scenario_name
+        self.active_scenario_pub.publish(msg)
 
     def get_object_control_state_callback(self):
         # Call the service
