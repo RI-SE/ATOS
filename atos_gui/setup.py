@@ -10,6 +10,9 @@ setup(
     name=package_name,
     version=package_xml.find("version").text,
     packages=find_packages(),
+    package_data={
+        package_name: ["images/*", "static/*.js"],
+    },
     maintainer=package_xml.find("license").text,
     maintainer_email=package_xml.find("maintainer").attrib["email"],
     license=package_xml.find("license").text,
@@ -20,6 +23,9 @@ setup(
     install_requires=["setuptools"],
     zip_safe=True,
     entry_points={
-        "console_scripts": ["gui = atos_gui.main:main"],
+        "console_scripts": [
+            "gui = atos_gui.main:main",
+            "truck_object_gui = atos_gui.main:main",
+        ],
     },
 )

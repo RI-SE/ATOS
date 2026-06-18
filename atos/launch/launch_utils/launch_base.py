@@ -24,7 +24,7 @@ def get_files():
     return validate_atos_dir()
 
 
-def get_base_nodes():
+def get_base_nodes(include_gui=True):
     files = get_files()
 
     insecure_websockets = LaunchConfiguration("insecure")
@@ -52,14 +52,9 @@ def get_base_nodes():
     ros_bridge_params = copy.deepcopy(fox_bridge_params)
     ros_bridge_params[0] = {"port": 9090}
 
-    return [
+    base_nodes = [
         foxbridge_launch_arg,
         insecure_launch_arg,
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(get_package_share_directory("atos_gui"), "launch/gui.py")
-            )
-        ),
         Node(
             package="atos",
             namespace="atos",
@@ -135,3 +130,17 @@ def get_base_nodes():
             parameters=ros_tls_bridge_params,
         ),
     ]
+
+    if include_gui:
+        base_nodes.insert(
+            2,
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(
+                        get_package_share_directory("atos_gui"), "launch/gui.py"
+                    )
+                )
+            ),
+        )
+
+    return base_nodes

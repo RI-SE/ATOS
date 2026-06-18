@@ -16,7 +16,8 @@ class BasePub {
 public:
 	BasePub(rclcpp::Node& node, const std::string& topicName, const rclcpp::QoS& qos = rclcpp::QoS(rclcpp::KeepAll())) :
 	  pub(node.create_publisher<T>(topicName, qos)) {}
-	BasePub() = delete;
+	BasePub()		   = delete;
+	virtual ~BasePub() = default;
 	typename rclcpp::Publisher<T>::SharedPtr pub;
 	inline virtual void publish(const T& msg) {
 		assert(pub);
@@ -32,7 +33,8 @@ public:
 			std::function<void(const typename T::SharedPtr)> callback,
 			const rclcpp::QoS& qos = rclcpp::QoS(rclcpp::KeepAll())) :
 	  sub(node.create_subscription<T>(topicName, qos, callback)) {}
-	BaseSub() = delete;
+	BaseSub()		   = delete;
+	virtual ~BaseSub() = default;
 	typename rclcpp::Subscription<T>::SharedPtr sub;
 };
 

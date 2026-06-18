@@ -23,8 +23,8 @@ public:
 
 private:
 	static inline std::string const moduleName = "trajectorylet_streamer";
-	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr);
-	void onObjectsConnectedMessage(const ROSChannels::ObjectsConnected::message_type::SharedPtr);
+	void onInitMessage(const ROSChannels::Init::message_type::SharedPtr) override;
+	void onObjectsConnectedMessage(const ROSChannels::ObjectsConnected::message_type::SharedPtr) override;
 	void onAbortMessage(const ROSChannels::Abort::message_type::SharedPtr) override;
 	void onStopMessage(const ROSChannels::Stop::message_type::SharedPtr) override;
 

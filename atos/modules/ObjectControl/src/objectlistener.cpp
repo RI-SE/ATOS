@@ -35,11 +35,11 @@ void ObjectListener::listen() {
 			obj->handleISOMessage(true);
 		}
 	} catch (std::invalid_argument& e) {
-		RCLCPP_ERROR(get_logger(), e.what()); // TODO: add comment explaining this case..
+		RCLCPP_ERROR(get_logger(), "%s", e.what()); // TODO: add comment explaining this case..
 	} catch (std::range_error& e) {
-		RCLCPP_DEBUG(get_logger(), e.what()); // Socket was interrupted intentionally, exit gracefully
+		RCLCPP_DEBUG(get_logger(), "%s", e.what()); // Socket was interrupted intentionally, exit gracefully
 	} catch (std::runtime_error& e) {
-		RCLCPP_ERROR(get_logger(), e.what());
+		RCLCPP_ERROR(get_logger(), "%s", e.what());
 		obj->disconnect();
 		handler->sm.process_event(state_machine::events::DisconnectedFromObject{obj->getTransmitterID()});
 	}

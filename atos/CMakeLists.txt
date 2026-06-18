@@ -16,7 +16,7 @@ set(CMAKE_C_COMPILER "clang")
 #Set preprocessor macros depending on used ros version
 if ($ENV{ROS_DISTRO} STREQUAL "foxy")
   add_definitions(-DROS_FOXY)
-elseif($ENV{ROS_DISTRO} STREQUAL "humble")
+elseif($ENV{ROS_DISTRO} STREQUAL "humble" OR $ENV{ROS_DISTRO} STREQUAL "jazzy")
   add_definitions(-DROS_HUMBLE)
 endif()
 
