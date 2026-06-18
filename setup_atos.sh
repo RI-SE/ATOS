@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Get this file location
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
-
 #####################################
 ###### Pre-installation checks ######
 #####################################
 
-source "${REPO_DIR}/scripts/installation/install_functions.sh"
+source "scripts/installation/install_functions.sh"
+
+# Get this file location
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 
 # Check if running on a supported Ubuntu variant
 if is_ubuntu_core; then
