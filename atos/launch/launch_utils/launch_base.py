@@ -136,7 +136,9 @@ def get_base_nodes(include_gui=True):
             2,
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
-                    os.path.join(get_package_share_directory("atos_gui"), "launch/gui.py")
+                    os.path.join(
+                        get_package_share_directory("atos_gui"), "launch/gui.py"
+                    )
                 )
             ),
         )
