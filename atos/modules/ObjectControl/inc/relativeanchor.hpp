@@ -15,10 +15,10 @@ public:
 	RelativeAnchor(RelativeAnchor&&);
 
 	RelativeAnchor& operator=(const RelativeAnchor&) = delete;
-	RelativeAnchor& operator=(RelativeAnchor&&) = delete;
+	RelativeAnchor& operator=(RelativeAnchor&&)		 = delete;
 
-    virtual void publishMonr(const ROSChannels::Monitor::message_type) override;
+	virtual void publishMonr(const ROSChannels::Monitor::message_type) override;
 
 private:
-    ROSChannels::Monitor::AnchorPub anchorPub;
+	ROSChannels::Monitor::AnchorPub anchorPub;
 };

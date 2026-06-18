@@ -31,7 +31,6 @@ FLEET_GEOJSON_CACHE: dict[str, dict] = {}
 APP_CONFIGURED = False
 
 
-
 def main() -> None:
     configure_app()
     ui.run(**build_ui_run_args())
@@ -128,13 +127,17 @@ def _fleet_map_payload_json() -> str:
 class FleetStateNode(Node):
     def __init__(self) -> None:
         super().__init__("truck_object_gui_state_bridge")
-        self._state_sub = self.create_subscription(String, "truck_objects/state", self._on_state, 100)
+        self._state_sub = self.create_subscription(
+            String, "truck_objects/state", self._on_state, 100
+        )
 
     def _on_state(self, msg: String) -> None:
         try:
             payload = json.loads(msg.data)
         except Exception:
-            self.get_logger().warning("Failed to parse truck_objects/state payload as JSON")
+            self.get_logger().warning(
+                "Failed to parse truck_objects/state payload as JSON"
+            )
             return
 
         uid = payload.get("uid")
@@ -154,7 +157,9 @@ def render_atosfleetmanagement_pages() -> None:
 
     @ui.page(path="/", title="TruckObjectGUI")
     def render_home() -> None:
-        ui.add_head_html(f'<script src="{FLEET_STATIC_ROUTE}/fleet_map.js?v={FLEET_MAP_JS_VERSION}"></script>')
+        ui.add_head_html(
+            f'<script src="{FLEET_STATIC_ROUTE}/fleet_map.js?v={FLEET_MAP_JS_VERSION}"></script>'
+        )
         ui.label("TruckObjectGUI (ATOSFleetManagement mode)").classes("text-h4")
 
         with ui.tabs().classes("w-full") as tabs:
@@ -190,13 +195,22 @@ Live truck state topic for map overlay:
                 ui.label("Path visualization by COT path_name").classes("text-h5")
 
                 if not default_geojson:
-                    ui.label("Could not load default geojson file.").classes("text-red-600")
-                    ui.markdown("Searched conf dirs:\n" + "\n".join([f"- `{p}`" for p in _candidate_conf_dirs()]))
+                    ui.label("Could not load default geojson file.").classes(
+                        "text-red-600"
+                    )
+                    ui.markdown(
+                        "Searched conf dirs:\n"
+                        + "\n".join([f"- `{p}`" for p in _candidate_conf_dirs()])
+                    )
                     return
 
-                ui.label(f"Default source: {source_path}").classes("text-sm text-gray-600")
+                ui.label(f"Default source: {source_path}").classes(
+                    "text-sm text-gray-600"
+                )
                 map_id = "fleet-road-map"
-                ui.html(f'<div id="{map_id}" style="height:75vh;width:100%;border-radius:8px;"></div>')
+                ui.html(
+                    f'<div id="{map_id}" style="height:75vh;width:100%;border-radius:8px;"></div>'
+                )
 
                 ui.timer(
                     0.2,
@@ -268,6 +282,7 @@ def ros_main() -> None:
             node.destroy_node()
         rclpy.shutdown()
 
+
 def print_access_hint() -> None:
     scheme = "https" if USE_SSL else "http"
     print(f"TruckObjectGUI ready. Open {scheme}://localhost:8420", flush=True)
@@ -295,8 +310,12 @@ def build_ui_run_args() -> dict:
     }
 
     if USE_SSL:
-        uvicorn_args["ssl_keyfile"] = Path.home() / ".astazero/ATOS/certs/selfsigned.key"
-        uvicorn_args["ssl_certfile"] = Path.home() / ".astazero/ATOS/certs/selfsigned.crt"
+        uvicorn_args["ssl_keyfile"] = (
+            Path.home() / ".astazero/ATOS/certs/selfsigned.key"
+        )
+        uvicorn_args["ssl_certfile"] = (
+            Path.home() / ".astazero/ATOS/certs/selfsigned.crt"
+        )
 
     return uvicorn_args
 

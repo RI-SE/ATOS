@@ -13,8 +13,8 @@ class ObjectPanelNode(Node):
         except RuntimeError:
             self.get_logger().warning(message)
 
-
     """This node is responsible for rendering the object panel and visualize the IP address for each object ID in the scenario."""
+
     def __init__(self) -> None:
         """Initializes the node, fetches all object IDs and their IPs in the current scenario and visualizes them."""
         super().__init__("object_panel")
@@ -55,8 +55,12 @@ class ObjectPanelNode(Node):
                 "Get object ID service not available, waiting again..."
             )
             if service_timeout_counter > MAX_TIMEOUT:
-                self._safe_notify(f'Get object ID service not available after {MAX_TIMEOUT} seconds')
-                self.get_logger().info(f'Get object ID service not available after {MAX_TIMEOUT} seconds')
+                self._safe_notify(
+                    f"Get object ID service not available after {MAX_TIMEOUT} seconds"
+                )
+                self.get_logger().info(
+                    f"Get object ID service not available after {MAX_TIMEOUT} seconds"
+                )
                 return
         future = self.get_id_client.call_async(self.object_ids_req)
         future.add_done_callback(
@@ -77,8 +81,12 @@ class ObjectPanelNode(Node):
                 "Get object IP service not available, waiting again..."
             )
             if service_timeout_counter > MAX_TIMEOUT:
-                self._safe_notify(f'Get object IP service not available after {MAX_TIMEOUT} seconds')
-                self.get_logger().info(f'Get object IP service not available after {MAX_TIMEOUT} seconds')
+                self._safe_notify(
+                    f"Get object IP service not available after {MAX_TIMEOUT} seconds"
+                )
+                self.get_logger().info(
+                    f"Get object IP service not available after {MAX_TIMEOUT} seconds"
+                )
                 return
         for object_id in object_ids:
             self.object_id_ip_map[object_id] = ""
@@ -105,15 +113,19 @@ class ObjectPanelNode(Node):
             object_ip (str): New IP address for the given object ID.
 
         """
-        self._safe_notify(f'Setting object {object_id} IP: {object_ip}')
+        self._safe_notify(f"Setting object {object_id} IP: {object_ip}")
         service_timeout_counter = 0
         while not self.set_ip_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().debug(
                 "Set object IP service not available, waiting again..."
             )
             if service_timeout_counter > MAX_TIMEOUT:
-                self._safe_notify(f'Set object IP service not available after {MAX_TIMEOUT} seconds')
-                self.get_logger().info(f'Set object IP service not available after {MAX_TIMEOUT} seconds')
+                self._safe_notify(
+                    f"Set object IP service not available after {MAX_TIMEOUT} seconds"
+                )
+                self.get_logger().info(
+                    f"Set object IP service not available after {MAX_TIMEOUT} seconds"
+                )
                 return
         future = self.set_ip_client.call_async(
             SetObjectIp.Request(id=object_id, ip=object_ip)
@@ -131,13 +143,19 @@ class ObjectPanelNode(Node):
         """
         if result.success:
             with self.refresh_row:
-                self._safe_notify(f'IP set to {result.ip} for object {result.id} was successful')
-            self.get_logger().info(f'IP set to {result.ip} for object {result.id} was successful')
+                self._safe_notify(
+                    f"IP set to {result.ip} for object {result.id} was successful"
+                )
+            self.get_logger().info(
+                f"IP set to {result.ip} for object {result.id} was successful"
+            )
             self.object_id_ip_map[result.id] = result.ip
         else:
             with self.refresh_row:
-                self._safe_notify(f'Failed to set object {result.id} IP to {result.ip}')
-            self.get_logger().info(f'Failed to set object {result.id} IP to {result.ip}')
+                self._safe_notify(f"Failed to set object {result.id} IP to {result.ip}")
+            self.get_logger().info(
+                f"Failed to set object {result.id} IP to {result.ip}"
+            )
 
     def refresh(self):
         """Refreshes the object panel by fetching all object IDs and their IPs in the current scenario."""

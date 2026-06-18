@@ -6,10 +6,10 @@
 #include "objectlistener.hpp"
 #include "objectcontrol.hpp"
 
-ObjectListener::ObjectListener(ObjectControl* sh,	std::shared_ptr<TestObject> ob,	rclcpp::Logger log) :
-	Loggable(log),
-	obj(ob),
-	handler(sh) {
+ObjectListener::ObjectListener(ObjectControl* sh, std::shared_ptr<TestObject> ob, rclcpp::Logger log) :
+  Loggable(log),
+  obj(ob),
+  handler(sh) {
 
 	if (!obj->isConnected()) {
 		throw std::invalid_argument("Attempted to start listener for disconnected object");
@@ -31,12 +31,12 @@ ObjectListener::~ObjectListener() {
 void ObjectListener::listen() {
 	try {
 		while (!this->quit) {
-			//handle incoming iso22133 messages
+			// handle incoming iso22133 messages
 			obj->handleISOMessage(true);
 		}
 	} catch (std::invalid_argument& e) {
 		RCLCPP_ERROR(get_logger(), "%s", e.what()); // TODO: add comment explaining this case..
-	} catch (std::range_error& e){
+	} catch (std::range_error& e) {
 		RCLCPP_DEBUG(get_logger(), "%s", e.what()); // Socket was interrupted intentionally, exit gracefully
 	} catch (std::runtime_error& e) {
 		RCLCPP_ERROR(get_logger(), "%s", e.what());
