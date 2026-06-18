@@ -9,28 +9,38 @@ source "scripts/installation/install_functions.sh"
 # Get this file location
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 
-# Check if running on Ubuntu
-if ! grep -q "Ubuntu" /etc/os-release; then
-    echo "This script is designed for Ubuntu systems only."
+# Check if running on a supported Ubuntu variant
+if is_ubuntu_core; then
+    echo "Ubuntu Core is not supported for native ATOS installation."
+    echo "Use Docker instead, or run this script on Ubuntu 20.04, 22.04, or 24.04 with apt available."
     exit 1
 fi
 
-# Set ROS_DISTRO based on Ubuntu distribution
-case "$(get_ubuntu_codename)" in
-    "focal")
-    ;;
-    "jammy")
-    ;;
-    *)
-    echo "Unsupported Ubuntu distribution. Only 20.04 (focal) and 22.04 (jammy) are supported."
+if ! is_standard_ubuntu; then
+    echo "This script is designed for standard Ubuntu systems only."
     exit 1
-    ;;
-esac
+fi
+
+UBUNTU_CODENAME="$(get_ubuntu_codename)"
+ROS_DISTRO="$(get_supported_ros_distro)"
+
+if [ -z "${UBUNTU_CODENAME}" ] || [ -z "${ROS_DISTRO}" ]; then
+    echo "Unsupported Ubuntu distribution. Supported releases are 20.04 (focal), 22.04 (jammy), and 24.04 (noble)."
+    exit 1
+fi
+
+if ! command -v apt-get >/dev/null 2>&1; then
+    echo "apt-get is required for native ATOS installation but was not found on this system."
+    exit 1
+fi
+
+export ROS_DISTRO
 
 # Add -h/--help option
 if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
     echo "Usage: ./setup_atos.sh [single option]"
-    echo "This script will install all necessary dependencies, setup the ROS workspace at ~/atos_ws and install ATOS. Please open and inspect this script for further details."
+    echo "This script will install all necessary dependencies, setup the ROS workspace at ~/atos_ws and install ATOS."
+    echo "Supported native targets: Ubuntu 20.04 with ROS 2 Foxy, Ubuntu 22.04 with ROS 2 Humble, and Ubuntu 24.04 with ROS 2 Jazzy."
     echo "Options:"
     echo "  -h, --help      Show this help message and exit"
     echo "  -r              Reinstall dependencies"              

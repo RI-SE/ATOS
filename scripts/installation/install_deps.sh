@@ -24,16 +24,62 @@ if [ -z "${ROS_DISTRO:-}" ]; then
     exit 1
 fi
 
-PIP_INSTALL_CMD=(python3 -m pip install)
-if python3 -m pip help install 2>/dev/null | grep -q -- "--break-system-packages"; then
-    PIP_INSTALL_CMD+=(--break-system-packages)
-fi
+ATOS_VENV_PATH="$(get_atos_venv_path)"
+apt_update_retry() {
+    local attempts=5
+    local delay=5
+    local i=1
+    while [ "$i" -le "$attempts" ]; do
+        if sudo apt-get update; then
+            return 0
+        fi
+        echo "apt update failed (attempt ${i}/${attempts}); cleaning apt cache and retrying..."
+        sudo apt-get clean
+        sudo rm -rf /var/lib/apt/lists/*
+        sleep "$delay"
+        i=$((i + 1))
+    done
+    return 1
+}
+
+apt_install_retry() {
+    local attempts=3
+    local delay=5
+    local i=1
+    while [ "$i" -le "$attempts" ]; do
+        if sudo apt-get install -y "$@"; then
+            return 0
+        fi
+        echo "apt install failed (attempt ${i}/${attempts}); retrying..."
+        sleep "$delay"
+        i=$((i + 1))
+    done
+    return 1
+}
 
 # Update and install required dependencies specified in dependencies.txt and requirements.txt file
 apt_deps=$(cat ${ATOS_REPO_PATH}/scripts/installation/dependencies.txt | tr '\n' ' ')
 echo "Installing dependencies... $apt_deps"
-sudo apt update && sudo apt install -y ${apt_deps}
-"${PIP_INSTALL_CMD[@]}" -r ${ATOS_REPO_PATH}/scripts/installation/requirements.txt
+apt_update_retry
+apt_install_retry ${apt_deps}
+apt_install_retry python3-pip
+apt_install_retry python3-venv
+
+if [ -d "${ATOS_VENV_PATH}" ] && [ "$REINSTALL" = true ]; then
+    echo "Removing existing ATOS Python virtual environment at ${ATOS_VENV_PATH}..."
+    rm -rf "${ATOS_VENV_PATH}"
+fi
+
+if [ ! -f "${ATOS_VENV_PATH}/bin/activate" ]; then
+    echo "Creating ATOS Python virtual environment at ${ATOS_VENV_PATH}..."
+    mkdir -p "$(dirname "${ATOS_VENV_PATH}")"
+    # ROS Python tooling depends on distro packages such as `empy` being importable
+    # while the ATOS venv is active during colcon builds.
+    python3 -m venv --system-site-packages "${ATOS_VENV_PATH}"
+fi
+
+"${ATOS_VENV_PATH}/bin/python" -m pip install --upgrade pip
+"${ATOS_VENV_PATH}/bin/python" -m pip install -r ${ATOS_REPO_PATH}/scripts/installation/requirements.txt
 
 # Check if apt failed to install dependencies
 check_command_failed $? "Failed to install dependencies."
@@ -46,7 +92,8 @@ if ! (apt list | grep -q "ros-$ROS_DISTRO-desktop"); then
     echo "Adding the ROS2 $ROS_DISTRO apt repository..."
 
     # Install ROS2 prerequisites
-    sudo apt update && sudo apt install -y lsb-release ros-dev-tools
+    apt_update_retry
+    apt_install_retry lsb-release ros-dev-tools
 
     # Authorize the ROS2 gpg key with apt
     sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
@@ -60,7 +107,8 @@ fi
 
 # Install ROS2 packages
 echo "Installing ROS2 packages..."
-sudo apt install -y \
+apt_update_retry
+apt_install_retry \
     ros-${ROS_DISTRO}-desktop \
     python3-rosdep \
     ros-${ROS_DISTRO}-launch-pytest
@@ -75,7 +123,7 @@ check_command_failed $? "Failed to install ROS2 dependencies."
 ######## Install ATOS GUI dependencies ########
 ###############################################
 
-"${PIP_INSTALL_CMD[@]}" -r ${ATOS_REPO_PATH}/atos_gui/requirements.txt 
+"${ATOS_VENV_PATH}/bin/python" -m pip install -r ${ATOS_REPO_PATH}/atos_gui/requirements.txt
 
 ###########################################
 ###### Install some deps from source ######
