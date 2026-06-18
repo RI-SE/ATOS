@@ -73,7 +73,9 @@ fi
 if [ ! -f "${ATOS_VENV_PATH}/bin/activate" ]; then
     echo "Creating ATOS Python virtual environment at ${ATOS_VENV_PATH}..."
     mkdir -p "$(dirname "${ATOS_VENV_PATH}")"
-    python3 -m venv "${ATOS_VENV_PATH}"
+    # ROS Python tooling depends on distro packages such as `empy` being importable
+    # while the ATOS venv is active during colcon builds.
+    python3 -m venv --system-site-packages "${ATOS_VENV_PATH}"
 fi
 
 "${ATOS_VENV_PATH}/bin/python" -m pip install --upgrade pip
