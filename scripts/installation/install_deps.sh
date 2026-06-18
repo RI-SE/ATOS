@@ -23,6 +23,8 @@ if [ -z "${ROS_DISTRO:-}" ]; then
     echo "ROS_DISTRO is not set. Source /opt/ros/<distro>/setup.bash before running this script."
     exit 1
 fi
+
+ATOS_VENV_PATH="$(get_atos_venv_path)"
 apt_update_retry() {
     local attempts=5
     local delay=5
@@ -55,18 +57,27 @@ apt_install_retry() {
     return 1
 }
 
-PIP_INSTALL_CMD=(python3 -m pip install)
-if python3 -m pip help install 2>/dev/null | grep -q -- "--break-system-packages"; then
-    PIP_INSTALL_CMD+=(--break-system-packages)
-fi
-
 # Update and install required dependencies specified in dependencies.txt and requirements.txt file
 apt_deps=$(cat ${ATOS_REPO_PATH}/scripts/installation/dependencies.txt | tr '\n' ' ')
 echo "Installing dependencies... $apt_deps"
 apt_update_retry
 apt_install_retry ${apt_deps}
 apt_install_retry python3-pip
-"${PIP_INSTALL_CMD[@]}" -r ${ATOS_REPO_PATH}/scripts/installation/requirements.txt
+apt_install_retry python3-venv
+
+if [ -d "${ATOS_VENV_PATH}" ] && [ "$REINSTALL" = true ]; then
+    echo "Removing existing ATOS Python virtual environment at ${ATOS_VENV_PATH}..."
+    rm -rf "${ATOS_VENV_PATH}"
+fi
+
+if [ ! -f "${ATOS_VENV_PATH}/bin/activate" ]; then
+    echo "Creating ATOS Python virtual environment at ${ATOS_VENV_PATH}..."
+    mkdir -p "$(dirname "${ATOS_VENV_PATH}")"
+    python3 -m venv "${ATOS_VENV_PATH}"
+fi
+
+"${ATOS_VENV_PATH}/bin/python" -m pip install --upgrade pip
+"${ATOS_VENV_PATH}/bin/python" -m pip install -r ${ATOS_REPO_PATH}/scripts/installation/requirements.txt
 
 # Check if apt failed to install dependencies
 check_command_failed $? "Failed to install dependencies."
@@ -110,7 +121,7 @@ check_command_failed $? "Failed to install ROS2 dependencies."
 ######## Install ATOS GUI dependencies ########
 ###############################################
 
-"${PIP_INSTALL_CMD[@]}" -r ${ATOS_REPO_PATH}/atos_gui/requirements.txt 
+"${ATOS_VENV_PATH}/bin/python" -m pip install -r ${ATOS_REPO_PATH}/atos_gui/requirements.txt
 
 ###########################################
 ###### Install some deps from source ######
