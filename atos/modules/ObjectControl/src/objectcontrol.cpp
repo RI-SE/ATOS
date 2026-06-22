@@ -54,6 +54,7 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	ip_client_cb_group_		= this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 	origin_client_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 	this->declare_parameter("max_missing_heartbeats", 100);
+	this->declare_parameter("max_missing_monr", 100);
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
 	idClient			  = create_client<atos_interfaces::srv::GetObjectIds>(
 	   ServiceNames::getObjectIds, rmw_qos_profile_services_default, id_client_cb_group_);
