@@ -193,6 +193,24 @@ bool ObjectControl::loadScenario() {
 	this->isResetting = false;
 	this->clearScenario();
 	RCLCPP_INFO(get_logger(), "Loading scenario");
+
+	if (!idClient->wait_for_service(5s)) {
+		RCLCPP_ERROR(get_logger(), "Get object IDs service is not available");
+		return false;
+	}
+	if (!trajectoryClient->wait_for_service(5s)) {
+		RCLCPP_ERROR(get_logger(), "Get object trajectory service is not available");
+		return false;
+	}
+	if (!ipClient->wait_for_service(5s)) {
+		RCLCPP_ERROR(get_logger(), "Get object IP service is not available");
+		return false;
+	}
+	if (!originClient->wait_for_service(5s)) {
+		RCLCPP_ERROR(get_logger(), "Get test origin service is not available");
+		return false;
+	}
+
 	std::promise<bool> scenarioLoaded;
 	auto idsCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFuture future) {
 		auto idResponse = future.get();
