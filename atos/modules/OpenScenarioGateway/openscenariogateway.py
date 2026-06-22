@@ -227,6 +227,12 @@ class OpenScenarioGateway(Node):
         return catalog_object.properties.properties
 
     def srv_get_object_id_array(self, request, response):
+        if not self.active_objects:
+            self.update_scenario(self.get_parameter(SCENARIO_FILE_PARAMETER).value)
+            self.update_active_scenario_objects(
+                self.get_parameter(ACTIVE_OBJECT_NAME_PARAMETER).value
+            )
+
         for id, object in self.active_objects.items():
             response.ids.append(id)
             response.names.append(object.name)
