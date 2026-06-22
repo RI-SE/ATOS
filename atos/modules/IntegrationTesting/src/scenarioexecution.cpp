@@ -67,7 +67,10 @@ std::vector<std::pair<double, double>> ScenarioExecution::getTrajectoryPoints() 
 	auto request = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
 	request->id	 = 1;
 	std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Response> response;
-	this->callService(1000ms, getObjectTrajectoryClient, response, request);
+	if (!this->callService(1000ms, getObjectTrajectoryClient, response, request) || response == nullptr) {
+		RCLCPP_ERROR(get_logger(), "Failed to call service %s", getObjectTrajectoryClient->get_service_name());
+		return {};
+	}
 
 	std::vector<std::pair<double, double>> trajectory;
 	for (const auto& t : response->trajectory.points) {
@@ -82,6 +85,11 @@ std::vector<std::pair<double, double>> ScenarioExecution::getTrajectoryPoints() 
  */
 void ScenarioExecution::checkObjectStoppedAtLastPoint() {
 	auto trajectory = getTrajectoryPoints();
+	if (trajectory.empty()) {
+		followedTrajectory = false;
+		RCLCPP_ERROR(get_logger(), "Object trajectory is unavailable or empty");
+		return;
+	}
 	std::pair<double, double> lastPoint;
 	auto isObjectMoving = true;
 	while (isObjectMoving) {
