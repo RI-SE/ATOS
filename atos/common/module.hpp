@@ -47,7 +47,7 @@ public:
 	Module(const std::string name) :
 	  Node(name),
 	  getStatusResponsePub(*this) {};
-	Module() = default;
+	Module() = delete;
 	bool shouldExit();
 
 protected:

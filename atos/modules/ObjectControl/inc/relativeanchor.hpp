@@ -15,7 +15,7 @@ public:
 	RelativeAnchor(RelativeAnchor&&);
 
 	RelativeAnchor& operator=(const RelativeAnchor&) = delete;
-	RelativeAnchor& operator=(RelativeAnchor&&)		 = default;
+	RelativeAnchor& operator=(RelativeAnchor&&)		 = delete;
 
 	virtual void publishMonr(const ROSChannels::Monitor::message_type) override;
 

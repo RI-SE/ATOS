@@ -18,7 +18,6 @@ find_package(OpenSSL REQUIRED)
 include(GNUInstallDirs)
 
 set(COREUTILS_LIBRARY ATOSCoreUtil)
-
 add_executable(${PROJECT_NAME}
   ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/truckobjectcontrol.cpp

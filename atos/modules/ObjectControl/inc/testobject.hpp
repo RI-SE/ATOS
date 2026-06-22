@@ -41,7 +41,7 @@ public:
 	TestObject(TestObject&&);
 
 	TestObject& operator=(const TestObject&) = delete;
-	TestObject& operator=(TestObject&&)		 = default;
+	TestObject& operator=(TestObject&&)		 = delete;
 
 	virtual void parseConfigurationFile(const fs::path& file);
 

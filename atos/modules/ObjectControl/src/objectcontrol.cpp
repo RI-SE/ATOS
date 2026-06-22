@@ -53,11 +53,7 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	traj_client_cb_group_	= this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 	ip_client_cb_group_		= this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 	origin_client_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
-
 	this->declare_parameter("max_missing_heartbeats", 100);
-	this->declare_parameter("max_missing_monr", 100);
-	this->declare_parameter("monr_timeout_period_ms", 1000);
-
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
 	idClient			  = create_client<atos_interfaces::srv::GetObjectIds>(
 	   ServiceNames::getObjectIds, rmw_qos_profile_services_default, id_client_cb_group_);
@@ -207,8 +203,6 @@ bool ObjectControl::loadScenario() {
 			exec->add_node(object);
 			objects.emplace(id, object);
 			objects.at(id)->setTransmitterID(id);
-			objects.at(id)->setMaxAllowedMonitorPeriod(
-			  std::chrono::milliseconds(this->get_parameter("monr_timeout_period_ms").as_int()));
 
 			std::promise<bool> trajLoaded;
 			auto trajectoryCallback =
@@ -295,17 +289,17 @@ bool ObjectControl::loadScenario() {
 			std::future<bool> trajLoadedFuture	 = trajLoaded.get_future();
 			std::future<bool> ipLoadedFuture	 = ipLoaded.get_future();
 			std::future<bool> originLoadedFuture = originLoaded.get_future();
-			if (auto status = trajLoadedFuture.wait_for(20s);
+			if (auto status = trajLoadedFuture.wait_for(5s);
 				status != std::future_status::ready || !trajLoadedFuture.get()) {
 				RCLCPP_ERROR(get_logger(), "Trajectory loading failed for object ID %u", id);
 				successful = false;
 			}
-			if (auto status = ipLoadedFuture.wait_for(2s);
+			if (auto status = ipLoadedFuture.wait_for(250ms);
 				status != std::future_status::ready || !ipLoadedFuture.get()) {
 				RCLCPP_ERROR(get_logger(), "IP loading failed for object ID %u", id);
 				successful = false;
 			}
-			if (auto status = originLoadedFuture.wait_for(2s);
+			if (auto status = originLoadedFuture.wait_for(250ms);
 				status != std::future_status::ready || !originLoadedFuture.get()) {
 				RCLCPP_ERROR(get_logger(), "Origin loading failed for object ID %u", id);
 				successful = false;
@@ -326,7 +320,7 @@ bool ObjectControl::loadScenario() {
 	auto future	 = idClient->async_send_request(request, idsCallback);
 	// Wait for all objects to load
 	std::future scenarioLoadedFuture = scenarioLoaded.get_future();
-	if (auto status = scenarioLoadedFuture.wait_for(30s); status == std::future_status::ready) {
+	if (auto status = scenarioLoadedFuture.wait_for(10s); status == std::future_status::ready) {
 		return scenarioLoadedFuture.get(); // Get the status value
 	} else if (status == std::future_status::timeout) {
 		RCLCPP_ERROR(get_logger(), "Scenario loading timed out");
@@ -339,6 +333,63 @@ bool ObjectControl::loadScenario() {
 	}
 	// This should never happen
 	return false;
+}
+
+void ObjectControl::loadObjectFiles() {
+	char path[MAX_FILE_PATH];
+	std::vector<std::invalid_argument> errors;
+
+	UtilGetObjectDirectoryPath(path, sizeof(path));
+	fs::path objectDir(path);
+	if (!fs::exists(objectDir)) {
+		throw std::ios_base::failure("Object directory does not exist");
+	}
+
+	for (const auto& entry : fs::directory_iterator(objectDir)) {
+		if (fs::is_regular_file(entry.status())) {
+			const auto inputFile = entry.path();
+			ObjectConfig conf(get_logger());
+			try {
+				conf.parseConfigurationFile(inputFile);
+				uint32_t id = conf.getTransmitterID();
+				RCLCPP_INFO(get_logger(), "Loaded configuration: %s", conf.toString().c_str());
+				// Check preexisting
+				auto foundObject = objects.find(id);
+				if (foundObject == objects.end()) {
+					std::shared_ptr<TestObject> object = std::make_shared<TestObject>(id);
+					object->parseConfigurationFile(inputFile);
+					objects.emplace(id, object);
+				} else {
+					auto badID		   = conf.getTransmitterID();
+					std::string errMsg = "Duplicate object ID " + std::to_string(badID) + " detected in files " +
+										 objects.at(badID)->getTrajectoryFileName() + " and " +
+										 conf.getTrajectoryFileName();
+					throw std::invalid_argument(errMsg);
+				}
+			} catch (std::invalid_argument& e) {
+				RCLCPP_ERROR(get_logger(), "%s", e.what());
+				errors.push_back(e);
+			}
+		}
+	}
+
+	// Fix injector ID maps - reverse their direction
+	for (const auto& id : getVehicleIDs()) {
+		auto injMap = objects.at(id)->getObjectConfig().getInjectionMap();
+		for (const auto& sourceID : injMap.sourceIDs) {
+			auto conf = objects.at(sourceID)->getObjectConfig();
+			conf.addInjectionTarget(id);
+			objects.at(sourceID)->setObjectConfig(conf);
+		}
+	}
+
+	if (!errors.empty()) {
+		objects.clear();
+		std::ostringstream ostr;
+		auto append = [&ostr](const std::invalid_argument& e) { ostr << e.what() << std::endl; };
+		std::for_each(errors.begin(), errors.end(), append);
+		throw std::invalid_argument("Failed to parse object file(s):\n" + ostr.str());
+	}
 }
 
 uint32_t ObjectControl::getAnchorObjectID() const {
@@ -468,7 +519,7 @@ void ObjectControl::heartbeat() {
 					objects.at(id)->sendHeartbeat(controlCenterStatus());
 				}
 			} catch (std::exception& e) {
-				RCLCPP_WARN(get_logger(), e.what());
+				RCLCPP_WARN(get_logger(), "%s", e.what());
 				objects.at(id)->disconnect();
 				sm.process_event(state_machine::events::DisconnectedFromObject{id});
 			}
@@ -536,8 +587,8 @@ void ObjectControl::notifyObjectsConnected() {
 }
 
 void ObjectControl::connectToObject(std::shared_ptr<TestObject> obj, std::shared_future<void>& connStopReq) {
-	const int maxConnHeabs = this->get_parameter("max_missing_heartbeats").as_int();
-	const int maxConnMonrs = this->get_parameter("max_missing_monr").as_int();
+	const int maxConnHeabs	   = this->get_parameter("max_missing_heartbeats").as_int();
+	constexpr int maxConnMonrs = 100;
 	try {
 		if (!obj->isConnected()) {
 			try {
