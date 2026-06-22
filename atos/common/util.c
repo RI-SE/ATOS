@@ -1070,7 +1070,7 @@ int UtilSetSyncPoint(ObjectPosition * OP, double x, double y, double z, double T
 		}
 
 	}
-
+	return OP->SyncIndex;
 }
 
 float UtilCalculateTimeToSync(ObjectPosition * OP) {
@@ -1222,6 +1222,7 @@ int UtilSortSpaceTimeAscending(ObjectPosition * OP) {
 			}
 		}
 	}
+	return 0;
 }
 
 
@@ -1236,7 +1237,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 	//OP->BestFoundTrajectoryIndex = 0;
 	if (debug)
 		fprintf(stderr, "UtilFindCurrentTrajectoryPosition: StartIndex=%d, CurrentTime=%4.3f, MaxTrajDiff=%4.3f, MaxTimeDiff=%4.3f\n",
-				OP->OrigoDistance, OP->x, OP->y, OP->SyncIndex);
+				StartIndex, CurrentTime, MaxTrajDiff, MaxTimeDiff);
 
 	Init = 1;
 	while (i < (OP->TrajectoryPositionCount - 1) && i <= OP->SyncIndex) {
@@ -1378,8 +1379,8 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition * OP, int StartIndex, do
 					PositionFound = i;
 					//SampledSpaceIndex[j] = i;
 					//j++ ;
-						if (debug == 2)
-							fprintf(stderr, "Minimum: %d, %3.6f, %3.6f", i, AngleDiff, RDiff);
+					if (debug == 2)
+						fprintf(stderr, "Minimum: %d, %3.6f, %3.6f", i, AngleDiff, RDiff);
 					PrevAngleDiff = AngleDiff;
 				}
 
@@ -1754,10 +1755,10 @@ int UtilGetRowInFile(const char *path, const size_t pathLength,
 				fprintf(stderr, "Buffer to small for read row in file\n");
 				return -1;
 			}
-				if(rowIndex == i){
-					*(rowBuffer+length) = '\0';
-					return i;
-				} 
+			if(rowIndex == i){
+				*(rowBuffer + length) = '\0';
+				return i;
+			} 
 		}
 	}
 	fclose(fd);
