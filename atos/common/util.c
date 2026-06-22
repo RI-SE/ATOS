@@ -251,7 +251,8 @@ static int recursiveMkdir(const char *dir, int mode) {
 			*p = '/';
 		}
 	res = mkdir(tmp, mode);
-	}
+	return res;
+}
 
 /*!
  * \brief deleteFile Deletes the file given in the parameter ::path
