@@ -587,8 +587,8 @@ void ObjectControl::notifyObjectsConnected() {
 }
 
 void ObjectControl::connectToObject(std::shared_ptr<TestObject> obj, std::shared_future<void>& connStopReq) {
-	const int maxConnHeabs	   = this->get_parameter("max_missing_heartbeats").as_int();
-	constexpr int maxConnMonrs = 100;
+	const int maxConnHeabs = this->get_parameter("max_missing_heartbeats").as_int();
+	const int maxConnMonrs = this->get_parameter("max_missing_monr").as_int();
 	try {
 		if (!obj->isConnected()) {
 			try {
