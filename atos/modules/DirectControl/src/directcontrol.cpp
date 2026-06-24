@@ -175,7 +175,7 @@ void DirectControl::readTCPSocketData() {
 					try {
 						this->handleISOMessage(data, static_cast<size_t>(recvData));
 					} catch (std::invalid_argument& e) {
-						RCLCPP_ERROR(get_logger(), "%s", e.what());
+						RCLCPP_ERROR(get_logger(), e.what());
 						std::fill(data.begin(), data.end(), 0);
 					}
 				}

@@ -4,7 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "mqttbridge.hpp"
+
 #include <random>
+
+#include <rclcpp/serialization.hpp>
+#include <sensor_msgs/msg/nav_sat_fix.hpp>
+#include <std_msgs/msg/empty.hpp>
+
+#include "mqtt2ros_utils.hpp"
 
 using namespace ROSChannels;
 
@@ -41,6 +48,9 @@ void MqttBridge::loadParameters() {
 		param_desc.description = "ROS topic on which corresponding MQTT messages are published";
 		declare_parameter(
 		  fmt::format("mqtt2ros.{}.ros_topic", mqtt_topic), rclcpp::ParameterType::PARAMETER_STRING, param_desc);
+		param_desc.description = "ROS message type for this bridge";
+		declare_parameter(
+		  fmt::format("mqtt2ros.{}.msg_type", mqtt_topic), rclcpp::ParameterType::PARAMETER_STRING, param_desc);
 		param_desc.description = "MQTT QoS value";
 		declare_parameter(fmt::format("mqtt2ros.{}.advanced.mqtt.qos", mqtt_topic),
 						  rclcpp::ParameterType::PARAMETER_INTEGER,
@@ -80,6 +90,13 @@ void MqttBridge::loadParameters() {
 			Mqtt2RosInterface& mqtt2ros = mqtt2ros_[mqtt_topic];
 			mqtt2ros.ros.topic			= ros_topic;
 
+			rclcpp::Parameter msg_type_param;
+			if (get_parameter(fmt::format("mqtt2ros.{}.msg_type", mqtt_topic), msg_type_param)) {
+				mqtt2ros.ros.msg_type = msg_type_param.as_string();
+			} else {
+				mqtt2ros.ros.msg_type = "std_msgs/msg/Empty"; // default if no parameter is set
+			}
+
 			// mqtt2ros[k]/advanced/mqtt/qos
 			rclcpp::Parameter qos_param;
 			if (get_parameter(fmt::format("mqtt2ros.{}.advanced.mqtt.qos", mqtt_topic), qos_param)) {
@@ -93,14 +110,16 @@ void MqttBridge::loadParameters() {
 			}
 
 			RCLCPP_INFO(get_logger(),
-						"Bridging MQTT topic '%s' to ROS topic '%s'",
+						"Bridging MQTT topic '%s' to ROS topic '%s' with message type '%s'",
 						mqtt_topic.c_str(),
-						mqtt2ros.ros.topic.c_str());
+						mqtt2ros.ros.topic.c_str(),
+						mqtt2ros.ros.msg_type.c_str());
 		} else {
-			const auto warning = fmt::format("Parameter 'mqtt2ros.{}' is missing subparameter 'ros_topic', will "
-											 "be ignored",
-											 mqtt_topic);
-			RCLCPP_WARN(get_logger(), "%s", warning.c_str());
+			RCLCPP_WARN(get_logger(),
+						fmt::format("Parameter 'ros2mqtt.{}' is missing subparameter "
+									"'ros_topic', will be ignored",
+									mqtt_topic)
+						  .c_str());
 		}
 	}
 
@@ -130,10 +149,11 @@ void MqttBridge::loadParameters() {
 						ros_topic.c_str(),
 						ros2mqtt.mqtt.topic.c_str());
 		} else {
-			const auto warning = fmt::format("Parameter 'ros2mqtt.{}' is missing subparameter 'mqtt_topic', will "
-											 "be ignored",
-											 ros_topic);
-			RCLCPP_WARN(get_logger(), "%s", warning.c_str());
+			RCLCPP_WARN(get_logger(),
+						fmt::format("Parameter 'ros2mqtt.{}' is missing subparameter "
+									"'mqtt_topic', will be ignored",
+									ros_topic)
+						  .c_str());
 		}
 	}
 }
@@ -236,7 +256,6 @@ void MqttBridge::setupSubscriptions() {
 
 void MqttBridge::ros2mqtt(const std::shared_ptr<rclcpp::SerializedMessage>& serialized_msg,
 						  const std::string& ros_topic) {
-	(void)serialized_msg;
 
 	Ros2MqttInterface& ros2mqtt = ros2mqtt_[ros_topic];
 	std::string mqtt_topic		= ros2mqtt.mqtt.topic;
@@ -312,7 +331,8 @@ void MqttBridge::newMqtt2RosBridge(atos_interfaces::srv::NewMqtt2RosBridge::Requ
 	mqtt2ros.ros.is_stale		= true;
 	mqtt2ros.ros.topic			= request->ros_topic;
 	mqtt2ros.mqtt.qos			= request->mqtt_qos;
-	mqtt2ros.ros.publisher	= this->create_publisher<std_msgs::msg::Empty>(mqtt2ros.ros.topic, request->ros_queue_size);
+	mqtt2ros.ros.publisher =
+	  this->create_generic_publisher(mqtt2ros.ros.topic, mqtt2ros.ros.msg_type, mqtt2ros.ros.queue_size);
 	mqtt2ros.ros.queue_size = request->ros_queue_size;
 
 	RCLCPP_DEBUG(get_logger(),
@@ -372,9 +392,9 @@ void MqttBridge::message_arrived(mqtt::const_message_ptr mqtt_msg) {
 	RCLCPP_DEBUG(get_logger(), "Received MQTT message on topic '%s'", mqtt_topic.c_str());
 	Mqtt2RosInterface& mqtt2ros = mqtt2ros_[mqtt_topic];
 
-	// Publish empty message to ROS topic
-	mqtt2ros.ros.publisher->publish(std_msgs::msg::Empty());
-	RCLCPP_DEBUG(get_logger(), "Published empty message to ROS topic '%s'", mqtt2ros.ros.topic.c_str());
+	const auto msg = Mqtt2RosUtils::get_serialized_msg(mqtt2ros.ros.msg_type, mqtt_msg->get_payload_str());
+	mqtt2ros.ros.publisher->publish(msg);
+	RCLCPP_DEBUG(get_logger(), "Published MQTT message to ROS topic '%s'", mqtt2ros.ros.topic.c_str());
 }
 
 template<typename T>

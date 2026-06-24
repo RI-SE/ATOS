@@ -16,7 +16,7 @@ public:
 	RelativeTestObject(RelativeTestObject&&);
 
 	RelativeTestObject& operator=(const RelativeTestObject&) = delete;
-	RelativeTestObject& operator=(RelativeTestObject&&)		 = delete;
+	RelativeTestObject& operator=(RelativeTestObject&&)		 = default;
 
 private:
 	virtual ObjectMonitorType transformCoordinate(const ObjectMonitorType& point,
