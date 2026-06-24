@@ -1,15 +1,42 @@
 import os
 import sys
+from pathlib import Path
 
 from ament_index_python.packages import get_package_prefix
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
 from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.substitutions import EnvironmentVariable, LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 # Need to modify sys.path since we launch from the ros2 installed path.
 sys.path.insert(0, os.path.join(get_package_prefix("atos"), "share", "atos", "launch"))
+
+
+def get_pythonpath_setup_action():
+    venv_site_packages = Path.home() / ".local" / "share" / "atos" / "venv" / "lib" / (
+        f"python{os.sys.version_info.major}.{os.sys.version_info.minor}"
+    ) / "site-packages"
+    if not venv_site_packages.exists():
+        return None
+
+    return SetEnvironmentVariable(
+        name="PYTHONPATH",
+        value=[
+            str(venv_site_packages),
+            os.pathsep,
+            EnvironmentVariable("PYTHONPATH", default_value=""),
+        ],
+    )
+
+
+def get_default_trajectory_path():
+    return str(
+        Path(get_package_prefix("atos"))
+        / "etc"
+        / "conf"
+        / "RuralRoad_center_of_driving_lane_ccw.geojson"
+    )
 
 
 def generate_launch_description():
@@ -38,6 +65,7 @@ def generate_launch_description():
     cot_tls_ca_path_launch_arg = DeclareLaunchArgument(
         "cot_tls_ca_path", default_value=""
     )
+    default_trajectory_path = get_default_trajectory_path()
 
     fox_tls_bridge_params = [
         {"port": 8765},
@@ -64,8 +92,7 @@ def generate_launch_description():
     ros_bridge_params[1] = {"retry_startup_delay": 5.0}
     ros_bridge_params[2] = {"tls": False}
 
-    return LaunchDescription(
-        [
+    actions = [
             foxbridge_launch_arg,
             insecure_launch_arg,
             simulator_launch_arg,
@@ -104,6 +131,7 @@ def generate_launch_description():
                     {"cot_tls_cert_path": cot_tls_cert_path},
                     {"cot_tls_key_path": cot_tls_key_path},
                     {"cot_tls_ca_path": cot_tls_ca_path},
+                    {"trajectory_geojson_path": default_trajectory_path},
                 ],
             ),
             Node(
@@ -119,6 +147,7 @@ def generate_launch_description():
                     {"target_speed_kmh": 80.0},
                     {"acceleration_mps2": 2.0},
                     {"ignore_warning_speed_commands": True},
+                    {"trajectory_geojson_path": default_trajectory_path},
                 ],
             ),
             Node(
@@ -133,6 +162,7 @@ def generate_launch_description():
                     {"start_index": 250},
                     {"target_speed_kmh": 40.0},
                     {"acceleration_mps2": 2.0},
+                    {"trajectory_geojson_path": default_trajectory_path},
                 ],
             ),
             Node(
@@ -147,6 +177,7 @@ def generate_launch_description():
                     {"start_index": 500},
                     {"target_speed_kmh": 40.0},
                     {"acceleration_mps2": 2.0},
+                    {"trajectory_geojson_path": default_trajectory_path},
                 ],
             ),
             Node(
@@ -198,4 +229,9 @@ def generate_launch_description():
                 parameters=ros_tls_bridge_params,
             ),
         ]
-    )
+
+    pythonpath_setup = get_pythonpath_setup_action()
+    if pythonpath_setup is not None:
+        actions.insert(7, pythonpath_setup)
+
+    return LaunchDescription(actions)

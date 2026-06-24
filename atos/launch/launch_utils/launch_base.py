@@ -5,10 +5,10 @@ from pathlib import Path
 
 import rclpy.logging as logging
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.substitutions import EnvironmentVariable, LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 from .validate_files import validate_atos_dir
@@ -22,6 +22,23 @@ def print_version():
 
 def get_files():
     return validate_atos_dir()
+
+
+def get_pythonpath_setup_action():
+    venv_site_packages = Path.home() / ".local" / "share" / "atos" / "venv" / "lib" / (
+        f"python{os.sys.version_info.major}.{os.sys.version_info.minor}"
+    ) / "site-packages"
+    if not venv_site_packages.exists():
+        return None
+
+    return SetEnvironmentVariable(
+        name="PYTHONPATH",
+        value=[
+            str(venv_site_packages),
+            os.pathsep,
+            EnvironmentVariable("PYTHONPATH", default_value=""),
+        ],
+    )
 
 
 def get_base_nodes(include_gui=True):
@@ -131,9 +148,13 @@ def get_base_nodes(include_gui=True):
         ),
     ]
 
+    pythonpath_setup = get_pythonpath_setup_action()
+    if pythonpath_setup is not None:
+        base_nodes.insert(2, pythonpath_setup)
+
     if include_gui:
         base_nodes.insert(
-            2,
+            3 if pythonpath_setup is not None else 2,
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     os.path.join(
