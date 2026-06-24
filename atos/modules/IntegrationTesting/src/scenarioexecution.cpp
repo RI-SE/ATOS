@@ -130,9 +130,8 @@ void ScenarioExecution::printResult() {
 
 	bool allStatesCorrect = true;
 	for (auto const& [state, expectedState] : stateResult) {
-		const bool passed = (state == expectedState);
-		const char* pass  = passed ? "OK" : "NOT OK";
-		if (!passed) {
+		auto pass = (state == expectedState) ? "OK" : "NOT OK";
+		if (pass == "NOT OK") {
 			allStatesCorrect = false;
 		}
 		ss << std::left << std::setfill(' ') << std::setw(width) << state << std::setw(width) << expectedState
@@ -145,8 +144,7 @@ void ScenarioExecution::printResult() {
 	ss << ((allStatesCorrect) ? "OK" : "NOT OK");
 	ss << "\nTrajectory following result: ";
 	ss << ((followedTrajectory) ? "OK" : "NOT OK");
-	const auto result = ss.str();
-	RCLCPP_INFO(get_logger(), "%s", result.c_str());
+	RCLCPP_INFO(get_logger(), ss.str().c_str());
 }
 
 /**
@@ -154,6 +152,4 @@ void ScenarioExecution::printResult() {
  *
  * @param msg Message.
  */
-void ScenarioExecution::placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr msg) {
-	(void)msg;
-}
+void ScenarioExecution::placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr msg) {}
