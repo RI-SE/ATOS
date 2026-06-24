@@ -5,10 +5,18 @@ from pathlib import Path
 
 import rclpy.logging as logging
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    SetEnvironmentVariable,
+)
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import EnvironmentVariable, LaunchConfiguration, PythonExpression
+from launch.substitutions import (
+    EnvironmentVariable,
+    LaunchConfiguration,
+    PythonExpression,
+)
 from launch_ros.actions import Node
 
 from .validate_files import validate_atos_dir
@@ -25,9 +33,16 @@ def get_files():
 
 
 def get_pythonpath_setup_action():
-    venv_site_packages = Path.home() / ".local" / "share" / "atos" / "venv" / "lib" / (
-        f"python{os.sys.version_info.major}.{os.sys.version_info.minor}"
-    ) / "site-packages"
+    venv_site_packages = (
+        Path.home()
+        / ".local"
+        / "share"
+        / "atos"
+        / "venv"
+        / "lib"
+        / (f"python{os.sys.version_info.major}.{os.sys.version_info.minor}")
+        / "site-packages"
+    )
     if not venv_site_packages.exists():
         return None
 

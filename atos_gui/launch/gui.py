@@ -4,14 +4,25 @@ from pathlib import Path
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
 from launch.conditions import IfCondition
-from launch.substitutions import EnvironmentVariable, LaunchConfiguration, PythonExpression
+from launch.substitutions import (
+    EnvironmentVariable,
+    LaunchConfiguration,
+    PythonExpression,
+)
 from launch_ros.actions import Node
 
 
 def get_pythonpath_setup_action():
-    venv_site_packages = Path.home() / ".local" / "share" / "atos" / "venv" / "lib" / (
-        f"python{os.sys.version_info.major}.{os.sys.version_info.minor}"
-    ) / "site-packages"
+    venv_site_packages = (
+        Path.home()
+        / ".local"
+        / "share"
+        / "atos"
+        / "venv"
+        / "lib"
+        / (f"python{os.sys.version_info.major}.{os.sys.version_info.minor}")
+        / "site-packages"
+    )
     if not venv_site_packages.exists():
         return None
 
