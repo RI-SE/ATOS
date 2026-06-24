@@ -67,7 +67,10 @@ std::vector<std::pair<double, double>> ScenarioExecution::getTrajectoryPoints() 
 	auto request = std::make_shared<atos_interfaces::srv::GetObjectTrajectory::Request>();
 	request->id	 = 1;
 	std::shared_ptr<atos_interfaces::srv::GetObjectTrajectory::Response> response;
-	this->callService(1000ms, getObjectTrajectoryClient, response, request);
+	if (!this->callService(1000ms, getObjectTrajectoryClient, response, request) || response == nullptr) {
+		RCLCPP_ERROR(get_logger(), "Failed to call service %s", getObjectTrajectoryClient->get_service_name());
+		return {};
+	}
 
 	std::vector<std::pair<double, double>> trajectory;
 	for (const auto& t : response->trajectory.points) {
@@ -82,6 +85,11 @@ std::vector<std::pair<double, double>> ScenarioExecution::getTrajectoryPoints() 
  */
 void ScenarioExecution::checkObjectStoppedAtLastPoint() {
 	auto trajectory = getTrajectoryPoints();
+	if (trajectory.empty()) {
+		followedTrajectory = false;
+		RCLCPP_ERROR(get_logger(), "Object trajectory is unavailable or empty");
+		return;
+	}
 	std::pair<double, double> lastPoint;
 	auto isObjectMoving = true;
 	while (isObjectMoving) {
@@ -130,8 +138,9 @@ void ScenarioExecution::printResult() {
 
 	bool allStatesCorrect = true;
 	for (auto const& [state, expectedState] : stateResult) {
-		auto pass = (state == expectedState) ? "OK" : "NOT OK";
-		if (pass == "NOT OK") {
+		const bool passed = (state == expectedState);
+		const char* pass  = passed ? "OK" : "NOT OK";
+		if (!passed) {
 			allStatesCorrect = false;
 		}
 		ss << std::left << std::setfill(' ') << std::setw(width) << state << std::setw(width) << expectedState
@@ -144,7 +153,8 @@ void ScenarioExecution::printResult() {
 	ss << ((allStatesCorrect) ? "OK" : "NOT OK");
 	ss << "\nTrajectory following result: ";
 	ss << ((followedTrajectory) ? "OK" : "NOT OK");
-	RCLCPP_INFO(get_logger(), ss.str().c_str());
+	const auto result = ss.str();
+	RCLCPP_INFO(get_logger(), "%s", result.c_str());
 }
 
 /**
@@ -152,4 +162,6 @@ void ScenarioExecution::printResult() {
  *
  * @param msg Message.
  */
-void ScenarioExecution::placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr msg) {}
+void ScenarioExecution::placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr msg) {
+	(void)msg;
+}
