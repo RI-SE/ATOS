@@ -546,7 +546,7 @@ void EsminiAdapter::runEsminiSimulation() {
 	auto objectNameAndAtosIDsCallback =
 	  [&](rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFutureWithRequest future) {
 		  auto response = future.get();
-		  for (size_t i = 0; i < response.second->ids.size(); ++i) {
+		  for (std::size_t i = 0; i < response.second->ids.size(); ++i) {
 			  me->atosIDToObjectName[response.second->ids[i]]	= response.second->names[i];
 			  me->objectNameToAtosId[response.second->names[i]] = response.second->ids[i];
 		  }

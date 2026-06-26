@@ -138,8 +138,8 @@ void ScenarioExecution::printResult() {
 
 	bool allStatesCorrect = true;
 	for (auto const& [state, expectedState] : stateResult) {
-		const bool passed = (state == expectedState);
-		const char* pass  = passed ? "OK" : "NOT OK";
+		const bool passed	 = (state == expectedState);
+		const std::string pass = passed ? "OK" : "NOT OK";
 		if (!passed) {
 			allStatesCorrect = false;
 		}
@@ -162,6 +162,4 @@ void ScenarioExecution::printResult() {
  *
  * @param msg Message.
  */
-void ScenarioExecution::placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr msg) {
-	(void)msg;
-}
+void ScenarioExecution::placeholderCallback(const atos_interfaces::msg::Monitor::SharedPtr) {}
