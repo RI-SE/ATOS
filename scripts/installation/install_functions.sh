@@ -3,7 +3,59 @@
 # Function to get Ubuntu distribution codename
 get_ubuntu_codename() {
     source /etc/os-release
-    echo $UBUNTU_CODENAME
+
+    if [ -n "${UBUNTU_CODENAME:-}" ]; then
+        echo "$UBUNTU_CODENAME"
+        return 0
+    fi
+
+    if [ -n "${VERSION_CODENAME:-}" ]; then
+        echo "$VERSION_CODENAME"
+        return 0
+    fi
+
+    case "${VERSION_ID:-}" in
+        "20.04"|"20")
+            echo "focal"
+        ;;
+        "22.04"|"22")
+            echo "jammy"
+        ;;
+        "24.04"|"24")
+            echo "noble"
+        ;;
+    esac
+}
+
+is_standard_ubuntu() {
+    source /etc/os-release
+    [ "${ID:-}" = "ubuntu" ]
+}
+
+is_ubuntu_core() {
+    source /etc/os-release
+    [ "${ID:-}" = "ubuntu-core" ]
+}
+
+get_supported_ros_distro() {
+    case "$(get_ubuntu_codename)" in
+        "focal")
+            echo "foxy"
+        ;;
+        "jammy")
+            echo "humble"
+        ;;
+        "noble")
+            echo "jazzy"
+        ;;
+        *)
+            return 1
+        ;;
+    esac
+}
+
+get_atos_venv_path() {
+    echo "$HOME/.local/share/atos/venv"
 }
 
 # Function that checks if command failed
@@ -39,12 +91,12 @@ update_symlink() {
 add_source_line_if_needed() {
     local file="$1"
     local shell_type="$2"
-    local source_line="$3$shell_type"
+    local source_line="$3"
 
-    if [ ! grep -qF "$source_line" "$file" ]; then
-        # Ask the user if they want to add the source line.
-        # First check for noninteractive shell with DEBAIN_FRONTEND=noninteractive
-        if [ -z "$DEBIAN_FRONTEND" && ! -z $GITHUB_ACTION ]; then
+    if ! grep -qF "$source_line" "$file"; then
+        # Ask the user only for interactive local shells.
+        # In non-interactive environments (e.g. CI), append automatically.
+        if [ -t 0 ] && [ -z "$DEBIAN_FRONTEND" ] && [ -z "$GITHUB_ACTION" ]; then
             echo "Do you want to add the following line to your $shell_type config file $file:"
             echo "$source_line"
             echo "y/n"
