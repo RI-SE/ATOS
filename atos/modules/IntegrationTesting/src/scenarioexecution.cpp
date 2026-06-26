@@ -138,7 +138,7 @@ void ScenarioExecution::printResult() {
 
 	bool allStatesCorrect = true;
 	for (auto const& [state, expectedState] : stateResult) {
-		const bool passed	 = (state == expectedState);
+		const bool passed	   = (state == expectedState);
 		const std::string pass = passed ? "OK" : "NOT OK";
 		if (!passed) {
 			allStatesCorrect = false;
