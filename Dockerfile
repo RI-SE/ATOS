@@ -22,8 +22,7 @@ COPY ./atos/package.xml ./atos/package.xml
 COPY . .
 RUN --mount=type=cache,target=/var/cache/apt \
         ./setup_atos.sh
-WORKDIR /root/atos_ws
-RUN chmod +x /root/atos_git/scripts/run_atosfleetmanagement.sh
+    WORKDIR /root/atos_ws
 
 EXPOSE 8420 8765 9090 8114
 
