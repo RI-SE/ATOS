@@ -27,7 +27,7 @@ def get_integration_test_nodes():
 
 
 def generate_launch_description():
-    base_nodes = launch_base.get_base_nodes()
+    base_nodes = launch_base.get_base_nodes(include_gui=False)
 
     integration_test_nodes = get_integration_test_nodes()
 

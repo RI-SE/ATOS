@@ -53,11 +53,9 @@ ObjectControl::ObjectControl(std::shared_ptr<rclcpp::executors::MultiThreadedExe
 	traj_client_cb_group_	= this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 	ip_client_cb_group_		= this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 	origin_client_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
-
 	this->declare_parameter("max_missing_heartbeats", 100);
 	this->declare_parameter("max_missing_monr", 100);
 	this->declare_parameter("monr_timeout_period_ms", 1000);
-
 	objectsConnectedTimer = create_wall_timer(1000ms, std::bind(&ObjectControl::publishObjectIds, this));
 	idClient			  = create_client<atos_interfaces::srv::GetObjectIds>(
 	   ServiceNames::getObjectIds, rmw_qos_profile_services_default, id_client_cb_group_);
@@ -196,6 +194,24 @@ bool ObjectControl::loadScenario() {
 	this->isResetting = false;
 	this->clearScenario();
 	RCLCPP_INFO(get_logger(), "Loading scenario");
+
+	if (!idClient->wait_for_service(5s)) {
+		RCLCPP_ERROR(get_logger(), "Get object IDs service is not available");
+		return false;
+	}
+	if (!trajectoryClient->wait_for_service(5s)) {
+		RCLCPP_ERROR(get_logger(), "Get object trajectory service is not available");
+		return false;
+	}
+	if (!ipClient->wait_for_service(5s)) {
+		RCLCPP_ERROR(get_logger(), "Get object IP service is not available");
+		return false;
+	}
+	if (!originClient->wait_for_service(5s)) {
+		RCLCPP_ERROR(get_logger(), "Get test origin service is not available");
+		return false;
+	}
+
 	std::promise<bool> scenarioLoaded;
 	auto idsCallback = [&](const rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFuture future) {
 		auto idResponse = future.get();
@@ -207,8 +223,6 @@ bool ObjectControl::loadScenario() {
 			exec->add_node(object);
 			objects.emplace(id, object);
 			objects.at(id)->setTransmitterID(id);
-			objects.at(id)->setMaxAllowedMonitorPeriod(
-			  std::chrono::milliseconds(this->get_parameter("monr_timeout_period_ms").as_int()));
 
 			std::promise<bool> trajLoaded;
 			auto trajectoryCallback =
@@ -295,7 +309,7 @@ bool ObjectControl::loadScenario() {
 			std::future<bool> trajLoadedFuture	 = trajLoaded.get_future();
 			std::future<bool> ipLoadedFuture	 = ipLoaded.get_future();
 			std::future<bool> originLoadedFuture = originLoaded.get_future();
-			if (auto status = trajLoadedFuture.wait_for(20s);
+			if (auto status = trajLoadedFuture.wait_for(15s);
 				status != std::future_status::ready || !trajLoadedFuture.get()) {
 				RCLCPP_ERROR(get_logger(), "Trajectory loading failed for object ID %u", id);
 				successful = false;
@@ -315,6 +329,7 @@ bool ObjectControl::loadScenario() {
 				trajectoryClient->prune_pending_requests();
 				ipClient->prune_pending_requests();
 				originClient->prune_pending_requests();
+				scenarioLoaded.set_value(false);
 				return;
 			}
 		}
@@ -468,7 +483,7 @@ void ObjectControl::heartbeat() {
 					objects.at(id)->sendHeartbeat(controlCenterStatus());
 				}
 			} catch (std::exception& e) {
-				RCLCPP_WARN(get_logger(), e.what());
+				RCLCPP_WARN(get_logger(), "%s", e.what());
 				objects.at(id)->disconnect();
 				sm.process_event(state_machine::events::DisconnectedFromObject{id});
 			}

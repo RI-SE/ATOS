@@ -49,9 +49,6 @@ class ObjectPanelNode(Node):
                 "Get object ID service not available, waiting again..."
             )
             if service_timeout_counter > MAX_TIMEOUT:
-                ui.notify(
-                    f"Get object ID service not available after {MAX_TIMEOUT} seconds"
-                )
                 self.get_logger().info(
                     f"Get object ID service not available after {MAX_TIMEOUT} seconds"
                 )
@@ -75,9 +72,6 @@ class ObjectPanelNode(Node):
                 "Get object IP service not available, waiting again..."
             )
             if service_timeout_counter > MAX_TIMEOUT:
-                ui.notify(
-                    f"Get object IP service not available after {MAX_TIMEOUT} seconds"
-                )
                 self.get_logger().info(
                     f"Get object IP service not available after {MAX_TIMEOUT} seconds"
                 )
@@ -136,17 +130,11 @@ class ObjectPanelNode(Node):
 
         """
         if result.success:
-            with self.refresh_row:
-                ui.notify(
-                    f"IP set to {result.ip} for object {result.id} was successful"
-                )
             self.get_logger().info(
                 f"IP set to {result.ip} for object {result.id} was successful"
             )
             self.object_id_ip_map[result.id] = result.ip
         else:
-            with self.refresh_row:
-                ui.notify(f"Failed to set object {result.id} IP to {result.ip}")
             self.get_logger().info(
                 f"Failed to set object {result.id} IP to {result.ip}"
             )

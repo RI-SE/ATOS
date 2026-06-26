@@ -11,6 +11,7 @@
 #include <regex>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
+#include <type_traits>
 
 #include "atos_interfaces/msg/cartesian_trajectory.hpp"
 #include "rclcpp/wait_for_message.hpp"
@@ -24,6 +25,32 @@ using ObjectTriggerSrv	  = atos_interfaces::srv::GetObjectTriggerStart;
 using std::placeholders::_1;
 using std::placeholders::_2;
 using namespace std::chrono_literals;
+
+namespace {
+template<typename ReportObjectPosFn>
+int reportObjectPos(ReportObjectPosFn reportFn,
+					int objectId,
+					double timestamp,
+					double x,
+					double y,
+					double z,
+					double h,
+					double p,
+					double r) {
+	if constexpr (std::is_invocable_v<ReportObjectPosFn, int, float, float, float, float, float, float, float>) {
+		return reportFn(objectId,
+						static_cast<float>(timestamp),
+						static_cast<float>(x),
+						static_cast<float>(y),
+						static_cast<float>(z),
+						static_cast<float>(h),
+						static_cast<float>(p),
+						static_cast<float>(r));
+	} else {
+		return reportFn(objectId, x, y, z, h, p, r);
+	}
+}
+} // namespace
 
 std::shared_ptr<EsminiAdapter> EsminiAdapter::me					   = nullptr;
 std::unordered_map<int, std::string> EsminiAdapter::atosIDToObjectName = std::unordered_map<int, std::string>();
@@ -221,8 +248,7 @@ void EsminiAdapter::reportObjectPosition(const Monitor::message_type::SharedPtr 
 	auto speed = monr->velocity.twist.linear;
 
 	// Reporting to Esmini
-	float timestamp = 0.0f; // Not really used according to esmini documentation
-	SE_ReportObjectPos(esminiObjectId, timestamp, pos.x, pos.y, pos.z, yaw, pitch, roll);
+	reportObjectPos(&SE_ReportObjectPos, esminiObjectId, SE_GetSimulationTime(), pos.x, pos.y, pos.z, yaw, pitch, roll);
 	SE_ReportObjectSpeed(esminiObjectId, speed.x);
 }
 
@@ -505,7 +531,7 @@ void EsminiAdapter::runEsminiSimulation() {
 			me->crsTransformation  = std::make_shared<CRSTransformation>(projStringFrom, projStringTo);
 			me->applyTrajTransform = true;
 		} catch (std::exception& e) {
-			RCLCPP_ERROR(me->get_logger(), e.what());
+			RCLCPP_ERROR(me->get_logger(), "%s", e.what());
 			return;
 		}
 	} else {
@@ -520,7 +546,7 @@ void EsminiAdapter::runEsminiSimulation() {
 	auto objectNameAndAtosIDsCallback =
 	  [&](rclcpp::Client<atos_interfaces::srv::GetObjectIds>::SharedFutureWithRequest future) {
 		  auto response = future.get();
-		  for (int i = 0; i < response.second->ids.size(); i++) {
+		  for (std::size_t i = 0; i < response.second->ids.size(); ++i) {
 			  me->atosIDToObjectName[response.second->ids[i]]	= response.second->names[i];
 			  me->objectNameToAtosId[response.second->names[i]] = response.second->ids[i];
 		  }
@@ -546,7 +572,7 @@ void EsminiAdapter::runEsminiSimulation() {
 			me->atosObjectIdToTraj.emplace(atos_id, traj);
 			me->atosIdToEsminiId.emplace(atos_id, esminiId);
 			RCLCPP_INFO(
-			  me->get_logger(), "Extracted trajectory for object %s with size %d", objectName, traj.points.size());
+			  me->get_logger(), "Extracted trajectory for object %s with size %zu", objectName, traj.points.size());
 
 			me->pathPublishers.emplace(atos_id, ROSChannels::Path::Pub(*me, atos_id));
 			me->pathPublishers.at(atos_id).publish(traj.toPath());
@@ -573,7 +599,6 @@ void EsminiAdapter::runEsminiSimulation() {
 
 void EsminiAdapter::onRequestObjectTrajectory(const std::shared_ptr<ObjectTrajectorySrv::Request> req,
 											  std::shared_ptr<ObjectTrajectorySrv::Response> res) {
-	res->id;
 	me->fetchOSCFilePath();
 	if (me->runSimulation || me->atosObjectIdToTraj.find(req->id) == me->atosObjectIdToTraj.end()) {
 		me->runEsminiSimulation();

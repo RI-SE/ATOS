@@ -20,6 +20,9 @@ setup(
     install_requires=["setuptools"],
     zip_safe=True,
     entry_points={
-        "console_scripts": ["gui = atos_gui.main:main"],
+        "console_scripts": [
+            "gui = atos_gui.main:main",
+            "truck_object_gui = atos_gui.main:main",
+        ],
     },
 )
