@@ -1,0 +1,26 @@
+version: "3.2"
+services:
+  atos-fleetmanagement:
+    container_name: atos-fleetmanagement
+    image: astazero/atos_docker_env:latest
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ipc: host
+    privileged: true
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+      - INSECURE=${INSECURE:-True}
+      - WITH_TRUCK_SIMULATOR=${WITH_TRUCK_SIMULATOR:-False}
+      - FOXBRIDGE=${FOXBRIDGE:-True}
+      - COT_TLS_REQUIRE_CLIENT_CERT=${COT_TLS_REQUIRE_CLIENT_CERT:-False}
+      - COT_TLS_CERT_PATH=${COT_TLS_CERT_PATH:-}
+      - COT_TLS_KEY_PATH=${COT_TLS_KEY_PATH:-}
+      - COT_TLS_CA_PATH=${COT_TLS_CA_PATH:-}
+    volumes:
+      - ~/.astazero/ATOS/:/root/.astazero/ATOS/
+    network_mode: "host"
+    command: /bin/bash -lc "/root/atos_git/scripts/run_atosfleetmanagement.sh"
