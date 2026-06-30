@@ -19,9 +19,11 @@ COPY ./atos_gui/requirements.txt ./atos_gui/requirements.txt
 COPY ./atos_gui/package.xml ./atos_gui/package.xml
 COPY ./atos_interfaces/package.xml ./atos_interfaces/package.xml
 COPY ./atos/package.xml ./atos/package.xml
-
-RUN --mount=type=cache,target=/var/cache/apt \ 
-        ./scripts/installation/install_deps.sh ${REPO_DIR}
 COPY . .
-RUN ./scripts/installation/install_atos.sh ${REPO_DIR}
-WORKDIR /root/atos_ws
+RUN --mount=type=cache,target=/var/cache/apt \
+        ./setup_atos.sh
+    WORKDIR /root/atos_ws
+
+EXPOSE 8420 8765 9090 8114
+
+CMD ["/bin/bash", "-lc", "/root/atos_git/scripts/run_atosfleetmanagement.sh"]
