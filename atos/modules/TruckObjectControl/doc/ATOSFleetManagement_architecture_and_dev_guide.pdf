@@ -1,0 +1,287 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+3 0 obj
+<< /Length 3194 >>
+stream
+BT
+1 0 0 1 42 786 Tm
+/F2 16 Tf (ATOSFleetManagement: Architecture and Development Guide) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Purpose) Tj
+0 -13 Td
+/F1 9 Tf (ATOSFleetManagement is a lightweight ATOS runtime focused on truck monitoring and) Tj
+0 -13 Td
+/F1 9 Tf (  command flow. It is built around TruckObjectControl and TruckObjectGUI and) Tj
+0 -13 Td
+/F1 9 Tf (  intentionally does not start the full ATOS scenario stack.) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Runtime scope) Tj
+0 -13 Td
+/F1 9 Tf (Included core runtime pieces:) Tj
+0 -13 Td
+/F1 9 Tf (- truck_object_control) Tj
+0 -13 Td
+/F1 9 Tf (- truck_object_gui \(FleetManagement mode\)) Tj
+0 -13 Td
+/F1 9 Tf (- foxglove_bridge or rosbridge_websocket) Tj
+0 -13 Td
+/F1 9 Tf (- optional atos_truck_simulator instances) Tj
+0 -13 Td
+/F1 9 Tf (Not started in this mode:) Tj
+0 -13 Td
+/F1 9 Tf (- OpenScenarioGateway) Tj
+0 -13 Td
+/F1 9 Tf (- JournalControl) Tj
+0 -13 Td
+/F1 9 Tf (- EsminiAdapter) Tj
+0 -13 Td
+/F1 9 Tf (- ObjectControl and the full scenario-execution path) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Launch entrypoint) Tj
+0 -13 Td
+/F1 9 Tf (Main launch file:) Tj
+0 -13 Td
+/F1 9 Tf (ros2 launch atos launch_atosfleetmanagement.py) Tj
+0 -13 Td
+/F1 9 Tf (Important launch arguments:) Tj
+0 -13 Td
+/F1 9 Tf (- insecure:=True|False) Tj
+0 -13 Td
+/F1 9 Tf (- foxbridge:=True|False) Tj
+0 -13 Td
+/F1 9 Tf (- with_truck_simulator:=True|False) Tj
+0 -13 Td
+/F1 9 Tf (- cot_tls_require_client_cert:=True|False) Tj
+0 -13 Td
+/F1 9 Tf (- cot_tls_cert_path:=<path>) Tj
+0 -13 Td
+/F1 9 Tf (- cot_tls_key_path:=<path>) Tj
+0 -13 Td
+/F1 9 Tf (- cot_tls_ca_path:=<path>) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Component overview) Tj
+0 -13 Td
+/F1 9 Tf (TruckObjectControl receives truck state/COT input, tracks route progress, and) Tj
+0 -13 Td
+/F1 9 Tf (  publishes speed commands.) Tj
+0 -13 Td
+/F1 9 Tf (TruckObjectGUI runs NiceGUI in FleetManagement mode and renders a route-based map) Tj
+0 -13 Td
+/F1 9 Tf (  view with live truck overlays from /atos/truck_objects/state.) Tj
+0 -13 Td
+/F1 9 Tf (Foxglove Bridge or Rosbridge provides websocket access depending on the selected) Tj
+0 -13 Td
+/F1 9 Tf (  launch mode.) Tj
+0 -13 Td
+/F1 9 Tf (ATOS truck simulators can be enabled for local development without real truck input.) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Default ports and endpoints) Tj
+0 -13 Td
+/F1 9 Tf (- TruckObjectGUI: http://localhost:8420) Tj
+0 -13 Td
+/F1 9 Tf (- Foxglove Bridge TLS/non-TLS port: 8765) Tj
+0 -13 Td
+/F1 9 Tf (- Rosbridge TLS/non-TLS port: 9090) Tj
+0 -13 Td
+/F1 9 Tf (- TruckObjectControl COT TCP listener: tcp://0.0.0.0:8114) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Topics and messages) Tj
+0 -13 Td
+/F1 9 Tf (- Input topic placeholder: /atos/truck_objects/cot) Tj
+0 -13 Td
+/F1 9 Tf (- Speed command topic: /atos/truck_objects/speed_command) Tj
+0 -13 Td
+/F1 9 Tf (- Live truck state topic: /atos/truck_objects/state) Tj
+0 -13 Td
+/F1 9 Tf (Current placeholder COT payload used for development:) Tj
+0 -13 Td
+/F1 9 Tf (id=<truck_id>;distance_m=<value>;tcp_connected=<0|1>) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Route and map data) Tj
+0 -13 Td
+/F1 9 Tf (Default route asset in the repository:) Tj
+0 -13 Td
+/F1 9 Tf (conf/conf/RuralRoad_center_of_driving_lane_ccw.geojson) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 9 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 3233 >>
+stream
+BT
+1 0 0 1 42 786 Tm
+/F1 9 Tf (TruckObjectControl and the optional simulators use this route as their default) Tj
+0 -13 Td
+/F1 9 Tf (  trajectory_geojson_path.) Tj
+0 -13 Td
+/F1 9 Tf (The GUI loads the GeoJSON route and overlays live truck states in the) Tj
+0 -13 Td
+/F1 9 Tf (  FleetManagement map view.) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Build workflow) Tj
+0 -13 Td
+/F1 9 Tf (Supported native installations:) Tj
+0 -13 Td
+/F1 9 Tf (- Ubuntu 20.04 with ROS 2 Foxy) Tj
+0 -13 Td
+/F1 9 Tf (- Ubuntu 22.04 with ROS 2 Humble) Tj
+0 -13 Td
+/F1 9 Tf (- Ubuntu 24.04 with ROS 2 Jazzy) Tj
+0 -13 Td
+/F1 9 Tf (Always source ROS before building:) Tj
+0 -13 Td
+/F1 9 Tf (source /opt/ros/<foxy|humble|jazzy>/setup.bash) Tj
+0 -13 Td
+/F1 9 Tf (Manual workspace build:) Tj
+0 -13 Td
+/F1 9 Tf (cd <ATOS_WORKSPACE>) Tj
+0 -13 Td
+/F1 9 Tf (colcon build --symlink-install --cmake-args -DWITH_TRUCK_OBJECT_CONTROL=ON) Tj
+0 -13 Td
+/F1 9 Tf (Helper build script:) Tj
+0 -13 Td
+/F1 9 Tf (cd <ATOS_REPO_ROOT>) Tj
+0 -13 Td
+/F1 9 Tf (./scripts/build_atosfleetmanagement.sh) Tj
+0 -13 Td
+/F1 9 Tf (The helper script builds atos and atos_gui and disables legacy modules not used in) Tj
+0 -13 Td
+/F1 9 Tf (  this runtime.) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Local launch workflow) Tj
+0 -13 Td
+/F1 9 Tf (source /opt/ros/<foxy|humble|jazzy>/setup.bash) Tj
+0 -13 Td
+/F1 9 Tf (source <ATOS_WORKSPACE>/install/setup.bash) Tj
+0 -13 Td
+/F1 9 Tf (ros2 launch atos launch_atosfleetmanagement.py foxbridge:=False insecure:=True) Tj
+0 -13 Td
+/F1 9 Tf (Use with_truck_simulator:=True to start the built-in simulator nodes.) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Docker runtime) Tj
+0 -13 Td
+/F1 9 Tf (Dedicated compose file:) Tj
+0 -13 Td
+/F1 9 Tf (docker-compose-fleetmanagement.yml) Tj
+0 -13 Td
+/F1 9 Tf (Start with docker compose:) Tj
+0 -13 Td
+/F1 9 Tf (docker compose -f docker-compose-fleetmanagement.yml up --build) Tj
+0 -13 Td
+/F1 9 Tf (Optional environment flags:) Tj
+0 -13 Td
+/F1 9 Tf (- WITH_TRUCK_SIMULATOR=True|False) Tj
+0 -13 Td
+/F1 9 Tf (- INSECURE=True|False) Tj
+0 -13 Td
+/F1 9 Tf (- FOXBRIDGE=True|False) Tj
+0 -13 Td
+/F1 9 Tf (- COT_TLS_REQUIRE_CLIENT_CERT=True|False) Tj
+0 -13 Td
+/F1 9 Tf (- COT_TLS_CERT_PATH=<path>) Tj
+0 -13 Td
+/F1 9 Tf (- COT_TLS_KEY_PATH=<path>) Tj
+0 -13 Td
+/F1 9 Tf (- COT_TLS_CA_PATH=<path>) Tj
+0 -13 Td
+/F1 9 Tf (Runtime container entrypoint:) Tj
+0 -13 Td
+/F1 9 Tf (./scripts/run_atosfleetmanagement.sh) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Service deployment) Tj
+0 -13 Td
+/F1 9 Tf (Service assets:) Tj
+0 -13 Td
+/F1 9 Tf (- scripts/atosfleetmanagement.env.example) Tj
+0 -13 Td
+/F1 9 Tf (- scripts/atosfleetmanagement.service) Tj
+0 -13 Td
+/F1 9 Tf (Typical deployment flow:) Tj
+0 -13 Td
+/F1 9 Tf (1. Copy the repository to the target host, for example /opt/atos) Tj
+0 -13 Td
+/F1 9 Tf (2. Install /etc/default/atosfleetmanagement from the example env file) Tj
+0 -13 Td
+/F1 9 Tf (3. Install the systemd unit from scripts/atosfleetmanagement.service) Tj
+0 -13 Td
+/F1 9 Tf (4. Enable and start the service with systemctl) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Developer utilities) Tj
+0 -13 Td
+/F1 9 Tf (- scripts/build_atosfleetmanagement.sh: focused build helper) Tj
+0 -13 Td
+/F1 9 Tf (- scripts/run_atosfleetmanagement.sh: runtime launcher used by Docker/service) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 9 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 486 >>
+stream
+BT
+1 0 0 1 42 786 Tm
+/F1 9 Tf (  deployment) Tj
+0 -13 Td
+/F1 9 Tf (- scripts/sync_to_buildserver.sh: sync helper for deployment/build server workflows) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Design notes) Tj
+0 -13 Td
+/F1 9 Tf (This runtime is intentionally smaller than the full ATOS stack. The goal is a) Tj
+0 -13 Td
+/F1 9 Tf (  practical truck-oriented control and visualization environment with fewer moving) Tj
+0 -13 Td
+/F1 9 Tf (  parts for development, deployment, and operations.) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 9 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Type /Pages /Kids [ 4 0 R 6 0 R 8 0 R ] /Count 3 >>
+endobj
+10 0 obj
+<< /Type /Catalog /Pages 9 0 R >>
+endobj
+xref
+0 11
+0000000000 65535 f 
+0000000015 00000 n 
+0000000083 00000 n 
+0000000158 00000 n 
+0000003404 00000 n 
+0000003540 00000 n 
+0000006825 00000 n 
+0000006961 00000 n 
+0000007498 00000 n 
+0000007634 00000 n 
+0000007705 00000 n 
+trailer
+<< /Size 11 /Root 10 0 R >>
+startxref
+7755
+%%EOF

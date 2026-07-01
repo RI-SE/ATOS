@@ -1,0 +1,171 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+3 0 obj
+<< /Length 3090 >>
+stream
+BT
+1 0 0 1 42 786 Tm
+/F2 16 Tf (ROS2 ATOSFleetManagement Cheatsheet) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Supported native installations) Tj
+0 -13 Td
+/F1 9 Tf (Ubuntu 20.04  -> ROS 2 Foxy) Tj
+0 -13 Td
+/F1 9 Tf (Ubuntu 22.04  -> ROS 2 Humble) Tj
+0 -13 Td
+/F1 9 Tf (Ubuntu 24.04  -> ROS 2 Jazzy) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Always source ROS before building or launching) Tj
+0 -13 Td
+/F1 9 Tf (Ubuntu 24.04: source /opt/ros/jazzy/setup.bash) Tj
+0 -13 Td
+/F1 9 Tf (Ubuntu 22.04: source /opt/ros/humble/setup.bash) Tj
+0 -13 Td
+/F1 9 Tf (Ubuntu 20.04: source /opt/ros/foxy/setup.bash) Tj
+0 -13 Td
+/F1 9 Tf (Check:         echo $ROS_DISTRO) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Local workspace build \(manual\)) Tj
+0 -13 Td
+/F1 9 Tf (cd <ATOS_WORKSPACE>) Tj
+0 -13 Td
+/F1 9 Tf (source /opt/ros/<jazzy|humble|foxy>/setup.bash) Tj
+0 -13 Td
+/F1 9 Tf (colcon build --symlink-install --cmake-args -DWITH_TRUCK_OBJECT_CONTROL=ON) Tj
+0 -13 Td
+/F1 9 Tf (source install/setup.bash) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (FleetManagement helper build) Tj
+0 -13 Td
+/F1 9 Tf (cd <ATOS_REPO_ROOT>) Tj
+0 -13 Td
+/F1 9 Tf (source /opt/ros/<jazzy|humble|foxy>/setup.bash) Tj
+0 -13 Td
+/F1 9 Tf (./scripts/build_atosfleetmanagement.sh) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Local launch) Tj
+0 -13 Td
+/F1 9 Tf (source /opt/ros/<jazzy|humble|foxy>/setup.bash) Tj
+0 -13 Td
+/F1 9 Tf (source <ATOS_WORKSPACE>/install/setup.bash) Tj
+0 -13 Td
+/F1 9 Tf (ros2 launch atos launch_atosfleetmanagement.py foxbridge:=False insecure:=True) Tj
+0 -13 Td
+/F1 9 Tf (TruckObjectGUI: http://localhost:8420) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Docker launch) Tj
+0 -13 Td
+/F1 9 Tf (docker compose -f docker-compose-fleetmanagement.yml up --build) Tj
+0 -13 Td
+/F1 9 Tf (WITH_TRUCK_SIMULATOR=True docker compose -f docker-compose-fleetmanagement.yml) Tj
+0 -13 Td
+/F1 9 Tf (  up --build) Tj
+0 -13 Td
+/F1 9 Tf (WITH_TRUCK_SIMULATOR=False docker compose -f) Tj
+0 -13 Td
+/F1 9 Tf (  docker-compose-fleetmanagement.yml up --build) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Service / deployment) Tj
+0 -13 Td
+/F1 9 Tf (sudo cp scripts/atosfleetmanagement.env.example) Tj
+0 -13 Td
+/F1 9 Tf (  /etc/default/atosfleetmanagement) Tj
+0 -13 Td
+/F1 9 Tf (sudo cp scripts/atosfleetmanagement.service) Tj
+0 -13 Td
+/F1 9 Tf (  /etc/systemd/system/atosfleetmanagement.service) Tj
+0 -13 Td
+/F1 9 Tf (sudo systemctl daemon-reload) Tj
+0 -13 Td
+/F1 9 Tf (sudo systemctl enable --now atosfleetmanagement) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (Main runtime pieces) Tj
+0 -13 Td
+/F1 9 Tf (launch file:      ros2 launch atos launch_atosfleetmanagement.py) Tj
+0 -13 Td
+/F1 9 Tf (build script:     ./scripts/build_atosfleetmanagement.sh) Tj
+0 -13 Td
+/F1 9 Tf (run script:       ./scripts/run_atosfleetmanagement.sh) Tj
+0 -13 Td
+/F1 9 Tf (compose file:     docker-compose-fleetmanagement.yml) Tj
+0 -13 Td
+/F1 9 Tf (route asset:      conf/conf/RuralRoad_center_of_driving_lane_ccw.geojson) Tj
+0 -13 Td
+0 -13 Td
+/F2 12 Tf (ROS interfaces) Tj
+0 -13 Td
+/F1 9 Tf (Send truck input to TruckObjectControl:) Tj
+0 -13 Td
+/F1 9 Tf (/atos/truck_objects/cot) Tj
+0 -13 Td
+/F1 9 Tf (Current temporary payload format:) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 7 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 537 >>
+stream
+BT
+1 0 0 1 42 786 Tm
+/F1 9 Tf (id=<truck_id>;distance_m=<value>;tcp_connected=<0|1>) Tj
+0 -13 Td
+/F1 9 Tf (Read commanded speed from:) Tj
+0 -13 Td
+/F1 9 Tf (/atos/truck_objects/speed_command) Tj
+0 -13 Td
+/F1 9 Tf (Read live truck state for GUI/map from:) Tj
+0 -13 Td
+/F1 9 Tf (/atos/truck_objects/state) Tj
+0 -13 Td
+/F1 9 Tf (Useful inspection commands:) Tj
+0 -13 Td
+/F1 9 Tf (ros2 topic list) Tj
+0 -13 Td
+/F1 9 Tf (ros2 topic echo /atos/truck_objects/state) Tj
+0 -13 Td
+/F1 9 Tf (ros2 topic echo /atos/truck_objects/speed_command) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 7 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Type /Pages /Kids [ 4 0 R 6 0 R ] /Count 2 >>
+endobj
+8 0 obj
+<< /Type /Catalog /Pages 7 0 R >>
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000015 00000 n 
+0000000083 00000 n 
+0000000158 00000 n 
+0000003300 00000 n 
+0000003436 00000 n 
+0000004024 00000 n 
+0000004160 00000 n 
+0000004225 00000 n 
+trailer
+<< /Size 9 /Root 8 0 R >>
+startxref
+4274
+%%EOF
