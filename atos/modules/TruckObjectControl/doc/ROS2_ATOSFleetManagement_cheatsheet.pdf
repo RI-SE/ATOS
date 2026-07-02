@@ -7,7 +7,7 @@ endobj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
 endobj
 3 0 obj
-<< /Length 3090 >>
+<< /Length 3140 >>
 stream
 BT
 1 0 0 1 42 786 Tm
@@ -62,6 +62,10 @@ BT
 0 -13 Td
 /F1 9 Tf (ros2 launch atos launch_atosfleetmanagement.py foxbridge:=False insecure:=True) Tj
 0 -13 Td
+/F1 9 Tf (ros2 launch atos launch_atosfleetmanagement.py foxbridge:=False insecure:=True) Tj
+0 -13 Td
+/F1 9 Tf (  with_truck_simulator:=True) Tj
+0 -13 Td
 /F1 9 Tf (TruckObjectGUI: http://localhost:8420) Tj
 0 -13 Td
 0 -13 Td
@@ -109,10 +113,6 @@ BT
 /F2 12 Tf (ROS interfaces) Tj
 0 -13 Td
 /F1 9 Tf (Send truck input to TruckObjectControl:) Tj
-0 -13 Td
-/F1 9 Tf (/atos/truck_objects/cot) Tj
-0 -13 Td
-/F1 9 Tf (Current temporary payload format:) Tj
 ET
 endstream
 endobj
@@ -120,10 +120,14 @@ endobj
 << /Type /Page /Parent 7 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 3 0 R >>
 endobj
 5 0 obj
-<< /Length 537 >>
+<< /Length 641 >>
 stream
 BT
 1 0 0 1 42 786 Tm
+/F1 9 Tf (/atos/truck_objects/cot) Tj
+0 -13 Td
+/F1 9 Tf (Current temporary payload format:) Tj
+0 -13 Td
 /F1 9 Tf (id=<truck_id>;distance_m=<value>;tcp_connected=<0|1>) Tj
 0 -13 Td
 /F1 9 Tf (Read commanded speed from:) Tj
@@ -159,13 +163,13 @@ xref
 0000000015 00000 n 
 0000000083 00000 n 
 0000000158 00000 n 
-0000003300 00000 n 
-0000003436 00000 n 
-0000004024 00000 n 
-0000004160 00000 n 
-0000004225 00000 n 
+0000003350 00000 n 
+0000003486 00000 n 
+0000004178 00000 n 
+0000004314 00000 n 
+0000004379 00000 n 
 trailer
 << /Size 9 /Root 8 0 R >>
 startxref
-4274
+4428
 %%EOF
