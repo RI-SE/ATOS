@@ -1023,7 +1023,7 @@ void TruckObjectControl::handleTcpClient(const int client_fd, const std::string&
 }
 
 void TruckObjectControl::evaluateAndPublishSpeedCommand() {
-	constexpr double kMaxDistanceToPathM = 5.0;
+	constexpr double kMaxDistanceToPathM = 7.5;
 
 	struct ConnectedTruck {
 		std::string id;
