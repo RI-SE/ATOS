@@ -38,6 +38,7 @@ private:
 
 	struct TruckState {
 		double distance_along_trajectory_m = 0.0;
+		double distance_to_path_m		   = 0.0;
 		double lat						   = 0.0;
 		double lon						   = 0.0;
 		double speed_mps				   = 0.0;
@@ -55,6 +56,7 @@ private:
 	struct CotObservation {
 		std::string truck_id;
 		double distance_along_trajectory_m = 0.0;
+		double distance_to_path_m		   = 0.0;
 		double lat						   = 0.0;
 		double lon						   = 0.0;
 		double speed_mps				   = 0.0;
@@ -132,7 +134,8 @@ private:
 	double projectDistanceAlongTrajectory(const double lat,
 										  const double lon,
 										  const std::vector<GeoPoint>* trajectory = nullptr,
-										  int* projected_path_index				  = nullptr) const;
+										  int* projected_path_index				  = nullptr,
+										  double* lateral_distance_m			  = nullptr) const;
 
 	void startTcpServer();
 	void stopTcpServer();
