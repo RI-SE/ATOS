@@ -54,6 +54,9 @@ def generate_launch_description():
     insecure_websockets = LaunchConfiguration("insecure")
     foxbridge = LaunchConfiguration("foxbridge")
     with_simulator = LaunchConfiguration("with_truck_simulator")
+    simulator_1_lateral_offset_m = LaunchConfiguration("simulator_1_lateral_offset_m")
+    simulator_2_lateral_offset_m = LaunchConfiguration("simulator_2_lateral_offset_m")
+    simulator_3_lateral_offset_m = LaunchConfiguration("simulator_3_lateral_offset_m")
     cot_tls_require_client_cert = LaunchConfiguration("cot_tls_require_client_cert")
     cot_tls_cert_path = LaunchConfiguration("cot_tls_cert_path")
     cot_tls_key_path = LaunchConfiguration("cot_tls_key_path")
@@ -63,6 +66,15 @@ def generate_launch_description():
     foxbridge_launch_arg = DeclareLaunchArgument("foxbridge", default_value="True")
     simulator_launch_arg = DeclareLaunchArgument(
         "with_truck_simulator", default_value="False"
+    )
+    simulator_1_lateral_offset_arg = DeclareLaunchArgument(
+        "simulator_1_lateral_offset_m", default_value="0.0"
+    )
+    simulator_2_lateral_offset_arg = DeclareLaunchArgument(
+        "simulator_2_lateral_offset_m", default_value="0.0"
+    )
+    simulator_3_lateral_offset_arg = DeclareLaunchArgument(
+        "simulator_3_lateral_offset_m", default_value="0.0"
     )
     cot_tls_require_client_cert_launch_arg = DeclareLaunchArgument(
         "cot_tls_require_client_cert", default_value="False"
@@ -107,6 +119,9 @@ def generate_launch_description():
         foxbridge_launch_arg,
         insecure_launch_arg,
         simulator_launch_arg,
+        simulator_1_lateral_offset_arg,
+        simulator_2_lateral_offset_arg,
+        simulator_3_lateral_offset_arg,
         cot_tls_require_client_cert_launch_arg,
         cot_tls_cert_path_launch_arg,
         cot_tls_key_path_launch_arg,
@@ -158,6 +173,7 @@ def generate_launch_description():
                 {"target_speed_kmh": 80.0},
                 {"acceleration_mps2": 2.0},
                 {"ignore_warning_speed_commands": True},
+                {"lateral_offset_m": simulator_1_lateral_offset_m},
                 {"trajectory_geojson_path": default_trajectory_path},
             ],
         ),
@@ -173,6 +189,7 @@ def generate_launch_description():
                 {"start_index": 250},
                 {"target_speed_kmh": 40.0},
                 {"acceleration_mps2": 2.0},
+                {"lateral_offset_m": simulator_2_lateral_offset_m},
                 {"trajectory_geojson_path": default_trajectory_path},
             ],
         ),
@@ -188,6 +205,7 @@ def generate_launch_description():
                 {"start_index": 500},
                 {"target_speed_kmh": 40.0},
                 {"acceleration_mps2": 2.0},
+                {"lateral_offset_m": simulator_3_lateral_offset_m},
                 {"trajectory_geojson_path": default_trajectory_path},
             ],
         ),

@@ -30,6 +30,7 @@ using json = nlohmann::json;
 
 namespace {
 constexpr double kEpsilon		   = 1e-9;
+constexpr double kMaxDistanceToPathM = 7.5;
 constexpr const char* kGeoJsonName = "RuralRoad_center_of_driving_lane_ccw.geojson";
 
 double degToRad(double value) {
@@ -38,6 +39,14 @@ double degToRad(double value) {
 
 double radToDeg(double value) {
 	return value * 180.0 / M_PI;
+}
+
+void offsetLatLonMeters(double lat_deg, double lon_deg, double north_m, double east_m, double& out_lat, double& out_lon) {
+	constexpr double earth_radius_m = 6378137.0;
+	const double lat_rad			   = degToRad(lat_deg);
+	out_lat						   = lat_deg + radToDeg(north_m / earth_radius_m);
+	const double cos_lat			   = std::max(kEpsilon, std::cos(lat_rad));
+	out_lon						   = lon_deg + radToDeg(east_m / (earth_radius_m * cos_lat));
 }
 
 double geodesicDistanceMeters(double lat1, double lon1, double lat2, double lon2) {
@@ -85,6 +94,7 @@ AtosTruckSimulator::AtosTruckSimulator() :
 	declare_parameter("target_speed_kmh", m_target_speed_kmh);
 	declare_parameter("acceleration_mps2", m_acceleration_mps2);
 	declare_parameter("publish_hz", m_publish_hz);
+	declare_parameter("lateral_offset_m", m_lateral_offset_m);
 	declare_parameter("loop_path", m_loop_path);
 	declare_parameter("ignore_warning_speed_commands", m_ignore_warning_speed_commands);
 
@@ -97,8 +107,10 @@ AtosTruckSimulator::AtosTruckSimulator() :
 	m_start_index					= get_parameter("start_index").as_int();
 	m_initial_speed_kmh				= get_parameter("initial_speed_kmh").as_double();
 	m_target_speed_kmh				= get_parameter("target_speed_kmh").as_double();
+	m_cruise_target_speed_kmh		= m_target_speed_kmh;
 	m_acceleration_mps2				= std::max(0.01, get_parameter("acceleration_mps2").as_double());
 	m_publish_hz					= std::max(1.0, get_parameter("publish_hz").as_double());
+	m_lateral_offset_m				= get_parameter("lateral_offset_m").as_double();
 	m_loop_path						= get_parameter("loop_path").as_bool();
 	m_ignore_warning_speed_commands = get_parameter("ignore_warning_speed_commands").as_bool();
 
@@ -127,12 +139,13 @@ AtosTruckSimulator::AtosTruckSimulator() :
 
 	RCLCPP_INFO(get_logger(),
 				"AtosTruckSimulator started (uid=%s, path=%s, start_index=%d, target=%.1f km/h, accel=%.2f m/s^2, "
-				"tcp=%s:%d, ignore_warning=%s)",
+				"lateral_offset=%.1f m, tcp=%s:%d, ignore_warning=%s)",
 				m_uid.c_str(),
 				m_trajectory_path_name.c_str(),
 				m_start_index,
 				m_target_speed_kmh,
 				m_acceleration_mps2,
+				m_lateral_offset_m,
 				m_tcp_host.c_str(),
 				m_tcp_port,
 				m_ignore_warning_speed_commands ? "true" : "false");
@@ -303,11 +316,22 @@ bool AtosTruckSimulator::pointAtDistance(double distance_m,
 					 std::sin(degToRad(a.lat)) * std::cos(degToRad(b.lat)) * std::cos(degToRad(b.lon - a.lon));
 	course_deg = std::fmod(radToDeg(std::atan2(y, x)) + 360.0, 360.0);
 
+	if (std::abs(m_lateral_offset_m) > kEpsilon) {
+		const double course_rad = degToRad(course_deg);
+		const double north_m	   = -std::sin(course_rad) * m_lateral_offset_m;
+		const double east_m	   = std::cos(course_rad) * m_lateral_offset_m;
+		offsetLatLonMeters(lat, lon, north_m, east_m, lat, lon);
+	}
+
 	path_index = static_cast<int>(t < 0.5 ? (segment_index - 1) : segment_index);
 	return true;
 }
 
 void AtosTruckSimulator::simulationStep() {
+	if (std::abs(m_lateral_offset_m) > kMaxDistanceToPathM) {
+		m_target_speed_kmh = m_cruise_target_speed_kmh;
+	}
+
 	const auto now_time = now();
 	const double dt		= std::max(0.001, (now_time - m_last_step_time).seconds());
 	m_last_step_time	= now_time;
@@ -377,10 +401,35 @@ void AtosTruckSimulator::simulationStep() {
 }
 
 void AtosTruckSimulator::onSpeedCommand(const std_msgs::msg::String::SharedPtr msg) {
+	const std::string uid_key = "uid=";
+	const auto uid_pos		 = msg->data.find(uid_key);
+	if (uid_pos != std::string::npos) {
+		const auto value_start = uid_pos + uid_key.size();
+		const auto value_end   = msg->data.find(';', value_start);
+		const auto target_uid  = msg->data.substr(value_start, value_end - value_start);
+		if (target_uid != m_uid) {
+			return;
+		}
+	}
+
 	applySpeedCommandPayload(msg->data);
 }
 
 void AtosTruckSimulator::applySpeedCommandPayload(const std::string& payload) {
+	if (std::abs(m_lateral_offset_m) > kMaxDistanceToPathM) {
+		return;
+	}
+
+	auto parseStringField = [&](const std::string& key) -> std::optional<std::string> {
+		const auto pos = payload.find(key);
+		if (pos == std::string::npos) {
+			return std::nullopt;
+		}
+		const auto value_start = pos + key.size();
+		const auto value_end   = payload.find(';', value_start);
+		return payload.substr(value_start, value_end - value_start);
+	};
+
 	auto parseField = [&](const std::string& key) -> std::optional<double> {
 		const auto pos = payload.find(key);
 		if (pos == std::string::npos) {
@@ -403,6 +452,10 @@ void AtosTruckSimulator::applySpeedCommandPayload(const std::string& payload) {
 		commanded_speed_kmh = std::max(0.0, *speed_kmh);
 	} else {
 		return;
+	}
+
+	if (const auto command = parseStringField("command="); command.has_value() && *command == "DRIVE") {
+		commanded_speed_kmh = m_cruise_target_speed_kmh;
 	}
 
 	if (m_ignore_warning_speed_commands && commanded_speed_kmh > 0.0) {
