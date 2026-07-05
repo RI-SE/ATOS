@@ -29,9 +29,9 @@
 using json = nlohmann::json;
 
 namespace {
-constexpr double kEpsilon		   = 1e-9;
+constexpr double kEpsilon			 = 1e-9;
 constexpr double kMaxDistanceToPathM = 7.5;
-constexpr const char* kGeoJsonName = "RuralRoad_center_of_driving_lane_ccw.geojson";
+constexpr const char* kGeoJsonName	 = "RuralRoad_center_of_driving_lane_ccw.geojson";
 
 double degToRad(double value) {
 	return value * M_PI / 180.0;
@@ -41,12 +41,17 @@ double radToDeg(double value) {
 	return value * 180.0 / M_PI;
 }
 
-void offsetLatLonMeters(double lat_deg, double lon_deg, double north_m, double east_m, double& out_lat, double& out_lon) {
+void offsetLatLonMeters(double lat_deg,
+						double lon_deg,
+						double north_m,
+						double east_m,
+						double& out_lat,
+						double& out_lon) {
 	constexpr double earth_radius_m = 6378137.0;
-	const double lat_rad			   = degToRad(lat_deg);
-	out_lat						   = lat_deg + radToDeg(north_m / earth_radius_m);
-	const double cos_lat			   = std::max(kEpsilon, std::cos(lat_rad));
-	out_lon						   = lon_deg + radToDeg(east_m / (earth_radius_m * cos_lat));
+	const double lat_rad			= degToRad(lat_deg);
+	out_lat							= lat_deg + radToDeg(north_m / earth_radius_m);
+	const double cos_lat			= std::max(kEpsilon, std::cos(lat_rad));
+	out_lon							= lon_deg + radToDeg(east_m / (earth_radius_m * cos_lat));
 }
 
 double geodesicDistanceMeters(double lat1, double lon1, double lat2, double lon2) {
@@ -318,8 +323,8 @@ bool AtosTruckSimulator::pointAtDistance(double distance_m,
 
 	if (std::abs(m_lateral_offset_m) > kEpsilon) {
 		const double course_rad = degToRad(course_deg);
-		const double north_m	   = -std::sin(course_rad) * m_lateral_offset_m;
-		const double east_m	   = std::cos(course_rad) * m_lateral_offset_m;
+		const double north_m	= -std::sin(course_rad) * m_lateral_offset_m;
+		const double east_m		= std::cos(course_rad) * m_lateral_offset_m;
 		offsetLatLonMeters(lat, lon, north_m, east_m, lat, lon);
 	}
 
@@ -402,7 +407,7 @@ void AtosTruckSimulator::simulationStep() {
 
 void AtosTruckSimulator::onSpeedCommand(const std_msgs::msg::String::SharedPtr msg) {
 	const std::string uid_key = "uid=";
-	const auto uid_pos		 = msg->data.find(uid_key);
+	const auto uid_pos		  = msg->data.find(uid_key);
 	if (uid_pos != std::string::npos) {
 		const auto value_start = uid_pos + uid_key.size();
 		const auto value_end   = msg->data.find(';', value_start);
