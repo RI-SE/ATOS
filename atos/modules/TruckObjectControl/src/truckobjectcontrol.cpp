@@ -197,6 +197,7 @@ void TruckObjectControl::publishTruckState(const std::string& truck_id, const Tr
 	json payload;
 	payload["uid"]				= truck_id;
 	payload["distance_m"]		= state.distance_along_trajectory_m;
+	payload["distance_to_path_m"] = state.distance_to_path_m;
 	payload["lat"]				= state.lat;
 	payload["lon"]				= state.lon;
 	payload["speed_mps"]		= state.speed_mps;
@@ -227,6 +228,7 @@ void TruckObjectControl::onCotMessage(const std_msgs::msg::String::SharedPtr msg
 		std::lock_guard<std::mutex> lock(m_state_mutex);
 		auto& entry						  = m_trucks[observation.truck_id];
 		entry.distance_along_trajectory_m = observation.distance_along_trajectory_m;
+		entry.distance_to_path_m		  = observation.distance_to_path_m;
 		entry.lat						  = observation.lat;
 		entry.lon						  = observation.lon;
 		entry.speed_mps					  = observation.speed_mps;
@@ -355,9 +357,11 @@ bool TruckObjectControl::parseCotXml(const std::string& payload, CotObservation&
 	}
 
 	int projected_path_index = -1;
+	double lateral_dist_m	 = 0.0;
 	out.distance_along_trajectory_m =
-	  projectDistanceAlongTrajectory(out.lat, out.lon, trajectory, &projected_path_index);
+	  projectDistanceAlongTrajectory(out.lat, out.lon, trajectory, &projected_path_index, &lateral_dist_m);
 	out.path_index = projected_path_index;
+	out.distance_to_path_m = lateral_dist_m;
 
 	out.tcp_connected = true;
 	return true;
@@ -530,7 +534,8 @@ const std::vector<TruckObjectControl::GeoPoint>* TruckObjectControl::getTrajecto
 double TruckObjectControl::projectDistanceAlongTrajectory(const double lat,
 														  const double lon,
 														  const std::vector<GeoPoint>* trajectory,
-														  int* projected_path_index) const {
+														  int* projected_path_index,
+														  double* lateral_distance_m) const {
 	const std::vector<GeoPoint>* path = trajectory;
 	if (!path || path->empty()) {
 		path = &m_trajectory_path;
@@ -580,6 +585,9 @@ double TruckObjectControl::projectDistanceAlongTrajectory(const double lat,
 
 	if (projected_path_index != nullptr) {
 		*projected_path_index = best_index;
+	}
+	if (lateral_distance_m != nullptr) {
+		*lateral_distance_m = best_distance_to_path_m;
 	}
 	return best_distance_along_m;
 }
@@ -971,6 +979,7 @@ void TruckObjectControl::handleTcpClient(const int client_fd, const std::string&
 					std::lock_guard<std::mutex> lock(m_state_mutex);
 					auto& entry						  = m_trucks[observation.truck_id];
 					entry.distance_along_trajectory_m = observation.distance_along_trajectory_m;
+					entry.distance_to_path_m		  = observation.distance_to_path_m;
 					entry.lat						  = observation.lat;
 					entry.lon						  = observation.lon;
 					entry.speed_mps					  = observation.speed_mps;
@@ -1014,11 +1023,14 @@ void TruckObjectControl::handleTcpClient(const int client_fd, const std::string&
 }
 
 void TruckObjectControl::evaluateAndPublishSpeedCommand() {
+	constexpr double kMaxDistanceToPathM = 7.5;
+
 	struct ConnectedTruck {
 		std::string id;
 		std::string path_name;
 		double distance_m = 0.0;
 		double speed_mps  = 0.0;
+		double distance_to_path_m = 0.0;
 		int path_index	  = -1;
 		std::string previous_command;
 	};
@@ -1037,10 +1049,21 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 									 state.distance_along_trajectory_m);
 				continue;
 			}
+			if (state.distance_to_path_m > kMaxDistanceToPathM) {
+				RCLCPP_WARN_THROTTLE(get_logger(),
+									 *get_clock(),
+									 3000,
+									 "Skipping uid=%s from command eval: off-path by %.1f m (max %.1f m)",
+									 id.c_str(),
+									 state.distance_to_path_m,
+									 kMaxDistanceToPathM);
+				continue;
+			}
 			connected.push_back(ConnectedTruck{id,
 											   state.path_name,
 											   state.distance_along_trajectory_m,
 											   state.speed_mps,
+											   state.distance_to_path_m,
 											   state.path_index,
 											   state.last_control_command});
 		}
