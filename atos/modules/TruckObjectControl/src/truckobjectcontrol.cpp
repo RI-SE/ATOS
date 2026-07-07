@@ -1174,25 +1174,26 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 			}
 
 			const std::string previous_command = group[i].previous_command;
-			std::string control_command		   = previous_command.empty() ? "DRIVE" : previous_command;
+			std::string control_command		   = "DRIVE";
 
 			if (!has_ahead) {
 				control_command = "DRIVE";
-			}
-
-			const bool in_warning_band = has_ahead && (ahead_gap <= 500.0 && ahead_gap > 200.0);
-			const bool in_stop_band	   = has_ahead && (ahead_gap <= 200.0);
-			if (in_warning_band) {
-				control_command = "SLOWDOWN";
-			}
-			if (in_stop_band) {
-				control_command = "STOP";
-			}
-			if (has_ahead && ahead_gap > 300.0 && previous_command == "STOP") {
-				control_command = "SLOWDOWN";
-			}
-			if (has_ahead && ahead_gap > 700.0 && previous_command == "SLOWDOWN") {
-				control_command = "DRIVE";
+			} else {
+				control_command = previous_command.empty() ? "DRIVE" : previous_command;
+				const bool in_warning_band = ahead_gap <= 500.0 && ahead_gap > 200.0;
+				const bool in_stop_band	   = ahead_gap <= 200.0;
+				if (in_warning_band) {
+					control_command = "SLOWDOWN";
+				}
+				if (in_stop_band) {
+					control_command = "STOP";
+				}
+				if (ahead_gap > 300.0 && previous_command == "STOP") {
+					control_command = "SLOWDOWN";
+				}
+				if (ahead_gap > 700.0 && previous_command == "SLOWDOWN") {
+					control_command = "DRIVE";
+				}
 			}
 
 			std::string target_speed_mps_value = std::to_string(std::max(0.0, group[i].speed_mps));
