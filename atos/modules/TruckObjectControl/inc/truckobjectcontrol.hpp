@@ -95,7 +95,7 @@ private:
 	double m_stop_distance_m			  = 200.0;
 	double m_warning_speed_kmh			  = 30.0;
 	double m_stop_speed_kmh				  = 0.0;
-	double m_cot_timeout_seconds		  = 2.0;
+	double m_cot_timeout_seconds		  = 10.0;
 	int m_cot_tcp_port					  = 8114;
 	std::string m_cot_tcp_bind_address	  = "0.0.0.0";
 	bool m_cot_tls_require_client_cert	  = false;
