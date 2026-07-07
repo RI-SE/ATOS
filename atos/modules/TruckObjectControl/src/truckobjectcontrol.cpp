@@ -1176,6 +1176,10 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 			const std::string previous_command = group[i].previous_command;
 			std::string control_command		   = previous_command.empty() ? "DRIVE" : previous_command;
 
+			if (!has_ahead) {
+				control_command = "DRIVE";
+			}
+
 			const bool in_warning_band = has_ahead && (ahead_gap <= 500.0 && ahead_gap > 200.0);
 			const bool in_stop_band	   = has_ahead && (ahead_gap <= 200.0);
 			if (in_warning_band) {
