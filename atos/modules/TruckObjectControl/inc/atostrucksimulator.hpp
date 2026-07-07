@@ -29,9 +29,11 @@ private:
 	std::string m_trajectory_path_name	  = "";
 	int m_start_index					  = 0;
 	double m_initial_speed_kmh			  = 0.0;
+	double m_cruise_target_speed_kmh	  = 40.0;
 	double m_target_speed_kmh			  = 40.0;
 	double m_acceleration_mps2			  = 2.0;
 	double m_publish_hz					  = 5.0;
+	double m_lateral_offset_m			  = 0.0;
 	bool m_loop_path					  = true;
 	bool m_ignore_warning_speed_commands  = false;
 

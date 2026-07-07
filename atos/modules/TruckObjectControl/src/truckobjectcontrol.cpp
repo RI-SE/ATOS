@@ -195,21 +195,21 @@ TruckObjectControl::~TruckObjectControl() {
 
 void TruckObjectControl::publishTruckState(const std::string& truck_id, const TruckState& state) {
 	json payload;
-	payload["uid"]				= truck_id;
-	payload["distance_m"]		= state.distance_along_trajectory_m;
+	payload["uid"]				  = truck_id;
+	payload["distance_m"]		  = state.distance_along_trajectory_m;
 	payload["distance_to_path_m"] = state.distance_to_path_m;
-	payload["lat"]				= state.lat;
-	payload["lon"]				= state.lon;
-	payload["speed_mps"]		= state.speed_mps;
-	payload["speed_kmh"]		= state.speed_mps * 3.6;
-	payload["course_deg"]		= state.course_deg;
-	payload["tcp_connected"]	= state.tcp_connected;
-	payload["path_name"]		= state.path_name;
-	payload["path_index"]		= state.path_index;
-	payload["last_cot_message"] = state.last_cot_message;
-	payload["last_tcp_command"] = state.last_tcp_command;
-	payload["last_tcp_warning"] = state.last_tcp_warning;
-	payload["stamp_sec"]		= now().seconds();
+	payload["lat"]				  = state.lat;
+	payload["lon"]				  = state.lon;
+	payload["speed_mps"]		  = state.speed_mps;
+	payload["speed_kmh"]		  = state.speed_mps * 3.6;
+	payload["course_deg"]		  = state.course_deg;
+	payload["tcp_connected"]	  = state.tcp_connected;
+	payload["path_name"]		  = state.path_name;
+	payload["path_index"]		  = state.path_index;
+	payload["last_cot_message"]	  = state.last_cot_message;
+	payload["last_tcp_command"]	  = state.last_tcp_command;
+	payload["last_tcp_warning"]	  = state.last_tcp_warning;
+	payload["stamp_sec"]		  = now().seconds();
 
 	std_msgs::msg::String msg;
 	msg.data = payload.dump();
@@ -360,7 +360,7 @@ bool TruckObjectControl::parseCotXml(const std::string& payload, CotObservation&
 	double lateral_dist_m	 = 0.0;
 	out.distance_along_trajectory_m =
 	  projectDistanceAlongTrajectory(out.lat, out.lon, trajectory, &projected_path_index, &lateral_dist_m);
-	out.path_index = projected_path_index;
+	out.path_index		   = projected_path_index;
 	out.distance_to_path_m = lateral_dist_m;
 
 	out.tcp_connected = true;
@@ -1028,10 +1028,10 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 	struct ConnectedTruck {
 		std::string id;
 		std::string path_name;
-		double distance_m = 0.0;
-		double speed_mps  = 0.0;
+		double distance_m		  = 0.0;
+		double speed_mps		  = 0.0;
 		double distance_to_path_m = 0.0;
-		int path_index	  = -1;
+		int path_index			  = -1;
 		std::string previous_command;
 	};
 	std::vector<ConnectedTruck> connected;
