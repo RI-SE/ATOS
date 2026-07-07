@@ -1036,6 +1036,7 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 	};
 	std::vector<ConnectedTruck> connected;
 
+	const rclcpp::Time now_time = now();
 	{
 		std::lock_guard<std::mutex> lock(m_state_mutex);
 		for (const auto& [id, state] : m_trucks) {
@@ -1047,6 +1048,15 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 									 id.c_str(),
 									 state.path_name.c_str(),
 									 state.distance_along_trajectory_m);
+				continue;
+			}
+			if (!isCotFresh(state, now_time)) {
+				RCLCPP_WARN_THROTTLE(get_logger(),
+									 *get_clock(),
+									 3000,
+									 "Skipping uid=%s from command eval: COT data stale (timeout=%.1fs)",
+									 id.c_str(),
+									 m_cot_timeout_seconds);
 				continue;
 			}
 			if (state.distance_to_path_m > kMaxDistanceToPathM) {
@@ -1281,8 +1291,7 @@ void TruckObjectControl::updateTruckTcpStatus(const std::string& target_id,
 			it->second.last_tcp_command = command;
 			it->second.last_tcp_warning = warning;
 			if (mark_disconnected) {
-				it->second.tcp_connected  = false;
-				it->second.last_cot_stamp = now();
+				it->second.tcp_connected = false;
 			}
 			state_copy = it->second;
 			has_state  = true;
