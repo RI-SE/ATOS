@@ -60,7 +60,7 @@ cd $HOME/atos_ws
 # shellcheck disable=SC1090
 source "${ATOS_VENV_PATH}/bin/activate"
 source /opt/ros/$ROS_DISTRO/setup.bash
-MAKEFLAGS=-j4 colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+MAKEFLAGS=-j4 colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DWITH_TRUCK_OBJECT_CONTROL=ON
 check_command_failed $? "Failed to build ATOS."
 cd -
 
