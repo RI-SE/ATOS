@@ -8,7 +8,6 @@ import sys
 import threading
 from pathlib import Path
 
-import nicegui
 import rclpy
 from nicegui import app, ui, ui_run
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
@@ -251,19 +250,22 @@ Live truck state topic for map overlay:
                 )
 
 
+def render_atos_home_page() -> None:
+    @ui.page(path="/", title="ATOS GUI")
+    def render_home() -> None:
+        ui.link("Control Panel", "/control")
+        ui.link("Config Panel", "/config")
+        ui.link("Object Panel", "/object")
+
+
 def ros_main() -> None:
     rclpy.init()
     executor = MultiThreadedExecutor()
     nodes = []
 
     if FLEET_MODE:
-        render_atosfleetmanagement_pages()
         nodes = [FleetStateNode()]
     else:
-        nicegui.ui.link("Control Panel", "/control")
-        nicegui.ui.link("Config Panel", "/config")
-        nicegui.ui.link("Object Panel", "/object")
-
         control_panel = ControlPanelNode()
         config_panel = ConfigPanelNode()
         object_panel = ObjectPanelNode()
@@ -292,6 +294,11 @@ def configure_app() -> None:
     global APP_CONFIGURED
     if APP_CONFIGURED:
         return
+
+    if FLEET_MODE:
+        render_atosfleetmanagement_pages()
+    else:
+        render_atos_home_page()
 
     app.on_startup(lambda: threading.Thread(target=ros_main, daemon=True).start())
     app.on_startup(print_access_hint)
