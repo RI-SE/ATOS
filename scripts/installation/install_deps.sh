@@ -118,6 +118,11 @@ apt_install_retry \
     ros-${ROS_DISTRO}-launch-pytest
 check_command_failed $? "Failed to install ROS2 packages."
 
+# Initialize submodules so rosdep can find local packages like atos_interfaces
+if command -v git >/dev/null 2>&1 && git -C "${ATOS_REPO_PATH}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git -C "${ATOS_REPO_PATH}" submodule update --init --recursive
+fi
+
 sudo rosdep init || true && \
     rosdep update || true && \
     rosdep install --from-paths ${ATOS_REPO_PATH} --ignore-src --rosdistro $ROS_DISTRO -y
