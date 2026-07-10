@@ -68,25 +68,34 @@ cd -
 ###### Configure setup scripts ######
 #####################################
 
+if [ -t 0 ] && [ -z "$DEBIAN_FRONTEND" ] && [ -z "$GITHUB_ACTION" ]; then
+    echo ""
+    echo "Would you like to add ATOS source lines to your shell config file (.bashrc/.zshrc)?"
+    echo "This will auto-activate the ATOS environment in new terminals. (y/n)"
+    read -r answer
+    if [ "$answer" == "${answer#[Yy]}" ]; then
+        echo "Skipping shell configuration."
+        exit 0
+    fi
+fi
+
 atos_venv_setup_script="source $ATOS_VENV_PATH/bin/activate"
 atos_python_site_packages="$(python -c 'import site; print(site.getsitepackages()[0])')"
 check_command_failed $? "Failed to determine ATOS Python site-packages path."
 atos_pythonpath_script="export PYTHONPATH=$atos_python_site_packages:\$PYTHONPATH"
-atos_setup_script="source $HOME/atos_ws/install/setup."
-ros2_setup_script="source /opt/ros/$ROS_DISTRO/setup."
 
 case "$SHELL" in
     */bash)
         add_source_line_if_needed $HOME/.bashrc "bash" "${atos_venv_setup_script}"
         add_source_line_if_needed $HOME/.bashrc "bash" "${atos_pythonpath_script}"
-        add_source_line_if_needed $HOME/.bashrc "bash" "${ros2_setup_script}"
-        add_source_line_if_needed $HOME/.bashrc "bash" "${atos_setup_script}"
+        add_source_line_if_needed $HOME/.bashrc "bash" "source /opt/ros/$ROS_DISTRO/setup.sh"
+        add_source_line_if_needed $HOME/.bashrc "bash" "source $HOME/atos_ws/install/setup.sh"
     ;;
     */zsh)
         add_source_line_if_needed $HOME/.zshrc "zsh" "${atos_venv_setup_script}"
         add_source_line_if_needed $HOME/.zshrc "zsh" "${atos_pythonpath_script}"
-        add_source_line_if_needed $HOME/.zshrc "zsh" "${ros2_setup_script}"
-        add_source_line_if_needed $HOME/.zshrc "zsh" "${atos_setup_script}"
+        add_source_line_if_needed $HOME/.zshrc "zsh" "source /opt/ros/$ROS_DISTRO/setup.zsh"
+        add_source_line_if_needed $HOME/.zshrc "zsh" "source $HOME/atos_ws/install/setup.zsh"
     ;;
     *)
         echo "Unsupported shell detected! Please use either bash or zsh shells to run ATOS"

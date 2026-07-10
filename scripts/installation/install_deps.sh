@@ -91,9 +91,9 @@ check_command_failed $? "Failed to install dependencies."
 if ! (apt list | grep -q "ros-$ROS_DISTRO-desktop"); then
     echo "Adding the ROS2 $ROS_DISTRO apt repository..."
 
-    # Install ROS2 prerequisites
+    # Install prerequisites for adding the ROS2 repository
     apt_update_retry
-    apt_install_retry lsb-release ros-dev-tools
+    apt_install_retry lsb-release curl
 
     # Authorize the ROS2 gpg key with apt
     sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
@@ -101,8 +101,12 @@ if ! (apt list | grep -q "ros-$ROS_DISTRO-desktop"); then
 
     # Add the ROS2 repo to sources list
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(source /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+
+    # Now install ros-dev-tools from the ROS2 repository
+    apt_update_retry
+    apt_install_retry ros-dev-tools
 else
-    echo "ROS2 $ROS_DISTRO" repository already added, skipping addition...
+    echo "ROS2 $ROS_DISTRO repository already added, skipping addition..."
 fi
 
 # Install ROS2 packages
@@ -113,6 +117,11 @@ apt_install_retry \
     python3-rosdep \
     ros-${ROS_DISTRO}-launch-pytest
 check_command_failed $? "Failed to install ROS2 packages."
+
+# Initialize submodules so rosdep can find local packages like atos_interfaces
+if command -v git >/dev/null 2>&1 && git -C "${ATOS_REPO_PATH}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git -C "${ATOS_REPO_PATH}" submodule update --init --recursive
+fi
 
 sudo rosdep init || true && \
     rosdep update || true && \
