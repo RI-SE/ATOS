@@ -21,6 +21,7 @@
 #include <openssl/err.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -47,7 +48,21 @@ constexpr int kTlsHandshakeRetrySleepMs		   = 10;
 constexpr int kTlsReadPollTimeoutMs			   = 1000;
 constexpr int kTlsIoRetrySleepMs			   = 10;
 constexpr int kTlsWriteMaxTransientRetries	   = 100;
-constexpr std::string_view kDefaultGeoJsonName = "RuralRoad_center_of_driving_lane_ccw.geojson";
+constexpr std::string_view kDefaultGeoJsonName = "rural_road_center_of_driving_lane_ccw.geojson";
+constexpr std::string_view kRuralRoadPrefix	   = "rural_road";
+
+// All rural_road* paths (case-insensitive) share one group under the default path name.
+void normalizePathName(std::string& path_name) {
+	if (path_name.size() < kRuralRoadPrefix.size()) {
+		return;
+	}
+	const bool matches = std::equal(kRuralRoadPrefix.begin(), kRuralRoadPrefix.end(), path_name.begin(), [](char a, char b) {
+		return a == std::tolower(static_cast<unsigned char>(b));
+	});
+	if (matches) {
+		path_name = std::string(kDefaultGeoJsonName);
+	}
+}
 
 double degToRad(const double value) {
 	return value * M_PI / 180.0;
@@ -290,6 +305,7 @@ bool TruckObjectControl::parseCotPlaceholder(const std::string& payload, CotObse
 		}
 		if (fields.find("path_name") != fields.end()) {
 			out.path_name = fields.at("path_name");
+			normalizePathName(out.path_name);
 		}
 		if (fields.find("path_index") != fields.end()) {
 			out.path_index = std::stoi(fields.at("path_index"));
@@ -344,6 +360,7 @@ bool TruckObjectControl::parseCotXml(const std::string& payload, CotObservation&
 	out.path_index = -1;
 	if (std::regex_search(payload, m, path_name_re) && m.size() >= 2) {
 		out.path_name = m[1].str();
+		normalizePathName(out.path_name);
 	}
 
 	const std::vector<GeoPoint>* trajectory = nullptr;

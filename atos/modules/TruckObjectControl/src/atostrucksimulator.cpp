@@ -31,7 +31,7 @@ using json = nlohmann::json;
 namespace {
 constexpr double kEpsilon			 = 1e-9;
 constexpr double kMaxDistanceToPathM = 7.5;
-constexpr const char* kGeoJsonName	 = "RuralRoad_center_of_driving_lane_ccw.geojson";
+constexpr const char* kGeoJsonName	 = "rural_road_center_of_driving_lane_ccw.geojson";
 
 double degToRad(double value) {
 	return value * M_PI / 180.0;

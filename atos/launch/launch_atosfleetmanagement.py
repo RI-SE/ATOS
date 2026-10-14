@@ -46,7 +46,7 @@ def get_default_trajectory_path():
         Path(get_package_prefix("atos"))
         / "etc"
         / "conf"
-        / "RuralRoad_center_of_driving_lane_ccw.geojson"
+        / "rural_road_center_of_driving_lane_ccw.geojson"
     )
 
 
