@@ -20,7 +20,7 @@ from atos_gui.objectpanel.objectpanel import ObjectPanelNode
 
 USE_SSL = len(sys.argv) > 1 and sys.argv[1] == "True"
 FLEET_MODE = len(sys.argv) > 2 and sys.argv[2].lower() == "atosfleetmanagement"
-GEOJSON_NAME = "RuralRoad_center_of_driving_lane_ccw.geojson"
+GEOJSON_NAME = "rural_road_centerline_ccw.geojson"
 FLEET_STATIC_ROUTE = "/atos_gui_static"
 FLEET_STATIC_DIR = Path(__file__).parent / "static"
 FLEET_MAP_JS_VERSION = "20260424-3"
