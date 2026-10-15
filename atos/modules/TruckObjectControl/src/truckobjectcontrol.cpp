@@ -48,7 +48,7 @@ constexpr int kTlsHandshakeRetrySleepMs		   = 10;
 constexpr int kTlsReadPollTimeoutMs			   = 1000;
 constexpr int kTlsIoRetrySleepMs			   = 10;
 constexpr int kTlsWriteMaxTransientRetries	   = 100;
-constexpr std::string_view kDefaultGeoJsonName = "rural_road_center_of_driving_lane_ccw.geojson";
+constexpr std::string_view kDefaultGeoJsonName = "rural_road_centerline_ccw.geojson";
 constexpr std::string_view kRuralRoadPrefix	   = "rural_road";
 
 // All rural_road* paths (case-insensitive) share one group under the default path name.
