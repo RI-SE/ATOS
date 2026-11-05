@@ -50,6 +50,8 @@ private:
 		std::string last_tcp_command	   = "";
 		std::string last_tcp_warning	   = "";
 		std::string last_cot_message	   = "";
+		double ahead_gap_m				   = -1.0;
+		std::string ahead_uid			   = "";
 		rclcpp::Time last_cot_stamp		   = rclcpp::Time(0, 0, RCL_ROS_TIME);
 	};
 

@@ -50,6 +50,7 @@ constexpr int kTlsIoRetrySleepMs			   = 10;
 constexpr int kTlsWriteMaxTransientRetries	   = 100;
 constexpr std::string_view kDefaultGeoJsonName = "rural_road_centerline_ccw.geojson";
 constexpr std::string_view kRuralRoadPrefix	   = "rural_road";
+constexpr double kMaxNearPathDistanceM		   = 15.0;
 
 // All rural_road* paths (case-insensitive) share one group under the default path name.
 void normalizePathName(std::string& path_name) {
@@ -225,6 +226,10 @@ void TruckObjectControl::publishTruckState(const std::string& truck_id, const Tr
 	payload["last_cot_message"]	  = state.last_cot_message;
 	payload["last_tcp_command"]	  = state.last_tcp_command;
 	payload["last_tcp_warning"]	  = state.last_tcp_warning;
+	payload["on_road"]			  = state.distance_to_path_m <= kMaxNearPathDistanceM;
+	payload["cot_fresh"]		  = isCotFresh(state, now());
+	payload["ahead_gap_m"]		  = state.ahead_gap_m > 0.0 ? json(state.ahead_gap_m) : json(nullptr);
+	payload["ahead_uid"]		  = state.ahead_uid;
 	payload["stamp_sec"]		  = now().seconds();
 
 	std_msgs::msg::String msg;
@@ -1042,7 +1047,6 @@ void TruckObjectControl::handleTcpClient(const int client_fd, const std::string&
 
 void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 	constexpr double kMaxDistanceToPathM = 7.5;
-	constexpr double kMaxNearPathDistanceM = 15.0;
 
 	struct ConnectedTruck {
 		std::string id;
@@ -1055,6 +1059,24 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 		bool on_path = true;
 	};
 	std::vector<ConnectedTruck> connected;
+
+	// Ahead values exactly as sent in the TCP command, keyed by truck uid.
+	std::unordered_map<std::string, std::pair<double, std::string>> sent_ahead;
+	const auto publishAllTruckStates = [&]() {
+		std::vector<std::pair<std::string, TruckState>> snapshot;
+		{
+			std::lock_guard<std::mutex> lock(m_state_mutex);
+			for (auto& [id, state] : m_trucks) {
+				const auto it	 = sent_ahead.find(id);
+				state.ahead_gap_m = it != sent_ahead.end() ? it->second.first : -1.0;
+				state.ahead_uid	 = it != sent_ahead.end() ? it->second.second : "";
+				snapshot.emplace_back(id, state);
+			}
+		}
+		for (const auto& [id, state] : snapshot) {
+			publishTruckState(id, state);
+		}
+	};
 
 	const rclcpp::Time now_time = now();
 	{
@@ -1106,6 +1128,7 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 	if (on_path_count == 0) {
 		RCLCPP_WARN_THROTTLE(
 		  get_logger(), *get_clock(), 3000, "No TCP-connected trucks available for command evaluation.");
+		publishAllTruckStates();
 		return;
 	}
 
@@ -1278,6 +1301,10 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 				ahead_path_index = near_path_index;
 			}
 
+			if (ahead_uid != "none") {
+				sent_ahead[group[i].id] = {ahead_gap, ahead_uid};
+			}
+
 			std::string target_speed_mps_value = std::to_string(std::max(0.0, group[i].speed_mps));
 			if (control_command == "STOP") {
 				target_speed_mps_value = std::to_string(m_stop_speed_kmh / 3.6);
@@ -1324,6 +1351,8 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 				auto it = m_trucks.find(group[i].id);
 				if (it != m_trucks.end()) {
 					it->second.last_tcp_command = tcp_command;
+					it->second.ahead_gap_m		= ahead_uid != "none" ? ahead_gap : -1.0;
+					it->second.ahead_uid		= ahead_uid != "none" ? ahead_uid : "";
 					state_copy					= it->second;
 					has_state					= true;
 				}
@@ -1336,6 +1365,8 @@ void TruckObjectControl::evaluateAndPublishSpeedCommand() {
 			sent_commands += 1;
 		}
 	}
+
+	publishAllTruckStates();
 
 	if (!std::isfinite(min_gap_m)) {
 		min_gap_m = -1.0;

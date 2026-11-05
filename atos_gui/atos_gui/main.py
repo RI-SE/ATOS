@@ -6,6 +6,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 import json
 import sys
 import threading
+import time
 from pathlib import Path
 
 import rclpy
@@ -23,9 +24,10 @@ FLEET_MODE = len(sys.argv) > 2 and sys.argv[2].lower() == "atosfleetmanagement"
 GEOJSON_NAME = "rural_road_centerline_ccw.geojson"
 FLEET_STATIC_ROUTE = "/atos_gui_static"
 FLEET_STATIC_DIR = Path(__file__).parent / "static"
-FLEET_MAP_JS_VERSION = "20260424-3"
+FLEET_MAP_JS_VERSION = "20261105-1"
 FLEET_STATE_LOCK = threading.Lock()
 FLEET_TRUCK_STATES: dict[str, dict] = {}
+FLEET_STATE_MAX_AGE_S = 5.0
 FLEET_GEOJSON_CACHE: dict[str, dict] = {}
 APP_CONFIGURED = False
 
@@ -101,7 +103,18 @@ def _load_geojson_by_name(path_name: str) -> tuple[dict | None, Path | None]:
 
 def _fleet_map_payload_json() -> str:
     with FLEET_STATE_LOCK:
-        trucks = list(FLEET_TRUCK_STATES.values())
+        now = time.monotonic()
+        for uid in [
+            uid
+            for uid, truck in FLEET_TRUCK_STATES.items()
+            if now - truck["_rx_time"] > FLEET_STATE_MAX_AGE_S
+        ]:
+            del FLEET_TRUCK_STATES[uid]
+        trucks = [
+            {k: v for k, v in truck.items() if k != "_rx_time"}
+            for truck in FLEET_TRUCK_STATES.values()
+            if truck.get("tcp_connected") and truck.get("cot_fresh", True)
+        ]
 
     path_names = {GEOJSON_NAME}
     for truck in trucks:
@@ -147,6 +160,7 @@ class FleetStateNode(Node):
             payload["path_name"] = Path(str(payload["path_name"])).name
 
         with FLEET_STATE_LOCK:
+            payload["_rx_time"] = time.monotonic()
             FLEET_TRUCK_STATES[str(uid)] = payload
 
 
