@@ -56,6 +56,30 @@ ament_target_dependencies(atos_truck_simulator
   ament_index_cpp
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_ros REQUIRED)
+  file(GLOB TESTFILES "tests/*.cpp")
+
+  ament_add_ros_isolated_gtest(${PROJECT_NAME}_test
+    ${TESTFILES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/truckobjectcontrol.cpp
+  )
+  target_include_directories(${PROJECT_NAME}_test PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../common
+  )
+  target_link_libraries(${PROJECT_NAME}_test
+    ${COREUTILS_LIBRARY}
+    OpenSSL::SSL
+    OpenSSL::Crypto
+  )
+  ament_target_dependencies(${PROJECT_NAME}_test
+    rclcpp
+    std_msgs
+    ament_index_cpp
+  )
+endif()
+
 install(CODE "MESSAGE(STATUS \"Installing target ${PROJECT_NAME}\")")
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/atos"
