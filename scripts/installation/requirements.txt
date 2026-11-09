@@ -3,4 +3,7 @@ pyOpenSSL >= 23.2.0
 numpy<2.0
 scenariogeneration
 pytest>=6.2,<7.5
-anyio>=3.6,<4.0
+# NiceGUI (atos_gui, installed in the same venv) requires anyio >= 4.14.2.
+# Python < 3.10 (ROS 2 Foxy) gets no GUI and keeps the old pin.
+anyio>=3.6,<4.0; python_version < "3.10"
+anyio>=4.14.2; python_version >= "3.10"

@@ -21,6 +21,8 @@ setup(
         (str(data / "launch"), ["launch/gui.py"]),
     ],
     install_requires=["setuptools"],
+    # Makes colcon test run the tests in test/ with pytest.
+    extras_require={"test": ["pytest"]},
     zip_safe=True,
     entry_points={
         "console_scripts": [

@@ -570,4 +570,4 @@ class ConfigPanelNode(Node):
         threading.Thread(
             target=self.fetch_parameters_list, args=(self.parameter_clients,)
         ).start()
-        ui.open("/config")
+        ui.navigate.to("/config")

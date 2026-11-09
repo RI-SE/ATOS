@@ -151,9 +151,6 @@ class FleetStateNode(Node):
 
 
 def render_atosfleetmanagement_pages() -> None:
-    if FLEET_STATIC_DIR.exists():
-        app.add_static_files(FLEET_STATIC_ROUTE, str(FLEET_STATIC_DIR))
-
     @ui.page(path="/", title="TruckObjectGUI")
     def render_home() -> None:
         ui.add_head_html(
@@ -208,7 +205,8 @@ Live truck state topic for map overlay:
                 )
                 map_id = "fleet-road-map"
                 ui.html(
-                    f'<div id="{map_id}" style="height:75vh;width:100%;border-radius:8px;"></div>'
+                    f'<div id="{map_id}" style="height:75vh;width:100%;border-radius:8px;"></div>',
+                    sanitize=False,  # trusted static markup; keep id/style
                 )
 
                 ui.timer(
@@ -294,6 +292,10 @@ def configure_app() -> None:
     global APP_CONFIGURED
     if APP_CONFIGURED:
         return
+
+    # Scripts for the fleet road map and the control panel map view.
+    if FLEET_STATIC_DIR.exists():
+        app.add_static_files(FLEET_STATIC_ROUTE, str(FLEET_STATIC_DIR))
 
     if FLEET_MODE:
         render_atosfleetmanagement_pages()
