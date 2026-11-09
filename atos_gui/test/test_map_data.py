@@ -1,9 +1,8 @@
 """This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
-"""
 
-"""MapDataSource tests with a fake rclpy node (no ROS graph needed)."""
+MapDataSource tests with a fake rclpy node (no ROS graph needed)."""
 
 import math
 from types import SimpleNamespace as NS
@@ -115,7 +114,10 @@ def monitor_msg(object_id, x, y, yaw, vx=3.0, vy=4.0):
 
 
 def origin_result(lat, lon, success=True):
-    return NS(success=success, origin=NS(position=NS(latitude=lat, longitude=lon, altitude=0.0)))
+    return NS(
+        success=success,
+        origin=NS(position=NS(latitude=lat, longitude=lon, altitude=0.0)),
+    )
 
 
 @pytest.fixture
@@ -130,7 +132,9 @@ def setup():
 def load(node, state, maintain, ids=(1, 2), names=("Car", "Truck")):
     state["value"] = 2
     maintain()
-    node.clients["/atos/get_object_ids"].calls[-1].set_result(NS(ids=list(ids), names=list(names)))
+    node.clients["/atos/get_object_ids"].calls[-1].set_result(
+        NS(ids=list(ids), names=list(names))
+    )
     node.clients["/atos/get_test_origin"].calls[-1].set_result(origin_result(*ORIGIN))
 
 
@@ -163,7 +167,9 @@ def test_load_sequence_and_snapshot(setup):
     assert obj["lat"] == pytest.approx(lats[0], abs=1e-8)
     assert obj["lon"] == pytest.approx(lons[0], abs=1e-8)
     assert obj["bearing"] == pytest.approx(bearings[0], abs=0.01)
-    assert obj["bearing"] == pytest.approx(0.0, abs=0.01) or obj["bearing"] == pytest.approx(360.0, abs=0.01)
+    assert obj["bearing"] == pytest.approx(0.0, abs=0.01) or obj[
+        "bearing"
+    ] == pytest.approx(360.0, abs=0.01)
     assert obj["speed"] == pytest.approx(5.0)
     assert obj["stale"] is False
 
@@ -175,7 +181,9 @@ def test_path_received_before_origin_is_converted_later(setup):
     node, state, data, maintain = setup
     state["value"] = 2
     maintain()
-    node.clients["/atos/get_object_ids"].calls[-1].set_result(NS(ids=[1], names=["Car"]))
+    node.clients["/atos/get_object_ids"].calls[-1].set_result(
+        NS(ids=[1], names=["Car"])
+    )
     assert data.frame is None
     # Origin not answered yet; a (re)subscribed path arrives via a previous subscription.
     data._on_path(1, path_msg([(0, 0), (5, 5)]))
@@ -208,7 +216,9 @@ def test_origin_timeout_reports_and_retries(setup):
     node, state, data, maintain = setup
     state["value"] = 2
     maintain()
-    node.clients["/atos/get_object_ids"].calls[-1].set_result(NS(ids=[1], names=["Car"]))
+    node.clients["/atos/get_object_ids"].calls[-1].set_result(
+        NS(ids=[1], names=["Car"])
+    )
     origin_client = node.clients["/atos/get_test_origin"]
     timeout_timer = node.timers[-1]
     assert timeout_timer.period == map_data.ORIGIN_TIMEOUT_S
@@ -248,6 +258,10 @@ def test_missing_georeference(setup):
     node, state, data, maintain = setup
     state["value"] = 2
     maintain()
-    node.clients["/atos/get_object_ids"].calls[-1].set_result(NS(ids=[1], names=["Car"]))
-    node.clients["/atos/get_test_origin"].calls[-1].set_result(origin_result(float("nan"), 0.0))
+    node.clients["/atos/get_object_ids"].calls[-1].set_result(
+        NS(ids=[1], names=["Car"])
+    )
+    node.clients["/atos/get_test_origin"].calls[-1].set_result(
+        origin_result(float("nan"), 0.0)
+    )
     assert data.frame is None and "geo-reference" in data.status

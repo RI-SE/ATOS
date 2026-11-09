@@ -77,7 +77,9 @@ def test_yaw_to_bearing_on_central_meridian(frame, yaw, bearing):
 def test_meridian_convergence_sign(frame):
     # Grid north east of the central meridian (northern hemisphere) is rotated
     # clockwise from true north by about dlon * sin(lat); west of it, anticlockwise.
-    _, _, bearings = frame.poses_to_geo([2000.0, -2000.0], [0.0, 0.0], [math.pi / 2] * 2)
+    _, _, bearings = frame.poses_to_geo(
+        [2000.0, -2000.0], [0.0, 0.0], [math.pi / 2] * 2
+    )
     lons, _ = frame.to_lonlat([2000.0], [0.0])
     expected = (lons[0] - ORIGIN_LON) * math.sin(math.radians(ORIGIN_LAT))
     assert expected > 0.02  # big enough for the test to mean something
@@ -105,7 +107,9 @@ def test_differs_from_flat_earth_gnss_topics_as_expected(frame):
     a = 6378137.0
     for x, y in [(1000.0, 0.0), (0.0, 1000.0), (-700.0, 700.0)]:
         flat_lat = ORIGIN_LAT + y / a * 180 / math.pi
-        flat_lon = ORIGIN_LON + x / a * 180 / math.pi / math.cos(math.radians(ORIGIN_LAT))
+        flat_lon = ORIGIN_LON + x / a * 180 / math.pi / math.cos(
+            math.radians(ORIGIN_LAT)
+        )
         lons, lats = frame.to_lonlat([x], [y])
         _, _, error = WGS84.inv(flat_lon, flat_lat, lons[0], lats[0])
         assert error < 0.003 * math.hypot(x, y)
@@ -114,7 +118,9 @@ def test_differs_from_flat_earth_gnss_topics_as_expected(frame):
 def test_yaw_from_quaternion():
     for yaw in [0.0, 0.3, math.pi / 2, 3.0, -2.0]:
         q = (0.0, 0.0, math.sin(yaw / 2), math.cos(yaw / 2))
-        assert yaw_from_quaternion(*q) == pytest.approx(math.atan2(math.sin(yaw), math.cos(yaw)))
+        assert yaw_from_quaternion(*q) == pytest.approx(
+            math.atan2(math.sin(yaw), math.cos(yaw))
+        )
     assert yaw_from_quaternion(0.0, 0.0, 0.0, 1.0) == 0.0
 
 

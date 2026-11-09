@@ -1,9 +1,8 @@
 """This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
-"""
 
-"""Conversions from the ATOS local test frame to WGS84 for the map view.
+Conversions from the ATOS local test frame to WGS84 for the map view.
 
 ATOS' local frame (see EsminiAdapter, esminiadapter.cpp) is a transverse Mercator
 projection centred on the test origin:
@@ -65,7 +64,9 @@ class LocalFrame:
         """WGS84 longitude/latitude (degrees) to local x/y (metres)."""
         return self._transform(self._from_wgs84, lons, lats)
 
-    def _transform(self, transformer: Transformer, a, b) -> tuple[np.ndarray, np.ndarray]:
+    def _transform(
+        self, transformer: Transformer, a, b
+    ) -> tuple[np.ndarray, np.ndarray]:
         a = np.asarray(a, dtype=float)
         b = np.asarray(b, dtype=float)
         with self._lock:
@@ -93,7 +94,9 @@ class LocalFrame:
         )
         if lons.size == 1:
             # Same single-point fast path as in _transform.
-            azimuth, _, _ = WGS84.inv(lons.item(), lats.item(), lons_ahead.item(), lats_ahead.item())
+            azimuth, _, _ = WGS84.inv(
+                lons.item(), lats.item(), lons_ahead.item(), lats_ahead.item()
+            )
             azimuths = np.full(lons.shape, azimuth)
         else:
             azimuths, _, _ = WGS84.inv(lons, lats, lons_ahead, lats_ahead)

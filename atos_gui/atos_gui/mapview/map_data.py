@@ -1,9 +1,8 @@
 """This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
-"""
 
-"""ROS side of the map view: collects the test origin, scenario trajectories and live
+ROS side of the map view: collects the test origin, scenario trajectories and live
 object poses, and converts them to WGS84 for the browser.
 
 Data sources (all in the ATOS local frame, see geo.py):
@@ -19,13 +18,13 @@ import math
 import threading
 import time
 
-import rclpy
-from atos_interfaces.msg import Monitor, ObjectIdArray, StateChange
-from atos_interfaces.srv import GetObjectIds, GetTestOrigin
 from nav_msgs.msg import Path
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
+
+from atos_interfaces.msg import Monitor, ObjectIdArray, StateChange
+from atos_interfaces.srv import GetObjectIds, GetTestOrigin
 
 from .geo import LocalFrame, decimate, yaw_from_quaternion
 
@@ -76,15 +75,25 @@ class MapDataSource:
             GetTestOrigin, "/atos/get_test_origin", callback_group=cb
         )
         node.create_subscription(
-            StateChange, "/atos/state_change", self._on_state_change,
-            QoSProfile(depth=10), callback_group=cb,
+            StateChange,
+            "/atos/state_change",
+            self._on_state_change,
+            QoSProfile(depth=10),
+            callback_group=cb,
         )
         node.create_subscription(
-            Monitor, "/atos/object_monitor", self._on_monitor, LATEST_QOS, callback_group=cb
+            Monitor,
+            "/atos/object_monitor",
+            self._on_monitor,
+            LATEST_QOS,
+            callback_group=cb,
         )
         node.create_subscription(
-            ObjectIdArray, "/atos/connected_object_ids", self._on_connected_ids,
-            QoSProfile(depth=10), callback_group=cb,
+            ObjectIdArray,
+            "/atos/connected_object_ids",
+            self._on_connected_ids,
+            QoSProfile(depth=10),
+            callback_group=cb,
         )
         node.create_timer(1.0, self._maintain, callback_group=cb)
 
@@ -151,12 +160,18 @@ class MapDataSource:
                 return
             on_result(result)
 
-        timer = self.node.create_timer(timeout_s, on_timeout, callback_group=self._cb_group)
+        timer = self.node.create_timer(
+            timeout_s, on_timeout, callback_group=self._cb_group
+        )
         future.add_done_callback(on_done)
 
     def _load_object_ids(self) -> None:
         self._call_with_timeout(
-            self._ids_client, GetObjectIds.Request(), IDS_TIMEOUT_S, self._on_object_ids, "object ids"
+            self._ids_client,
+            GetObjectIds.Request(),
+            IDS_TIMEOUT_S,
+            self._on_object_ids,
+            "object ids",
         )
 
     def _on_object_ids(self, result) -> None:
@@ -167,7 +182,11 @@ class MapDataSource:
         with self._lock:
             self.object_names = names
         self._call_with_timeout(
-            self._origin_client, GetTestOrigin.Request(), ORIGIN_TIMEOUT_S, self._on_origin, "test origin"
+            self._origin_client,
+            GetTestOrigin.Request(),
+            ORIGIN_TIMEOUT_S,
+            self._on_origin,
+            "test origin",
         )
 
     def _on_origin(self, result) -> None:
@@ -222,7 +241,9 @@ class MapDataSource:
             return []
         keep = decimate(xs, ys)
         lons, lats = frame.to_lonlat([xs[i] for i in keep], [ys[i] for i in keep])
-        return [[round(float(lat), 9), round(float(lon), 9)] for lat, lon in zip(lats, lons)]
+        return [
+            [round(float(lat), 9), round(float(lon), 9)] for lat, lon in zip(lats, lons)
+        ]
 
     def _on_path(self, object_id: int, msg: Path) -> None:
         xs = [pose.pose.position.x for pose in msg.poses]
@@ -243,7 +264,9 @@ class MapDataSource:
             "x": pose.position.x,
             "y": pose.position.y,
             "yaw": yaw_from_quaternion(q.x, q.y, q.z, q.w),
-            "speed": math.hypot(msg.velocity.twist.linear.x, msg.velocity.twist.linear.y),
+            "speed": math.hypot(
+                msg.velocity.twist.linear.x, msg.velocity.twist.linear.y
+            ),
             "state": int(msg.object_state.state),
             "received": time.monotonic(),
         }
@@ -269,7 +292,11 @@ class MapDataSource:
             names = dict(self.object_names)
             connected_fresh = now - self._connected_ids_stamp < CONNECTED_IDS_MAX_AGE_S
             connected = set(self._connected_ids) if connected_fresh else set()
-            for object_id in [i for i, m in self._monitors.items() if now - m["received"] > MONITOR_FORGET_S]:
+            for object_id in [
+                i
+                for i, m in self._monitors.items()
+                if now - m["received"] > MONITOR_FORGET_S
+            ]:
                 del self._monitors[object_id]
             monitors = {i: dict(m) for i, m in self._monitors.items()}
             payload = {
@@ -279,7 +306,11 @@ class MapDataSource:
             }
             if known_traj_version != self.traj_version:
                 payload["trajectories"] = [
-                    {"id": object_id, "name": names.get(object_id, f"Object {object_id}"), "latlngs": latlngs}
+                    {
+                        "id": object_id,
+                        "name": names.get(object_id, f"Object {object_id}"),
+                        "latlngs": latlngs,
+                    }
                     for object_id, latlngs in sorted(self._geo_paths.items())
                     if latlngs
                 ]

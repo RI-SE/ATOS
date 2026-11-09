@@ -8,9 +8,9 @@ from nicegui import ui
 from rclpy.node import Node
 from std_msgs.msg import Empty
 
-from atos_interfaces.srv import *
 from atos_gui.mapview.map_data import MapDataSource
 from atos_gui.mapview.map_view import MapView
+from atos_interfaces.srv import GetObjectControlState
 
 QOS = rclpy.qos.QoSProfile(depth=10)
 

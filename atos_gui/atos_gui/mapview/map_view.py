@@ -1,9 +1,8 @@
 """This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
-"""
 
-"""NiceGUI part of the map view: a resizable satellite map with scenario
+NiceGUI part of the map view: a resizable satellite map with scenario
 trajectories and live, heading-rotated object markers, plus style settings.
 
 The overlays are drawn by static/atos_map.js; this module creates the ui.leaflet
@@ -24,7 +23,16 @@ UI_RATE_S = 0.1
 SETTINGS_KEY = "atos_map_settings"
 
 # Bright colours that stay readable on aerial imagery.
-PALETTE = ["#ffd400", "#00e5ff", "#ff4fd8", "#7cfc00", "#ff8c00", "#ffffff", "#ff3b3b", "#9b8cff"]
+PALETTE = [
+    "#ffd400",
+    "#00e5ff",
+    "#ff4fd8",
+    "#7cfc00",
+    "#ff8c00",
+    "#ffffff",
+    "#ff3b3b",
+    "#9b8cff",
+]
 
 DEFAULT_SETTINGS = {
     "trajectory": {"width": 3, "dash": "solid", "opacity": 0.9},
@@ -34,9 +42,23 @@ DEFAULT_SETTINGS = {
     "colorOverrides": {},
 }
 
-DASH_OPTIONS = {"solid": "Solid", "dashed": "Dashed", "dotted": "Dotted", "dashdot": "Dash-dot"}
-SHAPE_OPTIONS = {"arrow": "Arrow", "chevron": "Chevron", "vehicle": "Vehicle", "circle": "Circle + heading"}
-BASE_OPTIONS = {"satellite": "Satellite (Esri World Imagery)", "osm": "OpenStreetMap", "custom": "Custom tile URL"}
+DASH_OPTIONS = {
+    "solid": "Solid",
+    "dashed": "Dashed",
+    "dotted": "Dotted",
+    "dashdot": "Dash-dot",
+}
+SHAPE_OPTIONS = {
+    "arrow": "Arrow",
+    "chevron": "Chevron",
+    "vehicle": "Vehicle",
+    "circle": "Circle + heading",
+}
+BASE_OPTIONS = {
+    "satellite": "Satellite (Esri World Imagery)",
+    "osm": "OpenStreetMap",
+    "custom": "Custom tile URL",
+}
 
 
 def load_settings() -> dict:
@@ -66,17 +88,23 @@ class MapView:
         self._known_ids: list[int] = []
         self._color_inputs: dict[int, ui.color_input] = {}
 
-        ui.add_head_html(f'<script src="{STATIC_ROUTE}/atos_map.js?v={MAP_JS_VERSION}"></script>')
+        ui.add_head_html(
+            f'<script src="{STATIC_ROUTE}/atos_map.js?v={MAP_JS_VERSION}"></script>'
+        )
 
         with ui.card().classes("w-full"):
             with ui.row().classes("w-full items-center gap-2"):
                 ui.label("Map").classes("text-lg font-medium")
                 self.status_label = ui.label().classes("text-sm text-grey-7")
                 ui.space()
-                self.follow_select = ui.select(
-                    {"": "Follow: off"}, value="", on_change=self._on_follow
-                ).props("dense outlined options-dense").classes("w-44")
-                ui.button("Fit to scenario", icon="fit_screen", on_click=self._fit).props("flat dense")
+                self.follow_select = (
+                    ui.select({"": "Follow: off"}, value="", on_change=self._on_follow)
+                    .props("dense outlined options-dense")
+                    .classes("w-44")
+                )
+                ui.button(
+                    "Fit to scenario", icon="fit_screen", on_click=self._fit
+                ).props("flat dense")
 
             with ui.row().classes("w-full items-start gap-4 md:flex-nowrap"):
                 # Drag the bottom-right corner to resize; atos_map.js reflows the map
@@ -104,42 +132,91 @@ class MapView:
         s = self.settings
         with ui.expansion("Map settings", icon="tune").classes("w-full").props("dense"):
             ui.label("Trajectory").classes("text-sm font-medium")
-            ui.label().bind_text_from(s["trajectory"], "width", lambda v: f"Width: {v} px").classes("text-xs")
-            ui.slider(min=1, max=12, step=1, value=s["trajectory"]["width"],
-                      on_change=lambda e: self._set("trajectory", "width", e.value))
-            ui.select(DASH_OPTIONS, label="Line style", value=s["trajectory"]["dash"],
-                      on_change=lambda e: self._set("trajectory", "dash", e.value)).classes("w-full")
-            ui.label().bind_text_from(s["trajectory"], "opacity", lambda v: f"Opacity: {round(v * 100)} %").classes("text-xs")
-            ui.slider(min=0.1, max=1.0, step=0.05, value=s["trajectory"]["opacity"],
-                      on_change=lambda e: self._set("trajectory", "opacity", e.value))
+            ui.label().bind_text_from(
+                s["trajectory"], "width", lambda v: f"Width: {v} px"
+            ).classes("text-xs")
+            ui.slider(
+                min=1,
+                max=12,
+                step=1,
+                value=s["trajectory"]["width"],
+                on_change=lambda e: self._set("trajectory", "width", e.value),
+            )
+            ui.select(
+                DASH_OPTIONS,
+                label="Line style",
+                value=s["trajectory"]["dash"],
+                on_change=lambda e: self._set("trajectory", "dash", e.value),
+            ).classes("w-full")
+            ui.label().bind_text_from(
+                s["trajectory"], "opacity", lambda v: f"Opacity: {round(v * 100)} %"
+            ).classes("text-xs")
+            ui.slider(
+                min=0.1,
+                max=1.0,
+                step=0.05,
+                value=s["trajectory"]["opacity"],
+                on_change=lambda e: self._set("trajectory", "opacity", e.value),
+            )
 
             ui.separator()
             ui.label("Object marker").classes("text-sm font-medium")
-            ui.label().bind_text_from(s["marker"], "size", lambda v: f"Size: {v} px").classes("text-xs")
-            ui.slider(min=12, max=96, step=2, value=s["marker"]["size"],
-                      on_change=lambda e: self._set("marker", "size", e.value))
-            ui.select(SHAPE_OPTIONS, label="Marker style", value=s["marker"]["shape"],
-                      on_change=lambda e: self._set("marker", "shape", e.value)).classes("w-full")
-            ui.switch("Show labels", value=s["marker"]["labels"],
-                      on_change=lambda e: self._set("marker", "labels", e.value))
+            ui.label().bind_text_from(
+                s["marker"], "size", lambda v: f"Size: {v} px"
+            ).classes("text-xs")
+            ui.slider(
+                min=12,
+                max=96,
+                step=2,
+                value=s["marker"]["size"],
+                on_change=lambda e: self._set("marker", "size", e.value),
+            )
+            ui.select(
+                SHAPE_OPTIONS,
+                label="Marker style",
+                value=s["marker"]["shape"],
+                on_change=lambda e: self._set("marker", "shape", e.value),
+            ).classes("w-full")
+            ui.switch(
+                "Show labels",
+                value=s["marker"]["labels"],
+                on_change=lambda e: self._set("marker", "labels", e.value),
+            )
 
             ui.separator()
             ui.label("Object colours").classes("text-sm font-medium")
             self.colors_column = ui.column().classes("w-full gap-1")
-            ui.button("Reset colours", on_click=self._reset_colors).props("flat dense size=sm")
+            ui.button("Reset colours", on_click=self._reset_colors).props(
+                "flat dense size=sm"
+            )
 
             ui.separator()
             ui.label("Base map").classes("text-sm font-medium")
-            ui.select(BASE_OPTIONS, value=s["base"],
-                      on_change=lambda e: self._set(None, "base", e.value)).classes("w-full")
-            custom_url = ui.input(
-                "Custom tile URL", value=s["customUrl"], placeholder="https://host/{z}/{x}/{y}.png"
-            ).classes("w-full").bind_visibility_from(s, "base", lambda v: v == "custom")
+            ui.select(
+                BASE_OPTIONS,
+                value=s["base"],
+                on_change=lambda e: self._set(None, "base", e.value),
+            ).classes("w-full")
+            custom_url = (
+                ui.input(
+                    "Custom tile URL",
+                    value=s["customUrl"],
+                    placeholder="https://host/{z}/{x}/{y}.png",
+                )
+                .classes("w-full")
+                .bind_visibility_from(s, "base", lambda v: v == "custom")
+            )
             # Apply on blur/enter only, so typing does not reload tiles per keystroke.
             for event in ("blur", "keydown.enter"):
-                custom_url.on(event, lambda: self._set(None, "customUrl", (custom_url.value or "").strip()))
-            ui.label("Satellite imagery: Esri World Imagery (no API key, attribution required).").classes(
-                "text-xs text-grey-7")
+                custom_url.on(
+                    event,
+                    lambda: self._set(
+                        None, "customUrl", (custom_url.value or "").strip()
+                    ),
+                )
+            ui.label(
+                "Satellite imagery: Esri World Imagery (no API key, attribution required)."
+            ).classes("text-xs text-grey-7")
 
     def _set(self, group: str | None, key: str, value) -> None:
         target = self.settings[group] if group else self.settings
@@ -152,7 +229,8 @@ class MapView:
     def _object_colors(self) -> dict[str, str]:
         overrides = self.settings["colorOverrides"]
         return {
-            str(object_id): overrides.get(str(object_id)) or PALETTE[index % len(PALETTE)]
+            str(object_id): overrides.get(str(object_id))
+            or PALETTE[index % len(PALETTE)]
             for index, object_id in enumerate(self._known_ids)
         }
 
@@ -182,14 +260,25 @@ class MapView:
             if not self._known_ids:
                 ui.label("No objects yet").classes("text-xs text-grey-7")
             for object_id in self._known_ids:
-                self._color_inputs[object_id] = ui.color_input(
-                    names.get(object_id, f"Object {object_id}"),
-                    value=colors[str(object_id)],
-                    on_change=lambda e, object_id=object_id: self._set_color(object_id, e.value),
-                ).props("dense").classes("w-full")
+                self._color_inputs[object_id] = (
+                    ui.color_input(
+                        names.get(object_id, f"Object {object_id}"),
+                        value=colors[str(object_id)],
+                        on_change=lambda e, object_id=object_id: self._set_color(
+                            object_id, e.value
+                        ),
+                    )
+                    .props("dense")
+                    .classes("w-full")
+                )
         options = {"": "Follow: off"}
         options.update({str(i): f"Follow: {names.get(i, i)}" for i in self._known_ids})
-        self.follow_select.set_options(options, value=self.follow_select.value if self.follow_select.value in options else "")
+        self.follow_select.set_options(
+            options,
+            value=self.follow_select.value
+            if self.follow_select.value in options
+            else "",
+        )
 
     def _style_payload(self) -> dict:
         s = self.settings
@@ -206,7 +295,9 @@ class MapView:
 
     def _push_style(self) -> None:
         if self.map.is_initialized:
-            self._js(f"window.atosMap.setStyle({self.map.id}, {json.dumps(self._style_payload())})")
+            self._js(
+                f"window.atosMap.setStyle({self.map.id}, {json.dumps(self._style_payload())})"
+            )
 
     # ------------------------------------------------------------------ updates
 
@@ -241,7 +332,9 @@ class MapView:
             if self._sent_origin is not None:
                 self._js(f"window.atosMap.reset({self.map.id})")
             self._sent_origin = payload["origin"]
-            payload["trajectories"] = payload.get("trajectories") or self.data.snapshot(None)["trajectories"]
+            payload["trajectories"] = (
+                payload.get("trajectories") or self.data.snapshot(None)["trajectories"]
+            )
 
         self._js(f"window.atosMap.update({self.map.id}, {json.dumps(payload)})")
         self._sent_traj_version = payload["traj_version"]

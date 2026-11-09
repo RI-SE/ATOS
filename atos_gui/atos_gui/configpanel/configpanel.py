@@ -484,67 +484,67 @@ class ConfigPanelNode(Node):
         """
         match param_type:
             case "file":
-                if type(param_value) != str:
+                if type(param_value) is not str:
                     ui.notify("Please select a file")
                     return
                 parameter.value.type = ParameterType.PARAMETER_STRING
                 parameter.value.string_value = param_value
             case "bool":
-                if type(param_value) != bool:
+                if type(param_value) is not bool:
                     ui.notify("Please select a boolean")
                     return
                 parameter.value.type = ParameterType.PARAMETER_BOOL
                 parameter.value.bool_value = param_value
             case "int":
-                if type(param_value) != int:
+                if type(param_value) is not int:
                     ui.notify("Please select an integer")
                     return
                 parameter.value.type = ParameterType.PARAMETER_INTEGER
                 parameter.value.integer_value = param_value
             case "double":
-                if type(param_value) != float:
+                if type(param_value) is not float:
                     ui.notify("Please select a double")
                     return
                 parameter.value.type = ParameterType.PARAMETER_DOUBLE
                 parameter.value.double_value = param_value
             case "string":
-                if type(param_value) != str:
+                if type(param_value) is not str:
                     ui.notify("Please select a string")
                     return
                 parameter.value.type = ParameterType.PARAMETER_STRING
                 parameter.value.string_value = param_value
             case "file_array":
-                if type(param_value) != list or type(param_value[0]) != str:
+                if type(param_value) is not list or type(param_value[0]) is not str:
                     ui.notify("Please select one or more files")
                     return
                 parameter.value.type = ParameterType.PARAMETER_STRING_ARRAY
                 parameter.value.string_array_value = param_value
             case "byte_array":
-                if type(param_value) != list or type(param_value[0]) != int:
+                if type(param_value) is not list or type(param_value[0]) is not int:
                     ui.notify("Please select one or more bytes")
                     return
                 parameter.value.type = ParameterType.PARAMETER_BYTE_ARRAY
                 parameter.value.byte_array_value = param_value
             case "bool_array":
-                if type(param_value) != list or type(param_value[0]) != bool:
+                if type(param_value) is not list or type(param_value[0]) is not bool:
                     ui.notify("Please select one or more booleans")
                     return
                 parameter.value.type = ParameterType.PARAMETER_BOOL_ARRAY
                 parameter.value.bool_array_value = param_value
             case "int_array":
-                if type(param_value) != list or type(param_value[0]) != int:
+                if type(param_value) is not list or type(param_value[0]) is not int:
                     ui.notify("Please select one or more integers")
                     return
                 parameter.value.type = ParameterType.PARAMETER_INTEGER_ARRAY
                 parameter.value.integer_array_value = param_value
             case "double_array":
-                if type(param_value) != list or type(param_value[0]) != float:
+                if type(param_value) is not list or type(param_value[0]) is not float:
                     ui.notify("Please select one or more doubles")
                     return
                 parameter.value.type = ParameterType.PARAMETER_DOUBLE_ARRAY
                 parameter.value.double_array_value = param_value
             case "string_array":
-                if type(param_value) != list or type(param_value[0]) != str:
+                if type(param_value) is not list or type(param_value[0]) is not str:
                     ui.notify("Please select one or more strings")
                     return
                 parameter.value.type = ParameterType.PARAMETER_STRING_ARRAY
