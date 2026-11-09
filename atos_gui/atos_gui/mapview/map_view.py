@@ -18,7 +18,7 @@ from nicegui import app, ui
 from .map_data import MapDataSource
 
 STATIC_ROUTE = "/atos_gui_static"
-MAP_JS_VERSION = "20261109-1"
+MAP_JS_VERSION = "20261109-2"
 UI_RATE_S = 0.1
 SETTINGS_KEY = "atos_map_settings"
 
@@ -87,6 +87,7 @@ class MapView:
         self._style_sent = False
         self._known_ids: list[int] = []
         self._color_inputs: dict[int, ui.color_input] = {}
+        self.settings_open = False
 
         ui.add_head_html(
             f'<script src="{STATIC_ROUTE}/atos_map.js?v={MAP_JS_VERSION}"></script>'
@@ -105,14 +106,21 @@ class MapView:
                 ui.button(
                     "Fit to scenario", icon="fit_screen", on_click=self._fit
                 ).props("flat dense")
+                self.settings_button = ui.button(
+                    "Map settings", icon="tune", on_click=self._toggle_settings
+                ).props("flat dense")
 
             with ui.row().classes("w-full items-start gap-4 md:flex-nowrap"):
                 # Drag the bottom-right corner to resize; atos_map.js reflows the map
                 # and remembers the size in the browser.
-                with ui.element("div").style(
-                    "resize: both; overflow: hidden; width: 100%; max-width: 100%;"
-                    "height: 60vh; min-height: 250px; min-width: 280px;"
-                    "border-radius: 8px; border: 1px solid rgba(128,128,128,.4);"
+                with (
+                    ui.element("div")
+                    .classes("min-w-0")
+                    .style(
+                        "resize: both; overflow: hidden; width: 100%; max-width: 100%;"
+                        "height: 60vh; min-height: 250px; min-width: 280px;"
+                        "border-radius: 8px; border: 1px solid rgba(128,128,128,.4);"
+                    )
                 ):
                     self.map = ui.leaflet(
                         center=(0.0, 0.0), zoom=2, options={"maxZoom": 22}
@@ -121,16 +129,27 @@ class MapView:
                     # Not initialized yet, so clearing the Python-side list is enough.
                     self.map.layers.clear()
 
-                with ui.column().classes("w-full md:w-72 shrink-0"):
+                # Only takes space while open; otherwise the map gets the full width.
+                settings_pane = ui.column().classes("w-full md:w-72 shrink-0")
+                settings_pane.bind_visibility_from(self, "settings_open")
+                with settings_pane:
                     self._build_settings()
 
         ui.timer(UI_RATE_S, self._tick)
 
     # ---------------------------------------------------------------- settings
 
+    def _toggle_settings(self) -> None:
+        self.settings_open = not self.settings_open
+        # Filled button while the pane is open, flat while it is closed.
+        if self.settings_open:
+            self.settings_button.props(remove="flat")
+        else:
+            self.settings_button.props("flat")
+
     def _build_settings(self) -> None:
         s = self.settings
-        with ui.expansion("Map settings", icon="tune").classes("w-full").props("dense"):
+        with ui.column().classes("w-full gap-2"):
             ui.label("Trajectory").classes("text-sm font-medium")
             ui.label().bind_text_from(
                 s["trajectory"], "width", lambda v: f"Width: {v} px"

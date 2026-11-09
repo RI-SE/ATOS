@@ -14,7 +14,9 @@
 (function () {
   "use strict";
 
-  const SIZE_STORAGE_KEY = "atosMapSize";
+  // v2: width is stored as a percentage of the available width. The old key held
+  // absolute pixels, which also captured window shrinks and pinned the map small.
+  const SIZE_STORAGE_KEY = "atosMapSize2";
 
   const BASE_LAYERS = {
     satellite: {
@@ -128,28 +130,43 @@
     return comp._atos;
   }
 
+  // Only a drag of the resize handle is remembered. Window resizes just reflow the
+  // map: the width stays a percentage, so the map grows again with the window.
   function watchResize(comp) {
     const wrapper = comp.$el.parentElement;
     if (!wrapper) return;
     const saved = storageGet(SIZE_STORAGE_KEY);
     if (saved && saved.h > 0) wrapper.style.height = `${saved.h}px`;
-    if (saved && saved.w > 0) wrapper.style.width = `${saved.w}px`;
-    let timer = null;
-    let first = true;
-    const observer = new ResizeObserver(() => {
-      comp.map.invalidateSize({ pan: false });
-      if (first) {
-        first = false; // initial notification, not a user resize
-        return;
-      }
-      clearTimeout(timer);
-      timer = setTimeout(
-        () => storageSet(SIZE_STORAGE_KEY, { w: wrapper.offsetWidth, h: wrapper.offsetHeight }),
-        300,
-      );
-    });
+    if (saved && saved.wPct > 0) wrapper.style.width = `${Math.min(100, saved.wPct)}%`;
+
+    const observer = new ResizeObserver(() => comp.map.invalidateSize({ pan: false }));
     observer.observe(wrapper);
-    comp.map.on("unload", () => observer.disconnect());
+
+    // The resize grip belongs to the wrapper itself; the map covers everything else.
+    const onPointerDown = (ev) => {
+      if (ev.target !== wrapper) return;
+      const startW = wrapper.offsetWidth;
+      const startH = wrapper.offsetHeight;
+      window.addEventListener(
+        "pointerup",
+        () => {
+          const w = wrapper.offsetWidth;
+          const h = wrapper.offsetHeight;
+          if (w === startW && h === startH) return;
+          const avail = wrapper.parentElement ? wrapper.parentElement.clientWidth : 0;
+          const wPct = avail > 0 ? Math.min(100, (w / avail) * 100) : 100;
+          // Replace the browser's pixel width with a relative one.
+          wrapper.style.width = `${wPct}%`;
+          storageSet(SIZE_STORAGE_KEY, { wPct, h });
+        },
+        { once: true },
+      );
+    };
+    wrapper.addEventListener("pointerdown", onPointerDown);
+    comp.map.on("unload", () => {
+      observer.disconnect();
+      wrapper.removeEventListener("pointerdown", onPointerDown);
+    });
   }
 
   function applyBaseLayer(state) {
