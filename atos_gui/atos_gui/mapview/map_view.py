@@ -19,7 +19,7 @@ from nicegui import app, ui
 from .map_data import MapDataSource
 
 STATIC_ROUTE = "/atos_gui_static"
-MAP_JS_VERSION = "20261105-2"
+MAP_JS_VERSION = "20261109-1"
 UI_RATE_S = 0.1
 SETTINGS_KEY = "atos_map_settings"
 

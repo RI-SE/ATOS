@@ -120,6 +120,10 @@
         generation: 0, // bumped on reset, so late probe results are ignored
       };
       watchResize(comp);
+      // Composite the map as one layer. Otherwise Chrome snaps each tile to device pixels
+      // on its own, and on HiDPI screens a map at a fractional page offset shows hairline
+      // gaps between tile rows.
+      comp.$el.style.willChange = "transform";
     }
     return comp._atos;
   }
