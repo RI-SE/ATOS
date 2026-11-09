@@ -18,7 +18,7 @@ from nicegui import app, ui
 from .map_data import MapDataSource
 
 STATIC_ROUTE = "/atos_gui_static"
-MAP_JS_VERSION = "20261109-2"
+MAP_JS_VERSION = "20261109-3"
 UI_RATE_S = 0.1
 SETTINGS_KEY = "atos_map_settings"
 
@@ -37,6 +37,7 @@ PALETTE = [
 DEFAULT_SETTINGS = {
     "trajectory": {"width": 3, "dash": "solid", "opacity": 0.9},
     "marker": {"shape": "arrow", "size": 32, "labels": True},
+    "showOrigin": False,
     "base": "satellite",
     "customUrl": "",
     "colorOverrides": {},
@@ -203,6 +204,14 @@ class MapView:
             )
 
             ui.separator()
+            ui.label("Scenario origin").classes("text-sm font-medium")
+            ui.switch(
+                "Show origin and x/y axes",
+                value=s["showOrigin"],
+                on_change=lambda e: self._set(None, "showOrigin", e.value),
+            )
+
+            ui.separator()
             ui.label("Object colours").classes("text-sm font-medium")
             self.colors_column = ui.column().classes("w-full gap-1")
             ui.button("Reset colours", on_click=self._reset_colors).props(
@@ -304,6 +313,7 @@ class MapView:
         return {
             "trajectory": s["trajectory"],
             "marker": s["marker"],
+            "showOrigin": s["showOrigin"],
             "base": s["base"],
             "customUrl": s["customUrl"],
             "colors": self._object_colors(),

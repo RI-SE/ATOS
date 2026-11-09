@@ -118,6 +118,8 @@
         fitted: false,
         centeredOnOrigin: false,
         follow: null,
+        origin: null, // [lat, lon] of the scenario's local frame origin
+        originMarker: null,
         imageryMaxZoom: null, // deepest Esri zoom with imagery over the scenario
         generation: 0, // bumped on reset, so late probe results are ignored
       };
@@ -364,6 +366,49 @@
     }
   }
 
+  // Crosshair at the local frame origin with its x (east) and y (north) axes.
+  const ORIGIN_ICON_SIZE = 56;
+  function originIcon() {
+    const n = ORIGIN_ICON_SIZE;
+    const c = n / 2;
+    const axis = (x2, y2, color) =>
+      `<line x1="${c}" y1="${c}" x2="${x2}" y2="${y2}" stroke="${OUTLINE}" stroke-width="5" stroke-linecap="round"/>` +
+      `<line x1="${c}" y1="${c}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`;
+    const html =
+      `<svg viewBox="0 0 ${n} ${n}" width="${n}" height="${n}" style="overflow:visible;filter:drop-shadow(0 0 2px rgba(0,0,0,.6))">` +
+      axis(n - 4, c, "#ff3b3b") +
+      axis(c, 4, "#7cfc00") +
+      `<path d="M${n - 4} ${c} l-7 -4 v8 z" fill="#ff3b3b" stroke="${OUTLINE}" stroke-width="1"/>` +
+      `<path d="M${c} 4 l-4 7 h8 z" fill="#7cfc00" stroke="${OUTLINE}" stroke-width="1"/>` +
+      `<text x="${n - 6}" y="${c + 13}" font-size="11" font-weight="700" fill="#fff" stroke="${OUTLINE}" stroke-width="3" paint-order="stroke" text-anchor="middle" font-family="sans-serif">x</text>` +
+      `<text x="${c + 11}" y="11" font-size="11" font-weight="700" fill="#fff" stroke="${OUTLINE}" stroke-width="3" paint-order="stroke" text-anchor="middle" font-family="sans-serif">y</text>` +
+      `<circle cx="${c}" cy="${c}" r="7" fill="none" stroke="${OUTLINE}" stroke-width="4"/>` +
+      `<circle cx="${c}" cy="${c}" r="7" fill="none" stroke="#fff" stroke-width="2"/>` +
+      `<circle cx="${c}" cy="${c}" r="1.8" fill="#fff" stroke="${OUTLINE}" stroke-width="1"/>` +
+      `</svg>`;
+    return window.L.divIcon({ className: "atos-obj-icon", html, iconSize: [n, n], iconAnchor: [c, c] });
+  }
+
+  /** Show, move or remove the origin marker to match the setting and the latest origin. */
+  function syncOrigin(state) {
+    const show = !!(state.style && state.style.showOrigin) && !!state.origin;
+    if (!show) {
+      if (state.originMarker) state.map.removeLayer(state.originMarker);
+      state.originMarker = null;
+      return;
+    }
+    const [lat, lon] = state.origin;
+    if (!state.originMarker) {
+      state.originMarker = window.L.marker([lat, lon], { icon: originIcon(), keyboard: false, zIndexOffset: 500 }).addTo(
+        state.map,
+      );
+      state.originMarker.bindTooltip("", { direction: "top", offset: [0, -ORIGIN_ICON_SIZE / 2] });
+    } else {
+      state.originMarker.setLatLng([lat, lon]);
+    }
+    state.originMarker.setTooltipContent(`Scenario origin<br>${lat.toFixed(7)}, ${lon.toFixed(7)}`);
+  }
+
   function scenarioBounds(state) {
     let bounds = null;
     for (const traj of Object.values(state.trajectories)) {
@@ -406,6 +451,7 @@
       for (const [id, traj] of Object.entries(state.trajectories)) styleTrajectory(state, id, traj);
       for (const obj of Object.values(state.objects)) obj.shapeKey = null; // rebuild icons
       setObjects(state, state.lastObjects);
+      syncOrigin(state);
       return true;
     },
 
@@ -416,6 +462,11 @@
       if (payload.origin && !state.centeredOnOrigin) {
         state.centeredOnOrigin = true;
         if (!state.fitted) state.map.setView(payload.origin, Math.min(17, nativeMaxZoom(state)));
+      }
+      const origin = payload.origin || null;
+      if (String(origin) !== String(state.origin)) {
+        state.origin = origin;
+        syncOrigin(state);
       }
       if (payload.trajectories) setTrajectories(state, payload.trajectories);
       if (payload.objects) setObjects(state, payload.objects);
@@ -444,6 +495,8 @@
       state.trajectories = {};
       state.objects = {};
       state.lastObjects = [];
+      state.origin = null;
+      syncOrigin(state);
       state.fitted = false;
       state.centeredOnOrigin = false;
       state.imageryMaxZoom = null; // the new scenario may be somewhere else
