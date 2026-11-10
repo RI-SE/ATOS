@@ -8,7 +8,9 @@ from nicegui import ui
 from rclpy.node import Node
 from std_msgs.msg import Empty
 
-from atos_interfaces.srv import *
+from atos_gui.mapview.map_data import MapDataSource
+from atos_gui.mapview.map_view import MapView
+from atos_interfaces.srv import GetObjectControlState
 
 QOS = rclpy.qos.QoSProfile(depth=10)
 
@@ -54,12 +56,17 @@ class ControlPanelNode(Node):
         )
 
         self.OBC_state = {"state": "UNDEFINED"}
+        self.OBC_state_number = None
         self.lost_connection = True
+
+        self.map_data = MapDataSource(
+            self, get_control_state=lambda: self.OBC_state_number
+        )
 
         @ui.page(path="/control", title="ATOS Control Panel")
         def render_page():
             with ui.row().bind_visibility_from(self, "lost_connection"):
-                ui.label("Lost connection to ATOS...").tailwind.text_color("red")
+                ui.label("Lost connection to ATOS...").classes("text-red")
             with ui.row():
                 ui.button(
                     "Abort",
@@ -113,6 +120,7 @@ class ControlPanelNode(Node):
                     on_click=lambda: self.reloadObjectSettingsPub.publish(Empty()),
                     color="grey",
                 )
+            MapView(self.map_data)
 
     def get_object_control_state_callback(self):
         # Call the service
@@ -133,4 +141,5 @@ class ControlPanelNode(Node):
         except Exception as e:
             self.get_logger().info("Service call failed %r" % (e,))
         else:
-            self.OBC_state["state"] = OBC_STATES[response.state]
+            self.OBC_state_number = response.state
+            self.OBC_state["state"] = OBC_STATES.get(response.state, "UNDEFINED")

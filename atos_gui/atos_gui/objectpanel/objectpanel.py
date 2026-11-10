@@ -1,4 +1,4 @@
-from nicegui import Client, ui
+from nicegui import ui
 from rclpy.node import Node
 
 from atos_interfaces.srv import GetObjectIds, GetObjectIp, SetObjectIp
@@ -27,9 +27,6 @@ class ObjectPanelNode(Node):
         self.object_ids_req = GetObjectIds.Request()
         self.object_id_ip_map = {}
         self.get_object_ids()
-
-        with Client.auto_index_client:
-            pass
 
         @ui.page(path="/object", title="ATOS Object Panel")
         def render_objectpanel() -> None:
@@ -160,4 +157,4 @@ class ObjectPanelNode(Node):
     def refresh(self):
         """Refreshes the object panel by fetching all object IDs and their IPs in the current scenario."""
         self.get_object_ids()
-        ui.open("/object")
+        ui.navigate.to("/object")

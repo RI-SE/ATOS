@@ -62,3 +62,6 @@ log/
 
 #
 *.env
+
+# NiceGUI storage (map view settings) when the GUI is run from the repository
+.nicegui/

@@ -1,10 +1,9 @@
 """This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
-"""
 
-"""This file is taken from the NiceGUI repository and added some dosctrings for clarifications. 
-Original file: https://github.com/zauberzeug/nicegui/blob/main/examples/local_file_picker/local_file_picker.py """
+This file is taken from the NiceGUI repository and added some dosctrings for clarifications.
+Original file: https://github.com/zauberzeug/nicegui/blob/main/examples/local_file_picker/local_file_picker.py"""
 
 import platform
 from pathlib import Path
@@ -48,7 +47,9 @@ class local_file_picker(ui.dialog):
                 ui.aggrid(
                     {
                         "columnDefs": [{"field": "name", "headerName": "File"}],
-                        "rowSelection": "multiple" if multiple else "single",
+                        "rowSelection": {
+                            "mode": "multiRow" if multiple else "singleRow"
+                        },
                     },
                     html_columns=[0],
                 )
@@ -83,7 +84,7 @@ class local_file_picker(ui.dialog):
         paths.sort(key=lambda p: p.name.lower())
         paths.sort(key=lambda p: not p.is_dir())
 
-        self.grid.options["rowData"] = [
+        rows = [
             {
                 "name": f"📁 <strong>{p.name}</strong>" if p.is_dir() else p.name,
                 "path": str(p),
@@ -96,14 +97,15 @@ class local_file_picker(ui.dialog):
             or self.upper_limit is not None
             and self.path != self.upper_limit
         ):
-            self.grid.options["rowData"].insert(
+            rows.insert(
                 0,
                 {
                     "name": "📁 <strong>..</strong>",
                     "path": str(self.path.parent),
                 },
             )
-        self.grid.update()
+        # Assigning to the element's options updates the grid (NiceGUI >= 3.0).
+        self.grid.options["rowData"] = rows
 
     def handle_double_click(self, e: events.GenericEventArguments) -> None:
         """Handle a double click on a file or directory."""
@@ -115,7 +117,5 @@ class local_file_picker(ui.dialog):
 
     async def _handle_ok(self):
         """Handle the OK button click."""
-        rows = await ui.run_javascript(
-            f"getElement({self.grid.id}).gridOptions.api.getSelectedRows()"
-        )
+        rows = await self.grid.get_selected_rows()
         self.submit([r["path"] for r in rows])
