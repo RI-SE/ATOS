@@ -285,7 +285,7 @@ def ros_main() -> None:
 
 def print_access_hint() -> None:
     scheme = "https" if USE_SSL else "http"
-    print(f"TruckObjectGUI ready. Open {scheme}://localhost:8420", flush=True)
+    print(f"GUI ready. Open {scheme}://localhost:8420", flush=True)
 
 
 def configure_app() -> None:
