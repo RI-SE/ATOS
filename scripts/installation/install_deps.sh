@@ -132,7 +132,12 @@ check_command_failed $? "Failed to install ROS2 dependencies."
 ######## Install ATOS GUI dependencies ########
 ###############################################
 
-"${ATOS_VENV_PATH}/bin/python" -m pip install -r ${ATOS_REPO_PATH}/atos_gui/requirements.txt
+if "${ATOS_VENV_PATH}/bin/python" -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then
+    "${ATOS_VENV_PATH}/bin/python" -m pip install -r ${ATOS_REPO_PATH}/atos_gui/requirements.txt
+    check_command_failed $? "Failed to install ATOS GUI dependencies."
+else
+    echo "The ATOS GUI requires Python >= 3.10; skipping GUI dependencies (see the note at the end of the installation)."
+fi
 
 ###########################################
 ###### Install some deps from source ######

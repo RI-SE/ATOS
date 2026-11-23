@@ -54,6 +54,32 @@ get_supported_ros_distro() {
     esac
 }
 
+# The ATOS GUI needs Python >= 3.10 (NiceGUI 3.19 or newer). Ubuntu 20.04 / ROS 2 Foxy has Python 3.8.
+gui_supported() {
+    python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))' 2>/dev/null
+}
+
+# Printed before and after the installation, so it is not lost in the install output.
+print_no_gui_notice() {
+    local python_version color="" reset=""
+    python_version="$(python3 -c 'import platform; print(platform.python_version())' 2>/dev/null || echo unknown)"
+    if [ -t 1 ]; then
+        color="\033[1;33m"
+        reset="\033[0m"
+    fi
+    printf '%b' "${color}"
+    echo ""
+    echo "=============================================================================="
+    echo " NOTE: The ATOS GUI (control panel with map view, config and object panels)"
+    echo " is NOT available on this system. It requires Python 3.10 or newer, and this"
+    echo " system has Python ${python_version} (Ubuntu 20.04 / ROS 2 Foxy)."
+    echo " ATOS itself installs and runs without the GUI."
+    echo " For the GUI, use Ubuntu 22.04 or newer, or the ATOS Docker image."
+    echo "=============================================================================="
+    echo ""
+    printf '%b' "${reset}"
+}
+
 get_atos_venv_path() {
     echo "$HOME/.local/share/atos/venv"
 }

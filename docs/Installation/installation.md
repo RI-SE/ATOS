@@ -22,6 +22,9 @@ ATOS comes with an installation script that automates the installation process. 
 ./setup_atos.sh
 ```
 
+!!! note
+    The ATOS GUI ([control panel](../Usage/GUI/controlpanel.md) with map view, config and object panels) requires Python 3.10 or newer, so it is **not available on Ubuntu 20.04 / ROS 2 Foxy**. ATOS is installed and runs there without the GUI. For the GUI, use Ubuntu 22.04 or newer, or the [Docker image](#docker) (Ubuntu 22.04 / ROS 2 Humble).
+
 ## <a name="running"></a> Starting ATOS
 Launch ATOS
 ```bash

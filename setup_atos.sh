@@ -41,6 +41,7 @@ if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
     echo "Usage: ./setup_atos.sh [single option]"
     echo "This script will install all necessary dependencies, setup the ROS workspace at ~/atos_ws and install ATOS."
     echo "Supported native targets: Ubuntu 20.04 with ROS 2 Foxy, Ubuntu 22.04 with ROS 2 Humble, and Ubuntu 24.04 with ROS 2 Jazzy."
+    echo "The ATOS GUI requires Ubuntu 22.04 or newer; on Ubuntu 20.04 (ROS 2 Foxy) ATOS is installed without the GUI."
     echo "Options:"
     echo "  -h, --help      Show this help message and exit"
     echo "  -r              Reinstall dependencies"              
@@ -55,6 +56,10 @@ fi
 #######################################
 ###### Install ATOS dependencies ######
 #######################################
+if ! gui_supported; then
+    print_no_gui_notice
+fi
+
 echo "Installing ATOS dependencies..."
 ${REPO_DIR}/scripts/installation/install_deps.sh ${REPO_DIR} ${REINSTALL_DEPS}
 
@@ -66,6 +71,7 @@ fi
 ###### Start installation of ATOS ######
 ########################################
 if ! [ -z "$REINSTALL_DEPS" ]; then
+    gui_supported || print_no_gui_notice
     echo "ATOS installation skipped."
     exit 0
 fi
@@ -78,5 +84,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+gui_supported || print_no_gui_notice
 echo "ATOS build and setup is complete. Please restart your terminal to complete the installation."
 echo "Please see the documentation for further details: https://atos.readthedocs.io/en/latest/"

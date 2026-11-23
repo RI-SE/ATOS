@@ -1,5 +1,6 @@
 # Don't launch this file directly, rather use the launch files one level up instead
 import copy
+import importlib.util
 import os
 from pathlib import Path
 
@@ -32,8 +33,8 @@ def get_files():
     return validate_atos_dir()
 
 
-def get_pythonpath_setup_action():
-    venv_site_packages = (
+def get_venv_site_packages():
+    return (
         Path.home()
         / ".local"
         / "share"
@@ -43,6 +44,17 @@ def get_pythonpath_setup_action():
         / (f"python{os.sys.version_info.major}.{os.sys.version_info.minor}")
         / "site-packages"
     )
+
+
+def gui_dependencies_available():
+    """The GUI needs NiceGUI, which is only installed on Python >= 3.10 (not ROS 2 Foxy)."""
+    if importlib.util.find_spec("nicegui") is not None:
+        return True
+    return (get_venv_site_packages() / "nicegui").is_dir()
+
+
+def get_pythonpath_setup_action():
+    venv_site_packages = get_venv_site_packages()
     if not venv_site_packages.exists():
         return None
 
@@ -166,6 +178,12 @@ def get_base_nodes(include_gui=True):
     pythonpath_setup = get_pythonpath_setup_action()
     if pythonpath_setup is not None:
         base_nodes.insert(2, pythonpath_setup)
+
+    if include_gui and not gui_dependencies_available():
+        logging.get_logger("launch").warning(
+            "NiceGUI is not installed (the ATOS GUI requires Python >= 3.10), skipping the GUI."
+        )
+        include_gui = False
 
     if include_gui:
         base_nodes.insert(
