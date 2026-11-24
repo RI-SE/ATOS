@@ -21,19 +21,10 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "3000:3000" 
-      - "3443:3443"
       - "55555:55555"
       - "443:443"
       - "9090:9090"
       - "8765:8765"
       - "8000:8000"
+      - "8420:8420"
     command: bash -c "source /root/.local/share/atos/venv/bin/activate ; source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py insecure:=True"
-  foxglove-studio:
-    image: ghcr.io/foxglove/studio:1.76
-    networks:
-      - atos-net
-    ports:
-      - 8080:8080
-    volumes:
-      - ./plugins/foxglove/Map, 3D and control layout.json:/foxglove/default-layout.json
