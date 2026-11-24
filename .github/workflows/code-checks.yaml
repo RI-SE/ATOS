@@ -9,43 +9,30 @@ jobs:
     file-changes:
       runs-on: ubuntu-latest
       outputs:
-        all: ${{ steps.changed-files.outputs.all }}
         cpp: ${{ steps.cpp-files.outputs.CPP }}
       steps:
         - name: Check out repository
           uses: actions/checkout@v4
           with:
-            submodules: recursive
+            fetch-depth: 0
 
-        - name: Get changed files
-          id: changed-files
-          uses: jitterbit/get-changed-files@v1
-
-        - name: Filter on only cpp, hpp, c, and h files
+        # Added, copied, modified, renamed and type-changed C/C++ files in the PR
+        # (deleted files can't be linted). Paths are taken from git directly, so
+        # changed files with spaces in their names don't break the job.
+        - name: Get changed cpp, hpp, c, and h files
           id: cpp-files
+          env:
+            BASE_SHA: ${{ github.event.pull_request.base.sha }}
+            HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           run: |
-            input_files=(${{ steps.changed-files.outputs.all }})
-            echo "Input files: $input_files"
-            cpp_files=""
-            for f in "${input_files[@]}"; do
-              if [[ $f == *.cpp || $f == *.hpp || $f == *.c || $f == *.h ]]; then
-                echo "File ending correct: $f"
-                cpp_files+="$f "
-              else
-                echo "File ending incorrect: $f"
-              fi
-            done
+            cpp_files=$(git diff --name-only --diff-filter=ACMRT "$BASE_SHA...$HEAD_SHA" -- '*.cpp' '*.hpp' '*.c' '*.h' | tr '\n' ' ')
             echo "Target files: $cpp_files"
 
             {
               echo 'CPP<<EOF'
               echo "$cpp_files"
               echo EOF
-            } >> $GITHUB_OUTPUT
-
-        - name: Print all files
-          run: |
-            echo ${{ steps.cpp-files.outputs.CPP }}
+            } >> "$GITHUB_OUTPUT"
 
     clang-tidy:
         uses: ./.github/workflows/clang-tidy.yaml
