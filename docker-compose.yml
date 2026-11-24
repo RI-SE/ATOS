@@ -15,8 +15,3 @@ services:
       - ~/.astazero/ATOS/:/root/.astazero/ATOS/
     network_mode: "host"
     command: bash -c "source /root/.local/share/atos/venv/bin/activate ; source /root/atos_ws/install/setup.sh ; ros2 launch atos launch_basic.py insecure:=True"
-  foxglove-studio:
-    image: ghcr.io/foxglove/studio:1.76
-    network_mode: "host"
-    volumes:
-      - ./plugins/foxglove/Map, 3D and control layout.json:/foxglove/default-layout.json
