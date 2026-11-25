@@ -182,42 +182,19 @@
     return bestName;
   }
 
-  function computeAheadDistanceMap(trucks, pathLengthMeters, selectedPathName) {
-    const result = {};
-    const candidates = trucks
-      .filter(function(item) {
-        const itemPath = item.path_name || selectedPathName;
-        return itemPath === selectedPathName && Number.isFinite(Number(item.distance_m));
-      })
-      .map(function(item) {
-        return {
-          uid: String(item.uid || "truck"),
-          distance_m: Number(item.distance_m),
-        };
-      })
-      .sort(function(a, b) { return a.distance_m - b.distance_m; });
-
-    if (candidates.length < 2) {
-      return result;
+  function aheadText(item) {
+    if (item.on_road === false) {
+      return "Not on Rural Road";
     }
-
-    for (let i = 0; i < candidates.length; i += 1) {
-      const current = candidates[i];
-      const next = candidates[(i + 1) % candidates.length];
-      let gap = next.distance_m - current.distance_m;
-      if (gap <= 0 && pathLengthMeters > 0) {
-        gap += pathLengthMeters;
-      }
-      if (gap > 0.01) {
-        result[current.uid] = gap;
-      }
-    }
-    return result;
+    const gap = Number(item.ahead_gap_m);
+    return item.ahead_gap_m !== null && item.ahead_gap_m !== undefined && Number.isFinite(gap)
+      ? gap.toFixed(1) + " m"
+      : "-";
   }
 
   function renderSvg(container, coords, trucks, selectedPathName, pathsByName) {
-    const width = 600;
-    const height = 650;
+    const maxWidth = 600;
+    const maxHeight = 650;
     const padding = 30;
 
     let minLon = Infinity;
@@ -234,12 +211,17 @@
       if (lat > maxLat) maxLat = lat;
     });
 
-    const lonSpan = Math.max(maxLon - minLon, 1e-9);
-    const latSpan = Math.max(maxLat - minLat, 1e-9);
+    // Equal metres per unit on both axes.
+    const lonScale = Math.cos(toRad((minLat + maxLat) / 2.0));
+    const spanX = Math.max((maxLon - minLon) * lonScale, 1e-9);
+    const spanY = Math.max(maxLat - minLat, 1e-9);
+    const scale = Math.min((maxWidth - 2 * padding) / spanX, (maxHeight - 2 * padding) / spanY);
+    const width = Math.round(spanX * scale + 2 * padding);
+    const height = Math.round(spanY * scale + 2 * padding);
 
     function toSvgXY(lon, lat) {
-      const x = padding + ((lon - minLon) / lonSpan) * (width - 2 * padding);
-      const y = height - padding - ((lat - minLat) / latSpan) * (height - 2 * padding);
+      const x = padding + (lon - minLon) * lonScale * scale;
+      const y = height - padding - (lat - minLat) * scale;
       return {x: x, y: y};
     }
 
@@ -256,8 +238,6 @@
       return itemPath === selectedPathName;
     });
 
-    const aheadDistanceMap = computeAheadDistanceMap(filteredTrucks, totalMeters, selectedPathName);
-
     const truckCircles = filteredTrucks.map(function(item) {
       const p = toSvgXY(Number(item.lon), Number(item.lat));
       const uid = String(item.uid || "truck");
@@ -267,17 +247,13 @@
       const courseDeg = Number(item.course_deg || 0);
       const pathIndex = Number(item.path_index || -1);
       const color = item.tcp_connected ? "#dc2626" : "#6b7280";
-      const ahead = aheadDistanceMap[uid];
-      const aheadText =
-        Number.isFinite(ahead)
-          ? (" next: " + ahead.toFixed(1) + " m")
-          : " next: -";
+      const aheadLabel = " next: " + aheadText(item);
       return (
         "<g>" +
           "<circle cx='" + p.x.toFixed(2) + "' cy='" + p.y.toFixed(2) + "' r='5' fill='" + color + "' />" +
           "<text x='" + (p.x + 8).toFixed(2) + "' y='" + (p.y - 8).toFixed(2) + "' " +
             "font-size='12' font-family='sans-serif' fill='#111827'>" +
-            uid + " [idx " + pathIndex + "] " + speedKmh.toFixed(1) + " km/h @" + courseDeg.toFixed(0) + "°" + aheadText +
+            uid + " [idx " + pathIndex + "] " + speedKmh.toFixed(1) + " km/h @" + courseDeg.toFixed(0) + "°" + aheadLabel +
           "</text>" +
         "</g>"
       );
@@ -293,11 +269,7 @@
       const lastCotMessage = String(item.last_cot_message || "-");
       const lastTcpCommand = String(item.last_tcp_command || "-");
       const tcpWarning = String(item.last_tcp_warning || "");
-      const ahead = aheadDistanceMap[uid];
-      const aheadCell =
-        Number.isFinite(ahead)
-          ? ahead.toFixed(1) + " m"
-          : "-";
+      const aheadCell = aheadText(item);
       return (
         "<tr>" +
           "<td style='padding:2px 8px 2px 0;'>" + uid + "</td>" +
@@ -327,9 +299,9 @@
 
     container.innerHTML =
       "<div style='display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;'>" +
-      "<div style='flex:0 0 auto;width:600px;'>" +
+      "<div style='flex:0 0 auto;max-width:100%;'>" +
       "<svg width='" + width + "' height='" + height + "' viewBox='0 0 " + width + " " + height + "' " +
-      "style='background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;'>" +
+      "style='background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;max-width:100%;height:auto;overflow:visible;'>" +
       "<polyline fill='none' stroke='#0ea5e9' stroke-width='3' points='" + linePoints + "'/>" +
       truckCircles +
       "</svg>" +
